@@ -6,12 +6,12 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Seven checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
-  6 roadmap↔manifest; 7 ai-map freshness):
+  will learn to ignore it. Eight checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
-    Check 7 ai-map freshness vs manifest.
+    Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity.
   Details inline. Original two checks documented below:
 
     1) BROKEN REFERENCES — in Living docs (repo-root *.md, _ORVION_CANONICAL/** except the
@@ -253,6 +253,65 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
     if ($lastSpec.Success -and $aiRaw -notmatch [regex]::Escape($lastSpec.Groups['s'].Value)) {
         Write-Host "  AI-MAP STALE: ai-map.json does not name manifest Last Completed $($lastSpec.Groups['s'].Value) — regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
         $issues++
+    }
+}
+
+Write-Host "== Check 8: Supabase project-topology registry integrity ==" -ForegroundColor Cyan
+# Verified failure class this guards against (2026-08-10): the dual-project topology record
+# (MASTER_INTEGRATION_CATALOG.md §0) is the only thing standing between an agent and querying/
+# writing to the wrong Supabase project, or treating the accidental/deleted projects as targets.
+# This check cannot see live Supabase state (deliberately dependency-free/no credentials) — it
+# only catches the registry itself going missing, losing a required ref, losing its disqualifying
+# wording for the non-target refs, or contradicting the certification ledger's stated status.
+$catalogPath = Join-Path $RepoRoot 'reports/master/MASTER_INTEGRATION_CATALOG.md'
+$certPath = Join-Path $RepoRoot 'reports/master/MASTER_CERTIFICATION_STATUS.md'
+$authorizedRefs = @('vrvtsxexkiiiivlkdxzp', 'brplkqmbzffpxqgkkdzo')
+$nonTargetRefs = @{
+    'hzyuczdlwalectfduehw' = 'DELETED'
+    'wgsmrjcuhjdksfpdbhre' = 'not an ORVION target'
+}
+if (-not (Test-Path $catalogPath)) {
+    Write-Host "  TOPOLOGY REGISTRY MISSING: reports/master/MASTER_INTEGRATION_CATALOG.md does not exist — no record of which Supabase projects are authorized" -ForegroundColor Yellow
+    $issues++
+} else {
+    $catalogRaw = Get-Content $catalogPath -Raw
+    foreach ($ref in $authorizedRefs) {
+        if ($catalogRaw -notmatch [regex]::Escape($ref)) {
+            Write-Host "  TOPOLOGY REGISTRY INCOMPLETE: authorized ref $ref is no longer recorded in MASTER_INTEGRATION_CATALOG.md §0" -ForegroundColor Yellow
+            $issues++
+        }
+    }
+    foreach ($ref in $nonTargetRefs.Keys) {
+        if ($catalogRaw -notmatch [regex]::Escape($ref)) {
+            Write-Host "  TOPOLOGY REGISTRY: non-target ref $ref is no longer recorded — its exclusion is no longer documented, a future session could mistake it for a valid target" -ForegroundColor Yellow
+            $issues++
+        } elseif ($catalogRaw -notmatch [regex]::Escape($nonTargetRefs[$ref])) {
+            Write-Host "  TOPOLOGY REGISTRY WEAKENED: ref $ref is recorded but its disqualifying wording ('$($nonTargetRefs[$ref])') is missing" -ForegroundColor Yellow
+            $issues++
+        }
+    }
+    if ($catalogRaw -notmatch 'explicit, contemporaneous owner authorization') {
+        Write-Host "  TOPOLOGY REGISTRY WEAKENED: the no-delete-without-explicit-owner-authorization rule for the two authorized projects is missing its exact wording" -ForegroundColor Yellow
+        $issues++
+    }
+    # Cross-file contradiction (same pattern as Check 2): the certification ledger must not claim
+    # CERTIFIED (synchronized) production-database status while the topology registry itself still
+    # says a project is unverified/unreachable — that combination means one doc was updated and the
+    # other wasn't, which is exactly the "only one project updated, INCOMPLETE" failure mode.
+    if (Test-Path $certPath) {
+        $certRaw = Get-Content $certPath -Raw
+        $prodRow = [regex]::Match($certRaw, '\|\s*\*\*Production database deployment\*\*\s*\|(?<row>[^\n]*)\|')
+        if ($prodRow.Success -and $prodRow.Groups['row'].Value -match 'CERTIFIED' -and $prodRow.Groups['row'].Value -notmatch 'CONDITIONAL') {
+            # Deliberately narrow to \bunverified\b only — NOT a looser "not reachable" scan.
+            # Legitimate prose about connector-scoping (e.g. "still not reachable through the
+            # claude_ai_Supabase connector" while reachable via a different server) is expected
+            # and must not cry wolf; "unverified" is the specific word this repo's convention
+            # uses to mark a project's actual deployment status as unconfirmed.
+            if ($catalogRaw -match '(?i)\bunverified\b') {
+                Write-Host "  CROSS-FILE CONTRADICTION: MASTER_CERTIFICATION_STATUS.md claims production database deployment is CERTIFIED, but MASTER_INTEGRATION_CATALOG.md §0 still marks a project's status 'unverified' — one file was updated without the other" -ForegroundColor Yellow
+                $issues++
+            }
+        }
     }
 }
 
