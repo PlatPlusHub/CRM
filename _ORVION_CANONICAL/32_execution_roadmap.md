@@ -129,6 +129,8 @@ Outputs:
 
 Status: Complete
 
+Regression note (2026-08-10): `app.merge_customer_identity` emitted an unregistered `event_type` code from migration `202607049100` onward, so every call silently aborted. Found by a full-repository audit treating `supabase/migrations/**` as ground truth, not the manifest; fixed by SPEC-120 with a permanent pgTAP guard added by SPEC-121 (`changes/SPEC-120-*.md`, `changes/SPEC-121-*.md`). Phase deliverables and scope unchanged — this is a closed regression record, not an open item.
+
 Objective:
 
 Implement lead and customer flow.
@@ -170,6 +172,8 @@ Outputs:
 Status: Complete
 
 Delivered: `app.customer_balance` + `app.supplier_balance` + `app.booking_item_profit` (derived read primitives); invoice create/issue, `record_payment` (allocation + status), `issue_receipt`, `record_supplier_payment`, customer refund workflow (`record_refund`/`advance_refund`), and basic journal entries + default chart of accounts (SPEC-089, SPEC-100–108). The finance-approval execution gate landed in Phase 5 (ADR-0020).
+
+Regression note (2026-08-10): `app.advance_refund` emitted an unregistered `event_type` code from migration `202607049100` onward, so every refund-advance call silently aborted. Found by the same full-repository audit as the Phase-4 note above; fixed by SPEC-120 with a permanent pgTAP guard added by SPEC-121 (`changes/SPEC-120-*.md`, `changes/SPEC-121-*.md`). Phase deliverables and scope unchanged — this is a closed regression record, not an open item.
 
 Objective:
 
