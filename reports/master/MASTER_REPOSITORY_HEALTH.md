@@ -18,8 +18,8 @@ Last measured: 2026-08-10 (SPEC-120 production deployment re-verified: remote mi
 ## 2. Structural indicators (⚙ measurable now)
 | Indicator | Value | Note |
 |---|---|---|
-| Schema: tables / indexes / triggers / functions / CHECKs / views | 72 / 229 / 40 / 63 app + 0 reporting / 519 / 7 | DB-verified 2026-07-18 after production deployment sync; views are the Phase-9 Tier-A `reporting` read model |
-| app RPCs / catalog types / permissions / roles | 63 / 67 / 64 / 9 | SPEC-120 verification 2026-08-10; catalog values = 569 per `scripts/verify_database.sql` |
+| Schema: tables / indexes / triggers / functions / CHECKs / views | 72 / 229 / 38 / 63 app + 0 reporting / 11 / 7 | DB-verified live 2026-08-10 (handover audit) against local `db reset`; corrects two stale counts (triggers was 40, CHECKs was 519 — neither matched a live count); views are the Phase-9 Tier-A `reporting` read model |
+| app RPCs / catalog types / permissions / roles | 63 / 67 / 69 / 9 | DB-verified live 2026-08-10; permissions corrected 64→69 (the 5 booking-capability permissions minted per-consumer — APPROVE/ISSUE/CANCEL/REFUND/REISSUE_BOOKING — were never folded into this count); catalog values = 569 per `scripts/verify_database.sql` |
 | Canon docs | 37 | `_ORVION_CANONICAL/**` (deprecated tombstones retired 2026-07-17; git history preserves them) |
 | ADRs (ratified) | 23 | ADR-0001…0023 |
 | Master documents (Living) | 14 | 13 findings/blueprint/integration + this health doc |
@@ -45,6 +45,8 @@ Single discoverable list of every automatic check. If one fails, CI is red and t
 | Docs-3 | Boot-chain router integrity + AI-pointer files stay thin (≤25 lines) & routed (anti-duplicate-authority) | Check 3 | `repository-consistency.yml` |
 | Docs-4 | Every report declares its document class | Check 4 | `repository-consistency.yml` |
 | Docs-5 | `manifest.md` stays lean (≤70 lines) — current-state only, no changelog creep | Check 5 | `repository-consistency.yml` |
+| Docs-6 | Roadmap ↔ manifest phase agreement (which phase is current) | Check 6 | `repository-consistency.yml` |
+| Docs-7 | `ai-map.json` stays fresh vs. manifest's `Last Completed` | Check 7 | `repository-consistency.yml` |
 
 Adding a new invariant is the standard permanent-guard response (GOVERNANCE §18 discovery-to-guard) — extend the pgTAP suite or the consistency script, never a one-off manual check.
 
@@ -67,7 +69,7 @@ Adding a new invariant is the standard permanent-guard response (GOVERNANCE §18
 | Metric | Value | Watch |
 |---|---|---|
 | Reports folder size | 56 files | subfoldered into master/ (14) + evidence/ (5) + history/ (34) + 3 root — physical reorg DONE (session 9) |
-| changes/ folder size | 119 files | flat SPEC-* history (117 SPEC + TEMPLATE + CHANGE_REQUEST); same subfolder-by-phase trigger reached (repo-eos-review §6) |
+| changes/ folder size | 121 files | flat SPEC-* history (119 SPEC + TEMPLATE + CHANGE_REQUEST, +SPEC-120/121 since last count); same subfolder-by-phase trigger reached (repo-eos-review §6) |
 | Root conduct docs | **1 authority** (AGENTS) + 2 tombstones | PROTOCOL/global-rules RETIRED to pointers (session 10, full-diff verified zero unique authority) ✅ |
 | Entry-point → GOVERNANCE pointer | present ✅ | added to README + AGENTS §4 + llms.txt (session 10) — navigation determinism closed |
 | Stray artifacts | `backup/` gitignored ✅ | retired from version control (session 8) |

@@ -8,9 +8,9 @@ reports/
   README.md                      (this index)
   architecture-decision-records.md   (ratified ADR log — top-level authority)
   future-backlog.md                  (deferred work + triggers)
-  master/     🟢 Living-Authoritative — findings, plan, blueprint (13)
+  master/     🟢 Living-Authoritative — findings, plan, blueprint (14)
   evidence/   🔵 Living — decision-validation trail (5)
-  history/    🟠 Historical-Immutable — dated review/phase/process reports (27)
+  history/    🟠 Historical-Immutable — dated review/phase/process reports (34)
 ```
 **Reference convention:** reports are cited by **unique filename** (filenames are globally unique); the subfolder is an organizational detail. So `MASTER_GAP_REGISTER.md` resolves regardless of prose reference — moves never break citations.
 
