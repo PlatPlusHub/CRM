@@ -516,6 +516,22 @@ Severity: info
 
 Severity: warning
 
+## refund_approved
+
+Severity: info
+
+## refund_rejected
+
+Severity: info
+
+## refund_cancelled
+
+Severity: info
+
+## refund_processing
+
+Severity: info
+
 ## refund_completed
 
 Severity: info

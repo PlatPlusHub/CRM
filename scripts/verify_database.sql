@@ -5,8 +5,9 @@
 -- freshly reset database: raises an exception on the first broken invariant, otherwise prints
 -- "ALL CHECKS PASSED". CI-able: a non-zero exit signals a regression.
 --   docker exec -i <db> psql -U postgres -d postgres -f - < scripts/verify_database.sql
--- Expected values track the frozen baseline: 72 public base tables, 67 catalog types, 565 catalog
--- values. Documented referential exceptions to the restrict default (30 Referential Action Standard):
+-- Expected values track the frozen baseline: 72 public base tables, 67 catalog types, 569 catalog
+-- values (565 + 4: refund_approved/rejected/cancelled/processing registered by 202607049800, audit
+-- 2026-08-10). Documented referential exceptions to the restrict default (30 Referential Action Standard):
 -- users.auth_user_id -> auth.users ON DELETE SET NULL (ADR-0011); trusted_devices / otp_challenges /
 -- totp_enrollments -> auth.users ON DELETE CASCADE (ADR-0012).
 
@@ -46,7 +47,7 @@ begin
     select count(*) into n from catalog_types;
     if n <> 67 then raise exception 'CHECK 6a FAILED: expected 67 catalog_types, found %', n; end if;
     select count(*) into n from catalog_values;
-    if n <> 565 then raise exception 'CHECK 6b FAILED: expected 565 catalog_values, found %', n; end if;
+    if n <> 569 then raise exception 'CHECK 6b FAILED: expected 569 catalog_values, found %', n; end if;
 
     -- 7. Referential Action Standard: every public FK is restrict/no-action, except the documented
     --    exceptions (users.auth_user_id set null; 3 auth-support cascades to auth.users).
@@ -76,6 +77,6 @@ begin
     select count(*) into n from pg_trigger where tgname in ('events_append_only', 'security_events_append_only');
     if n <> 2 then raise exception 'CHECK 9 FAILED: expected 2 append-only triggers, found %', n; end if;
 
-    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver, 67/565 catalog, FK standard, updated_at triggers, append-only audit)';
+    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver, 67/569 catalog, FK standard, updated_at triggers, append-only audit)';
 end
 $$;
