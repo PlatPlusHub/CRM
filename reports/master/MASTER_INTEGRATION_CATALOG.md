@@ -3,6 +3,19 @@
 Class: **LIVING-AUTHORITATIVE** (evolve in place; one SSOT row per integration — `GOVERNANCE.md §2/§4`).
 Purpose: the single registry of every external-platform integration — direction, transport, ORVION surface, status, and owning decision record. Seeded 2026-07-17 at its recorded trigger (Phase 8 landed; `future-backlog.md` Adopt-Later). Platforms are **consumers** of ORVION's verified outcomes, never dependencies (`PROJECT_CONTEXT.md §11`).
 
+## 0. Supabase project topology (deployment targets — verify before every schema/data change)
+
+Recorded here, not a new document: this is ORVION's own deployment-target registry, the closest existing fit to "external targets ORVION connects to" (`GOVERNANCE.md §6.8` — evolve an existing authoritative home rather than create a new one). Owner-provided ground truth, 2026-08-10.
+
+| Project | Ref | Account | Organization | Role | Status |
+|---|---|---|---|---|---|
+| **ORVION** (primary) | `vrvtsxexkiiiivlkdxzp` | platplustours@gmail.com | Platinum Plus Tours (`zvlxdabpjuunyfigkhci`) | **Primary** | ACTIVE_HEALTHY. **Not reachable from this repository's current Supabase MCP connection** — confirmed 2026-08-10: absent from `list_projects`; a direct `get_project` call returns a permission error. That connection is scoped to the `shehab.nim@gmail.com` account only. **SPEC-120 deployment status on this project is unverified.** |
+| **orvion-core** (secondary / mirror) | `brplkqmbzffpxqgkkdzo` | shehab.nim@gmail.com | Orvion (`emjkklugmzgyuzuabell`) | **Secondary — mirrors primary** | ACTIVE_HEALTHY. SPEC-120 deployed and migration-version-reconciled 2026-08-10 (git history, `changes/SPEC-120-*.md`). Reachable from this repository's current Supabase MCP connection. |
+| orvion-core *(deleted)* | `hzyuczdlwalectfduehw` | platplustours@gmail.com | Platinum Plus Tours | — | **DELETED — intentionally. Never use, restore, link, or reference.** |
+| ORVION *(created by mistake)* | `wgsmrjcuhjdksfpdbhre` | shehab.nim@gmail.com | Orvion (`emjkklugmzgyuzuabell`) | — | Created 2026-08-09; zero migrations; not an ORVION target. Owner intends manual deletion — never delete automatically. |
+
+**Synchronization rule (owner-ratified 2026-08-10):** the primary and secondary/mirror must remain synchronized — every schema/migration/RPC/policy/function/trigger/catalog change applies to both wherever technically applicable, GitHub/local migrations as the source of truth, applied there first. Neither project receives an undocumented direct change. **Verify the exact project ref before every schema-changing or destructive operation against either** — never assume which project is the target.
+
 ## 1. Registry
 
 | Integration | Direction | Transport | ORVION surface | Status | Decision |
