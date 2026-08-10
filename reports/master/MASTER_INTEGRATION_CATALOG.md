@@ -60,8 +60,9 @@ One workflow, schedule-triggered (e.g. every 15 min). All DB calls use the `orvi
 
 Monitoring: `offline_conversion_deliveries` rows + `offline_conversion_sent/failed` events are the health signal; a staleness/failure report is a Tier-A view away if operations wants one (Earn-It: build on demand).
 
-## 3. Owner-exclusive setup (the only remaining Phase-8 inputs)
+## 3. Owner-exclusive setup (remaining Phase-8 inputs)
 
-1. Google Cloud OAuth client authorized for the **Data Manager API** (`datamanager` scope) + the Ads account linked in Data Manager — owner authorizes; credential stored **only** in n8n.
-2. Enable login on the integration role (operator, never in the repo): `alter role orvion_integration login password '…';` — then create the n8n Postgres credential with it.
-3. n8n reachable with both credentials → build the §2 workflow → run once against a test conversion → confirm `sent` + the `offline_conversion_sent` event.
+1. Google Cloud OAuth client authorized for the **Data Manager API** (`datamanager` scope) + the Ads account linked in Data Manager — owner authorizes; credential stored **only** in n8n. Current official Google documentation (verified 2026-08-10) states a user-OAuth client requesting this scope typically requires Google OAuth verification — budget review time accordingly.
+2. **Google Ads account-side Enhanced Conversions for Leads setup** (verified against current Google Ads Help, 2026-08-10 — not previously documented here): enable "Turn on enhanced conversions" (Goals → Settings), agree to the Google Ads Data Processing Terms, and create the Conversion Action(s) that will receive ORVION's conversions. **OPEN DECISION — owner, not yet made:** how ORVION's five `offline_conversion_event_type` codes (`qualified_phone_call`, `qualified_lead`, `booking_created`, `payment_received`, `ticket_issued`) map to Google Ads Conversion Action(s) — one action per code, grouped, or otherwise. Referenced but not resolved by §2 step 4's "`conversion_event_type_code`-mapped action."
+3. Enable login on the integration role (operator, never in the repo): `alter role orvion_integration login password '…';` — then create the n8n Postgres credential with it. **OPEN DECISION — owner, not yet made:** whether this targets Primary (`vrvtsxexkiiiivlkdxzp`) or Secondary (`brplkqmbzffpxqgkkdzo`). `§0` establishes Secondary as "mirrors primary" but does not state which project serves live n8n traffic — not inferred here; the owner decides.
+4. n8n reachable with all credentials → build the §2 workflow → run once against a test conversion → confirm `sent` + the `offline_conversion_sent` event.
