@@ -215,7 +215,7 @@ Outputs:
 
 # Phase 8: Offline Conversion
 
-Status: In Progress — CURRENT phase (started 2026-07-17 after Phase 9 Tier A completed). ORVION-side pipeline COMPLETE (capture→map→claim→ack, migrations 049200/049300/049400) and Integration Catalog seeded. Production database deployment complete: remote migrations match local through `202607049600`. Remaining: n8n workflow activation (owner-exclusive: Google OAuth + `orvion_integration` password).
+Status: In Progress — CURRENT phase (started 2026-07-17 after Phase 9 Tier A completed). ORVION-side pipeline COMPLETE (capture→map→claim→ack, migrations 049200/049300/049400) and Integration Catalog seeded. Production database deployment complete and verified synchronized on both authoritative Supabase projects (`MASTER_INTEGRATION_CATALOG.md §0`): remote migrations match local through `202607049900` (includes SPEC-120/121). Remaining: n8n workflow activation (owner-exclusive: Google OAuth + `orvion_integration` password).
 
 Objective:
 
