@@ -11,6 +11,17 @@
         "@modelcontextprotocol/server-postgres",
         "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
       ]
+    },
+    "supabase-primary": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--project-ref=vrvtsxexkiiiivlkdxzp"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
     }
   }
 }
