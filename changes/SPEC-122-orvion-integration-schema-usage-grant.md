@@ -103,6 +103,22 @@ Commits: `6fdaa2c` (repo-side migration + guard, committed and pushed in an earl
 
 Blocker: Primary is not reachable from this session by any available tool. Resolving requires either a future session with the `supabase-primary` MCP server connected, or the owner applying `supabase/migrations/202607050000_grant_orvion_integration_schema_usage.sql` to primary directly.
 
+### 2026-08-15 — Claude (Sonnet 5) — Primary deployment run (resolves the blocker above)
+
+Outcome: Complete — Primary deployed, Primary/Secondary synchronized.
+
+Step results:
+- `supabase-primary` was switched from local-stdio/PAT to the official Supabase Remote MCP over OAuth (owner-directed, separate step; full detail `.workstation/manifest.md §4`) and independently verified live with a real Management API call (`list_migrations`) before any write was attempted.
+- Owner approved this exact single step: "proceed with the next single step: deploy SPEC-122 to Primary."
+- Pre-deploy state verified on Primary, not assumed: ref `vrvtsxexkiiiivlkdxzp` confirmed; 88 migrations (`202607050000` absent); `has_schema_privilege('orvion_integration','app','USAGE')` confirmed `false`.
+- Applied `grant usage on schema app to orvion_integration;` via `apply_migration`. Landed under an MCP-assigned timestamp version; reconciled to `202607050000` via `update supabase_migrations.schema_migrations set version = ...` — same technique used for Secondary above.
+- Post-deploy verified on Primary: `202607050000` present; `has_schema_privilege(...) = true`; 89 migrations total.
+- Cross-checked Secondary in the same session (read-only): ref `brplkqmbzffpxqgkkdzo` confirmed; `202607050000` present; `has_schema_privilege(...) = true` (re-verified live, not assumed from the earlier entry).
+- Confirmed synchronization: both projects show 89/89 migrations, version-for-version and name-for-name identical.
+- Noted, not a defect in this CR's scope: Primary's OAuth connection returned `Unauthorized` on data-access tools twice earlier this session (initial authentication, then again after a first disconnect+reauthenticate) before a second disconnect+reauthenticate succeeded with no configuration change — matches upstream report `supabase/supabase#38926`. Recorded as a live-connection reliability caveat in `MASTER_INTEGRATION_CATALOG.md §0/§4` and `.workstation/manifest.md §4`, not a blocker on this deployment (which was verified through successful, authenticated calls).
+
+Commits: (documentation/SSOT reconciliation for this run committed and pushed together with this entry — see repository history for the commit hash.)
+
 ---
 
 ## Verification Notes
