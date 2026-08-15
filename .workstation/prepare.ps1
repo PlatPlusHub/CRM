@@ -68,8 +68,8 @@ else { Write-Host "[SKIP] npm unavailable - restart shell so Node is on PATH, th
 
 Write-Host ""
 Write-Host "== MCP servers (manifest.md section 4) =="
-Write-Host "Configured in .mcp.json (context7, postgres-local) - auto-loaded by Claude Code on start."
-Write-Host "Cloud Supabase MCP: add @supabase/mcp-server-supabase with SUPABASE_ACCESS_TOKEN once a cloud project exists."
+Write-Host "Configured in .mcp.json (context7, postgres-local, supabase-primary) - auto-loaded by Claude Code on start."
+Write-Host "supabase-primary uses the official Supabase Remote MCP over OAuth (no token/env var needed) - run /mcp in Claude Code and authenticate on first use. See .workstation/manifest.md section 4."
 
 Write-Host ""
 Write-Host "== Verify =="

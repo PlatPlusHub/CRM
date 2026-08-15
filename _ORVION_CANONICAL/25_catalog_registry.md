@@ -70,7 +70,8 @@ Used for:
 Status:
 
 - Currencies: Implemented — see `31_schema_draft.md`, Reference Tables (`currencies`).
-- Countries, Cities, Languages, Nationalities, Airports: Not yet implemented as dedicated reference tables; current fields (e.g. `nationality_code`, `destination_country_code`, `preferred_language_code`) remain free-standing codes pending a documented business requirement for validated lookups at that granularity.
+- Countries, Languages, Nationalities: **Implemented** as dedicated reference tables (`countries`, `languages`, `nationalities`) — `31_schema_draft.md`, migration `202607042000_create_geo_reference_tables.sql` (SPEC-037). Actively referenced by FK from `customers.preferred_language_code`, `passengers.nationality_code`, `passengers.passport_issuing_country_code`, and `bookings.destination_country_code`. Corrected 2026-08-16 (pre-Phase-8-completion audit) — this line previously said "not yet implemented" for all five, which had gone stale for these three.
+- Cities, Airports: Not yet implemented as dedicated reference tables; current fields remain free-standing codes pending a documented business requirement for validated lookups at that granularity. (Still accurate — unchanged.)
 
 Rule:
 
