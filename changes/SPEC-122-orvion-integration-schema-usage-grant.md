@@ -91,6 +91,18 @@ Step results:
 
 Commits: (not committed as of this entry — left for explicit owner instruction, per this session's established pattern)
 
+### 2026-08-15 — Claude (Sonnet 5) — deployment run
+
+Outcome: Blocked (partial — secondary complete, primary blocked by connector availability, not skipped)
+
+Step results:
+- Deploy `202607050000` to Secondary (`brplkqmbzffpxqgkkdzo`): Applied and verified — `has_schema_privilege` confirmed `false` before, `true` after; MCP-assigned version reconciled to `202607050000`; `list_migrations` re-confirms 89/89 version-for-version. Full detail: `MASTER_CERTIFICATION_STATUS.md` certification history (2026-08-15 entry), `MASTER_INTEGRATION_CATALOG.md §4`.
+- Deploy `202607050000` to Primary (`vrvtsxexkiiiivlkdxzp`): Not attempted — no `supabase-primary` MCP server was connected in this session (confirmed via `ToolSearch` and `list_projects` returning only the secondary). No workaround attempted; reported as a blocker per `AGENTS.md` "no guessing."
+
+Commits: `6fdaa2c` (repo-side migration + guard, committed and pushed in an earlier run this session, before this deployment run).
+
+Blocker: Primary is not reachable from this session by any available tool. Resolving requires either a future session with the `supabase-primary` MCP server connected, or the owner applying `supabase/migrations/202607050000_grant_orvion_integration_schema_usage.sql` to primary directly.
+
 ---
 
 ## Verification Notes
