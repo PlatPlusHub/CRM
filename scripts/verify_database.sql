@@ -77,6 +77,24 @@ begin
     select count(*) into n from pg_trigger where tgname in ('events_append_only', 'security_events_append_only');
     if n <> 2 then raise exception 'CHECK 9 FAILED: expected 2 append-only triggers, found %', n; end if;
 
-    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver, 67/569 catalog, FK standard, updated_at triggers, append-only audit)';
+    -- 10. Within ORVION's own schemas (app/public/reporting — never Supabase's platform-internal
+    --     schemas such as realtime/storage/auth, which ORVION does not own and did not grant), no
+    --     role holds function EXECUTE without schema USAGE (an unusable, silently-broken grant).
+    --     Guards the exact defect class found 2026-08-15: orvion_integration had EXECUTE on 4
+    --     app-schema RPCs but no USAGE on app itself, discovered only by an actual RPC call
+    --     failing with "permission denied for schema app" — the function-level grant alone gave
+    --     no warning. Generalized beyond that one role/schema so any future integration role hits
+    --     this at db-reset time, not at first live call (SPEC-122).
+    select string_agg(distinct pg_get_userbyid(g.grantee) || ' missing USAGE on schema ' || ns.nspname, ', ') into bad
+        from pg_proc p
+        join pg_namespace ns on ns.oid = p.pronamespace
+        cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) as g(grantor, grantee, privilege_type, is_grantable)
+        where g.privilege_type = 'EXECUTE'
+          and g.grantee <> 0  -- 0 = PUBLIC pseudo-grantee; schema USAGE is checked per named role only
+          and ns.nspname in ('app', 'public', 'reporting')
+          and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
+    if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
+
+    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver, 67/569 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;
