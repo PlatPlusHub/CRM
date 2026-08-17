@@ -13,6 +13,21 @@ function Get-Field($text, $label) {
     return $null
 }
 
+# Multi-line variant. "Next capability:" became an ordered multi-step block on 2026-08-17;
+# Get-Field captures only its first line, which would ship a cold-start map naming the objective
+# but omitting the steps that qualify it (verify-tools-first, read the mandatory corrections,
+# read the built artifact back). Captures through to the next documented manifest label or
+# markdown structure. TERMINATOR SET IS DUPLICATED, DELIBERATELY, in
+# scripts/check_repository_consistency.ps1 Check 7, which compares this exact value -- change
+# both together; they are cross-referenced in each other's comments.
+function Get-Block($text, $label) {
+    $terminators = '---|#\s|Prior phases\b|Current Phase:|Current Module:|Active Change Request:|Last Completed:|Context & remaining'
+    $pattern = "(?ms)^" + [regex]::Escape($label) + "\s*(?<v>.*?)(?=\r?\n(?:$terminators)|\z)"
+    $m = [regex]::Match($text, $pattern)
+    if ($m.Success) { return $m.Groups['v'].Value.Trim() }
+    return $null
+}
+
 # Read as UTF-8 explicitly: under Windows PowerShell 5.1 the default read codepage is ANSI,
 # which corrupts em-dashes/Unicode in the manifest into mojibake (e.g. "â€”"). Forcing UTF-8
 # makes the generator produce a clean ai-map.json regardless of the host PowerShell edition.
@@ -45,7 +60,7 @@ $map = [ordered]@{
         phase                 = Get-Field $manifest "Current Phase:"
         active_change_request = Get-Field $manifest "Active Change Request:"
         last_completed        = Get-Field $manifest "Last Completed:"
-        next_capability       = Get-Field $manifest "Next capability:"
+        next_capability       = Get-Block $manifest "Next capability:"
     }
     authority = [ordered]@{
         execution_conduct   = "AGENTS.md"

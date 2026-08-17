@@ -46,7 +46,7 @@ Single discoverable list of every automatic check. If one fails, CI is red and t
 | Docs-4 | Every report declares its document class | Check 4 | `repository-consistency.yml` |
 | Docs-5 | `manifest.md` stays lean (≤70 lines) — current-state only, no changelog creep | Check 5 | `repository-consistency.yml` |
 | Docs-6 | Roadmap ↔ manifest phase agreement (which phase is current) | Check 6 | `repository-consistency.yml` |
-| Docs-7 | `ai-map.json` stays fresh vs. manifest — current phase, `Last Completed`, **and (2026-08-17) `live_state.next_capability` compared by value** | Check 7 | `repository-consistency.yml` |
+| Docs-7 | `ai-map.json` stays fresh vs. manifest — current phase, `Last Completed`, **and (2026-08-17) the whole multi-line `Next capability:` block compared by value, steps included** | Check 7 | `repository-consistency.yml` |
 | Docs-8 | Supabase dual-project topology registry (`MASTER_INTEGRATION_CATALOG.md §0`) retains both authorized project refs, retains disqualifying wording for non-target refs, and doesn't contradict `MASTER_CERTIFICATION_STATUS.md`'s stated sync status | Check 8 | `repository-consistency.yml` |
 
 Adding a new invariant is the standard permanent-guard response (GOVERNANCE §18 discovery-to-guard) — extend the pgTAP suite or the consistency script, never a one-off manual check.

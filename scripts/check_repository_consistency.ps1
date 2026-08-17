@@ -262,7 +262,14 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
     # map, so compare its VALUE — extracted exactly as generate-ai-map.ps1 extracts it (the first line
     # of the manifest's "Next capability:" field). Whitespace is collapsed before comparison so
     # trivial reflowing does not cry wolf; any real change of intent fails loudly.
-    $mfNext = [regex]::Match($mfRaw2, '(?m)^Next capability:\s*(?<v>.+?)\s*$')
+    # Extended 2026-08-17 to the WHOLE multi-step block, not just its headline: the steps that
+    # qualify the objective (verify-tools-first, read the mandatory §2a corrections, read the
+    # built workflow back) are the load-bearing part, and a map carrying only line 1 would drop
+    # exactly the guardrails that the preceding Phase-8 failures produced. TERMINATOR SET IS
+    # DUPLICATED, DELIBERATELY, from Get-Block in scripts/generate-ai-map.ps1 -- change both
+    # together. Divergence surfaces immediately here as a loud mismatch, never as silent drift.
+    $terminators = '---|#\s|Prior phases\b|Current Phase:|Current Module:|Active Change Request:|Last Completed:|Context & remaining'
+    $mfNext = [regex]::Match($mfRaw2, "(?ms)^Next capability:\s*(?<v>.*?)(?=\r?\n(?:$terminators)|\z)")
     if ($mfNext.Success) {
         $aiNext = $null
         try { $aiNext = (ConvertFrom-Json $aiRaw).live_state.next_capability } catch { $aiNext = $null }
