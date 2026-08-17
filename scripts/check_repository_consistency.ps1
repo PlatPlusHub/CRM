@@ -254,6 +254,25 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
         Write-Host "  AI-MAP STALE: ai-map.json does not name manifest Last Completed $($lastSpec.Groups['s'].Value) — regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
         $issues++
     }
+    # Verified failure class (2026-08-17): the two checks above key on the phase NUMBER and the
+    # Last-Completed SPEC id — tokens that survive most edits — so ai-map's live_state.next_capability
+    # drifted a full day out of date while this check reported CLEAN. A fresh agent reading the
+    # machine-readable cold-start map would have executed a superseded Phase-8 objective (creating an
+    # OAuth client that already existed). The next step is the single most action-guiding field in the
+    # map, so compare its VALUE — extracted exactly as generate-ai-map.ps1 extracts it (the first line
+    # of the manifest's "Next capability:" field). Whitespace is collapsed before comparison so
+    # trivial reflowing does not cry wolf; any real change of intent fails loudly.
+    $mfNext = [regex]::Match($mfRaw2, '(?m)^Next capability:\s*(?<v>.+?)\s*$')
+    if ($mfNext.Success) {
+        $aiNext = $null
+        try { $aiNext = (ConvertFrom-Json $aiRaw).live_state.next_capability } catch { $aiNext = $null }
+        $aiNextN = if ($null -eq $aiNext) { '' } else { ($aiNext -replace '\s+', ' ').Trim() }
+        $mfNextN = ($mfNext.Groups['v'].Value -replace '\s+', ' ').Trim()
+        if ($aiNextN -ne $mfNextN) {
+            Write-Host "  AI-MAP STALE: ai-map.json live_state.next_capability does not match the manifest's current 'Next capability:' — a fresh agent would follow a superseded objective; regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
+            $issues++
+        }
+    }
 }
 
 Write-Host "== Check 8: Supabase project-topology registry integrity ==" -ForegroundColor Cyan
