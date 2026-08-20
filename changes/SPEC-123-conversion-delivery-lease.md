@@ -160,7 +160,20 @@ Verdict: **Confirmed Complete** — every claim below was executed against the l
 
 **7. Clean-state confirmation.** After the final `db reset` the local database holds 0 tenants and 0 deliveries — every fixture used above is gone. No synthetic conversion or click identifier was ever created outside a local rolled-back transaction, and none reached Google.
 
-Recommendation to human: Status Complete. **Not yet deployed to Primary/Secondary** — that is a separate, owner-gated step (`AGENTS.md §4` step 11).
+Recommendation to human: Status Complete.
+
+### 2026-08-20 — Claude (Opus 5) — deployment run
+
+Outcome: **Complete — deployed and verified live on BOTH Primary and Secondary.** Owner-approved: *"Deploy SPEC-123 to Primary and Secondary."*
+
+- Target refs re-verified immediately before any write (`MASTER_INTEGRATION_CATALOG.md §0` rule 6): Primary `vrvtsxexkiiiivlkdxzp` (via `get_project_url`), Secondary `brplkqmbzffpxqgkkdzo` (via `list_projects`). Neither retired ref was contacted.
+- Pre-deploy state captured on both and identical: 89 migrations, latest `202607050000`, no `202607050100`, no `LEASE_EXPIRED` in the function, no partial index.
+- Applied the verbatim migration body to both. MCP-assigned versions (`20260820153356` Primary, `20260820153447` Secondary) reconciled to `202607050100`, matching the repository filename (SPEC-122 precedent).
+- Post-deploy verified on both: 90 migrations; `202607050100` present; function contains the `LEASE_EXPIRED` sweep **and** `for update of oc skip locked`; partial index present; `orvion_integration` holds `EXECUTE` + schema `USAGE`. **Behavioral proof:** `app.claim_conversion_deliveries('google_ads', 50)` executed successfully on each, returning 0 rows (correct against empty tables).
+- **Synchronization proven by fingerprint, not assertion:** the ordered `version:name` manifest of all 90 migrations hashes identically on both — `dffb38c1fcc5457da1b6f35dbec0c5dc`.
+- No data created or modified; `tenants` / `offline_conversions` / `offline_conversion_deliveries` all remain 0 rows on both.
+
+Full deployment record: `MASTER_INTEGRATION_CATALOG.md §4` ("SPEC-123 deployment — 2026-08-20").
 
 ---
 
