@@ -321,9 +321,12 @@ if (-not (Test-Path $catalogPath)) {
         $issues++
     }
     # Cross-file contradiction (same pattern as Check 2): the certification ledger must not claim
-    # CERTIFIED (synchronized) production-database status while the topology registry itself still
-    # says a project is unverified/unreachable — that combination means one doc was updated and the
-    # other wasn't, which is exactly the "only one project updated, INCOMPLETE" failure mode.
+    # CERTIFIED production-database status while the topology registry itself still says a project
+    # is unverified/unreachable — that combination means one doc was updated and the other wasn't.
+    # NOTE (2026-08-20): Primary and Secondary are permanently independent environments and are NOT
+    # synchronized; certification is per-project and no cross-project claim is made. This check is
+    # therefore about DOC-vs-DOC staleness only. It does NOT check parity between the two projects
+    # and must never be extended to do so (MASTER_INTEGRATION_CATALOG.md §0 rule 15).
     if (Test-Path $certPath) {
         $certRaw = Get-Content $certPath -Raw
         $prodRow = [regex]::Match($certRaw, '\|\s*\*\*Production database deployment\*\*\s*\|(?<row>[^\n]*)\|')

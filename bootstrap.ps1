@@ -1,15 +1,16 @@
 # ORVION Remote Bootstrap - the ONLY thing that runs before the repository exists.
-# Almost no logic: ensure Git, clone ORVION from GitHub, then hand off to the in-repo provisioner.
+# Almost no logic: ensure Git, clone the ORVION repository (PlatPlusHub/CRM - this repository, the
+# CRM environment) from GitHub, then hand off to the in-repo provisioner.
 # ALL real setup logic lives in the repository (the permanent source of truth). This file is
 # committed in the repo; the raw URL only delivers it for the single pre-clone step.
 #
 # On a brand-new machine, open PowerShell and run ONE command:
-#   irm https://raw.githubusercontent.com/Shehabhub/ORVION/main/bootstrap.ps1 | iex
+#   irm https://raw.githubusercontent.com/PlatPlusHub/CRM/main/bootstrap.ps1 | iex
 #
 # (Docker Desktop is still installed by prepare.ps1; start it once when prompted.)
 $ErrorActionPreference = "Stop"
-$RepoUrl = "https://github.com/Shehabhub/ORVION.git"
-$Target  = Join-Path $HOME "ORVION"
+$RepoUrl = "https://github.com/PlatPlusHub/CRM.git"
+$Target  = Join-Path $HOME "CRM"
 
 Write-Host "== ORVION bootstrap ==  target: $Target"
 

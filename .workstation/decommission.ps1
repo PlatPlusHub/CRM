@@ -32,5 +32,5 @@ Start-Process powershell -ArgumentList "-NoProfile", "-Command", "Start-Sleep 2;
 
 Write-Host ""
 Write-Host "ORVION will be removed from this machine momentarily. Recover anytime with one command:"
-Write-Host "  irm https://raw.githubusercontent.com/Shehabhub/ORVION/main/bootstrap.ps1 | iex"
+Write-Host "  irm https://raw.githubusercontent.com/PlatPlusHub/CRM/main/bootstrap.ps1 | iex"
 exit 0

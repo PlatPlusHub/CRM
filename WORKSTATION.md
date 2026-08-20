@@ -25,11 +25,12 @@ are not yet pushed.)
 Open PowerShell on a fresh Windows 11 machine (no USB, no manual download) and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/Shehabhub/ORVION/main/bootstrap.ps1 | iex
+irm https://raw.githubusercontent.com/PlatPlusHub/CRM/main/bootstrap.ps1 | iex
 ```
 
 `bootstrap.ps1` (committed in this repo; the URL just delivers it) does the minimum needed *before* the
-repo exists: ensure Git (install via `winget` if missing), clone ORVION from GitHub into `~/ORVION`,
+repo exists: ensure Git (install via `winget` if missing), clone this repository — **`PlatPlusHub/CRM`,
+the CRM environment; never `Shehabhub/ORVION`, which is a separate environment** — from GitHub into `~/CRM`,
 then hand off to the in-repo provisioner `.workstation/prepare.ps1`. **All real setup logic stays in
 the repo** — the bootstrap only downloads the repository and transfers execution to it. Start Docker
 Desktop once when prompted. When `prepare` reports a clean `doctor`, return to `README.md` and develop.
