@@ -175,6 +175,16 @@ Outcome: **Complete — deployed and verified live on BOTH Primary and Secondary
 
 Full deployment record: `MASTER_INTEGRATION_CATALOG.md §4` ("SPEC-123 deployment — 2026-08-20").
 
+### 2026-08-20 — Claude (Opus 5) — Secondary apply reverted (environment separation)
+
+Outcome: **Primary unchanged and authoritative; the Secondary apply reverted.** The entry above is retained as an accurate record of what happened at the time; this entry supersedes its "live on both projects" outcome.
+
+The owner subsequently ratified that Primary and Secondary are **separate, independent environments** — `PlatPlusHub/CRM` → Primary only, `Shehabhub/ORVION` → Secondary only — and **permanently revoked** the rule under which this CR was applied to Secondary. That apply is therefore reclassified as unintended and was reverted in full: the function restored **byte-exact** to its `202607049200` definition (md5 `f5670f22e5182695769b7719c467018f`), the lease index dropped, and the ledger returned to 89 rows ending at `202607050000`. Verified live on Secondary afterwards.
+
+**SPEC-123 remains fully deployed and correct on Primary** — 90 migrations, function md5 `746695b6fc018c2d13c0d6903ba0ee1c`, lease and index present, re-verified unchanged after the Secondary work. PH8-1 is resolved on Primary, which is the only environment this repository owns.
+
+The Secondary corrective was applied with `execute_sql`, **not** `apply_migration`, and was deliberately **not** added to `supabase/migrations/` — adding it would apply the revert to Primary on the next `db reset` and silently undo PH8-1 there. Full record: `MASTER_INTEGRATION_CATALOG.md §4`.
+
 ---
 
 ## Review Gate
