@@ -100,6 +100,34 @@ A pre-build review of the §2 contract against the actual migration source found
 
 Class note: this section is the durable handoff record for the in-progress Data Manager validation sub-step of Phase 8, so a new session/agent can resume without conversational context. Classification tags follow this session's convention: **VERIFIED** (independently confirmed from repo or current official docs this session), **USER-CONFIRMED** (owner-stated, not independently verifiable by an agent), **RECOMMENDATION** (engineering proposal, not yet owner-ratified), **OPEN DECISION** (requires owner approval), **NOT-CONFIRMED** (external claim not independently checked this session — must not be treated as fact; a different concept from this file's `§0` Supabase-deployment status convention). Last verified: 2026-08-15.
 
+### Google Ads transport — ADR-0023 is now the ONLY path, not merely the chosen one (verified 2026-08-21)
+
+**The Google Ads API route to offline conversions is closed to ORVION, permanently.** Verified this date against `developers.google.com/google-ads/api/docs/conversions/upload-offline` and the 2026-05-15 Google Ads Developer Blog post *"Changes to Offline Click Conversion Import Support in the Google Ads API"*:
+
+- **Effective 15 June 2026** — already past — offline conversion imports and enhanced conversions for leads are **migrated to the Data Manager API and blocked in the Google Ads API**.
+- `UploadClickConversion` requests now **fail if the developer token has not previously sent** offline-conversion or enhanced-conversions-for-leads requests. Tokens with no such request between January and June 2026 were **not allowlisted** for legacy access.
+- Google's own instruction for this exact situation: *"Organizations that have never uploaded offline conversions through the Google Ads API must migrate to the Data Manager API instead of attempting to implement the Google Ads API approach."*
+
+**What this means for ORVION specifically.** ORVION has never sent an `UploadClickConversion` request — it has zero conversions and no workflow — so its developer token cannot have been allowlisted and the legacy path is unavailable. Three consequences worth stating plainly:
+
+1. **ADR-0023 is validated by events, not merely still defensible.** The Data Manager API was chosen in 2026-07 as the better transport; it is now the only one. Nothing in the Phase-8 design needs revisiting on this axis.
+2. **There is no fallback.** A future session must not reach for `UploadClickConversion` if the Data Manager integration proves awkward — that route will simply fail, and its failure mode is a token-allowlist rejection rather than an obvious "unsupported" error.
+3. The related April 2026 change — Google Ads now accepting user-provided data from website tags, Data Manager and API connections without choosing between implementation methods — removes the former GTM/GA4 coexistence concern recorded in the Phase-8 risks.
+
+### Google Cloud environment — verified 2026-08-21
+
+Inspected directly rather than assumed; no credential was read, printed, rotated or modified.
+
+| Item | Verified state |
+|---|---|
+| SDK | Google Cloud SDK **580.0.0**, core `2026.08.07` |
+| Active account | `platplustours@gmail.com` — the tenant/customer account, matching `§0`'s account-identity labelling |
+| Active project | `orvion-data-manager` — matches the project recorded in `§3` |
+| **`datamanager.googleapis.com`** | **ENABLED** — the `§3` claim is now independently confirmed rather than owner-reported |
+| Application Default Credentials | Present (`%APPDATA%/gcloud/application_default_credentials.json`) |
+
+Also enabled on the project: BigQuery and its satellites, Dataform, Dataplex, Datastore, Logging, Monitoring, Cloud Trace. None of these is used by ORVION; they are Google's default enablement for the project and are recorded here only so a future session does not mistake them for ORVION dependencies.
+
 ### Operational hazard — `apply_migration` assigns its OWN ledger version (discovered 2026-08-21, must be reconciled after every apply)
 
 **The Supabase MCP `apply_migration` tool does not use the repository's migration filename as the ledger version — it stamps a fresh 14-digit `YYYYMMDDHHMMSS` timestamp of the moment it runs.** Applying `202607050200_restore_least_privilege_grant_model.sql` produced a Primary ledger row versioned `20260821123512`. The *name* was preserved; only the version diverged. All 90 prior rows follow this repository's 12-digit `2026MMDDHHMM` convention, so the outlier is easy to miss by counting (both sides said 91) and only visible by comparing version strings.
