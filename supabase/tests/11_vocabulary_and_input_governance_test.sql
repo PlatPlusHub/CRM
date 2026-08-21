@@ -11,7 +11,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(13);
+select plan(14);
 
 -- ---------------------------------------------------------------------------------------------
 -- Controlled vocabulary: format
@@ -125,17 +125,35 @@ select is(
   'app.normalize_phone output always satisfies the customers phone CHECK');
 
 -- ---------------------------------------------------------------------------------------------
--- Tripwire: catalog deactivation is NOT yet enforced at lookup.
--- None of the 27 catalog lookups across the app schema filter is_active, so a deactivated value
--- remains fully usable. That is harmless only while no value is deactivated, which is the case
--- today (0 rows). This assertion converts a silent latent defect into a loud one: the first time
--- anyone deactivates a catalog value, this test fails and forces the lookups to be fixed in the
--- same change. Recorded as finding CAT-4.
+-- CAT-4, now closed rather than tripwired.
+--
+-- This slot previously held a tripwire asserting that NO catalog value was deactivated, because
+-- deactivation was enforced nowhere: none of the ~27 in-RPC catalog lookups filters `is_active`, so
+-- a deactivated value stayed fully usable. The tripwire existed to make that silent defect loud.
+--
+-- SPEC-136 extended `app.enforce_catalog_codes` to every catalog-backed column, so deactivation is
+-- now enforced at the database on every write path. The tripwire is therefore replaced by the
+-- assertion it was standing in for -- and by its necessary counterpart, since "inactive values are
+-- unusable" would be a worse defect than the one it replaced if it also froze historical rows.
 -- ---------------------------------------------------------------------------------------------
-select is(
-  (select count(*)::int from public.catalog_values where not is_active),
-  0,
-  'no catalog value is deactivated (deactivation is not yet enforced by the lookups -- see CAT-4)');
+insert into public.tenants (id, name, slug, status)
+values ('aaaa1111-0000-0000-0000-00000000000c','Deactivation Co','deactivation-co','active');
+insert into public.customers (id, tenant_id, customer_type_code, full_name)
+values ('aaaa1111-0000-0000-0000-0000000000c9','aaaa1111-0000-0000-0000-00000000000c','person','Historic Customer');
+
+update public.catalog_values set is_active = false
+ where catalog_type_code = 'customer_type' and code = 'company';
+
+select throws_ok(
+  $$insert into public.customers (tenant_id, customer_type_code, full_name)
+    values ('aaaa1111-0000-0000-0000-00000000000c','company','New Co')$$,
+  '23514', null,
+  'a DEACTIVATED catalog value cannot be used for a new record on an RPC-written column either');
+
+select lives_ok(
+  $$update public.customers set full_name = 'Historic Customer, renamed'
+     where id = 'aaaa1111-0000-0000-0000-0000000000c9'$$,
+  'and a historical row is still editable -- deactivation stops new use, it does not freeze history');
 
 select * from finish();
 rollback;
