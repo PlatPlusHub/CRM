@@ -359,7 +359,18 @@ if (-not (Test-Path $catalogPath)) {
             # claude_ai_Supabase connector" while reachable via a different server) is expected
             # and must not cry wolf; "unverified" is the specific word this repo's convention
             # uses to mark a project's actual deployment status as unconfirmed.
-            if ($catalogRaw -match '(?i)\bunverified\b') {
+            #
+            # PRECISION FIX (2026-08-21 remediation pass): this scan is now scoped to §0, which is
+            # what its own failure message has always claimed ("MASTER_INTEGRATION_CATALOG.md §0
+            # still marks..."). It previously scanned the WHOLE file, so it fired on the word
+            # "unverified" wherever it appeared — including §4's n8n *credential* evidentiary
+            # boundary ("each credential's target ... remain unverified"), which says nothing about
+            # any Supabase project's deployment status. That is a false positive of exactly the
+            # cry-wolf kind the narrow-word choice above was made to avoid, and the correct fix is
+            # to scope the scan rather than to reword honest documentation to dodge the check.
+            $sec0 = [regex]::Match($catalogRaw, '(?ms)^##\s*0\.\s.*?(?=^##\s)')
+            $sec0Text = if ($sec0.Success) { $sec0.Value } else { $catalogRaw }
+            if ($sec0Text -match '(?i)\bunverified\b') {
                 Write-Host "  CROSS-FILE CONTRADICTION: MASTER_CERTIFICATION_STATUS.md claims production database deployment is CERTIFIED, but MASTER_INTEGRATION_CATALOG.md §0 still marks a project's status 'unverified' — one file was updated without the other" -ForegroundColor Yellow
                 $issues++
             }
