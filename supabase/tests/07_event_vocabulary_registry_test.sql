@@ -71,6 +71,16 @@ begin
                 v_tuple_items := regexp_split_to_array(v_tuple_match[1], '\s*,\s*');
                 if coalesce(array_length(v_tuple_items, 1), 0) >= v_ev_idx then
                     v_lit := regexp_replace(trim(v_tuple_items[v_ev_idx]), '^''|''$', '', 'g');
+                    -- PRECISION FIX (2026-08-21, SPEC-132): an UNQUOTED `null` in the event column
+                    -- is the SQL keyword, meaning "this transition emits no event" -- it is not an
+                    -- event literal and must not be required to exist in the catalog. That shape is
+                    -- real and canonical: app.advance_conversation's pending_customer /
+                    -- pending_internal transitions emit nothing, because 26_state_machines.md's
+                    -- Required Events list for conversations deliberately does not name an event for
+                    -- them. Without this exclusion the guard demanded a catalog value literally
+                    -- called "null". Nothing is masked: `null` is a reserved keyword and could never
+                    -- be a legitimate event code, and a QUOTED 'null' would still be scanned.
+                    continue when trim(v_tuple_items[v_ev_idx]) ~* '^null$';
                     if v_lit ~ '^[a-z][a-z0-9_]*$' then
                         insert into _event_literal_scan values (v_func.proname, v_lit);
                     end if;

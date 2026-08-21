@@ -27,7 +27,11 @@ insert into _transition_rpc_map (proname, catalog_type_code) values
     -- completeness assertion below FAILED the moment app.advance_task was created, which is
     -- precisely the behaviour it was designed for -- a new transition RPC cannot silently escape
     -- the status-vocabulary guard.
-    ('advance_task',         'task_status_code');
+    ('advance_task',         'task_status_code'),
+    -- Added 2026-08-21 (SPEC-132), again in response to this test failing rather than ahead of it.
+    ('advance_conversation',    'conversation_status_code'),
+    ('advance_complaint',       'complaint_status_code'),
+    ('advance_service_request', 'service_request_status_code');
 
 create temporary table _transition_literal_scan (proname text, side text, literal text) on commit drop;
 
