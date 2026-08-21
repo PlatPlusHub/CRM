@@ -29,7 +29,7 @@ Current Module: Phase-8 offline-conversion engine. The ORVION-side pipeline is i
 
 Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` deploys to **Primary `vrvtsxexkiiiivlkdxzp` only**. Secondary `brplkqmbzffpxqgkkdzo` is the `Shehabhub/ORVION` environment and is never a CRM target; schema and migration-count differences between the two are expected and valid. Detail: `MASTER_INTEGRATION_CATALOG.md §0/§4`.
 
-Live state (verified 2026-08-21): Primary at **102 migrations**, latest `202607051300`; repository, local stack and Primary agree by ledger fingerprint `2f1083ef29820eb33757821a5e0cb280`; 72 tables; 67/569 catalog types/values; all Phase-8 tables at 0 rows. n8n instance `plat.app.n8n.cloud`: **0 workflows**, 0 executions, 2 credentials. Only credential *existence* is agent-verified — targets, the `datamanager` scope, and whether either authenticates remain unverified (`MASTER_INTEGRATION_CATALOG.md §4`).
+Live state (verified 2026-08-21): Primary at **102 migrations**, latest `202607051300`; repository, local stack and Primary agree by ledger fingerprint `2f1083ef29820eb33757821a5e0cb280`; 72 tables; 68/583 catalog types/values; all Phase-8 tables at 0 rows; reference data seeded (82 countries / 82 nationalities / 20 languages). n8n instance `plat.app.n8n.cloud`: **0 workflows**, 0 executions, 2 credentials. Only credential *existence* is agent-verified — targets, the `datamanager` scope, and whether either authenticates remain unverified (`MASTER_INTEGRATION_CATALOG.md §4`).
 
 Active Change Request: None.
 
@@ -37,12 +37,11 @@ Open owner decisions: **SEC-1 + RPC-1** (write-path model — `authenticated` ho
 
 Last Completed: **SPEC-136 - complete catalog enforcement (2026-08-21)**, resolving CAT-4 and VOCAB-1's residual. SPEC-127 had covered only the 12 tables with no RPC; columns written by an RPC were validated on that path alone, so deactivation still did nothing and a direct PostgREST write bypassed the only check they had. Migration `202607051300` extends `app.enforce_catalog_codes` to every catalog-backed column - 35 catalog triggers now - closing both and materially reducing SEC-1's blast radius, without touching a single RPC. Deliberate exclusions recorded as **CAT-5** (sub-status, whose family depends on service type) and **CAT-6** (five columns with no catalog family at all). Suite 20 files / 127 tests PASS. Detail: `changes/SPEC-136-complete-catalog-enforcement.md`.
 
-Next capability: **Build and verify the n8n offline-conversion workflow via the n8n MCP.** Execute in this order:
-1. **Prove the n8n MCP tools respond** with a real data call — `✔ Connected` is a health check, not proof (`AGENTS.md §2`). If the tools are absent, run `claude mcp get n8n` from this repository directory and stop; only a fresh session can load them.
-2. **Read** `MASTER_INTEGRATION_CATALOG.md §2` (the contract, including the SPEC-123 delivery lease) and **`§2a` — EIGHT mandatory corrections.** The four highest-consequence: acking a `validateOnly` run as success permanently marks real conversions delivered that were never delivered (1); missing `transactionId` silently double-counts under the lease's at-least-once delivery (4); an unset request-level `encoding` risks Google reading the SHA-256 digests under the wrong encoding (7); and acking a row whose `fieldWarnings` entry rejected its identifier marks an unmatched conversion `sent` (8).
-3. **Independently inspect the live n8n instance** — confirm the workflow's non-existence yourself, and re-confirm the two owner-reported-only credentials now that MCP can see them.
-4. **Re-assess PH8-2…PH8-8** in `MASTER_GAP_REGISTER.md` before implementing. PH8-1 is RESOLVED and live (SPEC-123, Primary only).
-5. **Build only after 1–4**, then **verify node-by-node through a fresh MCP read-back** — never trust the creation call's own response.
+Next capability: **Foundation Completion Programme — the n8n workflow is GATED behind it (owner-directed 2026-08-21).** Do not build the workflow yet, however ready its contract looks; the owner has made Supabase completion the current stage. Remaining, in order:
+1. **AUDIT-3 — build the read-scope model.** All 76 RLS policies resolve to `tenant_id` and nothing else, while `28_permissions_matrix.md` defines five scope types and assigns one per permission ("Sales employee sees assigned leads only by default"). 14 `VIEW_*` permissions are enforced nowhere; a trainee can currently read every record in the tenant. Determinable from canon; needs its own CR because it rewrites every table's read path.
+2. **RPC-1 remainder — ~13 write permissions**: exchange rates, subscriptions, approval review, lead reassignment, booking-item costing, platform admin, and the system-set `task_overdue` sweep. Follow the SPEC-131/132/134 pattern.
+3. **CAT-5 / CAT-6**, then the table-by-table and configuration audits.
+The full remaining inventory with evidence is in `MASTER_GAP_REGISTER.md`. When the Foundation gate is genuinely earned, the workflow build steps are preserved in `MASTER_INTEGRATION_CATALOG.md §2/§2a` (eight mandatory corrections) — that contract is verified stable and did not move.
 
 Also open and autonomous: the Phase-10 Meta-ecosystem Learn-Before-Designing research + communications-domain Design Challenge.
 
