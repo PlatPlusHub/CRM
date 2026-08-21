@@ -428,6 +428,12 @@ Usage:
 - UI routing
 - Department-specific workflows
 
+Status:
+
+**Superseded by `department_type` — not implemented, and not to be implemented (recorded 2026-08-21, remediation pass).** Every one of the six values above is an exact subset of the live `department_type` catalog (`sales`, `operations`, `ticketing`, `finance`, `customer_service`, `administration`, plus `management`), which is seeded, FK-referenced by `departments.department_type_code`, and consumed by `app.create_department`. Introducing `functional_role_code` as a second catalog family would create two vocabularies for one concept and violate one-authority-per-concept (`GOVERNANCE.md §6.8`).
+
+This entry is retained rather than deleted, per the supersede-don't-delete convention already applied to `finance_approval_type` above. "Functional responsibility" and "UI routing" are served by `department_type` together with the separate `role_code` → `roles` table; if a future UI genuinely needs a functional axis independent of both department and RBAC role, that is a new design question, not a revival of this family.
+
 ## permission_key
 
 Ownership: System Catalog

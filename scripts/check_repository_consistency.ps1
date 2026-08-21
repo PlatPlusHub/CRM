@@ -176,12 +176,35 @@ Write-Host "== Check 5: manifest leanness (cold-boot cost) ==" -ForegroundColor 
 # manifest.md is re-read on every cold boot and its own rule forbids becoming a changelog.
 # A hard line budget mechanically enforces "keep it to current state only" — the drift that
 # accreted three dated narrative blocks (2026-07-16 cold-boot finding).
+#
+# GUARD-DESIGN FIX (2026-08-21 remediation pass): the line budget alone was a proxy that its own
+# invariant could walk straight past. At the time of the fix manifest.md passed this check at 60
+# lines while being 13,556 characters, because a single "Current Module" line had grown to 5,609
+# characters narrating three separate sessions of corrections — exactly the changelog the rule
+# forbids. Cold-boot cost is paid in characters (tokens), not in newlines, so the budget is now
+# enforced on BOTH axes, plus a per-line ceiling that catches the specific shape that defeated it:
+# one enormous paragraph. A guard that can be satisfied without satisfying its invariant is the
+# failure class the discovery-to-guard loop exists to eliminate (GOVERNANCE.md §18).
 $manifestBudget = 70
+$manifestCharBudget = 7000
+$manifestLineCharBudget = 1200
 $mfPath = Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md'
 if (Test-Path $mfPath) {
-    $mfLines = @(Get-Content $mfPath).Count
+    $mfContent = @(Get-Content $mfPath)
+    $mfLines = $mfContent.Count
+    $mfChars = (Get-Content $mfPath -Raw).Length
     if ($mfLines -gt $manifestBudget) {
         Write-Host "  MANIFEST BLOAT: manifest.md is $mfLines lines (budget $manifestBudget) — trim changelog-style narrative; it holds current state only, pointing to reports for history" -ForegroundColor Yellow
+        $issues++
+    }
+    if ($mfChars -gt $manifestCharBudget) {
+        Write-Host "  MANIFEST BLOAT: manifest.md is $mfChars characters (budget $manifestCharBudget) — cold-boot cost is paid in characters, not lines; move history to reports/ and git log" -ForegroundColor Yellow
+        $issues++
+    }
+    $mfLongest = ($mfContent | Measure-Object -Property Length -Maximum).Maximum
+    if ($mfLongest -gt $manifestLineCharBudget) {
+        $mfLongestNo = ($mfContent | Select-String -Pattern '.{1201,}' | Select-Object -First 1).LineNumber
+        Write-Host "  MANIFEST BLOAT: manifest.md line $mfLongestNo is $mfLongest characters (budget $manifestLineCharBudget) — a single field has become a changelog; state current state and link the history" -ForegroundColor Yellow
         $issues++
     }
 }
