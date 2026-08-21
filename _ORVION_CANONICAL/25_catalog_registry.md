@@ -1291,6 +1291,35 @@ Usage:
 
 - Document linking
 
+## related_entity_type
+
+Ownership: System Catalog
+
+Values:
+
+- customer
+- lead
+- booking
+- booking_item
+- quotation
+- invoice
+- payment
+- refund
+- passenger
+- supplier
+- conversation
+- complaint
+- service_request
+- document
+
+Usage:
+
+- The controlled vocabulary for the `related_entity_type` / `related_entity_id` pair on `tasks`, `notifications`, and `approval_requests` — the polymorphic "what is this about?" link defined in `29_relationship_map.md` ("Task may relate to any business entity").
+
+Added 2026-08-21 (SPEC-130). The pair previously had no vocabulary and no referential integrity: `'BoOkInG'` was accepted alongside `'booking'`, and the id could name a row in another tenant or no row at all. The values above are deliberately **singular**, matching `document_link_target_type` above and the values ORVION's own RPCs already write (`'lead'`, `'booking_item'`).
+
+Rule for extending this family: the code must be the singular form of an existing **tenant-scoped** table, because `app.enforce_entity_reference` resolves the target as `code || 's'`. This is verified, not assumed — `supabase/tests/15_entity_reference_test.sql` fails if any value in this family does not resolve to a real tenant-scoped table, so a value that breaks the rule is caught by the test suite rather than by an employee's first write.
+
 ---
 
 # Notification Catalogs

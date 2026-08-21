@@ -217,6 +217,15 @@ Relationship:
 - Task may relate to any business entity via `related_entity_type`/`related_entity_id`.
 - Task is owned by exactly one User, Department, and Branch.
 
+Enforcement (added 2026-08-21, SPEC-130 — the relationship above is unchanged; only its guarantees are new):
+
+- This polymorphic link is enforced by `app.enforce_entity_reference`, applied to `tasks`, `notifications`, and `approval_requests`.
+- `related_entity_type` must be an active value of the `related_entity_type` catalog family (`25_catalog_registry.md`), so spelling and casing variants are impossible.
+- `related_entity_id` must identify a row that actually exists in the named entity **and belongs to the same tenant** as the referring record.
+- The two columns must be set together or both left null; a half-set reference is refused.
+- "Any business entity" is therefore realised as "any entity registered in the `related_entity_type` family", which is extended by adding a catalog value rather than by a schema change — preserving the open-ended intent of this relationship while making it referentially sound.
+- The typed-FK pattern used by `document_links` was considered and deliberately not applied here: enumerating targets as columns would contradict the "any business entity" intent stated above and would make every newly relatable entity a schema migration.
+
 ## Customer To Complaint
 
 Relationship:
