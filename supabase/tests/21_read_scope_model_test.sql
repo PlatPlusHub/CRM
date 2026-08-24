@@ -88,16 +88,28 @@ insert into public.customers (id, tenant_id, customer_type_code, full_name, prim
   ('21000000-0000-0000-0000-0000000000d1','21000000-0000-0000-0000-000000000001','person','Shared Customer','+201005551234');
 
 -- One lead per branch. Alice owns Cairo's; Dave owns Alexandria's.
-insert into public.leads (id, tenant_id, branch_id, department_id, owner_user_id, assigned_user_id,
+insert into public.leads (id, tenant_id, branch_id, department_id, owner_user_id,
                           lead_source_code, lead_status_code, title) values
   ('21000000-0000-0000-0000-0000000000e1','21000000-0000-0000-0000-000000000001',
    '21000000-0000-0000-0000-00000000000a','21000000-0000-0000-0000-0000000000c1',
-   '21000000-0000-0000-0000-000000000011','21000000-0000-0000-0000-000000000011',
+   '21000000-0000-0000-0000-000000000011',
    'whatsapp','new','Cairo lead'),
   ('21000000-0000-0000-0000-0000000000e2','21000000-0000-0000-0000-000000000001',
    '21000000-0000-0000-0000-00000000000b','21000000-0000-0000-0000-0000000000c3',
-   '21000000-0000-0000-0000-000000000014','21000000-0000-0000-0000-000000000014',
+   '21000000-0000-0000-0000-000000000014',
    'whatsapp','new','Alexandria lead');
+
+-- SPEC-140 requires a lead's assignee to be backed by a current row in the timeline, so the fixture
+-- assigns the way production does: the lead exists first, the assignment is recorded, and only then
+-- does the lead point at its assignee. It cannot be collapsed into the INSERT above -- the history
+-- row has a foreign key to the lead, so the lead must exist before the assignment can be recorded.
+-- That is the rule working as intended: assignment is an act with a timestamp, not an attribute a
+-- record is born with.
+insert into public.lead_assignments (tenant_id, lead_id, assigned_user_id, is_current) values
+  ('21000000-0000-0000-0000-000000000001','21000000-0000-0000-0000-0000000000e1','21000000-0000-0000-0000-000000000011',true),
+  ('21000000-0000-0000-0000-000000000001','21000000-0000-0000-0000-0000000000e2','21000000-0000-0000-0000-000000000014',true);
+update public.leads set assigned_user_id = owner_user_id
+ where id in ('21000000-0000-0000-0000-0000000000e1','21000000-0000-0000-0000-0000000000e2');
 
 -- A Cairo booking and its invoice, for the finance axis.
 insert into public.bookings (id, tenant_id, branch_id, department_id, customer_id, owner_user_id,

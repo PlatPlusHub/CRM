@@ -80,6 +80,14 @@ begin
           and privilege_type = 'SELECT';
     if n <> 0 then raise exception 'CHECK 5e FAILED: booking_items carries a table-level SELECT grant, which overrides the column list'; end if;
 
+    -- 5f. Assignment-history integrity (canon 04: "No assignment history may be deleted"). Both
+    --     triggers are asserted by name: without the guard on `leads`, a direct UPDATE silently
+    --     erases the first employee, which is the exact defect SPEC-140 closed.
+    select count(*) into n from pg_trigger
+        where tgname in ('lead_assignments_immutable', 'leads_require_assignment_history',
+                         'customers_freeze_first_registration');
+    if n <> 3 then raise exception 'CHECK 5f FAILED: expected 3 assignment/first-registration triggers, found %', n; end if;
+
     -- 6. System catalog seed present
     select count(*) into n from catalog_types;
     if n <> 68 then raise exception 'CHECK 6a FAILED: expected 68 catalog_types, found %', n; end if;
