@@ -428,6 +428,40 @@ Write authority over identity, organization and configuration tables is enforced
 
 ---
 
+# Plan Gating Enforcement
+
+Implemented by SPEC-146 (`202607052500_plan_gating.sql`). Until then "Plan denial overrides user role
+permission" was documented and enforced nowhere: the matrix was seeded and nothing read it.
+
+`permissions.required_feature_code` names the feature a permission depends on (NULL = not
+plan-gated), and `app.has_permission` composes `app.plan_allows` after the role check. Because every
+RLS policy and every `app.authorize()` already resolve through that one function, the gate covers the
+RPC path, direct PostgREST reads and writes, future n8n calls and a future UI without any of them
+cooperating.
+
+The plan grants nothing — it only removes. A user still needs the role permission first.
+
+- **Fail-open on absence.** No subscription row, or a feature the matrix does not mention, means no
+  denial: a denial requires a plan that denies. Tenants cannot reach this state deliberately —
+  `subscriptions` writes need `MANAGE_SUBSCRIPTION`, which no role holds.
+- **Terminal states deny.** `suspended` / `cancelled` / `expired` deny every plan-gated permission.
+  `read_only` does not: restricting writes for a read-only tenant is subscription-*state* gating,
+  which `35 §8` keeps as a separate concern.
+- **Ungated on purpose:** `MANAGE_BRANCHES` (Starter excludes `multi_branch` but is entitled to one
+  branch — the `max_branches` ceiling is the right control); `crm` / `customers` / `basic_reporting`
+  (enabled on every plan); `automation` / `integrations` / `offline_conversion` / `ai_dashboard` (no
+  permission exists to attach to).
+- **Capability query.** `app.tenant_capabilities()` returns feature, enabled state and ceiling, so a
+  client asks rather than inferring capability from a failed write.
+- **Ceilings are readable, not enforced.** `app.plan_limit` exposes them; `usage_counters` is empty
+  and counting is a separate additive mechanism.
+
+`MANAGE_ROLES` and `MANAGE_PERMISSIONS` have no enforcement point by design: `roles`, `permissions`
+and `role_permissions` grant `authenticated` SELECT only, so no tenant user has a writable surface to
+guard.
+
+---
+
 # Next Step
 
 Create `29_relationship_map.md`.
