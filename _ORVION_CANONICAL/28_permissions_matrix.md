@@ -456,6 +456,13 @@ The plan grants nothing — it only removes. A user still needs the role permiss
 - **Ceilings are readable, not enforced.** `app.plan_limit` exposes them; `usage_counters` is empty
   and counting is a separate additive mechanism.
 
+**Revocation is complete, not partial (SPEC-148).** Because the `assigned` scope is itself
+permission-gated, an employee whose role assignment has expired — or whose role has been
+deactivated — loses sight of their OWN records too, not merely of the department queue.
+Deactivating the user (`users.is_active = false`) cuts `app.current_tenant_id()` at the root and so
+removes access to all 72 tables at once. Expiry (`user_role_assignments.ends_at`), role
+deactivation (`roles.is_active`) and user deactivation are three routes to the same result.
+
 `MANAGE_ROLES` and `MANAGE_PERMISSIONS` have no enforcement point by design: `roles`, `permissions`
 and `role_permissions` grant `authenticated` SELECT only, so no tenant user has a writable surface to
 guard.
