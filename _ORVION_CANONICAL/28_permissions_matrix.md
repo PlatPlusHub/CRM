@@ -375,6 +375,59 @@ The following permission actions always create events:
 
 ---
 
+# Read Scope Enforcement
+
+Implemented by SPEC-137 (`202607051400_read_scope_model.sql`). Until then the five scope types above
+were declarative only: every RLS policy resolved to `tenant_id`, and none of the `VIEW_*` permissions
+was enforced anywhere.
+
+A row in a scope-bearing table (`leads`, `bookings`, `booking_items`, `tasks`, `conversations`,
+`complaints`, `service_requests`, `quotations`) is readable when **any** of:
+
+| Scope | Condition |
+| --- | --- |
+| tenant | the caller holds `VIEW_ALL_BRANCHES` |
+| assigned | the caller is one of the row's responsible users |
+| branch | the row's branch is one the caller works in or governs, **and** the caller holds `VIEW_BRANCH_DATA` |
+| department | the row's branch is visible **and** the row's department is one the caller belongs to **and** the caller holds that entity's department-read permission |
+
+Derived children (`conversation_messages`, `quotation_items`, `booking_item_passengers`,
+`lead_interactions`, `lead_assignments`) inherit their parent's scope through an `exists` check; they
+carry no scope columns, so no second source of truth exists to disagree. Financial records
+(`invoices`, `payments`, `receipts`, `refunds`, `payment_allocations`) resolve through
+`VIEW_FINANCIAL_DOCUMENTS` **or** a visible related booking, which is the "assigned employee may view
+financial documents directly related to their lead/booking" rule in the Finance notes above.
+
+`customers` is deliberately **not** branch-scoped — see `05_customer_identity.md` §Customer
+Cross-Branch Awareness. Branch-scoping the master row would prevent a second branch finding a
+returning customer and would produce the duplicate canon 05 forbids. The customer's *activity* is
+branch-scoped, which is that section's "detailed event content from another branch is not shown".
+
+## Amendments ratified with this model (owner directive 2026-08-24)
+
+1. **Department visibility is granted to `employee` and `senior_employee` by default.** The CRM table
+   above marks Employee "No" for `VIEW_DEPARTMENT_QUEUE`. The owner requires that a colleague in the
+   same department can continue serving a customer when the assigned employee is absent, and that
+   assignment must never mean sole visibility. The mechanism remains permission-gated exactly as the
+   note "Department queue visibility requires explicit permission" specifies — only the default grant
+   changed. `trainee` is still excluded, which is what keeps the restricted-user boundary real.
+2. **`VIEW_DEPARTMENT_RECORDS` is added.** Canon names a `VIEW_*` permission for leads, tasks,
+   conversations, complaints and service requests, and none for bookings, booking items or
+   quotations. Rather than stretch `VIEW_DEPARTMENT_QUEUE` (a leads concept) over a booking, this
+   permission is the department-read gate for those three. Granted to the same roles.
+3. **`VIEW_BRANCH_DATA` is granted to `branch_manager`.** The Organization table records "Own branch"
+   for that role, but the seed gave the permission to `owner` and `ceo` only — which would have left
+   a branch manager seeing just their own department. Department managers are still excluded, per
+   "Department Manager manages only their department inside their branch".
+4. **`user_role_assignments.scope_type` is constrained** to `tenant` / `branch` / `department` /
+   `platform`, and a branch- or department-scoped assignment must carry its qualifying id. `assigned`
+   is excluded: it describes a permission's reach over records, not a scope a role can be granted at.
+
+Write authority over identity, organization and configuration tables is enforced by SPEC-138 — see
+`changes/SPEC-138-rbac-write-authority.md`.
+
+---
+
 # Next Step
 
 Create `29_relationship_map.md`.

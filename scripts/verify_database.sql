@@ -38,10 +38,35 @@ begin
           and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = c.relname);
     if bad is not null then raise exception 'CHECK 4 FAILED: RLS tables with no policy: %', bad; end if;
 
-    -- 5. Resolution primitive exists in the non-API app schema
+    -- 5. Resolution primitives exist in the non-API app schema (canon 35 principle 4: every policy
+    --    calls a primitive, so the mechanism evolves in one place).
     select count(*) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
         where ns.nspname = 'app' and p.proname = 'current_tenant_id';
     if n <> 1 then raise exception 'CHECK 5 FAILED: app.current_tenant_id() not found (%)', n; end if;
+    select count(distinct p.proname) into n from pg_proc p join pg_namespace ns on ns.oid = p.pronamespace
+        where ns.nspname = 'app' and p.proname in
+              ('current_user_id','has_tenant_wide_read','visible_branch_ids','visible_department_ids','current_placement');
+    if n <> 5 then raise exception 'CHECK 5b FAILED: expected 5 read-scope primitives, found %', n; end if;
+
+    -- 5c. The read-scope model is actually attached. A scope-bearing table that fell back to a bare
+    --     tenant predicate would still pass every other check here while silently exposing every
+    --     branch to every employee, so the policy NAME is asserted per table rather than counted.
+    select count(*) into n from pg_policies
+        where schemaname = 'public' and policyname = 'scope_isolation'
+          and tablename in ('leads','bookings','booking_items','tasks','conversations','complaints',
+                            'service_requests','quotations','conversation_messages','quotation_items',
+                            'booking_item_passengers','lead_interactions','lead_assignments','invoices',
+                            'payments','refunds','receipts','payment_allocations','notifications',
+                            'notification_deliveries','customer_notes');
+    if n <> 21 then raise exception 'CHECK 5c FAILED: expected 21 scope_isolation policies, found %', n; end if;
+
+    -- 5d. Identity and organization tables must not be writable on the strength of tenancy alone --
+    --     that was the path by which any employee could grant themselves the owner role.
+    select count(*) into n from pg_policies
+        where schemaname = 'public' and policyname = 'scope_insert'
+          and tablename in ('user_role_assignments','user_branch_assignments','users','branches',
+                            'departments','subscriptions','tenants');
+    if n <> 7 then raise exception 'CHECK 5d FAILED: expected 7 permission-gated write policies, found %', n; end if;
 
     -- 6. System catalog seed present
     select count(*) into n from catalog_types;
@@ -95,6 +120,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver, 68/583 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (72 tables, RLS + policies, resolver + read-scope model, 68/583 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;
