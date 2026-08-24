@@ -103,7 +103,7 @@ direct write path is gated).
 - [x] A suspended subscription denies plan-gated permissions on any tier.
 - [x] A tenant with no subscription is unrestricted.
 - [x] `app.tenant_capabilities()` reports "Unlimited" as a null ceiling.
-- [x] Clean `db reset` replays; full suite passes (`Files=30, Tests=266`); smoke passes.
+- [x] Clean `db reset` replays; full suite passes; smoke passes.
 - [ ] **UNVERIFIED — Primary.** MCP disconnected, no linked project, no access token.
 
 ---
@@ -116,11 +116,20 @@ Outcome: Complete
 
 Applied. `db reset` replays 114 clean; suite `Files=30, Tests=266 ... PASS`; smoke `ALL CHECKS PASSED`.
 
-Permission coverage is now **68 of 70**. The remaining two, `MANAGE_ROLES` and `MANAGE_PERMISSIONS`,
-are deliberately not given an enforcement point: `roles`, `permissions` and `role_permissions` grant
-`authenticated` **SELECT only**, so no tenant user has any writable surface to guard. That is a
-stronger guarantee than a permission check, and minting an RPC to "enforce" them would create the
-surface rather than protect it.
+Permission coverage is **65 of 70 enforced at a real check point** — corrected from an earlier
+figure of 68, which came from a coverage query that wrongly excluded plan-gated permissions from the
+unenforced list. Being plan-gated only *removes* a permission; something still has to check it.
+
+The five without a check point divide cleanly:
+
+- `MANAGE_ROLES`, `MANAGE_PERMISSIONS` — deliberately none. `roles`, `permissions` and
+  `role_permissions` grant `authenticated` **SELECT only**, so no tenant user has a writable surface
+  to guard. That is stronger than a permission check, and minting an RPC to "enforce" them would
+  create the surface rather than protect it.
+- `ACCESS_API_FULL`, `ACCESS_API_READ_ONLY`, `VIEW_ADVANCED_DASHBOARDS` — they gate surfaces that do
+  not exist yet (PostgREST access tiers; advanced reporting views). All three are plan-mapped, so
+  they will deny correctly the moment a consumer appears; wiring a check to nothing would be
+  ceremony.
 
 ---
 
