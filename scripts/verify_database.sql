@@ -68,6 +68,18 @@ begin
                             'departments','subscriptions','tenants');
     if n <> 7 then raise exception 'CHECK 5d FAILED: expected 7 permission-gated write policies, found %', n; end if;
 
+    -- 5e. Employee financial privacy: the two margin columns must NOT be reachable through a
+    --     table-level grant. A table-level SELECT covers every column including ones added later,
+    --     so re-granting the table would silently re-expose one employee's commission to another.
+    select count(*) into n from information_schema.role_column_grants
+        where grantee = 'authenticated' and table_schema = 'public' and table_name = 'booking_items'
+          and column_name in ('cost_amount', 'commission_rate') and privilege_type = 'SELECT';
+    if n <> 0 then raise exception 'CHECK 5e FAILED: authenticated can read % margin column(s) on booking_items directly', n; end if;
+    select count(*) into n from information_schema.role_table_grants
+        where grantee = 'authenticated' and table_schema = 'public' and table_name = 'booking_items'
+          and privilege_type = 'SELECT';
+    if n <> 0 then raise exception 'CHECK 5e FAILED: booking_items carries a table-level SELECT grant, which overrides the column list'; end if;
+
     -- 6. System catalog seed present
     select count(*) into n from catalog_types;
     if n <> 68 then raise exception 'CHECK 6a FAILED: expected 68 catalog_types, found %', n; end if;
