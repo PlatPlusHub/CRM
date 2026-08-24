@@ -22,7 +22,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(24);
+select plan(25);
 
 -- ---------------------------------------------------------------------------------------------
 -- Fixture, built as postgres before any role switch.
@@ -197,6 +197,15 @@ select is((select count(*)::int from public.invoices), 1,
   'FINANCE MANAGER reads the invoice with no branch placement at all -- finance authority is not geographic');
 select is((select count(*)::int from public.leads), 0,
   '...and that finance authority does not silently become operational visibility');
+
+-- SPEC-145 regression. This file originally asserted only that finance could read INVOICES -- which
+-- was exactly the clause SPEC-137 had written, so it could not have failed. It never asked whether
+-- finance could reach a BOOKING, and the answer was no: a finance manager holding APPROVE_FINANCE
+-- saw zero bookings and zero booking items, so `app.review_finance_approval` (SECURITY INVOKER)
+-- could not find the item it was approving. The finance-approval workflow was broken for the only
+-- role canon puts in charge of it.
+select is((select count(*)::int from public.bookings), 1,
+  'FINANCE MANAGER can reach the booking whose finances they govern -- without this, app.review_finance_approval cannot find its own subject');
 
 select set_config('request.jwt.claims', '{"sub":"21000000-0000-0000-0000-0000000000a1"}', true);
 select is((select count(*)::int from public.invoices where id = '21000000-0000-0000-0000-0000000000f2'), 1,

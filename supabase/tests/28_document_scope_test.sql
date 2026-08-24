@@ -11,7 +11,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(8);
+select plan(10);
 
 insert into auth.users (id, email) values
   ('28000000-0000-0000-0000-0000000000a1','uploader@example.com'),
@@ -54,10 +54,12 @@ insert into public.bookings (id, tenant_id, branch_id, department_id, customer_i
 
 insert into public.documents (id, tenant_id, document_type_code, title, lifecycle_status_code, is_confidential, created_by) values
   ('28000000-0000-0000-0000-0000000000e1','28000000-0000-0000-0000-000000000001','passport','Passport scan','active',false,'28000000-0000-0000-0000-000000000011'),
-  ('28000000-0000-0000-0000-0000000000e2','28000000-0000-0000-0000-000000000001','passport','Sensitive file','active',true,'28000000-0000-0000-0000-000000000011');
+  ('28000000-0000-0000-0000-0000000000e2','28000000-0000-0000-0000-000000000001','passport','Sensitive passport','active',true,'28000000-0000-0000-0000-000000000011'),
+  ('28000000-0000-0000-0000-0000000000e3','28000000-0000-0000-0000-000000000001','invoice','Confidential invoice copy','active',true,'28000000-0000-0000-0000-000000000011');
 insert into public.document_links (tenant_id, document_id, booking_id) values
   ('28000000-0000-0000-0000-000000000001','28000000-0000-0000-0000-0000000000e1','28000000-0000-0000-0000-0000000000f1'),
-  ('28000000-0000-0000-0000-000000000001','28000000-0000-0000-0000-0000000000e2','28000000-0000-0000-0000-0000000000f1');
+  ('28000000-0000-0000-0000-000000000001','28000000-0000-0000-0000-0000000000e2','28000000-0000-0000-0000-0000000000f1'),
+  ('28000000-0000-0000-0000-000000000001','28000000-0000-0000-0000-0000000000e3','28000000-0000-0000-0000-0000000000f1');
 insert into public.document_versions (tenant_id, document_id, version_number, file_name, file_type_code, storage_path, is_current) values
   ('28000000-0000-0000-0000-000000000001','28000000-0000-0000-0000-0000000000e1',1,'passport.pdf','pdf','docs/passport.pdf',true);
 
@@ -85,8 +87,8 @@ select is((select count(*)::int from public.document_versions), 0,
 -- ---------------------------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"28000000-0000-0000-0000-0000000000a1"}', true);
 
-select is((select count(*)::int from public.documents), 2,
-  'the uploader reads both of their own documents');
+select is((select count(*)::int from public.documents), 3,
+  'the uploader reads all three of their own documents');
 
 select is((select count(*)::int from public.document_versions), 1,
   '...and the version behind them');
@@ -96,11 +98,22 @@ select is((select count(*)::int from public.document_versions), 1,
 -- ---------------------------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"28000000-0000-0000-0000-0000000000a3"}', true);
 
-select is((select count(*)::int from public.documents where is_confidential), 1,
-  'the finance manager reads the CONFIDENTIAL document, which is what VIEW_FINANCIAL_DOCUMENTS is for');
+-- SPEC-145 corrected this rule. SPEC-144 granted finance ANY confidential document, which read the
+-- flag as "sensitive, therefore finance" -- but canon 28 separates VIEW_FINANCIAL_DOCUMENTS (Finance
+-- Manager: Yes) from VIEW_TRAVEL_DOCUMENTS (Finance Manager: *Optional*, and not granted) precisely
+-- so that seeing the money does not mean seeing the passport. Finance now gets financial document
+-- TYPES, confidential or not, and no travel documents at all.
+select is((select count(*)::int from public.documents where document_type_code = 'invoice'), 1,
+  'the finance manager reads the confidential INVOICE -- a financial document type, which is what VIEW_FINANCIAL_DOCUMENTS names');
 
-select is((select count(*)::int from public.documents where not is_confidential), 0,
-  '...and does NOT thereby acquire the ordinary travel document for a branch they have no part in -- the confidential flag grants a narrow thing, not a general one');
+select is((select count(*)::int from public.documents where document_type_code = 'passport' and is_confidential), 0,
+  '...and NOT the confidential passport: "confidential" does not mean "financial", and canon marks travel documents Optional for this role');
+
+select is((select count(*)::int from public.documents where document_type_code = 'passport' and not is_confidential), 0,
+  '...nor the ordinary passport scan, which SPEC-145''s finance visibility of bookings would otherwise have leaked through the document link');
+
+select is((select count(*)::int from public.documents), 1,
+  '...so finance sees exactly one document here, and it is the financial one');
 
 select * from finish();
 rollback;
