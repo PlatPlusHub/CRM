@@ -36,12 +36,17 @@ from (values ('32000000-0000-0000-0000-000000000011'::uuid,'employee'),
 join public.roles r on r.code = v.role_code;
 
 -- A lead owned by someone else in the same department, so the department clause is what grants it.
-insert into public.leads (id, tenant_id, branch_id, department_id, owner_user_id,
+insert into public.leads (id, tenant_id, branch_id, department_id,
                           lead_source_code, lead_status_code, title) values
   ('32000000-0000-0000-0000-0000000000e1','32000000-0000-0000-0000-000000000001',
    '32000000-0000-0000-0000-00000000000a','32000000-0000-0000-0000-0000000000c1',
-   '32000000-0000-0000-0000-000000000012',
    'whatsapp','new','Dokki lead');
+-- Assignment is an act with a timeline (SPEC-140), and owner mirrors assignee (SPEC-151).
+insert into public.lead_assignments (tenant_id, lead_id, assigned_user_id, is_current) values
+  ('32000000-0000-0000-0000-000000000001','32000000-0000-0000-0000-0000000000e1','32000000-0000-0000-0000-000000000012',true);
+update public.leads set assigned_user_id = '32000000-0000-0000-0000-000000000012',
+                        owner_user_id    = '32000000-0000-0000-0000-000000000012'
+ where id = '32000000-0000-0000-0000-0000000000e1';
 
 set local role authenticated;
 
