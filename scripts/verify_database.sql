@@ -88,6 +88,14 @@ begin
                          'customers_freeze_first_registration');
     if n <> 3 then raise exception 'CHECK 5f FAILED: expected 3 assignment/first-registration triggers, found %', n; end if;
 
+    -- 5g. Lifecycle transition enforcement (SPEC-149). Asserted per table by trigger name: without
+    --     these, `update bookings set booking_status_code = 'issued'` skips the state machine, the
+    --     authorization and the events entirely, which is what the guard was built to stop.
+    select count(*) into n from pg_trigger where tgname like '%_enforce_status_transition' and not tgisinternal;
+    if n <> 10 then raise exception 'CHECK 5g FAILED: expected 10 status-transition triggers, found %', n; end if;
+    select count(*) into n from app.status_transitions;
+    if n < 100 then raise exception 'CHECK 5g FAILED: transition registry holds only % rows', n; end if;
+
     -- 6. System catalog seed present
     select count(*) into n from catalog_types;
     if n <> 68 then raise exception 'CHECK 6a FAILED: expected 68 catalog_types, found %', n; end if;

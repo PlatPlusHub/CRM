@@ -814,3 +814,36 @@ draft
 # Next Step
 
 Create `27_event_catalog.md`.
+
+---
+
+# Transition Enforcement
+
+Implemented by SPEC-149 (`202607052700_lifecycle_transition_enforcement.sql`). Until then the state
+machines were enforced only inside the `app.advance_*` RPCs, and nothing obliged a caller to use
+one: a direct `update bookings set booking_status_code = 'issued'` moved a booking from `draft`
+straight to `issued` with no authorization, no validation and no events.
+
+`app.status_transitions` mirrors the transition maps held in the RPCs — 104 transitions across
+`bookings`, `leads`, `booking_items`, `quotations`, `refunds`, `tasks`, `conversations`,
+`complaints`, `service_requests` and `marketing_campaigns` — and a BEFORE UPDATE trigger on each
+table checks two things independently:
+
+| Failure | Code | Meaning |
+| --- | --- | --- |
+| unrecognised transition | `23514` | this `from -> to` pair is not in the state machine |
+| missing capability | `42501` | the pair is legal, the caller may not make it |
+
+**The RPCs remain the author of the rules.** The registry mirrors them and test 32 fails if any app
+function can write a status the registry does not recognise — the same registry-plus-drift-guard
+pattern as `07_event_vocabulary_registry_test` and `08_status_vocabulary_registry_test`.
+
+**Transition logic is not confined to `advance_*`.** `app.assign_lead` / `assign_lead_round_robin`
+(`new -> assigned`), `app.record_lead_interaction` (`assigned -> contacted`) and `app.convert_lead`
+(`won -> converted`, canon 26: "only a won lead may convert") all move a lead's status. The drift
+guard therefore scans every app function, not only the ones named like transition RPCs.
+
+**Boundary.** The trigger restricts direct DML to legal, authorized transitions. It does not
+reproduce the RPCs' side effects — events, closure reasons, risk flags, cost locking, timestamps —
+so the `app.advance_*` RPC remains the only complete path. Platform callers (`service_role`,
+migrations) are exempt per canon 35 principle 6.
