@@ -6,12 +6,14 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Eight checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
-  6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry):
+  will learn to ignore it. Nine checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
+  9 manifest migration state vs the actual migration files):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
-    Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity.
+    Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity ·
+    Check 9 manifest migration count/latest/fingerprint vs supabase/migrations.
   Details inline. Original two checks documented below:
 
     1) BROKEN REFERENCES — in Living docs (repo-root *.md, _ORVION_CANONICAL/** except the
@@ -374,6 +376,71 @@ if (-not (Test-Path $catalogPath)) {
                 Write-Host "  CROSS-FILE CONTRADICTION: MASTER_CERTIFICATION_STATUS.md claims production database deployment is CERTIFIED, but MASTER_INTEGRATION_CATALOG.md §0 still marks a project's status 'unverified' — one file was updated without the other" -ForegroundColor Yellow
                 $issues++
             }
+        }
+    }
+}
+
+Write-Host "== Check 9: manifest migration state vs actual repository ==" -ForegroundColor Cyan
+# Verified failure class (2026-08-24/25): the manifest asserted "112 migrations (latest
+# `202607052300`)" and a stale ledger fingerprint while the repository actually held 118 (latest
+# `202607052900`), and it asserted Primary was "15 BEHIND" when the real gap was 16. Checks 1-8 all
+# reported CLEAN throughout: check 5 measures the manifest's SIZE, not the truth of its claims, and
+# nothing else compares a manifest number to a countable fact. A cold-booting agent reads this line
+# as current state, so a wrong count sends it to the wrong baseline.
+#
+# This is mechanically checkable with no database and no network. The ledger fingerprint the
+# manifest quotes is md5 of the comma-joined `version_name` list ordered by version -- which is
+# exactly the migration filenames minus their extension. So all three claims (count, latest
+# version, fingerprint) are derivable from `supabase/migrations/` alone, and any of them drifting
+# from the files is a fact-level contradiction rather than a matter of judgement.
+$migDir = Join-Path $RepoRoot 'supabase/migrations'
+if (-not (Test-Path $migDir)) {
+    Write-Host "  UNREADABLE: supabase/migrations not found" -ForegroundColor Yellow
+    $issues++
+} elseif (-not (Test-Path $mfPath)) {
+    Write-Host "  UNREADABLE: manifest.md not found" -ForegroundColor Yellow
+    $issues++
+} else {
+    $migNames = Get-ChildItem -Path $migDir -Filter '*.sql' -File |
+                ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Name) } |
+                Sort-Object -CaseSensitive
+    $actualCount  = $migNames.Count
+    $actualLatest = if ($actualCount -gt 0) { ($migNames[-1] -split '_', 2)[0] } else { '' }
+    $md5          = [System.Security.Cryptography.MD5]::Create()
+    $actualPrint  = ([BitConverter]::ToString(
+                        $md5.ComputeHash([Text.Encoding]::UTF8.GetBytes(($migNames -join ',')))
+                     ) -replace '-', '').ToLower()
+
+    # Scoped to the "Live state:" line, which is where the manifest makes these claims.
+    $liveLine = [regex]::Match((Get-Content $mfPath -Raw), '(?m)^Live state:.*$')
+    if (-not $liveLine.Success) {
+        Write-Host "  UNREADABLE: manifest.md has no 'Live state:' line to verify" -ForegroundColor Yellow
+        $issues++
+    } else {
+        $lv = $liveLine.Value
+
+        $mCount = [regex]::Match($lv, '(?<n>\d{2,5})\s+migrations')
+        if (-not $mCount.Success) {
+            Write-Host "  UNREADABLE: manifest 'Live state:' states no migration count" -ForegroundColor Yellow
+            $issues++
+        } elseif ([int]$mCount.Groups['n'].Value -ne $actualCount) {
+            Write-Host "  MIGRATION STATE DRIFT: manifest says $($mCount.Groups['n'].Value) migrations, repository holds $actualCount" -ForegroundColor Yellow
+            $issues++
+        }
+
+        $mLatest = [regex]::Match($lv, 'latest\s+`(?<v>\d{9,14})')
+        if (-not $mLatest.Success) {
+            Write-Host "  UNREADABLE: manifest 'Live state:' names no latest migration version" -ForegroundColor Yellow
+            $issues++
+        } elseif ($mLatest.Groups['v'].Value -ne $actualLatest) {
+            Write-Host "  MIGRATION STATE DRIFT: manifest says latest migration is $($mLatest.Groups['v'].Value), repository's latest is $actualLatest" -ForegroundColor Yellow
+            $issues++
+        }
+
+        $mPrint = [regex]::Match($lv, '(?<h>\b[0-9a-f]{32}\b)')
+        if ($mPrint.Success -and $mPrint.Groups['h'].Value -ne $actualPrint) {
+            Write-Host "  MIGRATION STATE DRIFT: manifest asserts ledger fingerprint $($mPrint.Groups['h'].Value), but the migration files produce $actualPrint" -ForegroundColor Yellow
+            $issues++
         }
     }
 }
