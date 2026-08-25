@@ -456,6 +456,12 @@ The plan grants nothing — it only removes. A user still needs the role permiss
 - **Ceilings are readable, not enforced.** `app.plan_limit` exposes them; `usage_counters` is empty
   and counting is a separate additive mechanism.
 
+**Archive authority (SPEC-150).** `ARCHIVE_RECORD` extends this table's `ARCHIVE_DOCUMENT` profile
+— Owner / CEO / Branch Manager / Department Manager / Finance Manager Yes, Employee **No** — to the
+twelve other tables carrying `is_archived`, which canon never enumerated. ORVION grants no DELETE to
+any role, so archiving IS removal; it is governed in both directions, and `archived_at`/`archived_by`
+are stamped by the system rather than typed by the person. `documents` keeps `ARCHIVE_DOCUMENT`.
+
 **Revocation is complete, not partial (SPEC-148).** Because the `assigned` scope is itself
 permission-gated, an employee whose role assignment has expired — or whose role has been
 deactivated — loses sight of their OWN records too, not merely of the department queue.
