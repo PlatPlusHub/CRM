@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/environment-and-governance-gate-2026-08-26.md`
+> **Latest session report:** `history/environment-gate-earned-2026-08-26.md` — Environment Gate **EARNED**; predecessor `history/environment-and-governance-gate-2026-08-26.md`.
 >
 > `AGENTS.md §4` Stage A step 7 requires every session to read this before proposing work. **Whoever writes the next session report updates this row in the same commit** — an unlinked report is invisible to the boot sequence, which is the one job this pointer has.
 

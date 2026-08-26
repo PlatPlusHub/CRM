@@ -22,10 +22,6 @@
     "n8n": {
       "type": "http",
       "url": "https://plat.app.n8n.cloud/mcp-server/http"
-    },
-    "github": {
-      "type": "http",
-      "url": "https://api.githubcopilot.com/mcp/"
     }
   }
 }
