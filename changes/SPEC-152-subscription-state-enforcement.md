@@ -3,13 +3,15 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
-[ ] Complete
+[x] Complete
 [ ] Cancelled
 
-**ALIGNED — not implemented.** This document is the alignment artefact. No migration, code change or
-deployment has been made. Implementation begins only against the acceptance criteria below.
+**EARNED → CLOSED (2026-08-26, migration `202607053100`).** All twelve acceptance criteria satisfied
+individually and proven as a real `authenticated` user; suite 35 files / 331 assertions / 0 failures;
+smoke `ALL CHECKS PASSED`; repo = local = Primary = `b2f4482428307d1c87a3612abe5a517c` at 120.
+Evidence: `reports/history/wp-03-subscription-state-enforcement-2026-08-26.md`.
 
 ---
 

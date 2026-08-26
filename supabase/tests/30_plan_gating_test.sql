@@ -124,7 +124,15 @@ select lives_ok(
   '...and the same direct write now succeeds');
 
 -- ---------------------------------------------------------------------------------------------
--- Suspension denies everything the plan gates, regardless of tier.
+-- Suspension and PERMISSIONS -- corrected by SPEC-152.
+--
+-- These two assertions previously read the other way round, and encoded the defect rather than the
+-- rule: `plan_allows` used to fold subscription STATE into permission evaluation, so a suspended
+-- tenant lost plan-gated *permissions* -- which denied READS. The owner's rule is the opposite:
+-- reads survive every restricted state so a lapsed tenant can still inspect and export its own
+-- data; it is WRITES that stop. State is now enforced by the per-table write gate
+-- (`35_subscription_write_gate_test.sql`), and `plan_allows` is back to its single job: does the
+-- PLAN include this feature.
 -- ---------------------------------------------------------------------------------------------
 reset role;
 update public.subscriptions set subscription_status_code = 'suspended'
@@ -132,17 +140,19 @@ update public.subscriptions set subscription_status_code = 'suspended'
 set local role authenticated;
 
 select set_config('request.jwt.claims', '{"sub":"31000000-0000-0000-0000-0000000000a1"}', true);
-select is(app.has_permission('CREATE_BOOKING'), false,
-  'a SUSPENDED subscription denies plan-gated permissions even on Enterprise');
+select is(app.has_permission('CREATE_BOOKING'), true,
+  'a SUSPENDED subscription no longer strips plan-gated PERMISSIONS -- reads must survive, and the write is stopped by the SPEC-152 gate instead');
 select is(app.has_permission('CREATE_LEAD'), true,
-  '...but an ungated permission is untouched -- suspension is not a blanket lockout invented here');
+  '...and an ungated permission is likewise untouched');
 
 -- ---------------------------------------------------------------------------------------------
--- A tenant with no subscription at all. Denial requires a plan that denies.
+-- A tenant with no subscription at all. Plan gating alone still permits: nothing has been sold to
+-- them, so no FEATURE has been denied. Their WRITES are denied separately and unconditionally by
+-- the SPEC-152 gate, which is what stops this from being a fail-open hole.
 -- ---------------------------------------------------------------------------------------------
 select set_config('request.jwt.claims', '{"sub":"31000000-0000-0000-0000-0000000000a3"}', true);
 select is(app.has_permission('CREATE_BOOKING'), true,
-  'a tenant with NO subscription is unrestricted -- nothing has been sold to them, so nothing has been denied (and SPEC-138 stops them deleting a subscription to reach this state)');
+  'a tenant with NO subscription retains plan-gated permissions for READ purposes -- writes are refused by the write gate, not here');
 
 -- ---------------------------------------------------------------------------------------------
 -- What a UI or an n8n workflow should ask, instead of inferring capability from a failed write.

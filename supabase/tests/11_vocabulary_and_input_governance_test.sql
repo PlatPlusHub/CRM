@@ -54,6 +54,14 @@ insert into public.tenants (id, name, slug, status) values
   ('aaaaaaaa-0000-0000-0000-000000000001','Guard Tenant A','guard-tenant-a','active'),
   ('aaaaaaaa-0000-0000-0000-000000000002','Guard Tenant B','guard-tenant-b','active');
 
+-- SPEC-152: these two tenants write below, so they need a subscription before they can. This file
+-- creates tenants in two places, which is why the backfill appears twice.
+insert into public.subscriptions (tenant_id, subscription_plan_id, subscription_status_code)
+select t.id, sp.id, 'active'
+from public.tenants t cross join public.subscription_plans sp
+where sp.plan_code = 'enterprise'
+  and not exists (select 1 from public.subscriptions s where s.tenant_id = t.id);
+
 insert into public.catalog_values (tenant_id, catalog_type_code, code, label, sort_order, is_active, is_system)
 values ('aaaaaaaa-0000-0000-0000-000000000001','lead_source','expo_booth','Expo Booth',900,true,false);
 
@@ -138,6 +146,15 @@ select is(
 -- ---------------------------------------------------------------------------------------------
 insert into public.tenants (id, name, slug, status)
 values ('aaaa1111-0000-0000-0000-00000000000c','Deactivation Co','deactivation-co','active');
+
+-- SPEC-152: a tenant with no subscription cannot write (fail-closed). Production tenants always
+-- have one; a fixture without one models a state the system cannot reach. Set-based and idempotent,
+-- so it covers every tenant this file creates and never fights a test that manages its own.
+insert into public.subscriptions (tenant_id, subscription_plan_id, subscription_status_code)
+select t.id, sp.id, 'active'
+from public.tenants t cross join public.subscription_plans sp
+where sp.plan_code = 'enterprise'
+  and not exists (select 1 from public.subscriptions s where s.tenant_id = t.id);
 insert into public.customers (id, tenant_id, customer_type_code, full_name)
 values ('aaaa1111-0000-0000-0000-0000000000c9','aaaa1111-0000-0000-0000-00000000000c','person','Historic Customer');
 

@@ -18,6 +18,15 @@ insert into auth.users (id, email) values
   ('22220000-0000-0000-0000-0000000000bb','boss@example.com');
 insert into public.tenants (id, name, slug, status) values
   ('22220000-0000-0000-0000-000000000001','Master Data Co','masterdata','active');
+
+-- SPEC-152: a tenant with no subscription cannot write (fail-closed). Production tenants always
+-- have one; a fixture without one models a state the system cannot reach. Set-based and idempotent,
+-- so it covers every tenant this file creates and never fights a test that manages its own.
+insert into public.subscriptions (tenant_id, subscription_plan_id, subscription_status_code)
+select t.id, sp.id, 'active'
+from public.tenants t cross join public.subscription_plans sp
+where sp.plan_code = 'enterprise'
+  and not exists (select 1 from public.subscriptions s where s.tenant_id = t.id);
 insert into public.branches (id, tenant_id, name, slug) values
   ('22220000-0000-0000-0000-000000000002','22220000-0000-0000-0000-000000000001','Main','md-main');
 insert into public.departments (id, tenant_id, branch_id, department_type_code, name) values

@@ -30,6 +30,15 @@ select is(
 -- The four FK columns that could previously only ever be null must now accept a real value.
 insert into public.tenants (id, name, slug, status)
 values ('99990000-0000-0000-0000-00000000000a','Ref Data Tenant','refdata','active');
+
+-- SPEC-152: a tenant with no subscription cannot write (fail-closed). Production tenants always
+-- have one; a fixture without one models a state the system cannot reach. Set-based and idempotent,
+-- so it covers every tenant this file creates and never fights a test that manages its own.
+insert into public.subscriptions (tenant_id, subscription_plan_id, subscription_status_code)
+select t.id, sp.id, 'active'
+from public.tenants t cross join public.subscription_plans sp
+where sp.plan_code = 'enterprise'
+  and not exists (select 1 from public.subscriptions s where s.tenant_id = t.id);
 insert into public.customers (id, tenant_id, customer_type_code, full_name, preferred_language_code)
 values ('99990000-0000-0000-0000-0000000000c1','99990000-0000-0000-0000-00000000000a','person','Lang Customer','ar');
 
