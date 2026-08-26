@@ -31,7 +31,7 @@ Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` de
 
 Live state: **repository, local stack and Primary `vrvtsxexkiiiivlkdxzp` all at 119 migrations** (latest `202607053000`), ledger fingerprint `f5902d9dc743c316fc6421230d092e6f` on all three; 72 tables; 68/583 catalog types/values; 71 permissions; 66 feature entitlements; reference data seeded (82 countries / 82 nationalities / 20 languages / 18 currencies); 104 `app` functions; 116 policies. **repo = local = Primary parity HOLDS, re-proven 2026-08-26.** Prove it with `scripts/check_database_parity.ps1` — never from the repository guard, which reads files only and now says so. Primary holds **zero business rows**. n8n: **0 workflows** (live 2026-08-26), 2 credentials.
 
-Active Change Request: None.
+Active Change Request: **SPEC-152 — subscription state enforcement (WP-03). ALIGNED, not implemented.** Gate goes in a per-table trigger, not `has_permission` (32 of 89 write policies never call it). Two BLOCKED decisions isolated.
 
 Open owner decisions: **SEC-1/RPC-1** (write-path model; identity half closed by SPEC-138, audit-spine half by WP-00). **New SEC-1 evidence 2026-08-26** — three more forgeries of authoritative history proven, left unfixed because each IS the SEC-1 decision: backdated `lead_assignments`, `customers.first_registered_user_id` attribution theft, `offline_conversions` snapshot mutation (`wp-00-event-write-path-integrity-2026-08-26.md §5`). Also open: PH8-2/PH8-3; C4/C5; A3; AUDIT-4; **PLAN-1**. AUDIT-2/AUDIT-3 RESOLVED. Evidence in `MASTER_GAP_REGISTER.md`.
 
@@ -40,7 +40,7 @@ Last Completed: **WP-00 — event/audit write-path integrity (2026-08-26, `20260
 Next capability: **Foundation Hardening — Zero-Known-Debt (owner directive 2026-08-24). The n8n workflow stays GATED.** Suite 34 files / 307 assertions; 119 migrations; 71 permissions. Security posture (each proven by a named test): branch/department/assigned read scope, RBAC + finance write authority, plan gating, lifecycle + archive enforced against direct DML, employee financial privacy, document privacy, **audit-spine write integrity (WP-00)**. Remaining, in order:
 
 1. **WP-01 — creation events.** Four registered `*_created` types have an executable producer but never fire: `customer_created`, `lead_created`, `passenger_created`, `trusted_device_created`. Unblocked now the spine is trustworthy.
-2. **WP-03 — subscription state (raise priority: live behaviour is wrong, not merely absent).** `app.plan_allows` inverts the owner's rule — `read_only` permits writes, `suspended`/`expired`/`cancelled` deny reads; 42 of 71 permissions bypass the gate via a null `required_feature_code`; a missing subscription fails open; `MANAGE_SUBSCRIPTION` is held by no role.
+2. **WP-03 — subscription state.** Live behaviour is wrong, not merely absent: `app.plan_allows` inverts the owner's rule. Aligned in `changes/SPEC-152-subscription-state-enforcement.md`; implement next.
 3. Then, each verified open 2026-08-26: **WP-02** (six `*_created` types with no producer); **table/column sweep** (72 tables); **Employee/Supplier/Branch 360** primitives; **documents** (zero storage buckets/policies — `upload_document` points at storage that does not exist); **notifications** (no producer); **employee role is intake-only** (13 perms, no `CREATE_QUOTATION`/`CREATE_BOOKING`/`CONVERT_LEAD`).
 
 Evidence and open items are in `MASTER_GAP_REGISTER.md`. The workflow build steps remain preserved and unchanged in `MASTER_INTEGRATION_CATALOG.md §2/§2a`.
