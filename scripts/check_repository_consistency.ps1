@@ -448,6 +448,12 @@ if (-not (Test-Path $migDir)) {
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green
+    # Scope disclaimer, added after the 2026-08-26 incident in which this script printed CLEAN while
+    # the local database sat 29 migrations behind the repository. Every check above reads FILES; none
+    # opens a database. Stating that here is what stops a CLEAN result from being quoted as evidence
+    # of live parity -- which is exactly how the drift survived.
+    Write-Host "  (scope: repository files only -- no database was queried." -ForegroundColor DarkGray
+    Write-Host "   For live parity run scripts/check_database_parity.ps1)" -ForegroundColor DarkGray
     exit 0
 } else {
     Write-Host "REPOSITORY CONSISTENCY: $issues issue(s) found" -ForegroundColor Red

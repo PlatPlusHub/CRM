@@ -53,16 +53,20 @@ select is(
   0,
   'the ten global/reference tables are read-only for authenticated (no INSERT, no UPDATE)');
 
--- 4. The audit backbone is append-only at the privilege layer as well as the trigger layer:
---    authenticated may read and insert, never update.
+-- 4. The audit backbone is READ-ONLY at the privilege layer for end users, and append-only at the
+--    trigger layer. Until WP-00 (202607053000) authenticated also held INSERT, and the only INSERT
+--    policy checked tenant membership -- so an employee could write an event attributed to a
+--    colleague, about a record they could not read, with an unregistered event type, backdated by
+--    an explicit created_at, and the append-only trigger then made that forgery permanent.
+--    app.record_event (SECURITY DEFINER) is now the sole writer; the grant is the gate.
 select is(
   (select count(*)::int
      from unnest(array['events','security_events']) as t(relname)
-    where has_table_privilege('authenticated', ('public.' || quote_ident(t.relname))::regclass, 'UPDATE')
-       or not has_table_privilege('authenticated', ('public.' || quote_ident(t.relname))::regclass, 'SELECT')
-       or not has_table_privilege('authenticated', ('public.' || quote_ident(t.relname))::regclass, 'INSERT')),
+    cross join lateral (values ('INSERT'),('UPDATE'),('DELETE')) as p(priv)
+    where has_table_privilege('authenticated', ('public.' || quote_ident(t.relname))::regclass, p.priv)
+       or not has_table_privilege('authenticated', ('public.' || quote_ident(t.relname))::regclass, 'SELECT')),
   0,
-  'events and security_events grant authenticated exactly SELECT + INSERT, never UPDATE');
+  'events and security_events grant authenticated SELECT only -- no INSERT, UPDATE or DELETE');
 
 -- 5. No app-schema function is executable by PUBLIC. Every app.* RPC carries an explicit grant to
 --    its intended role, so a PUBLIC EXECUTE only widens reach -- and would become live exposure the
