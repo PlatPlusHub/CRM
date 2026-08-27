@@ -334,6 +334,20 @@ additive capability.*
      permission" proved not to mean "requires the right one": the money tables named a READ
      permission (FIN-3). The remaining non-money unguarded tables must each be classified against
      canon before either option is chosen.
+   * **SEC-1 PARTIAL — CLOSED 2026-08-28 (`202607056000`).** FIN-3's rule generalised: for every table
+     `authenticated` may INSERT with no capability enforcement, find every `app.*` function that
+     inserts into it and the permission that function authorizes. ONE RPC/ONE PERMISSION -> guard it.
+     TWO RPCs/TWO PERMISSIONS -> guard the UNION, which is exactly what the code already permits.
+     NO RPC, or an RPC that authorizes nothing -> no evidence-based answer, left to SEC-1 rather than
+     guessed. Nine tables guarded: approval_requests, conversation_messages,
+     customer_contact_methods, customer_identity_signals, customer_identity_merges,
+     internal_supplier_links, offline_conversions, document_links (union), lead_assignments (union).
+     `approval_requests` is INSERT-only -- `review_finance_approval` updates it and `finance_manager`
+     does NOT hold `CREATE_BOOKING_ITEM`, so charging it on UPDATE would have broken FIN-2's
+     workflow; verified before writing. SEC-1's residue: 40 (mis-measured, triggers only) -> 23 ->
+     **13**, now classified individually rather than counted -- 3 auth artifacts already owner-scoped
+     by policy, 5 system-written, 5 whose RPCs authorize nothing. Guarded by
+     `57_write_capability_map_test.sql` (12).
    * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their

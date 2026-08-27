@@ -12,7 +12,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(7);
+select plan(8);
 
 -- 1. anon holds no DML of any kind on any public base table. ORVION has no anonymous flow; every
 --    RLS policy is scoped to {authenticated}, so an anon grant is pure attack surface.
@@ -122,8 +122,33 @@ select cmp_ok(
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
          where t.tgrelid = c.oid and not t.tgisinternal
            and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)),
-  '<=', 36,
-  '...and at most 36 of them have NO capability trigger on the direct write path');
+  '<=', 27,
+  '...and at most 27 of them have NO capability trigger on the direct write path');
+
+-- The residue that matters: neither a capability trigger NOR a policy WITH CHECK naming a real
+-- write permission. Thirteen tables, and the list is understood rather than merely counted --
+-- `otp_challenges`, `totp_enrollments` and `trusted_devices` are the caller's own auth artifacts
+-- and are owner-scoped by policy; `attribution_clicks`, `notifications`,
+-- `notification_deliveries`, `offline_conversion_deliveries` and `usage_counters` are
+-- system-written; `branch_business_hours`, `company_assets`, `financial_accounts`, `holidays` and
+-- `lead_interactions` have no RPC that authorizes anything, so no permission can be derived from
+-- evidence. All of them stay under SEC-1 rather than being guessed at.
+select cmp_ok(
+  (select count(*)::int
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and has_table_privilege('authenticated', c.oid, 'INSERT')
+      and not exists (
+        select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+         where t.tgrelid = c.oid and not t.tgisinternal
+           and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)
+      and not exists (
+        select 1 from pg_policies pp
+         where pp.schemaname = 'public' and pp.tablename = c.relname
+           and pp.cmd in ('INSERT','ALL')
+           and coalesce(pp.with_check,'') ~ 'has_permission\(''(?!VIEW_|SEE_)[A-Z_]+''')),
+  '<=', 13,
+  '...and at most 13 have no capability enforcement of ANY kind (SEC-1 residue)');
 
 select * from finish();
 rollback;
