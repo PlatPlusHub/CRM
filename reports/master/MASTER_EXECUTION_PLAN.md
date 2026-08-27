@@ -165,7 +165,41 @@ additive capability.*
      table. **PP-2** `document_links` RLS has no branch for `subscription_payment_proof_id`; the
      insert works only because `VIEW_ALL_BRANCHES` and `MANAGE_TENANT_SETTINGS` happen to be the same
      role set — an implicit coupling to be made explicit in WP-04-C when that policy is rewritten.
-   * **WP-04-C — NEXT: storage-provider evaluation, then the object store end to end.** Compare
+   * **WP-04-C — DONE 2026-08-27 (`202607054600`/`4700`/`4800`).** **Provider decided on evidence:
+     Supabase Storage**, on one decisive property and explicitly NOT on being already present —
+     `storage.objects` is a PostgreSQL table with RLS (verified live: `relkind='r'`,
+     `relrowsecurity=true`, 0 policies, i.e. fail-closed), so object authorization and row
+     authorization are the **same mechanism**: an object is visible exactly when its
+     `document_versions` row is visible, with no visibility rule restated. Rejected with reasons:
+     **GCS** — dynamically generated IAM policies are unsupported on GCP and IAM policy size becomes
+     a ceiling as tenants multiply, with a "token vending machine" service as the escape (the second
+     authorization system canon 35 forbids); **Drive/OneDrive/SharePoint** — collaboration products
+     whose per-tenant OAuth, shared quota *pool* and 250 MB Graph PUT cap fight multi-tenant
+     isolation, and all need an external credential. Cost did not decide it. Delivered: a **private**
+     bucket with store-enforced MIME and size limits, read + insert policies keyed on document
+     visibility plus a tenant-prefix defence, and deliberately **no update/delete policy** (documents
+     are versioned; overwriting would defeat the audit trail). **PP-2 closed** — `document_links`
+     gained the `subscription_payment_proof_id` branch it always needed; all nine branches
+     transcribed verbatim and pinned by a structural assertion (§17).
+     **Two defects found by a FAILING assertion in this package's own test — SPP-1/SPP-2:**
+     `subscription_payment_proofs` gated **neither** reads nor inserts while its parent
+     `subscriptions` gated both, so any tenant user could read the agency's whole payment history and
+     **forge a pending proof by direct DML**. Fixed to parity (read → `VIEW_SUBSCRIPTION_STATUS`;
+     insert → `MANAGE_TENANT_SETTINGS`, deliberately not `MANAGE_SUBSCRIPTION`, which no role holds).
+     **This is the third occurrence of the sibling-table class and my own WP-04-B missed it** — that
+     package touched this table without comparing its RLS to its parent. Guards:
+     `48_document_storage_test.sql`, `47_payment_proof_lifecycle_test.sql`.
+   * **WP-04-D — NEXT: document retention, deletion, recovery and orphan reconciliation.** Storage
+     now exists on Primary, so an orphaned object is physically possible from this point: the byte
+     upload happens *after* the metadata transaction and cannot be rolled back by it. Acceptance
+     criteria: a scheduled reconciliation finds metadata without objects and objects without
+     metadata, per-tenant and **skip-never-raise** (the WP-03 shape); archival/deletion are
+     `service_role` lifecycle operations emitting `document_archived`; superseded versions stay
+     retrievable for the retention window; cross-tenant reconciliation proven not to touch another
+     tenant's objects. **The retention period itself is BLOCKED — BUSINESS DECISION** (Egyptian
+     record-keeping obligations for travel documents are not in canon). Should land before any client
+     begins uploading bytes.
+   * *(historical, superseded)* **WP-04-C as originally scoped: storage-provider evaluation, then the object store end to end.** Compare
      Supabase Storage / GCS / Google Drive / OneDrive-SharePoint on tenant isolation, private
      objects, signed URLs, versioning, retention, deletion, recovery, backup, encryption, access
      logging, auditability, size limits, performance, scalability, n8n integration, operational

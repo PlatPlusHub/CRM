@@ -14,7 +14,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(16);
+select plan(19);
 
 insert into auth.users (id, email) values
   ('47000000-0000-0000-0000-0000000000a1','owner@pp.test'),
@@ -177,6 +177,54 @@ select throws_ok(
       true, 'again')$$,
   '23514', null,
   'reviewing an already-approved proof is refused -- approval cannot be replayed');
+
+-- =============================================================================================
+-- 17-19. SPP-1 / SPP-2 -- the sibling audit, applied to this table by a FAILING ASSERTION in
+--        `48_document_storage_test.sql` rather than by inspection. `subscriptions` gates reads on
+--        VIEW_SUBSCRIPTION_STATUS and inserts on MANAGE_SUBSCRIPTION; this table gated NEITHER, so
+--        any tenant user could read the agency's whole payment history and FORGE a pending proof by
+--        direct DML. Both policies now say what the parent says.
+--
+--        The employee is a real, live session throughout -- assertion 17 proves it -- so the two
+--        refusals below are about authority and not about an empty fixture or a dead JWT.
+-- =============================================================================================
+-- The ids are captured as postgres FIRST. Without this the forgery attempt below reads
+-- `subscriptions`, which SPP-1 has just made invisible to the employee -- so the INSERT ... SELECT
+-- would read zero rows, insert nothing, and throw nothing. That is exactly the vacuous-test failure
+-- AGENTS.md §6 exists to prevent, and the first version of this block was guilty of it: it "passed"
+-- the forgery attempt by doing nothing at all. Handing the employee concrete ids makes the INSERT a
+-- real single-row attempt that the policy must refuse on its own merits.
+reset role;
+select set_config('request.jwt.claims', null, true);
+create temp table pp_ids as
+select s.id as subscription_id, d.id as document_id
+from public.subscriptions s
+cross join public.documents d
+where s.tenant_id = '47000000-0000-0000-0000-000000000001'
+  and d.tenant_id = '47000000-0000-0000-0000-000000000001'
+limit 1;
+grant select on pp_ids to authenticated;
+
+select set_config('request.jwt.claims','{"sub":"47000000-0000-0000-0000-0000000000a2"}', true);
+set local role authenticated;
+
+select ok(
+  app.current_user_id() = '47000000-0000-0000-0000-000000000012'
+  and not app.has_permission('VIEW_SUBSCRIPTION_STATUS'),
+  'CONTROL: the employee is a live session and genuinely lacks VIEW_SUBSCRIPTION_STATUS');
+
+select is(
+  (select count(*)::int from public.subscription_payment_proofs),
+  0,
+  'SPP-1: an ordinary employee can no longer read the agency''s payment history -- parity with subscriptions');
+
+select throws_ok(
+  $$insert into public.subscription_payment_proofs
+        (tenant_id, subscription_id, document_id, status_code)
+    select '47000000-0000-0000-0000-000000000001', subscription_id, document_id, 'pending'
+      from pp_ids$$,
+  '42501', null,
+  'SPP-2: ...and can no longer FORGE a pending proof by direct DML, which needed no permission at all');
 
 select finish();
 rollback;
