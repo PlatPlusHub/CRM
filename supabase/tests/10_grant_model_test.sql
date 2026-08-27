@@ -96,6 +96,14 @@ select is(
 --      and neither may be invented here. What CAN be done now is stop the exposure growing: these
 --      two assertions pin it, so a table added later without a capability guard fails the suite
 --      instead of quietly widening the surface. The numbers may fall; they must never rise.
+--
+--      THE SECOND NUMBER COUNTS CAPABILITY TRIGGERS ONLY, and that is deliberate after a
+--      measurement error of mine. A sweep that also credited "the policy mentions has_permission"
+--      scored the money tables as guarded -- but the permission they named was
+--      `VIEW_FINANCIAL_DOCUMENTS`, a READ permission, OR'd with a plain visibility test. Naming a
+--      permission is not requiring the right one. FIN-3 (`202607055900`) then added real capability
+--      triggers to payments, payment_allocations, receipts, refunds, invoices and quotation_items,
+--      which is why this ceiling drops from 40 to 36 rather than rising.
 -- =============================================================================================
 select cmp_ok(
   (select count(*)::int
@@ -114,8 +122,8 @@ select cmp_ok(
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
          where t.tgrelid = c.oid and not t.tgisinternal
            and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)),
-  '<=', 40,
-  '...and at most 40 of them have NO permission check anywhere on the direct write path');
+  '<=', 36,
+  '...and at most 36 of them have NO capability trigger on the direct write path');
 
 select * from finish();
 rollback;

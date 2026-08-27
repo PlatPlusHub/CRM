@@ -99,11 +99,17 @@ select is(
 -- 8-9. DIRECT DML still emits, and cross-tenant forgery is still impossible.
 -- =============================================================================================
 reset role;
+-- ...and CLEAR the claim with it, which is what `reset role` was always meant to model. `reset role`
+-- returns the session to postgres but leaves `request.jwt.claims` set, so `auth.uid()` still
+-- resolved to the employee and FIN-3's new financial capability guard correctly refused: an
+-- employee holds no RECORD_PAYMENT. The insert below is a SYSTEM path, and now genuinely is one.
+-- (Third occurrence of this fixture artifact in the suite, after 31 and 37.)
+select set_config('request.jwt.claims', null, true);
 select lives_ok(
   $$insert into public.payment_allocations (tenant_id, payment_id, invoice_id, allocated_amount, currency_code)
     select '38000000-0000-0000-0000-000000000001', p.id, i.id, 100, 'EGP'
       from public.payments p, public.invoices i limit 1$$,
-  'a DIRECT allocation insert (no RPC) succeeds -- SEC-1 still permits it');
+  'a DIRECT allocation insert on the SYSTEM path succeeds -- exempt from the capability check, never from the record');
 
 select is(
   (select count(*)::int from public.events where event_type_code='payment_allocation_created' and tenant_id='38000000-0000-0000-0000-000000000001'),

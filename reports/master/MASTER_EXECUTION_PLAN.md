@@ -314,6 +314,26 @@ additive capability.*
      RPC, direct DML, batch and system paths re-verified per table. DEPLOYMENT: migration to Primary,
      parity re-proven. REPORTING: the per-table capability map as the client contract.
      **Until it is decided, the exposure is capped by assertion so it cannot grow.**
+   * **FIN-3 / FIN-4 — CLOSED 2026-08-28 (`202607055900`).** The SEC-1 inventory revealed that every
+     money table's policy named `VIEW_FINANCIAL_DOCUMENTS` -- a READ permission -- OR'd with a plain
+     visibility test, so the effective rule was "you may write money about anything you can see".
+     REPRODUCED: an employee with no `RECORD_PAYMENT` inserted a 999,999 EGP payment by direct DML.
+     `journal_entries` had required `CREATE_JOURNAL_ENTRY` all along -- the ledger was guarded and the
+     cash was not. Six tables (payments, payment_allocations, receipts, refunds, invoices,
+     quotation_items) now charge EXACTLY the permission their own RPC charges, read out of the
+     functions rather than chosen. FIN-4: `approval_requests.requested_by` is derived from the
+     caller, so a request cannot be opened in a colleague's name. SEC-1's unguarded ceiling FELL from
+     40 to 36. Guarded by `56_financial_write_capability_test.sql` (12).
+   * **SEC-1 INVENTORY — COMPLETE 2026-08-28, decision still owed.** The systematic classification the
+     directive required: 36 `SECURITY DEFINER` vs 81 `SECURITY INVOKER` app functions, of which **56
+     write tables directly** -- so Option A (revoke `authenticated` writes) means converting 56
+     functions to DEFINER, a change to the whole authorization model, not a configuration tweak.
+     `authenticated` holds INSERT/UPDATE on 59 tables and DELETE on none. Enforcement: 19 by
+     capability trigger, 30 by a policy `WITH CHECK` naming a permission, 36 by either, **23 by
+     neither** -- correcting the previously reported 40, which counted triggers only. And "names a
+     permission" proved not to mean "requires the right one": the money tables named a READ
+     permission (FIN-3). The remaining non-money unguarded tables must each be classified against
+     canon before either option is chosen.
    * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their

@@ -522,3 +522,33 @@ Legend — **Req/Opt:** R = Architecturally Required · O = Architecturally Opti
 ### RLS-1 — read scope is write scope on eleven tables — MERGED into SEC-1 (2026-08-28)
 - **Category:** authorization model · **Severity:** — · **Status:** OBSOLETE (merged) · **Owner:** —
 - **Why merged:** the Phase C reproduction showed the defect is not confined to the eleven `for ALL` policies that name `has_tenant_wide_read()`. The read-only role also inserted into `customers`, whose policy is plain tenant isolation. Fixing the eleven would have left the class intact and created a false sense of closure. The finding, its evidence and its remediation now live under SEC-1.
+
+### FIN-3 — money could be written by anyone who could see the record it belonged to (discovered + FIXED 2026-08-28, `202607055900`)
+- **Category:** financial integrity / authorization · **Severity:** High · **Status:** FIXED · **Owner:** engineering
+- **Evidence (reproduced before fixed):** an `employee` with `RECORD_PAYMENT = false`, acting as `authenticated` by direct DML against a booking they own, inserted a 999,999 EGP payment. `app.record_payment` charges `RECORD_PAYMENT`, held by ceo, finance_manager and owner only.
+- **Root cause:** every money table's policy DID name a permission — `VIEW_FINANCIAL_DOCUMENTS`, a READ permission — sitting in an OR with a pure visibility test. The effective rule was "you may write money about anything you can see". `quotation_items` did not even do that: tenant plus parent visibility. This is the RLS-1 pattern (a read predicate authorizing writes) recurring in the family where it costs most.
+- **Why it was an omission and not a design choice:** `journal_entries` and `journal_entry_lines` already required `has_permission('CREATE_JOURNAL_ENTRY')` in WITH CHECK. ORVION knew the correct pattern; it was applied to the ledger and not to the cash.
+- **Impact:** any tenant user who could see a booking, quotation or payment could create or alter money against it — payments never received, invoices never agreed, refunds never authorised, quotation lines at any price. Not cross-tenant (RLS held that boundary) and fully audited, but financially wrong.
+- **Remediation (applied):** `app.guard_financial_capability`, a BEFORE INSERT OR UPDATE trigger on payments, payment_allocations, receipts, refunds, invoices and quotation_items, charging exactly the permission each table's own RPC charges — read out of the functions, not chosen. INSERT always; UPDATE only when a monetary column changes, so status advances and verification stamps keep their existing authority. Session-less paths exempt from the check, never from the record. A trigger rather than a policy amendment because these are `for ALL` policies whose long expressions are shared between USING and WITH CHECK, and retranscribing them is how PP-2 lost a branch.
+- **Test requirement (met):** `56_financial_write_capability_test.sql` (12) — every denial paired with a control proving the actor could otherwise reach the row (the employee owns the booking), the frontline's own `CREATE_QUOTATION` still works, finance's writes persist, and the system path still writes.
+
+### FIN-4 — an approval request could name someone else as its requester (discovered + FIXED 2026-08-28, `202607055900`)
+- **Category:** audit integrity · **Severity:** Medium · **Status:** FIXED · **Owner:** engineering
+- **Evidence:** `approval_requests.scope_insert` checks only `tenant_id = current_tenant_id()`, and `requested_by` was an ordinary caller-supplied column.
+- **Impact:** any tenant user could open an approval request attributed to a colleague. The approval record is the evidence of who asked for a financial exception, so a forged requester corrupts precisely the trail an approval exists to leave.
+- **Remediation (applied):** WP-00's shape — DERIVE, DO NOT VALIDATE. `requested_by` is overwritten with `app.current_user_id()`, making the forgery unrepresentable on the RPC path and the direct path alike, rather than merely refused.
+- **Test requirement (met):** `56_financial_write_capability_test.sql` §10–11 — the employee opens a request naming finance as requester and it is recorded against the employee.
+
+### FIN-5 — which permission may OPEN each approval type is undefined (recorded 2026-08-28)
+- **Category:** authorization / canon · **Severity:** Low · **Status:** BLOCKED — BUSINESS DECISION · **Owner:** owner
+- **Evidence:** `approval_requests.scope_update` switches on `approval_type_code` for the DECISION (`finance_execution_approval` → APPROVE_FINANCE, `subscription_approval` → REVIEW_SUBSCRIPTION_PAYMENT, else REVIEW_APPROVAL_REQUEST). There is no corresponding map for opening a request; `scope_insert` requires only tenant membership.
+- **Impact:** bounded by FIN-4 — a request can no longer be misattributed — but any tenant user may still open one of any type. FIN-2 established that a finance-execution request costs `CREATE_BOOKING_ITEM`; the other types have no such precedent.
+- **Decision required:** the per-type permission map for opening a request. Deliberately not invented while fixing FIN-4, because attribution needed no decision and this does.
+- **Test requirement:** a positive/negative pair per approval type once the map exists.
+
+### SYSADMIN-1 — the `system_administrator` role holds zero permissions (recorded 2026-08-28)
+- **Category:** role model · **Severity:** Low · **Status:** BLOCKED — BUSINESS DECISION · **Owner:** owner
+- **Evidence:** `role_permissions` contains no row for `system_administrator`. Every other seeded role has at least two. The role is referenced by `app.requires_mfa`, which lists it among the roles requiring step-up — so something expects it to exist and to matter.
+- **Impact:** none operationally: a user holding only this role can do nothing, which is fail-closed. The defect is that the role is a **misleading contract** — an administrator assigning it would reasonably expect it to confer administrative capability, and it confers nothing.
+- **Decision required:** whether the role is intentionally empty (and should say so), obsolete (and should be deactivated), reserved for a future capability, or missing its canon definition. Deliberately not granted anything: inventing a system-administrator capability set would be inventing business policy, and `app.requires_mfa` referencing it is not evidence of what it should be able to do.
+- **Test requirement:** once decided, either an assertion that it holds no permissions by design, or its permission set with positive and negative controls.
