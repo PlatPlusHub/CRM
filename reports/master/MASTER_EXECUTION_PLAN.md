@@ -49,10 +49,15 @@ additive capability.*
 | WP-02 / SPEC-153 | `202607053400` | Five Class A events + a Finance-visibility defect (`payment_allocation` events were invisible to `finance_manager`) |
 | SPEC-154 | `202607053500`, `202607053600` | The ordinary employee could not quote or book — 15 canon-mandated permissions were never seeded; and `create_booking` was broken on the direct path for every role |
 | SPEC-154-A | `202607053700` | The financial guard authorized by ROLE only, so canon's `assigned` scope on ENTER_COST/ENTER_SELLING_PRICE could not be honoured; guard made scope-aware and both permissions granted |
+| SPEC-155 | `202607053800` | An employee could set the basis of their own commission; commission is now system-derived (10% of gross profit), overwritten on every write path, with commission_amount/company_profit exposed through the existing financial accessor. **Closes BLOCKED-3.** |
 
 **Open, ordered by evidence (highest day-one/business impact first):**
 
-1. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
+1. **`app.create_booking_item` accepts a `p_commission_rate` parameter that is now silently ignored.**
+   A caller (future UI, n8n) can pass a value, get no error and no effect — a misleading contract.
+   Classified **A / FIX NOW**; separated only because removing a parameter is an integration-contract
+   change that deserves its own package.
+2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
    Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
 3. **WP-04 — documents/storage.** Zero storage buckets and zero storage policies exist:
    `app.upload_document` records metadata pointing at storage that does not exist. Must also narrow
@@ -67,10 +72,8 @@ additive capability.*
    authoritative history are recorded as its evidence.
 
 **Blocked on commercial decisions (none blocks the above):** BLOCKED-1 trial plan tier + duration at
-provisioning; BLOCKED-2 what `MANAGE_SUBSCRIPTION` "Limited" means for Owner/CEO; **BLOCKED-3 (new
-2026-08-27) who may set `commission_rate`** — the guard bundles it into ENTER_SELLING_PRICE, so an
-employee can now set the basis of their own commission; canon 28 defines no commission permission and
-canon 31 calls it "the reserved basis for sales commission" without saying who may write it.
+provisioning; BLOCKED-2 what `MANAGE_SUBSCRIPTION` "Limited" means for Owner/CEO; **~~BLOCKED-3 who may set `commission_rate`~~ — **RESOLVED 2026-08-27** by owner rule (10% of gross
+profit, system-derived), implemented in SPEC-155.
 
 **Standing method for this batch** (`AGENTS.md §3 5b`, §6): every package ends with a cross-path
 impact sweep classifying each affected execution path, and no security test may pass vacuously.
