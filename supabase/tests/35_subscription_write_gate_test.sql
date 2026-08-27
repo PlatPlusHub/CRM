@@ -222,7 +222,8 @@ select is(
       and c.table_name <> all (array['subscriptions','subscription_payment_proofs','events','security_events',
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                     'users','user_role_assignments','user_branch_assignments','branches','departments'])
+                                     'users','user_role_assignments','user_branch_assignments','branches','departments',
+                                     'tenant_license_activations'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
          where pc.relname = c.table_name and not tg.tgisinternal
@@ -237,7 +238,8 @@ select is(
       and pc.relname = any (array['subscriptions','subscription_payment_proofs','events','security_events',
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                  'users','user_role_assignments','user_branch_assignments','branches','departments'])),
+                                  'users','user_role_assignments','user_branch_assignments','branches','departments',
+                                     'tenant_license_activations'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');
 

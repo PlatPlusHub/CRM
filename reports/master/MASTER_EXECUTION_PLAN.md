@@ -73,13 +73,24 @@ additive capability.*
    their first producers. Platform authority is `service_role`-only functions, **not** a tenant
    permission — `app.has_permission` is tenant-bound by construction, so `MANAGE_SUBSCRIPTION`
    remains held by no role and a test now pins that. Guard: `42_subscription_lifecycle_test.sql`.
-1c. **SPEC-158 — tenant license activation credential** (canon **C4**, open since 2026-07-15).
-   Mechanism **decided on evidence and deliberately not TOTP**: a single-use, hashed, expiring
-   activation token. `totp_enrollments` stores no secret by design and canon 34 / ADR-0017 place
-   every authentication factor in Supabase Auth, so a per-tenant TOTP seed would be the first auth
-   secret ORVION ever stored — and TOTP is a *repeating* credential where a *single-use* one is
-   required. Full reasoning: `subscription-licensing-platform-authority-alignment-2026-08-27.md`
-   §G-LICENSE.
+1c. **SPEC-158 — tenant license activation credential — DONE 2026-08-27 (`202607054100`).** Closes
+   canon **C4**, open since 2026-07-15, where canon 09 recorded the activation-code idea and said it
+   "requires security review before implementation". That review's outcome: **deliberately not
+   TOTP** — `totp_enrollments` stores no secret by design and canon 34 / ADR-0017 place every
+   authentication factor in Supabase Auth, so a per-tenant TOTP seed would be the first auth secret
+   ORVION ever stored; and TOTP is a *repeating* credential where a *single-use* one is required.
+   Built instead: a single-use, hashed (SHA-256), expiring token whose plaintext is returned once and
+   never persisted, carrying the plan/period/auto-renew terms the Platform Owner fixes at issuance so
+   redemption can apply them but never choose them. Replay closed by consumption, rotation is
+   re-issuance (which revokes the outstanding token), revocation is a platform function.
+   `public.security_events` gained its **first producers** — a gap open since the WP-00 sweep.
+   Guard: `43_license_activation_test.sql`. **Known limitation LIC-1:** a *refused* redemption is not
+   audited — `raise` rolls back its own audit row and PostgreSQL has no autonomous transaction. The
+   first version shipped that INSERT anyway and its own test caught that the row was never written;
+   rather than keep code that looks like auditing and never runs, the limitation is stated in the
+   function body, pinned by an assertion, and classified **BLOCKED BY EXTERNAL DEPENDENCY**
+   (an out-of-transaction audit hop). Successful redemptions *are* audited; replay is closed
+   regardless; a 128-bit token makes guessing infeasible.
 1d. **SPEC-159 — employee performance & earnings report.** Must route through `app.item_financials`:
    `authenticated` cannot SELECT `cost_amount` or `commission_rate` (proven), so a plain view fails
    for every employee. Reuses the `reporting` security-invoker precedent. Commission attributes to

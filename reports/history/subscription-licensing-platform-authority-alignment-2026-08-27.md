@@ -415,19 +415,61 @@ property that a future "tidy up the orphaned permissions" pass cannot quietly un
 technical administrator depending on scope"; the ambiguity resolves to the tenant half, because the
 platform half cannot live in a tenant role at all.
 
+## SPEC-158 — `202607054100` — the tenant license activation credential
+
+Closes canon **C4**, open since 2026-07-15, where canon 09 recorded the activation-code idea and
+stated it *"requires security review before implementation"*. This is that review's outcome; the
+reasoning is §G-LICENSE above, and the mechanism is as designed there.
+
+**A defect of my own that this package's own test caught, and how it was resolved.** The first
+version wrote a `license_token_rejected` row to `security_events` and then raised. Assertion 7 failed
+with `have: NULL` — because `raise` aborts the transaction and rolls the audit INSERT back with it.
+PostgreSQL has no autonomous transaction, so an audit row written in the same transaction as its own
+refusal **cannot** survive. The escapes are an out-of-transaction hop (dblink self-connection, pg_net,
+an edge function) or abandoning `raise` for a status return; the first needs a stored connection
+secret, and the second invites a client to read failure as success.
+
+None of the three was worth taking, so the honest option was chosen: **the INSERT was removed, the
+limitation is stated in the function body, and an assertion now pins the real behaviour** — a refused
+attempt leaves no audit row — so nobody builds a brute-force alert on data that does not exist.
+Recorded as **LIC-1**, classified **BLOCKED BY EXTERNAL DEPENDENCY**. Residual risk is bounded: a
+token is 128 bits of CSPRNG output so guessing is infeasible, replay is closed by `consumed_at`
+regardless of auditing, and every *successful* redemption is audited because that path commits. The
+worst outcome would have been shipping the INSERT anyway — code that looks like auditing and never
+runs.
+
+**A fourth vocabulary word was deliberately not registered.** `license_token_rejected` is absent from
+the catalog precisely because nothing can emit it. Canon left eleven subscription event types
+registered with zero producers for years (§B8); registering a word nothing can ever write is how that
+happens.
+
+**Two more defects caught by existing guards, both fixed rather than exempted:**
+
+* `14_tenant_qualified_fk_test.sql` — `consumed_by uuid references public.users (id)` was a
+  single-column FK to a tenant-scoped table, i.e. a path by which one tenant's row could point at
+  another tenant's user. Replaced with the composite `(tenant_id, consumed_by) → users (tenant_id,
+  id)`, which makes the cross-tenant row unrepresentable. This is the exact class SPEC-130 removed
+  everywhere else, reintroduced by me and caught within one run.
+* `01_rls_coverage_test.sql` — the table had RLS enabled and no policy. That guard is catalog-driven
+  with **no exception list**, and the right answer was not to give it one: an explicit
+  `platform_only … using (false) with check (false)` policy states the intent where a reader will
+  look, and acts as a second lock if a future migration ever grants `authenticated` a privilege here
+  by accident. The exception I had briefly added to the smoke test was then **removed again**.
+
 ## VERIFIED
 
 | Check | Result |
 |---|---|
+| New guard `43_license_activation_test.sql` | **19/19** |
 | New guard `42_subscription_lifecycle_test.sql` | **28/28** |
 | `41_commission_derivation_test.sql` (extended for SPEC-156) | **17/17** |
 | `35_subscription_write_gate_test.sql` (rewritten assertion + 3 new controls) | **27/27** |
-| Suite | **42 files / 455 assertions / 0 failures** |
-| Smoke | `ALL CHECKS PASSED` (72 tables, **69/588** catalog) |
+| Suite | **43 files / 474 assertions / 0 failures** |
+| Smoke | `ALL CHECKS PASSED` (**73** tables, **69/591** catalog) |
 | Repository guard | CLEAN |
 | Database parity | `CLEAN (local proven; primary proven)` |
-| repo = local = Primary | **129 migrations**, `ae51b6a100053db2105723ed328b4141` |
-| Primary live re-read | 121 `app` functions (+9) · 2 `pg_cron` jobs · 5 `subscription_period` values · `service_role` **can** execute both platform functions, `authenticated` **cannot** · exactly **1** `create_booking_item` overload · **0** roles hold `MANAGE_SUBSCRIPTION` · 0 tenants, 0 subscriptions |
+| repo = local = Primary | **130 migrations**, `538237ee27a3aa6a41da26f6ac146b3f` |
+| Primary live re-read | 73 tables · **124** `app` functions (+12) · 117 policies · 2 `pg_cron` jobs · 5 `subscription_period` values · `service_role` **can** execute the platform functions and `authenticated` **cannot** · `authenticated` **can** execute `redeem_license_token` · **0** privileges on `tenant_license_activations` for `anon`/`authenticated` · exactly **1** `create_booking_item` overload · **0** roles hold `MANAGE_SUBSCRIPTION` · 0 tenants, 0 subscriptions |
 
 The decisive assertions are the ones that would have passed against the old, broken system and now
 do not:
@@ -493,6 +535,9 @@ it is a real constraint on any future caller of `provision_tenant`.
   suspended in one step (`active → cancelled` is available). Encoded exactly as canon states rather
   than widened for convenience. A canon question, not an implementation one.
 * **PLAN-1** — the three undefined "Limited" plan ceilings, unchanged.
+* **LIC-1 (BLOCKED BY EXTERNAL DEPENDENCY)** — a *refused* license redemption is not audited, because
+  `raise` rolls back its own audit row and PostgreSQL has no autonomous transaction. Stated in code,
+  pinned by an assertion, and fixable only by an out-of-transaction audit hop.
 
 ## GOVERNANCE
 
@@ -515,18 +560,19 @@ parity was re-proven. `npx supabase` continues to work only from PowerShell, not
 
 ## CURRENT STATE
 
-* **129 migrations**, latest `202607054000`, fingerprint `ae51b6a100053db2105723ed328b4141` on
+* **130 migrations**, latest `202607054100`, fingerprint `538237ee27a3aa6a41da26f6ac146b3f` on
   repository, local and Primary.
-* 72 tables · **121** `app` functions · 116 policies · 71 permissions · 69/588 catalog · 2 pg_cron
-  jobs. Primary holds zero business rows.
-* Suite 42 files / 455 assertions / 0 failures. Smoke passes. Both guards CLEAN.
+* **73** tables · **124** `app` functions · **117** policies · 71 permissions · 69/591 catalog ·
+  2 pg_cron jobs. Primary holds zero business rows.
+* Suite 43 files / 474 assertions / 0 failures. Smoke passes. Both guards CLEAN.
 * Git: `main`, tree clean, pushed.
 
 ## NEXT STEP
 
-**SPEC-158 — the tenant license activation credential** (canon C4, open since 2026-07-15). The
-mechanism is decided on evidence and is **not** TOTP: a single-use, hashed, expiring activation
-token, issued by the Platform Owner through a `service_role` function that returns the plaintext
-once, redeemed by the tenant Owner through a function that hashes the input and compares. Reasoning
-in §G-LICENSE above. It now has the platform surface and the canon-26 transition validator it
-depends on.
+**SPEC-159 — the employee performance & earnings report** (owner directive §7–§10). Two constraints
+are already proven and shape it before a line is written: `authenticated` **cannot** SELECT
+`cost_amount` or `commission_rate`, so the report must route through `app.item_financials` exactly as
+`reporting.booking_item_profit` already does; and commission attributes to `sales_owner_user_id`,
+derived from canon 31's "sales commission" wording rather than guessed — noting that today
+`create_booking_item` sets all three ownership fields to the creator, so the distinction is real in
+the schema and unrealised in behaviour (§B12), with the reassignment question held as BLOCKED-4.
