@@ -231,7 +231,7 @@ select is(
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                      'users','user_role_assignments','user_branch_assignments','branches','departments',
-                                     'tenant_license_activations'])
+                                     'tenant_license_activations','document_storage_findings'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
          where pc.relname = c.table_name and not tg.tgisinternal
@@ -247,7 +247,7 @@ select is(
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                   'users','user_role_assignments','user_branch_assignments','branches','departments',
-                                     'tenant_license_activations'])),
+                                     'tenant_license_activations','document_storage_findings'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');
 

@@ -88,6 +88,12 @@ select isnt(
 -- PERMISSION reason and told us nothing about event emission. (That an employee cannot register a
 -- traveller is a real day-one workflow question, recorded for the role audit -- not settled here.)
 reset role;
+-- ...and CLEAR the JWT claim with it. `reset role` changes the database role but leaves
+-- `request.jwt.claims` set, so `auth.uid()` still resolves and every session-aware guard --
+-- including RBAC-1's role-change trigger -- correctly reads this as a user write by someone
+-- who lacks MANAGE_USERS. That hybrid (postgres role, employee identity) cannot occur in
+-- production. Clearing the claim makes this fixture the system path it was always meant to be.
+select set_config('request.jwt.claims', null, true);
 insert into auth.users (id, email) values ('37000000-0000-0000-0000-0000000000a2','senior@evt1.test');
 insert into public.users (id, tenant_id, full_name, email, is_active, auth_user_id) values
   ('37000000-0000-0000-0000-000000000012','37000000-0000-0000-0000-000000000001','Senior','senior@evt1.test',true,'37000000-0000-0000-0000-0000000000a2');

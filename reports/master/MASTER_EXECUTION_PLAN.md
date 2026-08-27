@@ -189,7 +189,42 @@ additive capability.*
      **This is the third occurrence of the sibling-table class and my own WP-04-B missed it** — that
      package touched this table without comparing its RLS to its parent. Guards:
      `48_document_storage_test.sql`, `47_payment_proof_lifecycle_test.sql`.
-   * **WP-04-D — NEXT: document retention, deletion, recovery and orphan reconciliation.** Storage
+   * **WP-04-D — CLOSED 2026-08-27 (`202607054900`, `202607055000`, `202607055100`, `202607055200`).**
+     Delivered on a fact read live before any design: **the database cannot delete a storage object.**
+     `storage.protect_delete()` is a Supabase-installed BEFORE DELETE trigger on `storage.objects` and
+     `storage.buckets` that raises 42501 unless `storage.allow_delete_query` is set, and `pg_net` is
+     not installed on either environment — so the database can neither destroy bytes nor call the
+     Storage API. Setting that GUC in a DEFINER function was rejected twice over: it works around a
+     control the platform installed deliberately, and it would delete only the row while the S3 object
+     survived unnameable — manufacturing the very orphan this package detects. **The architecture is
+     therefore a split: the database owns the DECISION, an external executor owns the BYTES.** Built:
+     `app.document_retention_days()` (NULL = undecided = retain forever, so "delete immediately" is
+     unreachable *by default* rather than by validation); `public.document_storage_findings` (one
+     table, deny-all, `service_role` only); `app.reconcile_document_storage()` (per-tenant,
+     skip-never-raise, idempotent by unique index, re-detection reopens, cross-tenant safety
+     structural via the path prefix); `app.platform_resolve_storage_finding()` (the executor's only
+     way back, and the one path in ORVION that deletes a `document_versions` row, only on a confirmed
+     byte deletion and only after re-checking eligibility); daily cron. Guarded by
+     `49_document_retention_test.sql` (25). **Blocked and recorded, not guessed:** RET-1 (retention
+     period), RET-2 (a departed tenant's data), DEL-1 (the byte executor).
+   * **Also closed by WP-04-D's post-package sweep:** **POL-1** (four policies scoped `to public`
+     rather than `to authenticated` — all four mine, all from one omitted clause;
+     `50_policy_role_scope_test.sql`), **RBAC-1** (ORVION audited privilege grants made through one
+     RPC and nothing else — `user_role_assignments` had *no triggers at all*, so revocation was never
+     recorded, direct-DML grants were unaudited, and the destructive path cost no MFA while the safe
+     one did; fixed on the table, one trigger, single producer;
+     `51_role_change_audit_test.sql`), **CUR-1** (`integration_cursors` grants contradicted its own
+     RLS). **EVT-2** registered: 42 event types remain producerless, now pinned by a `<= 42` ceiling
+     in `07_event_vocabulary_registry_test.sql` so the debt can only shrink.
+   * **WP-04-E — NEXT: the storage executor.** WP-04-D stops at the database boundary because that is
+     where the database's authority stops; the split it establishes is half-built, and
+     `retention_expired` findings accumulate unresolved (safe — nothing is destroyed — but not
+     finished). Acceptance criteria: an executor authenticating as `service_role`, polling open
+     findings, performing exactly the byte operation each finding names through the Storage API,
+     reporting back through the one RPC, idempotent under retry, unable to act on a finding whose
+     tenant is restricted, and never touching an object outside the finding's own tenant prefix. Edge
+     Function vs n8n to be decided on evidence in that package.
+   * *(historical, superseded)* **WP-04-D as originally scoped: document retention, deletion, recovery and orphan reconciliation.** Storage
      now exists on Primary, so an orphaned object is physically possible from this point: the byte
      upload happens *after* the metadata transaction and cannot be rolled back by it. Acceptance
      criteria: a scheduled reconciliation finds metadata without objects and objects without

@@ -89,7 +89,14 @@ select is((select count(*)::int from public.events where entity_type = 'customer
 -- The owner (tenant-wide) must still see everything, or the audit trail is useless to the people
 -- who need it most.
 select set_config('request.jwt.claims', '{"sub":"27000000-0000-0000-0000-0000000000a3"}', true);
-select is((select count(*)::int from public.events), 2,
+-- Scoped to the two entity types this file is about, rather than counting every row in `events`.
+-- RBAC-1 gave `user_role_assignments` a trigger, so the fixture's own role grants are now audited
+-- too and a bare total counts them. The INTENT here was never "there are exactly two events" -- it
+-- is "the owner sees the booking event the Cairo employee was refused, and the customer one" --
+-- and that is what this now says. A total that changes whenever any unrelated write becomes
+-- audited is a brittle way to state it.
+select is((select count(*)::int from public.events
+            where entity_type in ('booking','customer')), 2,
   'the owner reads the whole stream -- a scoped audit trail that hides events from the owner would be a worse defect than the one it fixes');
 
 -- The employee who performed the action keeps sight of it.

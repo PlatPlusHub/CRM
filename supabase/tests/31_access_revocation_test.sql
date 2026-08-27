@@ -93,6 +93,12 @@ select is(app.has_permission('CREATE_CUSTOMER'), true,
   'the second employee still holds their permission while the assignment is current');
 
 reset role;
+-- ...and CLEAR the JWT claim with it. `reset role` changes the database role but leaves
+-- `request.jwt.claims` set, so `auth.uid()` still resolves and every session-aware guard --
+-- including RBAC-1's role-change trigger -- correctly reads this as a user write by someone
+-- who lacks MANAGE_USERS. That hybrid (postgres role, employee identity) cannot occur in
+-- production. Clearing the claim makes this fixture the system path it was always meant to be.
+select set_config('request.jwt.claims', null, true);
 update public.user_role_assignments set ends_at = now() - interval '1 day'
  where user_id = '32000000-0000-0000-0000-000000000012';
 set local role authenticated;
@@ -113,6 +119,7 @@ select is((select count(*)::int from public.leads), 0,
 -- Deactivating the role itself must have the same effect as expiry, or a tenant could disable a role
 -- and leave its holders fully empowered.
 reset role;
+select set_config('request.jwt.claims', null, true);  -- same reason as above
 update public.user_role_assignments set ends_at = null where user_id = '32000000-0000-0000-0000-000000000012';
 update public.roles set is_active = false where code = 'employee';
 set local role authenticated;

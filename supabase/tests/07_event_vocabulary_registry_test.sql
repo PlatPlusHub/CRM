@@ -16,7 +16,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(1);
+select plan(2);
 
 create temporary table _event_literal_scan (proname text, literal text) on commit drop;
 
@@ -99,6 +99,40 @@ select is(
     )),
   0,
   'Every event_type literal an app.* function can emit has a registered event_type catalog value');
+
+-- ---------------------------------------------------------------------------------------------
+-- 2. THE OTHER DIRECTION -- EVT-2. The assertion above stops an emitted code from being
+--    unregistered. Nothing stopped a REGISTERED code from having no producer, and the WP-04-D
+--    sweep found 43 of them: vocabulary the system promises and never speaks.
+--
+--    Most are genuinely unbuilt rather than broken -- auth events (login/otp/totp/password) are
+--    produced by Supabase Auth, which ORVION does not intercept, and the notification_* family
+--    belongs to a package that does not exist yet. Building 43 producers would be inventing
+--    features, so they are classified in MASTER_GAP_REGISTER.md as EVT-2 rather than fixed here.
+--    `role_removed` was NOT one of those -- it was an asymmetry, and RBAC-1 fixed it.
+--
+--    This assertion exists so the debt is MEASURED and can only shrink. It deliberately uses <=:
+--    a new event type registered without a producer pushes the count up and fails, and every
+--    producer added lowers the ceiling on the next reader's honour. A count that could drift
+--    silently upward is how 43 accumulated in the first place.
+--
+--    The scan is intentionally generous -- a code counts as produced if it appears ANYWHERE in any
+--    app function body or trigger definition, comments included -- so it can only UNDER-report.
+--    Everything it flags is genuinely unreachable.
+-- ---------------------------------------------------------------------------------------------
+select cmp_ok(
+  (select count(*)::int
+     from public.catalog_values cv
+    where cv.catalog_type_code = 'event_type'
+      and position(cv.code in (select coalesce(string_agg(pg_get_functiondef(p.oid), E'
+'), '')
+                                 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                where n.nspname = 'app')) = 0
+      and position(cv.code in (select coalesce(string_agg(pg_get_triggerdef(t.oid), E'
+'), '')
+                                 from pg_trigger t where not t.tgisinternal)) = 0),
+  '<=', 42,
+  'at most 42 registered event types have no producer (EVT-2) -- the number may fall, never rise');
 
 select * from finish();
 rollback;
