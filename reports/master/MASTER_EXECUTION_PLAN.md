@@ -256,7 +256,32 @@ additive capability.*
      profit 5400, read from the employee's own report endpoint. Cross-tenant isolation proven against
      a fully privileged owner of another agency. Found LEAD-2 (no `walk_in` lead source) and
      confirmed that an employee's inability to assign leads is correct design, not a gap.
-   * **PHASE C — NEXT: the system-wide zero-debt audit.** WHY IT EXISTS: every package so far has
+   * **PHASE C FIRST PASS — CLOSED 2026-08-28 (`202607055600`).** Walked the journey branches an
+     agency actually works, over HTTP as real users — 26 assertions covering tasks, conversations,
+     document versioning, complaints, service requests, supplier payment, finance approvals, refunds,
+     cancellation and cross-colleague financial privacy. Found and fixed **FIN-2** (an employee could
+     not REQUEST finance approval: the guard treated writing `finance_approval_status_code='pending'`
+     as APPROVING, so the workflow was dead for the only role that needs it) and **TASK-1** (an
+     employee could create and complete a task but not START one). Fixing TASK-1 did not fix it,
+     which exposed **TRANS-1**: transition permissions live in TWO sources -- the `advance_*` inline
+     lists and `app.status_transitions`, which `enforce_status_transition` reads on both the RPC and
+     direct-DML paths -- so editing one left a live drift. Both corrected; parity is now a permanent
+     guard. Also confirmed a cancelled booking item pays no commission, and that an employee sees
+     their own item's profit while a colleague in the same branch sees none of it.
+   * **RLS-1 — NEW PACKAGE: read scope is write scope on eleven tables.** WHY IT EXISTS: `bookings`,
+     `booking_items`, `leads`, `quotations`, `tasks`, `documents`, `document_links`, `complaints`,
+     `conversations`, `customer_notes` and `service_requests` carry `for ALL` policies whose USING and
+     WITH CHECK both include `app.has_tenant_wide_read()` = `has_permission('VIEW_ALL_BRANCHES')`, so
+     a READ permission confers WRITE authority. DISCOVERY SOURCE: Phase C policy sweep.
+     DEPENDENCIES: none. SCOPE: introduce `app.has_tenant_wide_write()` and use it in WITH CHECK, so
+     the two concepts are separable; behaviour is identical today because only owner and ceo hold
+     VIEW_ALL_BRANCHES and both hold every write permission. NON-GOALS: narrowing what owner/ceo can
+     write; splitting the policies into per-command sets. ACCEPTANCE: no `WITH CHECK` expression
+     references a read predicate. SECURITY CRITERIA: a role holding only VIEW_ALL_BRANCHES must gain
+     no write. TEST CRITERIA: a read-only fixture role proves the denial, with owner as the positive
+     control. CROSS-PATH: direct DML and RPC both re-verified on all eleven tables. DEPLOYMENT:
+     migration to Primary, parity re-proven. REPORTING: the eleven policies listed with before/after.
+   * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their
      relationships — schema, FKs, RLS, grants, functions, SECURITY DEFINER, triggers, catalogs,
