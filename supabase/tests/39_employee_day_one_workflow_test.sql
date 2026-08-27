@@ -125,11 +125,13 @@ select is(
 -- in the same session, just performed eight real business actions -- so these refusals are about
 -- authority, not about a broken fixture.
 -- =============================================================================================
-select throws_ok(
-  $$update public.booking_items set cost_amount = 50000
+-- SPEC-154-A changed this deliberately. The employee owns the item they just created, and canon 28
+-- gives Employee ENTER_COST with scope `assigned`, so pricing their OWN work is correct. The
+-- colleague's-item case is proven in `40_financial_scope_test.sql`.
+select lives_ok(
+  $$update public.booking_items set cost_amount = 12000
      where id = (select id from public.booking_items limit 1)$$,
-  '42501', null,
-  'STILL DENIED: writing a cost -- ENTER_COST is withheld because the financial guard is role-based only and cannot yet honour canon''s "assigned only" scope');
+  'NOW ALLOWED: the employee prices their OWN booking item -- canon 28 ENTER_COST, scope assigned');
 
 select throws_ok(
   $$update public.booking_items set finance_approval_status_code = 'approved'

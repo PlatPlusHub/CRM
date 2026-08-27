@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/spec-154-employee-role-canon-alignment-2026-08-27.md` — the ordinary employee could not quote or book; 15 canon-mandated permissions were never seeded, and `create_booking` was broken on the direct path for every role; predecessor `history/wp-02-class-a-events-2026-08-27.md`.
+> **Latest session report:** `history/spec-154a-scope-aware-financial-guard-2026-08-27.md` — canon's `assigned` scope on ENTER_COST/ENTER_SELLING_PRICE is now enforced, the two withheld permissions granted, and a new commission-rate business decision isolated; predecessor `history/spec-154-employee-role-canon-alignment-2026-08-27.md`.
 >
 > `AGENTS.md §4` Stage A step 7 requires every session to read this before proposing work. **Whoever writes the next session report updates this row in the same commit** — an unlinked report is invisible to the boot sequence, which is the one job this pointer has.
 
