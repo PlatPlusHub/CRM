@@ -12,7 +12,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(5);
+select plan(7);
 
 -- 1. anon holds no DML of any kind on any public base table. ORVION has no anonymous flow; every
 --    RLS policy is scoped to {authenticated}, so an anon grant is pure attack surface.
@@ -80,6 +80,42 @@ select is(
       and g.privilege_type = 'EXECUTE' and g.grantee = 0),
   0,
   'no app-schema function grants EXECUTE to PUBLIC');
+
+-- =============================================================================================
+-- 6-7. SEC-1, MEASURED. RLS scopes WHICH ROWS a caller reaches; it does not enforce WHAT they may
+--      do. Capability lives in the `app.*` RPCs -- which direct DML bypasses -- and in a partial set
+--      of guard triggers covering archive, status transitions and financial columns. Creation and
+--      ordinary field edits are unguarded on the direct path across most of the schema.
+--
+--      REPRODUCED 2026-08-28, not theorised: a role holding only VIEW_ALL_BRANCHES and
+--      VIEW_ASSIGNED_LEADS (CREATE_BOOKING = false, CREATE_TASK = false) renamed a booking,
+--      retitled a task, and INSERTED a customer -- all by direct DML, all accepted.
+--
+--      Resolving it is SEC-1, an open owner decision (revoke `authenticated` table writes and make
+--      the RPCs the only door, or enforce canon 28's matrix on every table). Both are architectural
+--      and neither may be invented here. What CAN be done now is stop the exposure growing: these
+--      two assertions pin it, so a table added later without a capability guard fails the suite
+--      instead of quietly widening the surface. The numbers may fall; they must never rise.
+-- =============================================================================================
+select cmp_ok(
+  (select count(*)::int
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and has_table_privilege('authenticated', c.oid, 'INSERT')),
+  '<=', 59,
+  'SEC-1 ceiling: at most 59 tables accept a direct INSERT from authenticated');
+
+select cmp_ok(
+  (select count(*)::int
+     from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r'
+      and has_table_privilege('authenticated', c.oid, 'INSERT')
+      and not exists (
+        select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+         where t.tgrelid = c.oid and not t.tgisinternal
+           and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)),
+  '<=', 40,
+  '...and at most 40 of them have NO permission check anywhere on the direct write path');
 
 select * from finish();
 rollback;

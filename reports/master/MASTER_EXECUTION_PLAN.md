@@ -281,6 +281,39 @@ additive capability.*
      no write. TEST CRITERIA: a read-only fixture role proves the denial, with owner as the positive
      control. CROSS-PATH: direct DML and RPC both re-verified on all eleven tables. DEPLOYMENT:
      migration to Primary, parity re-proven. REPORTING: the eleven policies listed with before/after.
+   * **PHASE C ROLE JOURNEYS — CLOSED 2026-08-28 (`202607055700`, `202607055800`).** The first
+     role-by-role walk ORVION has had: senior employee, branch manager, department manager, finance
+     manager, CEO, owner and platform owner, each with a positive control proving it can do its job
+     and negatives proving it cannot do someone else's. 27 HTTP assertions. Found **RBAC-4** -- a
+     department manager saw ZERO bookings in the department they manage while every employee under
+     them saw them all, because `VIEW_DEPARTMENT_RECORDS` (canon 28's department-read gate for
+     bookings, booking items and quotations) was granted to employee and senior_employee and not to
+     the manager. Fixed and guarded as a CLASS: a manager may never hold fewer department read gates
+     than their staff, and must still hold no branch-wide read. Closed **TASK-2** on canon evidence:
+     canon 26 lists five task events and no start event, and `app.assign_task` already owns
+     `task_assigned`, so the start transition now emits nothing rather than inflating assignment
+     counts with a falsehood. **TRANS-1 investigated and deliberately left guarded** -- the
+     de-duplication needs an event column on `app.status_transitions` and rewriting nine functions,
+     a larger risk than the guarded duplication.
+   * **SEC-1 — REPRODUCED 2026-08-28, and now the largest open item. OWNER DECISION.** WHY IT EXISTS:
+     RLS scopes which rows a caller reaches; it does not enforce what they may do. Capability lives
+     in the `app.*` RPCs, which direct DML bypasses, and in a partial set of guard triggers covering
+     only archive, status transitions and financial columns. DISCOVERY SOURCE: Phase C -- a role
+     holding only `VIEW_ALL_BRANCHES` and `VIEW_ASSIGNED_LEADS` (CREATE_BOOKING false, CREATE_TASK
+     false) renamed a booking, retitled a task and INSERTED a customer, all by direct DML.
+     MEASURED: 59 tables accept a direct INSERT from `authenticated`; 19 have any permission trigger;
+     **40 have none**. RLS-1 is merged in as its concrete instance. DEPENDENCIES: an owner decision
+     between two architectures. SCOPE (whichever is chosen): either revoke `authenticated`'s table
+     writes and make the RPCs the only door -- which requires converting them to SECURITY DEFINER,
+     a change to the whole authorization model -- or enforce canon 28's matrix on every table with a
+     capability trigger. NON-GOALS: choosing between them without the owner; inventing which
+     permission governs creation for tables canon does not name. ACCEPTANCE: the unguarded count
+     reaches zero, or every remaining table is explicitly justified. SECURITY CRITERIA: a role with
+     read permissions only must write nothing anywhere. TEST CRITERIA: the reproduction above becomes
+     a failing-then-passing test; the ceilings in `10_grant_model_test.sql` drop to 0. CROSS-PATH:
+     RPC, direct DML, batch and system paths re-verified per table. DEPLOYMENT: migration to Primary,
+     parity re-proven. REPORTING: the per-table capability map as the client contract.
+     **Until it is decided, the exposure is capped by assertion so it cannot grow.**
    * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their

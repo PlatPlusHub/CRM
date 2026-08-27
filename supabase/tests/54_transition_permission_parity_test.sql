@@ -38,17 +38,22 @@ insert into _fn_table values
   ('advance_service_request','service_requests');
 
 -- Every 4-tuple `('from','to','event','PERMISSION')` an advance_* function declares.
+-- The event slot is either a quoted code or `null::text` -- TASK-2 made two transitions
+-- eventless, because canon 26 defines no start event and `app.assign_task` already owns
+-- `task_assigned`. The pattern accepts both so those transitions stay permission-compared; a regex
+-- that only matched quoted events would have silently stopped checking them, which is precisely the
+-- kind of coverage loss that let TRANS-1 happen in the first place.
 create temporary table _fn_rules as
 select ft.table_name,
        m[1] as from_status,
        m[2] as to_status,
-       m[4] as permission_key
+       m[3] as permission_key
 from _fn_table ft
 join pg_proc p on p.proname = ft.proname
 join pg_namespace n on n.oid = p.pronamespace and n.nspname = 'app'
 cross join lateral regexp_matches(
     pg_get_functiondef(p.oid),
-    '\(''([a-z_]+)'',\s*''([a-z_]+)'',\s*''([a-z_]+)'',\s*''([A-Z_]+)''\)', 'g') m;
+    '\(''([a-z_]+)'',\s*''([a-z_]+)'',\s*(?:''[a-z_]+''|null::text),\s*''([A-Z_]+)''\)', 'g') m;
 
 select ok(
   (select count(*) from _fn_rules) >= 8,
