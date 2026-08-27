@@ -32,6 +32,50 @@ Product/Inventory/Allotments (CDD-2) · Groups + **DC-12 passenger_relationships
 
 ---
 
+## Batch 6 — Foundation Completion Programme (owner-directed 2026-08-24 → current)
+*Added 2026-08-27. This batch did not exist when Batches 0–5 were written: it is the owner's
+zero-known-debt programme, executed package-by-package with EARN-IT. It does not supersede Batches
+0–5; it runs ahead of them because each item is a LIVE defect or a day-one blocker rather than
+additive capability.*
+
+**Closed (each EARNED with behavioural proof, see `reports/history/`):**
+
+| Package | Migration | What it actually fixed |
+|---|---|---|
+| WP-00 | `202607053000` | Audit-spine forgery: any employee could INSERT a forged, backdated event blamed on a colleague into an append-only table |
+| WP-03 / SPEC-152 | `202607053100` | Subscription state was INVERTED — `read_only` permitted writes, `suspended`/`expired`/`cancelled` denied reads |
+| WP-03 discovery | `202607053200` | Two cross-tenant aborts the gate introduced: one lapsed tenant aborted the shared SLA run and stalled the n8n conversion cursor |
+| WP-01 | `202607053300` | Four creation events with real producers that never fired; timelines began mid-relationship |
+| WP-02 / SPEC-153 | `202607053400` | Five Class A events + a Finance-visibility defect (`payment_allocation` events were invisible to `finance_manager`) |
+| SPEC-154 | `202607053500`, `202607053600` | The ordinary employee could not quote or book — 15 canon-mandated permissions were never seeded; and `create_booking` was broken on the direct path for every role |
+
+**Open, ordered by evidence (highest day-one/business impact first):**
+
+1. **SPEC-154-A — scope-aware financial guard.** `app.guard_booking_item_financials` authorizes by
+   ROLE only, so `ENTER_COST` / `ENTER_SELLING_PRICE` cannot be granted per canon without letting an
+   employee price a colleague's item. Blocks the pricing half of the employee's own booking.
+2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
+   Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
+3. **WP-04 — documents/storage.** Zero storage buckets and zero storage policies exist:
+   `app.upload_document` records metadata pointing at storage that does not exist. Must also narrow
+   WP-03's broad `documents` subscription-gate exemption and resolve the missing `payment_proof`
+   document type (canon 28 requires proof upload; the catalog has no code).
+4. **Notifications.** `notifications` / `notification_deliveries` have **no producer at all**.
+5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist; these three do not.
+6. **`public.security_events` has zero producers** — the 13 authentication event types are Supabase
+   Auth events with no ORVION hook.
+7. **Table/column completeness sweep** across all 72 tables — never finished.
+8. **SEC-1 write-path model** — remains the open owner decision; three further forgeries of
+   authoritative history are recorded as its evidence.
+
+**Blocked on commercial decisions (neither blocks the above):** BLOCKED-1 trial plan tier + duration
+at provisioning; BLOCKED-2 what `MANAGE_SUBSCRIPTION` "Limited" means for Owner/CEO.
+
+**Standing method for this batch** (`AGENTS.md §3 5b`, §6): every package ends with a cross-path
+impact sweep classifying each affected execution path, and no security test may pass vacuously.
+
+---
+
 ## Tooling / environment enablement (supports execution quality — see ARB report §Tooling)
 - **Now:** pgTAP (DC-16); CR-invariant guard hook; secret scanning.
 - **Recommended:** Supabase/Postgres MCP server (replaces `docker exec psql` verification with direct queries); `sqlfluff`/`squawk` migration linters in CI.
