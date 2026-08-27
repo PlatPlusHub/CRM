@@ -56,7 +56,34 @@ additive capability.*
 1. **`app.create_booking_item` accepts a `p_commission_rate` parameter that is now silently ignored.**
    A caller (future UI, n8n) can pass a value, get no error and no effect — a misleading contract.
    Classified **A / FIX NOW**; separated only because removing a parameter is an integration-contract
-   change that deserves its own package.
+   change that deserves its own package. **DONE 2026-08-27 — SPEC-156 (`202607053900`).** Dropped
+   rather than replaced, so no stale overload survived; guarded in `41_commission_derivation_test.sql`.
+1b. **Subscription lifecycle, trial and platform authority — DONE 2026-08-27, SPEC-157
+   (`202607054000`).** Closes **BLOCKED-1**, **BLOCKED-2** and canon **C5**. Three defects were
+   proven live first: (i) `app.provision_tenant` created **no subscription row**, and
+   `app.subscription_allows_write` fails closed on absence, so **every newly provisioned tenant was
+   unable to write on all 42 gated tables** — day one of a real agency failed; (ii) `ends_at` /
+   `grace_ends_at` / `read_only_started_at` were **decorative** — read by one reporting view,
+   consumed by no logic, advanced by no job, so an expired trial kept write access forever;
+   (iii) `tenants.status` was unconstrained free text nothing read, a second lifecycle competing
+   with the authority canon 35 §8 names. Fixed: 30-day full-feature (Enterprise) trial created at
+   provisioning; write-once trial stamp on `tenants`; dates load-bearing in the gate **and** advanced
+   by a daily `pg_cron` job per canon 26; 5-value `subscription_period` catalog with **lifetime
+   modelled as `ends_at is null`** under CHECK constraints; the 11 subscription event types given
+   their first producers. Platform authority is `service_role`-only functions, **not** a tenant
+   permission — `app.has_permission` is tenant-bound by construction, so `MANAGE_SUBSCRIPTION`
+   remains held by no role and a test now pins that. Guard: `42_subscription_lifecycle_test.sql`.
+1c. **SPEC-158 — tenant license activation credential** (canon **C4**, open since 2026-07-15).
+   Mechanism **decided on evidence and deliberately not TOTP**: a single-use, hashed, expiring
+   activation token. `totp_enrollments` stores no secret by design and canon 34 / ADR-0017 place
+   every authentication factor in Supabase Auth, so a per-tenant TOTP seed would be the first auth
+   secret ORVION ever stored — and TOTP is a *repeating* credential where a *single-use* one is
+   required. Full reasoning: `subscription-licensing-platform-authority-alignment-2026-08-27.md`
+   §G-LICENSE.
+1d. **SPEC-159 — employee performance & earnings report.** Must route through `app.item_financials`:
+   `authenticated` cannot SELECT `cost_amount` or `commission_rate` (proven), so a plain view fails
+   for every employee. Reuses the `reporting` security-invoker precedent. Commission attributes to
+   `sales_owner_user_id`, derived from canon 31's "sales commission" wording rather than guessed.
 2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
    Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
 3. **WP-04 — documents/storage.** Zero storage buckets and zero storage policies exist:
@@ -71,9 +98,24 @@ additive capability.*
 8. **SEC-1 write-path model** — remains the open owner decision; three further forgeries of
    authoritative history are recorded as its evidence.
 
-**Blocked on commercial decisions (none blocks the above):** BLOCKED-1 trial plan tier + duration at
-provisioning; BLOCKED-2 what `MANAGE_SUBSCRIPTION` "Limited" means for Owner/CEO; **~~BLOCKED-3 who may set `commission_rate`~~ — **RESOLVED 2026-08-27** by owner rule (10% of gross
+**Blocked on commercial decisions (none blocks the above):**
+~~BLOCKED-1 trial plan tier + duration at provisioning~~ — **RESOLVED 2026-08-27**: owner set a
+30-day full-feature trial; "full feature" resolved to the Enterprise plan on evidence (it is the only
+plan with all 22 entitlements enabled), implemented in SPEC-157.
+~~BLOCKED-2 what `MANAGE_SUBSCRIPTION` "Limited" means for Owner/CEO~~ — **RESOLVED 2026-08-27**, and
+resolved in the opposite direction to the obvious reading: it is granted to **neither**. Platform
+authority cannot be a tenant permission at all, because `app.has_permission` resolves the caller
+through `public.users` joined on `current_tenant_id()` — every role holder is inside exactly one
+tenant by construction. SPEC-157 places it on `service_role` instead.
+~~BLOCKED-3 who may set `commission_rate`~~ — **RESOLVED 2026-08-27** by owner rule (10% of gross
 profit, system-derived), implemented in SPEC-155.
+**New, and none blocks current work:** **BLOCKED-4** — once booking-item ownership becomes
+transferable (it is not today: `create_booking_item` sets all three ownership fields to the creator
+and no reassignment path exists), does commission follow the new sales owner or stay with the
+original seller? Pure compensation policy. **BLOCKED-5** — may the Platform Owner ever deliberately
+re-grant a trial? Implemented conservatively as never (write-once stamp). **CANON-26-1** — canon 26
+admits `suspended` only from `read_only`, so an active tenant cannot be suspended in one step;
+`active -> cancelled` is available. Encoded as canon states rather than widened by assumption.
 
 **Standing method for this batch** (`AGENTS.md §3 5b`, §6): every package ends with a cross-path
 impact sweep classifying each affected execution path, and no security test may pass vacuously.

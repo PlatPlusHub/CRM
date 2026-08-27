@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/spec-155-commission-system-derived-2026-08-27.md` — commission is now system-derived (10% of gross profit) and cannot be manipulated on any write path; BLOCKED-3 resolved; predecessor `history/spec-154a-scope-aware-financial-guard-2026-08-27.md`.
+> **Latest session report:** `history/subscription-licensing-platform-authority-alignment-2026-08-27.md` — the owner's subscription/trial/licensing/platform-authority proposal evaluated against live evidence, then SPEC-156 + SPEC-157 implemented: provisioning now creates a 30-day full-feature trial (before it created no subscription at all, leaving every new tenant unable to write), subscription dates became load-bearing, and platform authority was placed outside the tenant permission model. Closes BLOCKED-1, BLOCKED-2 and canon C5; decides canon C4's mechanism. Predecessor `history/spec-155-commission-system-derived-2026-08-27.md`.
 >
 > `AGENTS.md §4` Stage A step 7 requires every session to read this before proposing work. **Whoever writes the next session report updates this row in the same commit** — an unlinked report is invisible to the boot sequence, which is the one job this pointer has.
 

@@ -15,7 +15,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(15);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('41000000-0000-0000-0000-0000000000a1','emp@com.test'),
@@ -160,6 +160,29 @@ set local role authenticated;
 select lives_ok(
   $$select app.create_booking_item('41000000-0000-0000-0000-0000000000f1','hotel','EGP')$$,
   'a BARE item (no cost, no selling price) still creates under CREATE_BOOKING_ITEM alone');
+
+-- =============================================================================================
+-- 15-16. SPEC-156: the ignored parameter is GONE, and gone without leaving an overload behind.
+--        A silently ignored input is worse than a rejected one -- it teaches the caller a false
+--        rule. Assertion 16 is the one that matters: `create or replace` with a shorter argument
+--        list would have left the 9-argument version callable alongside the new one, so proving
+--        the parameter is absent is only meaningful once we prove there is exactly ONE signature.
+-- =============================================================================================
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname = 'create_booking_item'),
+  1,
+  'app.create_booking_item has exactly ONE signature -- no stale overload survived the change');
+
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname = 'create_booking_item'
+      and 'p_commission_rate' = any (p.proargnames)),
+  0,
+  '...and it no longer accepts p_commission_rate, which SPEC-155 had made inert');
 
 select finish();
 rollback;

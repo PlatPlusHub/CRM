@@ -11,7 +11,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(24);
+select plan(27);
 
 insert into auth.users (id, email) values
   ('35000000-0000-0000-0000-0000000000a1','emp@sub.test');
@@ -248,9 +248,41 @@ select is(
 --     would have become a hard blocker. This assertion is what stops a later session from
 --     "tightening" the exemption list and silently breaking tenant creation.
 -- =============================================================================================
+--     SPEC-157 UPDATE: this assertion used to end with "...even though it has no subscription yet",
+--     which faithfully recorded a DEFECT. `app.subscription_allows_write` returns FALSE when no
+--     subscription row exists, so a tenant provisioned that way could create branches and users
+--     (exempt tables) and then not a single customer, lead, booking or payment. Provisioning now
+--     creates the 30-day trial subscription in the same transaction, and assertions 25-27 below are
+--     the positive controls that prove it -- the denial half above is only meaningful because a
+--     brand-new tenant demonstrably CAN write.
+--
+--     The session is cleared first because that is how this function is really called: it is granted
+--     to `service_role` alone, which carries no `auth.uid()`. WP-00 pins a session-ful caller's
+--     events to that caller's own tenant, so emitting `subscription_created` for a NEW tenant is
+--     only legitimate from the session-less platform path -- which is exactly the WP-00 rule doing
+--     its job, not an obstacle to work around.
+-- =============================================================================================
+reset role;
+select set_config('request.jwt.claims', null, true);
+
 select lives_ok(
   $$select app.provision_tenant('Gate Test Agency','gate-test-agency','owner@gate.test','Gate Owner')$$,
-  'a brand-new tenant can still be provisioned even though it has no subscription yet');
+  'a brand-new tenant provisions cleanly, session-less, exactly as service_role calls it');
+
+select ok(
+  app.subscription_allows_write((select id from public.tenants where slug = 'gate-test-agency')),
+  'SPEC-157: ...and it may WRITE on day one -- this returned FALSE before provisioning created a subscription');
+
+select is(
+  (select (trial_ends_at::date - trial_started_at::date) from public.tenants where slug = 'gate-test-agency'),
+  30,
+  '...on a 30-day trial stamped on the TENANT, so it survives every later subscription row');
+
+select lives_ok(
+  $$insert into public.customers (tenant_id, customer_type_code, full_name, primary_phone)
+    select id, 'person', 'Day One Customer', '+201009990000'
+      from public.tenants where slug = 'gate-test-agency'$$,
+  '...and the gate itself passes the first real business row -- proven end to end, not inferred');
 
 select finish();
 rollback;
