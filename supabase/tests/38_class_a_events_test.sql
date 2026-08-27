@@ -65,7 +65,7 @@ select lives_ok(
   'BASELINE: finance can record a payment against it');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='payment_allocation_created'),
+  (select count(*)::int from public.events where event_type_code='payment_allocation_created' and tenant_id='38000000-0000-0000-0000-000000000001'),
   1,
   'record_payment now emits exactly ONE payment_allocation_created -- it wrote the allocation but announced nothing before');
 
@@ -80,18 +80,18 @@ select is(
   'CONTROL: finance can read the allocation ROW itself (VIEW_FINANCIAL_DOCUMENTS)');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='payment_allocation_created'),
+  (select count(*)::int from public.events where event_type_code='payment_allocation_created' and tenant_id='38000000-0000-0000-0000-000000000001'),
   1,
   '...and can therefore read its EVENT -- which without the new dispatch branch would have hit ELSE false, since finance_manager does NOT hold VIEW_ALL_BRANCHES');
 
 select set_config('request.jwt.claims','{"sub":"38000000-0000-0000-0000-0000000000a2"}', true);
 
 select isnt(
-  (select count(*)::int from public.events where event_type_code='customer_created'), 0,
+  (select count(*)::int from public.events where event_type_code='customer_created' and tenant_id='38000000-0000-0000-0000-000000000001'), 0,
   'CONTROL: the ordinary employee CAN read events in general -- so the next denial is about the subject, not an empty fixture');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='payment_allocation_created'),
+  (select count(*)::int from public.events where event_type_code='payment_allocation_created' and tenant_id='38000000-0000-0000-0000-000000000001'),
   0,
   '...but CANNOT read the allocation event -- financial privacy follows the subject row, exactly as SPEC-143 intends');
 
@@ -106,7 +106,7 @@ select lives_ok(
   'a DIRECT allocation insert (no RPC) succeeds -- SEC-1 still permits it');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='payment_allocation_created'),
+  (select count(*)::int from public.events where event_type_code='payment_allocation_created' and tenant_id='38000000-0000-0000-0000-000000000001'),
   2,
   '...and ALSO emits its event -- an in-RPC emission would have missed the direct path entirely');
 
@@ -119,7 +119,7 @@ select set_config('request.jwt.claims','{"sub":"38000000-0000-0000-0000-00000000
 select lives_ok($$select app.record_trusted_device('wp2-device')$$, 'BASELINE: a device can be trusted');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='trusted_device_reverified'),
+  (select count(*)::int from public.events where event_type_code='trusted_device_reverified' and tenant_id='38000000-0000-0000-0000-000000000001'),
   0,
   'an ordinary re-login touch does NOT emit reverified -- record_trusted_device updates last_seen_at every time, and firing there would spam an append-only spine');
 
@@ -128,14 +128,14 @@ select lives_ok(
   'BASELINE: the device can be revoked');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='trusted_device_revoked'),
+  (select count(*)::int from public.events where event_type_code='trusted_device_revoked' and tenant_id='38000000-0000-0000-0000-000000000001'),
   1,
   'revoke_trusted_device now emits trusted_device_revoked -- it emitted nothing at all before');
 
 select lives_ok($$select app.record_trusted_device('wp2-device')$$, 'BASELINE: the revoked device can be trusted again');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='trusted_device_reverified'),
+  (select count(*)::int from public.events where event_type_code='trusted_device_reverified' and tenant_id='38000000-0000-0000-0000-000000000001'),
   1,
   '...and THAT emits reverified -- a genuine return from revoked, not a routine touch');
 
@@ -145,7 +145,7 @@ select is(
 -- =============================================================================================
 reset role;
 select is(
-  (select count(*)::int from public.events where event_type_code='user_branch_transfer_completed'),
+  (select count(*)::int from public.events where event_type_code='user_branch_transfer_completed' and tenant_id='38000000-0000-0000-0000-000000000001'),
   0,
   'the two FIRST placements in this fixture emitted no transfer event -- an initial posting is not a transfer');
 
@@ -160,17 +160,17 @@ values ('38000000-0000-0000-0000-000000000001','38000000-0000-0000-0000-00000000
         '38000000-0000-0000-0000-00000000000b','38000000-0000-0000-0000-0000000000c2', true, 'permanent');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='user_branch_transfer_completed'),
+  (select count(*)::int from public.events where event_type_code='user_branch_transfer_completed' and tenant_id='38000000-0000-0000-0000-000000000001'),
   1,
   'moving an employee to a second branch DOES emit transfer_completed -- branch placement finally leaves an audit trace');
 
 select is(
-  (select entity_type from public.events where event_type_code='user_branch_transfer_completed'),
+  (select entity_type from public.events where event_type_code='user_branch_transfer_completed' and tenant_id='38000000-0000-0000-0000-000000000001'),
   'user',
   '...against the employee as subject, an entity_type the events read policy already dispatches');
 
 select is(
-  (select count(*)::int from public.events where event_type_code='user_branch_transfer_started'),
+  (select count(*)::int from public.events where event_type_code='user_branch_transfer_started' and tenant_id='38000000-0000-0000-0000-000000000001'),
   0,
   'user_branch_transfer_started is NEVER emitted -- assign_user_branch is one synchronous call and canon defines no two-phase transfer, so firing both would fabricate a lifecycle');
 
@@ -186,8 +186,15 @@ insert into public.document_versions (id, tenant_id, document_id, version_number
 update public.documents set current_version_id = '38000000-0000-0000-0000-0000000000f1' where id='38000000-0000-0000-0000-0000000000e1';
 update public.documents set current_version_id = '38000000-0000-0000-0000-0000000000f2' where id='38000000-0000-0000-0000-0000000000e1';
 
+-- Scoped to THIS fixture's document. Counting `document_superseded` across the whole `events` table
+-- made this assertion depend on every other row in the database, and it duly broke the first time
+-- something outside the pgTAP suite created a second version -- `scripts/verify_storage_end_to_end.ps1`,
+-- whose fixture cannot be torn down because `events` is append-only by design. The code was correct
+-- both times; the assertion was measuring the wrong thing. Same correction as `27_event_visibility_test`.
 select is(
-  (select count(*)::int from public.events where event_type_code='document_superseded'),
+  (select count(*)::int from public.events
+    where event_type_code='document_superseded'
+      and entity_id='38000000-0000-0000-0000-0000000000e1'),
   1,
   'only the SECOND version supersedes: null -> v1 is the first version, v1 -> v2 is a supersession');
 

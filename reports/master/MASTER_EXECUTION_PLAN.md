@@ -216,7 +216,45 @@ additive capability.*
      `51_role_change_audit_test.sql`), **CUR-1** (`integration_cursors` grants contradicted its own
      RLS). **EVT-2** registered: 42 event types remain producerless, now pinned by a `<= 42` ceiling
      in `07_event_vocabulary_registry_test.sql` so the debt can only shrink.
-   * **WP-04-E — NEXT: the storage executor.** WP-04-D stops at the database boundary because that is
+   * **WP-04-E — CLOSED 2026-08-27 (`202607055300`, `202607055400`, Edge Function `storage-executor`).**
+     The byte half of WP-04-D's split now exists. **Chosen on one property, as WP-04-C was: the number
+     of new secrets.** The Supabase Edge runtime injects `SUPABASE_SERVICE_ROLE_KEY` itself, so the
+     credential is never created, pasted, stored or passed through an agent — zero new secrets. n8n
+     would require the owner to create a service_role credential by hand (AGENTS.md §6) that must
+     then live somewhere forever; a direct Postgres connection would require the database password.
+     The executor **decides nothing** — `app.claim_storage_actions` answers every eligibility question
+     (retention configured, version still superseded, `current_version_id` agreement, tenant not
+     restricted) before it sees a row, so no second authorization system exists outside the database.
+     **No lease, deliberately**: it marks nothing in flight, so a crash leaves the finding untouched
+     and the next run retries; adding PH8-1's lease would introduce the stranding state that lease
+     exists to escape. Authentication verified live on Primary: no header → 401 from the gateway, a
+     valid **anon** JWT → 403 from the function's own service-key check (the platform's default
+     `verify_jwt` alone would have admitted any visitor to a function that destroys documents).
+     **STORAGE IS NOW PROVEN END TO END** — `scripts/verify_storage_end_to_end.ps1`, 36 assertions with
+     real bytes over real HTTP: upload, cross-tenant and unauthenticated denial, signed URLs,
+     supersession, reconciliation against a populated bucket, retention, byte destruction, audit
+     survival, idempotency. Also closed **FND-1** (a failed storage action was permanently hidden —
+     PH8-1's shape, and mine from the previous day) and **GRANT-1**.
+   * **API-1 — NEXT, and the single largest thing between ORVION and a usable system: the database is
+     complete and unreachable.** WHY IT EXISTS: proven live against Primary, PostgREST serves only
+     `public` and `graphql_public`, so all 137 `app.*` functions and all 8 `reporting` views return
+     404/406. DISCOVERY SOURCE: WP-04-E, when the executor needed to call its own RPC over HTTP.
+     Invisible for the whole programme because every RPC test speaks SQL, not HTTP — 600 passing
+     assertions coexisted with a completely unreachable API. DEPENDENCIES: none blocking. SCOPE:
+     enumerate the client-facing RPCs and reporting views; wrap each in `public` as **`security
+     invoker`**; grant deliberately per role; prove each **over HTTP**. NON-GOALS: exposing the `app`
+     schema (it would publish every internal helper RLS depends on — a permission-probing oracle and a
+     frozen internal API); wrapping internal helpers; inventing endpoints for capabilities that do not
+     exist. SECURITY CRITERIA: no wrapper is ever `SECURITY DEFINER` (it would check the inner EXECUTE
+     grant against the owner and bridge into the private schema); every wrapper pins `search_path`;
+     no wrapper is executable by `anon` unless deliberately intended. TEST CRITERIA: the class guards
+     in `52_public_api_and_executor_contract_test.sql` plus a per-endpoint HTTP proof with a positive
+     control and a cross-tenant negative. CROSS-PATH CRITERIA: each endpoint must behave identically
+     to its `app.*` function under RLS — the wrapper adds reachability and zero authority. DEPLOYMENT:
+     migrations to Primary, parity re-proven. REPORTING: an endpoint inventory that survives as the
+     client contract. Also decides whether `ACCESS_API_FULL`/`ACCESS_API_READ_ONLY` gate the surface
+     (PERM-1).
+   * *(historical, superseded)* **WP-04-E as originally scoped: the storage executor.** WP-04-D stops at the database boundary because that is
      where the database's authority stops; the split it establishes is half-built, and
      `retention_expired` findings accumulate unresolved (safe — nothing is destroyed — but not
      finished). Acceptance criteria: an executor authenticating as `service_role`, polling open

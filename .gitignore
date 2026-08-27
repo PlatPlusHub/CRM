@@ -31,3 +31,6 @@ backup/
 .claude/settings.local.json
 .claude/settings.local.backup-*.json
 .claude/settings.json
+
+# Editor/vault state -- local tooling, never part of the repository's truth.
+.obsidian/
