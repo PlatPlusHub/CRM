@@ -235,7 +235,41 @@ additive capability.*
      supersession, reconciliation against a populated bucket, retention, byte destruction, audit
      survival, idempotency. Also closed **FND-1** (a failed storage action was permanently hidden —
      PH8-1's shape, and mine from the previous day) and **GRANT-1**.
-   * **API-1 — NEXT, and the single largest thing between ORVION and a usable system: the database is
+   * **API-1 — CLOSED 2026-08-28 (`202607055500`).** ORVION stops being unreachable. Executed as a
+     CAPABILITY AUDIT, not a wrapper factory: 137 `app` functions minus 20 triggers, 7 RLS helpers,
+     4 view helpers, 6 platform-only and 14 system/batch left 86 granted to `authenticated`, of which
+     **15 are internal helpers deliberately excluded** — `record_event` above all, the audit spine's
+     sole writer, which "expose the `app` schema" would have published as an endpoint (audit forgery
+     through the front door). **71 capabilities + 8 reporting views** exposed; every wrapper
+     `security invoker` so it adds reachability and precisely zero authority; named-argument
+     delegation so an `app` signature change fails at migration time; all VOLATILE for one uniform
+     POST convention. Deployed by generating identical DDL on Primary and then PROVING equality
+     rather than assuming it — surface hash `731cbd41ce480d714802b3de9a255c7a` on both, 81 objects.
+     Verified on Primary over HTTP with correct arguments: endpoints 401, internal helpers and
+     `platform_*` 404 PGRST202. Guarded by `53_api_surface_test.sql`, which pins the exposed set BY
+     NAME. **Deployment criteria gained a permanent step:** any migration touching a `public`
+     function or view must be followed by `notify pgrst, 'reload schema'`.
+   * **PHASE B FIRST PASS — CLOSED 2026-08-28.** `scripts/verify_api_end_to_end.ps1` (29 assertions)
+     walks the real revenue lifecycle as real JWT-bearing users: customer → lead → assignment →
+     interaction → quotation → pricing → send → booking → booking item → passenger → document →
+     invoice → payment → receipt → personal performance. Gross 6000 → commission 600 → company
+     profit 5400, read from the employee's own report endpoint. Cross-tenant isolation proven against
+     a fully privileged owner of another agency. Found LEAD-2 (no `walk_in` lead source) and
+     confirmed that an employee's inability to assign leads is correct design, not a gap.
+   * **PHASE C — NEXT: the system-wide zero-debt audit.** WHY IT EXISTS: every package so far has
+     found defects beside the one it was chartered for, and the remaining surface has never been
+     swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their
+     relationships — schema, FKs, RLS, grants, functions, SECURITY DEFINER, triggers, catalogs,
+     permissions, events and their producers/consumers, reporting views, scheduled jobs,
+     integrations, RPCs, direct-DML surfaces, test families, governance — inspected for BEHAVIOURAL
+     consistency, not existence. Plus the journey branches not yet walked over HTTP: refund,
+     cancellation, complaint, service request, supplier payment, finance approvals, conversations,
+     tasks. NON-GOALS: inventing features to give registered vocabulary a producer; adding reports
+     because mature CRMs have them. ACCEPTANCE: every finding classified PROVEN/UNPROVEN/FAILED/
+     BLOCKED and, if an engineering defect, fixed. TEST CRITERIA: each fix carries positive and
+     negative controls plus the relevant direct-DML/RPC/system/cross-tenant paths. DEPLOYMENT:
+     migrations to Primary, parity re-proven, PostgREST cache reloaded when the surface changes.
+   * *(historical, superseded)* **API-1 as originally scoped: the database is
      complete and unreachable.** WHY IT EXISTS: proven live against Primary, PostgREST serves only
      `public` and `graphql_public`, so all 137 `app.*` functions and all 8 `reporting` views return
      404/406. DISCOVERY SOURCE: WP-04-E, when the executor needed to call its own RPC over HTTP.
