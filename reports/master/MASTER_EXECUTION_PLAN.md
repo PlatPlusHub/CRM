@@ -131,17 +131,35 @@ additive capability.*
    * **`storage.buckets` = 0, `storage.objects` = 0, `pg_policies` in schema `storage` = 0 on
      Primary**, while `document_versions.storage_path` is **NOT NULL**. Every upload is therefore
      required to record a path into storage that does not exist.
-   * **DOC-1 — the storage path is caller-supplied.** `app.upload_document(… p_storage_path text …)`
-     takes the path as a parameter. The moment buckets exist, nothing stops a caller writing a path
-     under another tenant's prefix — a cross-tenant path designed in before storage is even created.
-     The fix shape is already proven in this repository: **derive the path, do not validate it**
-     (SPEC-155's overwrite-don't-forbid), so no caller value survives on any write path.
-   * **DOC-2 — no `payment_proof` document type.** The `document_type` catalog holds 12 values and
-     none of them is a payment proof, while `subscription_payment_proofs.document_id` is NOT NULL and
-     `document_links.subscription_payment_proof_id` exists. Canon 09/28 require a tenant to upload
-     bank-transfer proof for renewal; today it can only be filed as `other`. The linkage is modelled
-     end to end and the vocabulary is missing.
-   * Also owns: narrowing WP-03's broad `documents` subscription-gate exemption, and SPEC-154-B's
+   * **DOC-1 / DOC-3 — DONE 2026-08-27 as WP-04-A (`202607054400`).** Re-introspection found DOC-1
+     was wider than first recorded: `app.add_document_version` takes `p_storage_path` too, and
+     `authenticated` holds INSERT/UPDATE on `document_versions` directly — three caller-controlled
+     paths, not one. **DOC-3** (new): nothing forced anyone through the RPC, so a version's
+     `storage_path` could be rewritten by direct DML with no permission check and no event — the
+     WP-00 forgery class in the document domain. Fixed by derivation, not validation:
+     `app.document_storage_path` is the single source of the object key (tenant-first, so storage
+     policy can isolate on segment 1, and provider-independent by design), and a trigger derives
+     `version_number` / `storage_path` / `uploaded_by` on INSERT while freezing a version's identity
+     on UPDATE. Direct DML now costs `CREATE_DOCUMENT_VERSION` — verified safe first: every role
+     holding `UPLOAD_DOCUMENT` already holds it. Guard: `46_document_write_integrity_test.sql`.
+     *Correction recorded:* a partial unique index for "one current version" was attempted and
+     rejected by the database — `202607041900` already created it, so that invariant was never open.
+   * **WP-04-B — NEXT. DOC-2 is three layers deep, not one.** (i) the `document_type` catalog has no
+     `payment_proof` value; (ii) **`subscription_payment` IS already a `document_link_target_type`
+     but `app.upload_document` has no branch for it**, so it falls through to `else false` and
+     raises; (iii) `document_links.subscription_payment_proof_id` is populated by no code path. A
+     circular dependency (`subscription_payment_proofs.document_id` is NOT NULL while the link needs
+     the proof id) means the fix is a dedicated transactional RPC —
+     `app.upload_subscription_payment_proof` — not another parameter on `upload_document`. Then the
+     platform-side review that transitions the subscription and emits
+     `subscription_payment_approved` / `_rejected`.
+   * **The subscription-gate exemption (owner directive §7) belongs with WP-04-B.** Confirmed live:
+     **zero** gate triggers on `documents` / `document_versions` / `document_links`, so a suspended
+     tenant can create ANY document, not merely a renewal proof. Narrowing it requires
+     `payment_proof` to exist first — that type is the discriminator by which the gate tells a
+     renewal proof from an ordinary document — so sequencing it before DOC-2 would have meant
+     inventing a placeholder.
+   * Also owns SPEC-154-B's
      document-classification boundary (`VIEW_FINANCIAL_DOCUMENTS` is a binary tenant-wide gate that
      cannot express canon's "assigned related only").
    * **Provider evaluation is the gate** (owner directive §14): decided on tenant isolation, private
