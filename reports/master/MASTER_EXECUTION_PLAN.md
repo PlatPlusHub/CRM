@@ -91,10 +91,39 @@ additive capability.*
    function body, pinned by an assertion, and classified **BLOCKED BY EXTERNAL DEPENDENCY**
    (an out-of-transaction audit hop). Successful redemptions *are* audited; replay is closed
    regardless; a 128-bit token makes guessing infeasible.
-1d. **SPEC-159 — employee performance & earnings report.** Must route through `app.item_financials`:
-   `authenticated` cannot SELECT `cost_amount` or `commission_rate` (proven), so a plain view fails
-   for every employee. Reuses the `reporting` security-invoker precedent. Commission attributes to
-   `sales_owner_user_id`, derived from canon 31's "sales commission" wording rather than guessed.
+1d. **SPEC-159 — employee performance & earnings report — DONE 2026-08-27 (`202607054300`).**
+   `reporting.my_sales_performance`, a `security_invoker` view scoped by
+   `sales_owner_user_id = app.current_user_id()`. Money comes from
+   `cross join lateral app.item_financials(bi.id)` — `authenticated` cannot SELECT `cost_amount` or
+   `commission_rate` (proven), so a view naming them would fail for every employee; this is what
+   keeps SPEC-139 intact rather than weakened. A colleague's rows are **absent, not masked**: a
+   masked row still discloses that a colleague sold something, to whom, and when. Archived and
+   `cancelled`/`no_show` items are excluded, reusing `app.booking_item_profit`'s existing rule.
+   LEFT joins deliberately, because an item can be the caller's while its parent booking is not
+   visible to them — an inner join would under-report the employee's own commission.
+   **Exactly one view** was added: the employee already reads their own leads, quotations, customers
+   and bookings under RLS, and `reporting.sales_activity` / `lead_performance` already aggregate per
+   owner, so only the money needed a new object. **No EXPORT permission invented** — canon 25 defines
+   none, every listed filter is a WHERE clause over exposed columns, and PostgREST serves the same
+   view as CSV. Airline reporting is `supplier_type_code = 'airline'`; canon 32 defers airline
+   reference tables, so no dimension was invented. Guard: `45_employee_performance_test.sql`.
+1e. **SPEC-159-A — per-passenger financial authority — DONE 2026-08-27 (`202607054200`).**
+   **A prerequisite discovered inside SPEC-159's lineage pass and inserted rather than skipped.**
+   `booking_item_passengers.cost_amount_override` / `selling_amount_override` — the per-passenger
+   fare and cost — had none of the protection their `booking_items` siblings have carried since
+   SPEC-139/145/154-A: the column was **readable by `authenticated`** (proven live, while
+   `booking_items.cost_amount` is not), writable through `link_passenger_to_booking_item` on **any
+   item the caller could see** with only `CREATE_BOOKING_ITEM` and no scope check, and writable by
+   direct DML besides. RLS made it reachable rather than theoretical — department continuity means a
+   colleague's item is visible. It survived four financial packages because
+   `link_passenger_to_booking_item` had **zero test coverage**. Fixed with the same permissions, the
+   same `app.is_my_booking_item` scope test and the same tenant-wide exemption the parent table uses;
+   enforced by a trigger because direct DML was the unguarded path. Guard:
+   `44_passenger_financial_authority_test.sql`. Related open items, both recorded not hidden:
+   **DEAD-1** the override columns still have no reader (kept, not dropped — per-passenger pricing is
+   inevitable in a travel agency and AGENTS.md §3 keeps inevitable structure); **DEAD-2**
+   `refunds.booking_item_id` and `payments.booking_item_id` have no producer, so item-level refund
+   and payment attribution is a genuine gap for the finance package.
 2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
    Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
 3. **WP-04 — documents/storage.** Zero storage buckets and zero storage policies exist:
