@@ -5,7 +5,7 @@
 -- freshly reset database: raises an exception on the first broken invariant, otherwise prints
 -- "ALL CHECKS PASSED". CI-able: a non-zero exit signals a regression.
 --   docker exec -i <db> psql -U postgres -d postgres -f - < scripts/verify_database.sql
--- Expected values track the frozen baseline: 73 public base tables, 69 catalog types, 591 catalog
+-- Expected values track the frozen baseline: 73 public base tables, 69 catalog types, 593 catalog
 -- values (565 + 4 refund lifecycle events registered by 202607049800, audit 2026-08-10; + 14
 -- related_entity_type values seeded by 202607050700 / SPEC-130, which also added the 68th type). Documented referential exceptions to the restrict default (30 Referential Action Standard):
 -- users.auth_user_id -> auth.users ON DELETE SET NULL (ADR-0011); trusted_devices / otp_challenges /
@@ -100,7 +100,7 @@ begin
     select count(*) into n from catalog_types;
     if n <> 69 then raise exception 'CHECK 6a FAILED: expected 69 catalog_types, found %', n; end if;
     select count(*) into n from catalog_values;
-    if n <> 591 then raise exception 'CHECK 6b FAILED: expected 591 catalog_values, found %', n; end if;
+    if n <> 593 then raise exception 'CHECK 6b FAILED: expected 593 catalog_values, found %', n; end if;
 
     -- 7. Referential Action Standard: every public FK is restrict/no-action, except the documented
     --    exceptions (users.auth_user_id set null; 3 auth-support cascades to auth.users).
@@ -148,6 +148,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (73 tables, RLS + policies, resolver + read-scope model, 69/591 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (73 tables, RLS + policies, resolver + read-scope model, 69/593 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

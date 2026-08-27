@@ -162,12 +162,20 @@ select throws_ok(
 -- inserted nothing, which lives_ok cannot distinguish from success. Who may upload proof is a
 -- permission question covered by the permission model; what this file tests is that a suspended
 -- subscription does not block the write.
+--
+-- WP-04-B UPDATE: this fixture used `document_type_code = 'other'` with the title "Renewal payment
+-- proof", because no `payment_proof` type existed yet -- a stand-in that quietly documented DOC-2.
+-- The exemption it exercised was blanket: ANY document type passed, so a suspended tenant could
+-- create passports, tickets and invoices, not merely a renewal proof. WP-04-B added the real type
+-- and replaced the blanket exemption with a gate that permits only the payment-proof path, so this
+-- fixture now says what it always meant. `47_payment_proof_lifecycle_test.sql` asserts the other
+-- half -- that an ordinary document from the same lapsed tenant is refused.
 reset role;
 select lives_ok(
   $$insert into public.documents (id, tenant_id, document_type_code, title, lifecycle_status_code, is_confidential)
     values ('35000000-0000-0000-0000-0000000000e1','35000000-0000-0000-0000-000000000001',
-            'other','Renewal payment proof','active', false)$$,
-  'suspended: the document the proof hangs on CAN be created');
+            'payment_proof','Renewal payment proof','active', true)$$,
+  'suspended: the PAYMENT PROOF document CAN be created -- and now only because it is a payment proof');
 
 select lives_ok(
   $$insert into public.subscription_payment_proofs (tenant_id, subscription_id, document_id, uploaded_by, status_code)

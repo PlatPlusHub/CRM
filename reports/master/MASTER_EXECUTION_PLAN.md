@@ -144,7 +144,38 @@ additive capability.*
      holding `UPLOAD_DOCUMENT` already holds it. Guard: `46_document_write_integrity_test.sql`.
      *Correction recorded:* a partial unique index for "one current version" was attempted and
      rejected by the database — `202607041900` already created it, so that invariant was never open.
-   * **WP-04-B — NEXT. DOC-2 is three layers deep, not one.** (i) the `document_type` catalog has no
+   * **WP-04-B — DONE 2026-08-27 (`202607054500`).** DOC-2 turned out to be **five** layers, not
+     three: the missing type; `subscription_payment` already a link-target type with no branch in
+     `upload_document`; `document_links.subscription_payment_proof_id` with no producer;
+     `subscription_payment_proofs.status_code` as **unconstrained free text** (no catalog, no FK, no
+     trigger); and no review path, so `REVIEW_SUBSCRIPTION_PAYMENT` governed nothing. Delivered as
+     one capability: `app.upload_subscription_payment_proof` (one transaction, four rows, resolving
+     the circular dependency), `app.platform_review_payment_proof` (service_role only, canon-26
+     pending-only so approval cannot be replayed, optionally activating in the same transaction), the
+     `payment_proof` type added to `app.is_financial_document_type`, the status column given canon
+     26's existing `approval_status_code` family, and **the narrowed gate**: a lapsed tenant may
+     upload a renewal proof and nothing else, which is what canon 28's Read-Only Subscription Mode
+     always said and had never enforced. Guard: `47_payment_proof_lifecycle_test.sql`.
+     *Regression corrected:* `35_subscription_write_gate_test` used `document_type_code = 'other'`
+     titled "Renewal payment proof" as a stand-in — the fixture now uses the real type, and the old
+     one would pass today only because the exemption was blanket.
+     New items: **PP-1** `subscription_payment_proofs.reviewed_by` references `public.users`, which
+     holds only tenant users, so a Platform Owner reviewer cannot be recorded there — left NULL and
+     audited via events; a schema correction is owed but blocked on there being no platform-identity
+     table. **PP-2** `document_links` RLS has no branch for `subscription_payment_proof_id`; the
+     insert works only because `VIEW_ALL_BRANCHES` and `MANAGE_TENANT_SETTINGS` happen to be the same
+     role set — an implicit coupling to be made explicit in WP-04-C when that policy is rewritten.
+   * **WP-04-C — NEXT: storage-provider evaluation, then the object store end to end.** Compare
+     Supabase Storage / GCS / Google Drive / OneDrive-SharePoint on tenant isolation, private
+     objects, signed URLs, versioning, retention, deletion, recovery, backup, encryption, access
+     logging, auditability, size limits, performance, scalability, n8n integration, operational
+     complexity, cost and lock-in — **fact separated from recommendation**, cost a factor and not the
+     decider. Every non-Supabase option carries a genuine **BLOCKED — EXTERNAL DEPENDENCY** step (the
+     owner enters external credentials directly, AGENTS.md §6) which must be weighed openly rather
+     than allowed to decide silently. The object key is already settled and tested
+     (`tenant/document/version`, tenant-first, provider-independent), so the chosen provider inherits
+     a proven security model rather than one invented afterwards. Also carries **PP-2**.
+   * *(historical, superseded by the two entries above)* **DOC-2 as first recorded — three layers.** (i) the `document_type` catalog has no
      `payment_proof` value; (ii) **`subscription_payment` IS already a `document_link_target_type`
      but `app.upload_document` has no branch for it**, so it falls through to `else false` and
      raises; (iii) `document_links.subscription_payment_proof_id` is populated by no code path. A
