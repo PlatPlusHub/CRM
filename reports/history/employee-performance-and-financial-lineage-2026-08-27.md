@@ -243,9 +243,25 @@ metadata pointing at storage that does not exist. Per the owner directive §14 t
 genuine architectural evaluation (Supabase Storage / GCS / Drive / OneDrive-SharePoint / other)
 decided on tenant isolation, private objects, signed URLs, versioning, retention, deletion, recovery,
 backups, size limits, operational simplicity, scalability, auditability and n8n integration —
-**not** on cost or on Supabase already being present. It also owns three deferred items: narrowing
-WP-03's broad `documents` subscription-gate exemption, the missing `payment_proof` document type, and
-SPEC-154-B's document-classification boundary.
+**not** on cost or on Supabase already being present.
+
+A discovery pass was run for it before this session closed, so WP-04 starts from evidence rather than
+a re-scan. Recorded in `MASTER_EXECUTION_PLAN.md` Batch 6 item 3, and proven live on Primary:
+
+* `storage.buckets` = **0**, `storage.objects` = **0**, policies in schema `storage` = **0**, while
+  `document_versions.storage_path` is **NOT NULL** — every upload is required to record a path into
+  storage that does not exist.
+* **DOC-1 — the storage path is caller-supplied.** `app.upload_document` takes `p_storage_path` as a
+  parameter. The moment buckets exist, nothing stops a caller writing a path under another tenant's
+  prefix: a cross-tenant path designed in before storage is created. The fix shape is already proven
+  here — *derive* the path rather than validate it, exactly as SPEC-155 derives the commission rate.
+* **DOC-2 — no `payment_proof` document type.** The catalog holds 12 values and none is a payment
+  proof, while `subscription_payment_proofs.document_id` is NOT NULL and
+  `document_links.subscription_payment_proof_id` exists. The linkage is modelled end to end and the
+  vocabulary is missing, so a tenant's bank-transfer proof can only be filed as `other`.
+
+It also owns narrowing WP-03's broad `documents` subscription-gate exemption and SPEC-154-B's
+document-classification boundary.
 
 ## 19. NEWLY DISCOVERED QUESTIONS
 

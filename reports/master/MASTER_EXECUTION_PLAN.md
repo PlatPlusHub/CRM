@@ -126,10 +126,33 @@ additive capability.*
    and payment attribution is a genuine gap for the finance package.
 2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
    Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
-3. **WP-04 — documents/storage.** Zero storage buckets and zero storage policies exist:
-   `app.upload_document` records metadata pointing at storage that does not exist. Must also narrow
-   WP-03's broad `documents` subscription-gate exemption and resolve the missing `payment_proof`
-   document type (canon 28 requires proof upload; the catalog has no code).
+3. **WP-04 — documents/storage. NEXT.** Discovery pass run 2026-08-27; findings proven live and
+   recorded here so the package starts from evidence rather than from a re-scan:
+   * **`storage.buckets` = 0, `storage.objects` = 0, `pg_policies` in schema `storage` = 0 on
+     Primary**, while `document_versions.storage_path` is **NOT NULL**. Every upload is therefore
+     required to record a path into storage that does not exist.
+   * **DOC-1 — the storage path is caller-supplied.** `app.upload_document(… p_storage_path text …)`
+     takes the path as a parameter. The moment buckets exist, nothing stops a caller writing a path
+     under another tenant's prefix — a cross-tenant path designed in before storage is even created.
+     The fix shape is already proven in this repository: **derive the path, do not validate it**
+     (SPEC-155's overwrite-don't-forbid), so no caller value survives on any write path.
+   * **DOC-2 — no `payment_proof` document type.** The `document_type` catalog holds 12 values and
+     none of them is a payment proof, while `subscription_payment_proofs.document_id` is NOT NULL and
+     `document_links.subscription_payment_proof_id` exists. Canon 09/28 require a tenant to upload
+     bank-transfer proof for renewal; today it can only be filed as `other`. The linkage is modelled
+     end to end and the vocabulary is missing.
+   * Also owns: narrowing WP-03's broad `documents` subscription-gate exemption, and SPEC-154-B's
+     document-classification boundary (`VIEW_FINANCIAL_DOCUMENTS` is a binary tenant-wide gate that
+     cannot express canon's "assigned related only").
+   * **Provider evaluation is the gate** (owner directive §14): decided on tenant isolation, private
+     objects, signed URLs, versioning, retention, deletion, recovery, backups, size limits,
+     operational simplicity, scalability, auditability and n8n integration — explicitly **not** on
+     cost or on Supabase already being present. Options to compare: Supabase Storage, Google Cloud
+     Storage, Google Drive, OneDrive/SharePoint. One constraint is already evidence, not preference:
+     every non-Supabase option needs an external credential, which AGENTS.md §6 requires the owner to
+     enter directly into its destination — so those options carry a BLOCKED — EXTERNAL DEPENDENCY
+     step that Supabase Storage does not, and the evaluation must weigh that honestly rather than let
+     it silently decide the outcome.
 4. **Notifications.** `notifications` / `notification_deliveries` have **no producer at all**.
 5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist; these three do not.
 6. **`public.security_events` has zero producers** — the 13 authentication event types are Supabase
