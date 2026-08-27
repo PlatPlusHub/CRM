@@ -3,13 +3,16 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
-[ ] Complete
+[x] Complete
 [ ] Cancelled
 
-**ALIGNED — not implemented.** This document is the triage artefact. No migration or code change has
-been made under it.
+**EARNED → CLOSED (2026-08-27, migration `202607053400`).** All five Class A events implemented and
+proven; the `payment_allocation` visibility question resolved on live evidence and closed with a
+read-policy dispatch branch. Suite 38 files / 376 assertions / 0 failures; repo = local = Primary =
+`91d8e8b59380caa4e4f046288d6298f0` at 123. Evidence:
+`reports/history/wp-02-class-a-events-2026-08-27.md`.
 
 ---
 

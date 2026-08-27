@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/wp-01-creation-events-2026-08-27.md` — WP-01 **EARNED/CLOSED**, plus the two governance rules ratified 2026-08-27 (cross-path impact sweep; no vacuous security tests); predecessor `history/wp-03-post-package-discovery-2026-08-26.md`.
+> **Latest session report:** `history/wp-02-class-a-events-2026-08-27.md` — WP-02/SPEC-153 **EARNED/CLOSED**; five Class A events plus a Finance-visibility defect caught before it shipped; predecessor `history/wp-01-creation-events-2026-08-27.md`.
 >
 > `AGENTS.md §4` Stage A step 7 requires every session to read this before proposing work. **Whoever writes the next session report updates this row in the same commit** — an unlinked report is invisible to the boot sequence, which is the one job this pointer has.
 
