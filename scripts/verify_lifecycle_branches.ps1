@@ -136,12 +136,13 @@ $r = Get-Rest $trn "booking_item_profit?select=*"
 $trnProfit = @(Val $r)
 Check "...and sees no financial data at all" ($trnProfit.Count -eq 0) "$($r.StatusCode) rows=$($trnProfit.Count)"
 
-# LEAD-INTERACTION: this SUCCEEDS, and that is the recorded open decision, not an accident.
-# `app.record_lead_interaction` authorizes nothing, so the RPC and direct DML agree -- there is no
-# bypass, only an undecided question about what logging an interaction should cost. Asserting the
-# behaviour we actually have is how the next session finds out if it silently changes.
+# LEAD-INTERACTION: this SUCCEEDS, and the reason is the point. `app.record_lead_interaction`
+# charges "the assigned handler, OR ASSIGN_LEAD, plus MFA" -- the trainee IS the assigned handler
+# here, so two permissions is not what governs this write. `202607056200` put the same rule on the
+# direct path, so the two doors now agree; the assertion below is the positive half of that pair and
+# `59_lead_handler_authority_test.sql` carries the negative one.
 $r = Rpc $trn 'record_lead_interaction' @{ p_lead_id = $leadMine; p_interaction_type_code = 'phone_call'; p_summary = 'trainee listened in' }
-Check "a trainee CAN log an interaction on their own lead -- SEC-1's last open table, pinned as observed" (Ok $r) "$($r.StatusCode) $(Err $r)"
+Check "a trainee CAN log an interaction on the lead they are ASSIGNED -- the handler rule, not a permission" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 # =============================================================================================
 # QUOTATION: REJECTED, REVISED, EXPIRED. The three endings nobody had walked.

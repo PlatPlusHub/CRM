@@ -386,6 +386,29 @@ additive capability.*
      the HTTP scripts do not, so a script slug must be unique against every TEST slug too. It
      surfaced only in the order-independent regime introduced one package earlier. All five scripts
      were then checked against all 58 test files: no other collision exists.
+   * **TRANS-2 + SEC-1's LAST TABLE — CLOSED 2026-08-28 (`202607056200`).** Begins with a
+     CORRECTION: `202607056100` recorded that `app.record_lead_interaction` "authorizes nothing" and
+     left `lead_interactions` open. It does authorize -- "the assigned handler, OR ASSIGN_LEAD, plus
+     MFA", inline with `app.has_permission` and an explicit raise. The error was in my detector,
+     which searched for `app.authorize('PERM')` and so could not see an assignment-shaped rule.
+     Chasing the rule into `app.status_transitions` found the larger half: eight `leads` rows carry
+     a NULL `permission_key`, and the trigger applied a permission only `if not null` -- so direct
+     DML could walk a COLLEAGUE'S lead from `contacted` to `won` and on to `converted` with no check
+     at all, while every RPC refused anyone but the handler. Reachable, because canon 28 gives
+     `employee` VIEW_DEPARTMENT_QUEUE. Fixed by `app.require_lead_handler`, called from the
+     transition trigger where the permission is null and from a new guard on `lead_interactions`;
+     nothing became stricter than the RPC that walks it. AND THE CLASS: a null permission_key now
+     means "apply this table's named fallback", and a table with neither FAILS CLOSED.
+     TRANS-1 investigated per the directive: no live disagreement (all ten functions vs all 104
+     rows), and an `event` column is NOT proven to be the right home -- the inline lists carry
+     is_closure, sub-status and sometimes a constant permission, so unifying needs a decision on
+     where per-entity extras live. It stays open, narrowed. But its guard was broken:
+     `54_transition_permission_parity_test` was checking ONE function out of ten because its regex
+     matched only advance_booking's tuple shape. Rewritten to parse every function's VALUES block,
+     to fail if any stops parsing, and to check the reverse direction -- which is exactly where
+     TRANS-2 was hiding. Ceilings 54/18/4 -> **54/17/3**, and the three that remain are the canon-34
+     Human Identity tables: **SEC-1 has no unexplained residue left.** The detector in `10` was
+     widened for the same reason the defect existed.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice

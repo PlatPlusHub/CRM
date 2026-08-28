@@ -97,6 +97,16 @@ select is(
 --      two assertions pin it, so a table added later without a capability guard fails the suite
 --      instead of quietly widening the surface. The numbers may fall; they must never rise.
 --
+--      THE DETECTOR WAS WIDENED 2026-08-28, AND THE REASON IS A DEFECT IT CAUSED. It used to look
+--      for `app.authorize` alone. `app.record_lead_interaction`, `app.convert_lead` and
+--      `app.advance_lead` do not call it -- they enforce "the assigned handler, OR ASSIGN_LEAD, plus
+--      MFA" inline with `app.has_permission` and an explicit raise. A permission-shaped search could
+--      not see an assignment-shaped rule, so `202607056100` recorded that
+--      `record_lead_interaction` "authorizes nothing" and left `lead_interactions` open as a
+--      business question. It was not a question: it was the SEC-1 pattern, and `202607056200` closed
+--      it. Measuring authorization by ONE function name is how a guard reports a hole that is not
+--      there and misses one that is.
+--
 --      THE SECOND NUMBER COUNTS CAPABILITY TRIGGERS ONLY, and that is deliberate after a
 --      measurement error of mine. A sweep that also credited "the policy mentions has_permission"
 --      scored the money tables as guarded -- but the permission they named was
@@ -121,9 +131,10 @@ select cmp_ok(
       and not exists (
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
          where t.tgrelid = c.oid and not t.tgisinternal
-           and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)),
-  '<=', 18,
-  '...and at most 18 of them have NO capability trigger on the direct write path');
+           and pg_get_functiondef(p.oid) ~
+               '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
+  '<=', 17,
+  '...and at most 17 of them have NO capability trigger on the direct write path');
 
 -- The residue that matters: neither a capability trigger NOR a policy WITH CHECK naming a real
 -- write permission. Thirteen tables when this was first measured; FOUR now, and each of the three
@@ -151,14 +162,15 @@ select cmp_ok(
       and not exists (
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
          where t.tgrelid = c.oid and not t.tgisinternal
-           and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)
+           and pg_get_functiondef(p.oid) ~
+               '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
       and not exists (
         select 1 from pg_policies pp
          where pp.schemaname = 'public' and pp.tablename = c.relname
            and pp.cmd in ('INSERT','ALL')
            and coalesce(pp.with_check,'') ~ 'has_permission\(''(?!VIEW_|SEE_)[A-Z_]+''')),
-  '<=', 4,
-  '...and at most 4 have no capability enforcement of ANY kind (3 INTENTIONAL by canon 34, 1 open)');
+  '<=', 3,
+  '...and at most 3 have no capability enforcement of ANY kind -- all three INTENTIONAL by canon 34');
 
 select * from finish();
 rollback;
