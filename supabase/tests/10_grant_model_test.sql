@@ -139,14 +139,28 @@ select cmp_ok(
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')
+      -- SEC-1b (2026-08-29): `(t.tgtype & 4) <> 0` -- the trigger must fire ON INSERT. Without it
+      -- this detector counted `enforce_status_transition` and `enforce_archive_authority`, which
+      -- call app.authorize but are BEFORE **UPDATE** ONLY, so every status-bearing and every
+      -- archivable table was credited with protection it did not have on the path being measured.
+      -- Thirteen tables were credited that way; twelve of them had no INSERT-path check at all.
       and not exists (
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
-         where t.tgrelid = c.oid and not t.tgisinternal
+         where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
-  '<=', 17,
-  '...and at most 17 of them have NO capability trigger on the direct write path');
+  '<=', 18,
+  '...and at most 18 of them have NO capability trigger that FIRES ON INSERT');
 
+-- SEC-1b, 2026-08-29 -- READ THE NUMBERS CAREFULLY. The middle ceiling ROSE from 17 to 18 while the
+-- exposure FELL. Both are the same correction: the detectors now require the trigger to fire ON
+-- INSERT, which stopped crediting UPDATE-only guards. Under the corrected predicate the residue was
+-- 15, not 3 -- twelve ordinary business tables (bookings, complaints, conversations, customer_notes,
+-- customers, documents, leads, passengers, quotations, service_requests, suppliers, tasks) had no
+-- capability check on their INSERT path, and a `trainee` holding NO write permission was proven to
+-- insert a complaint and a conversation by direct DML in the same transaction that
+-- `app.create_complaint` refused them. `202607057000` guards all twelve, returning the residue to 3.
+--
 -- The residue that matters: neither a capability trigger NOR a policy WITH CHECK naming a real
 -- write permission. Thirteen tables when this was first measured; FOUR now, and each of the three
 -- groups was closed by a different action rather than by one sweeping rule (`202607056100`):
@@ -172,7 +186,7 @@ select cmp_ok(
       and has_table_privilege('authenticated', c.oid, 'INSERT')
       and not exists (
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
-         where t.tgrelid = c.oid and not t.tgisinternal
+         where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
       and not exists (

@@ -14,6 +14,14 @@
 # functions each package had just changed. -PrimaryLogicHash closes that: it covers the FULL function
 # surface, so drift anywhere is visible rather than drift only where someone thought to look.
 #
+# PAR-1a (2026-08-29): USE THIS SCRIPT'S EXPRESSION, NOT AN AD-HOC ONE. The comment-stripping pattern
+# below is built with `chr(10)` deliberately. Writing it as '--[^\n]*' does NOT mean "up to the next
+# newline": inside a POSIX bracket expression the backslash is not an escape, so `[^\n]` reads as
+# "not a backslash and not the letter n" and the pattern stops at the first `n` in the comment,
+# leaving most of the comment text in the hash. Two databases compared with THAT pattern can agree
+# while genuinely differing -- which is how `app.document_retention_days` stayed different between
+# local and Primary through a session that reported the whole surface identical.
+#
 # Scope: this script checks LOCAL only, because it reaches the database through docker/psql. Primary
 # is reached through the Supabase MCP connector, which is not available to a shell script; pass its
 # fingerprint with -PrimaryFingerprint to have it compared here too.

@@ -243,8 +243,8 @@ select is(
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  13,
-  'thirteen tables now carry the write-capability guard');
+  25,
+  'twenty-five tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -253,7 +253,14 @@ select is(
                             'customer_identity_signals','customer_identity_merges',
                             'internal_supplier_links','offline_conversions','document_links',
                             'lead_assignments','branch_business_hours','holidays',
-                            'financial_accounts','company_assets')),
+                            'financial_accounts','company_assets',
+                            -- SEC-1b (202607057000): the twelve whose INSERT path was unguarded
+                            -- while `10_grant_model_test`'s ceiling credited them for an
+                            -- UPDATE-only trigger. Each charges the permission its own creating
+                            -- RPC already charges.
+                            'bookings','complaints','conversations','customer_notes','customers',
+                            'documents','leads','passengers','quotations','service_requests',
+                            'suppliers','tasks')),
   0,
   '...and every one of them is on a table the function has a permission mapping for');
 

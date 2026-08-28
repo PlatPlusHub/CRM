@@ -453,6 +453,35 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **COMPLAINTS + CONVERSATIONS OVER HTTP — CLOSED 2026-08-29 (`202607057000`).** Both lifecycles
+     walked end to end over real JWTs: the complaint state machine through all nine transitions
+     including reopen, the conversation machine including the escalate/close authority split, plus
+     tenant isolation and the trainee's scope. New suite `scripts/verify_care_journeys.ps1` (38).
+   * **SEC-1b — SEC-1 was NOT closed, and the ceiling is why.** `10_grant_model_test`'s detector
+     asked whether a table had a trigger MENTIONING app.authorize, never WHEN it fires;
+     `enforce_status_transition` and `enforce_archive_authority` are BEFORE UPDATE ONLY, so thirteen
+     tables were credited for protection on a path they did not have. Corrected predicate: residue
+     3 -> 15. REPRODUCED: a `trainee` holding no write permission inserted a complaint AND a
+     conversation by direct DML in the same transaction that `app.create_complaint` refused, and
+     again over the wire via POST /rest/v1/complaints. Twelve tables now guarded ON INSERT with the
+     permission each one's own creating RPC charges; INSERT only, because charging CREATE_BOOKING on
+     UPDATE would break finance issuing a booking. Detector fixed too — the middle ceiling rose
+     17 -> 18 while exposure fell, and the file explains why. Residual UPDATE axis recorded as
+     **SEC-2**, genuinely underivable: there is no `update_customer` RPC to read a permission from.
+   * **ATTR-4 / CONV-2 / COMP-1.** A conversation message could name any colleague as its sender
+     (reproduced: "Colleague | I never wrote this"), could be rewritten after sending, and could be
+     deleted. All three closed, with `external_message_id` and `metadata` deliberately left writable
+     so the WhatsApp delivery writer is not blocked. And `complaints.resolution_notes` — declared in
+     canon 31, written by nothing — now records the reason given for RESOLVING, that transition only.
+   * **TEST-2 / PAR-1a — two guard-integrity findings the package produced about itself.** Pass B
+     DIED where Pass A was green: the new HTTP suite and the new pgTAP file both used
+     `emp@care.test`, and `auth.users.email` is globally unique with no tenant column to scope by —
+     the one identifier the slug-collision discipline never mentioned. Swept the class: 117 fixture
+     emails, zero other collisions. And the comparison used to close PAR-1 yesterday was itself
+     wrong: `'--[^\n]*'` in a POSIX bracket expression means "not a backslash and not the letter n",
+     so yesterday's "all 228 byte-identical" was true only under a weaker normalization. The guard's
+     own `chr(10)` form found `app.document_retention_days` still differing. Behaviour verified
+     first (both NULL — RET-1 intact), then restored, and the guard header now forbids the pattern.
    * **SCHEDULED / BACKGROUND EXECUTION AUDIT — CLOSED 2026-08-29 (`202607056900`).** All six
      background paths inventoried and traced CRON -> FUNCTION -> TABLES -> TRIGGERS -> RLS -> EVENTS
      -> CURSORS -> RETRIES -> OBSERVABILITY. `reconcile_document_storage` already had per-tenant
