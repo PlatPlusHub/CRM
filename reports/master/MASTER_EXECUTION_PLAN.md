@@ -441,6 +441,18 @@ additive capability.*
      (SPEC-124's class) -- unchecked. It now covers both, excluding extension-owned functions by
      `pg_depend` rather than by name. Same shape of mistake as the transition guard that covered one
      function out of ten, found by the same sweep.
+   * **ATTR-2 — CLOSED 2026-08-28 (`202607056500`), 2 of 5, and the other three were not what the
+     name suggested.** Reading the five columns individually rather than as a group split them three
+     ways. DERIVED: `subscription_payment_proofs.uploaded_by` (an INSERT-time attribution that ATTR-1
+     missed only because the column is not called `created_by`) and `approval_requests.reviewed_by`
+     (derived on UPDATE WHEN IT CHANGES, so an unrelated edit to a decided request does not
+     re-attribute the decision to whoever touched it last -- assertion 6 is what justifies that
+     condition). NOT an attribution defect: `invoices.voided_by` / `journal_entries.voided_by`, where
+     NOTHING writes the columns and `app.status_transitions` has no rows for either table -- voiding
+     is unimplemented, recorded as **VOID-1**, and deriving an attribution for an action nobody can
+     perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
+     `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
+     the reviewer is the PLATFORM -- recorded as **SPP-3**.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice
