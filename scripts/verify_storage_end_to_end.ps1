@@ -226,12 +226,26 @@ select app.reconcile_document_storage()::text;
 $expired = (Psql "select count(*) from public.document_storage_findings where tenant_id='$TA' and finding_type_code='retention_expired' and resolved_at is null;").Trim()
 Check "retention produces exactly one expired finding" ($expired -eq '1') "count=$expired"
 
+# SCHED-1: the backlog BEFORE the executor runs. Nothing invokes the executor on a schedule yet --
+# every route needs one owner-placed secret -- so the least ORVION can do is make the gap visible.
+# The count is asserted against the claim below, because a monitor that measures a different
+# population than the worker consumes reports zero while work piles up.
+$backlog = Req POST "$API/rest/v1/rpc/storage_action_backlog" ($hdrS + @{'Content-Type' = 'application/json' }) '{}' 'application/json'
+Check "public.storage_action_backlog is REACHABLE over HTTP by the platform" ($backlog.StatusCode -eq 200) "$($backlog.StatusCode) $($backlog.Content)"
+$pending = if ($backlog.StatusCode -eq 200) { @($backlog.Content | ConvertFrom-Json)[0].pending_actions } else { -1 }
+
+$backlogAnon = Req POST "$API/rest/v1/rpc/storage_action_backlog" @{apikey = $status.ANON_KEY; Authorization = "Bearer $($status.ANON_KEY)"; 'Content-Type' = 'application/json' } '{}' 'application/json'
+Check "anon CANNOT read how far behind the platform is" ($backlogAnon.StatusCode -ge 400) "$($backlogAnon.StatusCode)"
+$backlogUser = Req POST "$API/rest/v1/rpc/storage_action_backlog" ($hdrA + @{'Content-Type' = 'application/json' }) '{}' 'application/json'
+Check "...nor can an authenticated tenant user -- operational state is not a tenant surface" ($backlogUser.StatusCode -ge 400) "$($backlogUser.StatusCode)"
+
 # The executor's contract, over HTTP, exactly as the Edge Function calls it.
 $claim = Req POST "$API/rest/v1/rpc/claim_storage_actions" ($hdrS + @{'Content-Type' = 'application/json' }) '{"p_limit":50}' 'application/json'
 Check "public.claim_storage_actions is REACHABLE over HTTP" ($claim.StatusCode -eq 200) "$($claim.StatusCode) $($claim.Content)"
 $actions = @()
 if ($claim.StatusCode -eq 200) { $actions = @($claim.Content | ConvertFrom-Json) }
 Check "it hands out exactly the one eligible action" ($actions.Count -eq 1) "count=$($actions.Count)"
+Check "...and the backlog counted exactly that same work -- one definition of outstanding, not two" ($pending -eq $actions.Count) "backlog=$pending claimed=$($actions.Count)"
 
 $claimAnon = Req POST "$API/rest/v1/rpc/claim_storage_actions" @{apikey = $status.ANON_KEY; Authorization = "Bearer $($status.ANON_KEY)"; 'Content-Type' = 'application/json' } '{}' 'application/json'
 Check "anon CANNOT claim storage actions" ($claimAnon.StatusCode -ge 400) "$($claimAnon.StatusCode)"

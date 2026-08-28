@@ -409,6 +409,20 @@ additive capability.*
      TRANS-2 was hiding. Ceilings 54/18/4 -> **54/17/3**, and the three that remain are the canon-34
      Human Identity tables: **SEC-1 has no unexplained residue left.** The detector in `10` was
      widened for the same reason the defect existed.
+   * **SCHED-1 — INVESTIGATED, PARTIALLY ADDRESSED 2026-08-28 (`202607056300`).** Three of the four
+     recurring jobs are already scheduled; the storage executor is the fourth and has no scheduler.
+     Three routes exist and all three need ONE owner-placed secret: pg_cron+pg_net+Vault (pg_cron
+     installed, pg_net available but not installed, **supabase_vault IS installed** -- which improves
+     the position from when pg_net was first declined, though installing it still gives the DATABASE
+     outbound HTTP); n8n schedule -> HTTP (keeps HTTP out of the DB, adds an uptime dependency on a
+     core retention path); or a scheduled GitHub Action (couples the data plane to CI). Choosing is a
+     security trade-off, so it stays BLOCKED -- EXTERNAL DEPENDENCY + ARCHITECTURAL DECISION and
+     pg_net was NOT installed to make a metric move. What needed no decision: the gap was SILENT.
+     `app.storage_action_backlog()` reports pending actions, THE AGE OF THE OLDEST, already-failed
+     attempts, last attempt time and unresolved findings, service_role only. It calls
+     `app.claim_storage_actions` rather than restating its rules, and `60_...` (11) asserts the
+     monitor's count EQUALS what the executor would claim -- including under the RET-2 suspension
+     exclusion, where a hand-written monitor would most easily have drifted. HTTP 175 -> **179**.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice

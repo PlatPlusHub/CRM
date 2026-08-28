@@ -86,6 +86,9 @@ insert into _expected_endpoints (name) values
     ('redeem_license_token'),
     ('request_finance_approval'),
     ('resolve_storage_finding'),
+    -- SCHED-1: platform-only, service_role alone. How far behind the storage executor is must not
+    -- be probeable by a tenant, let alone anonymously.
+    ('storage_action_backlog'),
     ('review_finance_approval'),
     ('revoke_trusted_device'),
     ('revoke_user_role'),
@@ -116,8 +119,8 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  73,
-  'POSITIVE CONTROL: 73 endpoints are pinned, so the two zeros above are not drawn from an empty set');
+  74,
+  'POSITIVE CONTROL: 74 endpoints are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================
 -- 4-6. THE EXCLUSIONS. Named explicitly, because an absence proves nothing on its own.
