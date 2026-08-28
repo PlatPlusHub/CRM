@@ -116,6 +116,32 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
+# 5. The API contract is GENERATED from this database. A generated document that nobody regenerates
+#    is a stale claim, which is the failure mode this whole file exists to catch. Same shape as
+#    Check 7's ai-map freshness test.
+Write-Host "== Check L3: API contract freshness ==" -ForegroundColor Cyan
+$contract = Join-Path $RepoRoot 'reports/master/MASTER_API_CONTRACT.md'
+if (-not (Test-Path $contract)) {
+    Write-Host "  MISSING: reports/master/MASTER_API_CONTRACT.md -- run scripts/generate-api-contract.ps1" -ForegroundColor Red
+    $issues++
+} else {
+    $tmp = Join-Path ([IO.Path]::GetTempPath()) ("orvion-api-contract-{0}.md" -f [guid]::NewGuid())
+    try {
+        & (Join-Path $PSScriptRoot 'generate-api-contract.ps1') -Container $Container -OutFile $tmp | Out-Null
+        $a = [IO.File]::ReadAllText($contract).Replace("`r`n", "`n")
+        $b = [IO.File]::ReadAllText($tmp).Replace("`r`n", "`n")
+        if ($a -ne $b) {
+            Write-Host "  CONTRACT STALE: the committed MASTER_API_CONTRACT.md no longer matches the live API surface." -ForegroundColor Red
+            Write-Host "  Remedy: pwsh -File scripts/generate-api-contract.ps1" -ForegroundColor DarkGray
+            $issues++
+        } else {
+            Write-Host "  MASTER_API_CONTRACT.md matches the live surface" -ForegroundColor Green
+        }
+    } finally {
+        if (Test-Path $tmp) { Remove-Item $tmp -Force }
+    }
+}
+
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger $(if ($PrimaryFingerprint) { 'proven' } else { 'NOT checked' }); primary functions $(if ($PrimaryLogicHash) { 'proven' } else { 'NOT checked' }))" -ForegroundColor Green

@@ -453,6 +453,25 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **API CAPABILITY CONTRACT — DELIVERED 2026-08-29 (API-2).** `MASTER_API_CONTRACT.md`, GENERATED
+     from `pg_catalog` and `app.status_transitions` by `scripts/generate-api-contract.ps1` and kept
+     honest by a new **Check L3** in `check_database_parity.ps1` that regenerates and diffs it
+     (proven to fail on a tampered file and pass when regenerated). It covers the 71 RPC endpoints,
+     the 8 reporting views AND the 71 tenant-reachable TABLES, because PostgREST serves tables too
+     and that is where SEC-1b lived. Platform-wide rules (auth, tenant derivation, MFA step-up, 204
+     on void, error classes, pagination/filter/sort, RLS returning empty rather than 403) are stated
+     once rather than repeated per endpoint. Two defects were found in the GENERATOR before it
+     shipped: a first-match CASE that reported only half of `advance_lead`'s authority model, and an
+     HTTP-coverage column that under-counted 38 as 1. Recorded as **API-3**: 33 of 71 endpoints
+     still have no HTTP evidence, now visible and payable down deliberately rather than assumed.
+   * **Owner recommendations evaluated 2026-08-29 (10 items).** ACCEPT × 9, ACCEPT-with-finding × 1.
+     None changed the execution order; one refined it — the contract must cover the TABLE surface,
+     not only the RPCs. **SEC-2 reproduced and bounded** rather than left abstract: a trainee renamed
+     a lead assigned to them, but could not touch a colleague-owned complaint, so the exposure is
+     descriptive columns within existing read scope and it does NOT block the contract.
+     **CONV-3 recorded**: the WhatsApp/AI data model is ready (nullable customer/owner/sender,
+     external ids, whatsapp catalog values, `orvion_integration` attribution capture) but there is
+     no session-less inbound DOOR; deferred to the integration phase, precedent already in-house.
    * **COMPLAINTS + CONVERSATIONS OVER HTTP — CLOSED 2026-08-29 (`202607057000`).** Both lifecycles
      walked end to end over real JWTs: the complaint state machine through all nine transitions
      including reopen, the conversation machine including the escalate/close authority split, plus
