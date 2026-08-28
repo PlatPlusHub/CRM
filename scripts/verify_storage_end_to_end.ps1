@@ -239,6 +239,17 @@ Check "anon CANNOT read how far behind the platform is" ($backlogAnon.StatusCode
 $backlogUser = Req POST "$API/rest/v1/rpc/storage_action_backlog" ($hdrA + @{'Content-Type' = 'application/json' }) '{}' 'application/json'
 Check "...nor can an authenticated tenant user -- operational state is not a tenant surface" ($backlogUser.StatusCode -ge 400) "$($backlogUser.StatusCode)"
 
+# SCHED-2: the same boundary for the scheduled-job health surface. It lives in this script rather
+# than a new one because this is where ORVION's PLATFORM-OPERATIONS HTTP surface is proven, and a
+# second script would split one boundary across two files. pgTAP cannot prove reachability -- API-1
+# was 600 green assertions over an entirely unreachable API -- so the endpoint is exercised here.
+$health = Req POST "$API/rest/v1/rpc/scheduled_job_health" ($hdrS + @{'Content-Type' = 'application/json' }) '{}' 'application/json'
+Check "public.scheduled_job_health is REACHABLE over HTTP by the platform" ($health.StatusCode -eq 200) "$($health.StatusCode) $($health.Content)"
+$healthAnon = Req POST "$API/rest/v1/rpc/scheduled_job_health" @{apikey = $status.ANON_KEY; Authorization = "Bearer $($status.ANON_KEY)"; 'Content-Type' = 'application/json' } '{}' 'application/json'
+Check "anon CANNOT read which tenants' scheduled work is stuck" ($healthAnon.StatusCode -ge 400) "$($healthAnon.StatusCode)"
+$healthUser = Req POST "$API/rest/v1/rpc/scheduled_job_health" ($hdrA + @{'Content-Type' = 'application/json' }) '{}' 'application/json'
+Check "...nor can an authenticated tenant user -- it names OTHER tenants" ($healthUser.StatusCode -ge 400) "$($healthUser.StatusCode)"
+
 # The executor's contract, over HTTP, exactly as the Edge Function calls it.
 $claim = Req POST "$API/rest/v1/rpc/claim_storage_actions" ($hdrS + @{'Content-Type' = 'application/json' }) '{"p_limit":50}' 'application/json'
 Check "public.claim_storage_actions is REACHABLE over HTTP" ($claim.StatusCode -eq 200) "$($claim.StatusCode) $($claim.Content)"

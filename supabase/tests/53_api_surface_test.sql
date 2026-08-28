@@ -89,6 +89,9 @@ insert into _expected_endpoints (name) values
     -- SCHED-1: platform-only, service_role alone. How far behind the storage executor is must not
     -- be probeable by a tenant, let alone anonymously.
     ('storage_action_backlog'),
+    -- SCHED-2: platform-only for the same reason. Which tenant's scheduled work is stuck, and for
+    -- how long, is operational state about ORVION -- not a tenant-facing report.
+    ('scheduled_job_health'),
     ('review_finance_approval'),
     ('revoke_trusted_device'),
     ('revoke_user_role'),
@@ -119,8 +122,8 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  74,
-  'POSITIVE CONTROL: 74 endpoints are pinned, so the two zeros above are not drawn from an empty set');
+  75,
+  'POSITIVE CONTROL: 75 endpoints are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================
 -- 4-6. THE EXCLUSIONS. Named explicitly, because an absence proves nothing on its own.

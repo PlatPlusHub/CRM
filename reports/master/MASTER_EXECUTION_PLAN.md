@@ -453,6 +453,34 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **SCHEDULED / BACKGROUND EXECUTION AUDIT — CLOSED 2026-08-29 (`202607056900`).** All six
+     background paths inventoried and traced CRON -> FUNCTION -> TABLES -> TRIGGERS -> RLS -> EVENTS
+     -> CURSORS -> RETRIES -> OBSERVABILITY. `reconcile_document_storage` already had per-tenant
+     exception isolation, a persisted failure finding and self-healing; `process_lead_sla`,
+     `process_subscription_lifecycle` and `map_outcomes_to_conversions` had none of the three. The
+     exemplar was in-house, so the fix is that pattern applied where it was missing, not a new one.
+   * **CONV-1 — the finding that was NOT latent.** The mapper filtered restricted tenants out of its
+     set-based INSERT and advanced the cursor past their events anyway. REPRODUCED: a lapsed
+     tenant's conversion was destroyed, and restoring the tenant to good standing recovered nothing
+     on run 2 or run 3. Everywhere else in ORVION "a batch skips a lapsed tenant" means DEFER --
+     `process_lead_sla` retries a minute later, `platform_resolve_storage_finding` leaves the
+     finding open. The mapper was the only place it meant discard, and only because it owns a
+     cursor. Now: the skip is recorded BEFORE the cursor moves, each run reconsiders deferrals whose
+     tenant is writable again, and the cursor still advances so no tenant blocks another. Two
+     alternative fixes were costed and rejected in the register.
+   * **PAR-1 — the parity guard had never compared the function surface.** A full comparison of all
+     228 `app`+`public` functions found SIX whose stored source on Primary differed from the
+     repository -- reformatted, comment-stripped transcriptions from earlier hand-pasted deploys.
+     Behaviour was proven identical FIRST (whitespace-insensitive hashes matched on all 228), so
+     this was documentation loss on the deployed system, not a logic difference. The real defect is
+     that parity had only ever compared the migration-ledger fingerprint plus the functions each
+     package had just changed -- so drift anywhere else was invisible by construction, while every
+     report cited the guard as evidence. Fixed on all three axes: Primary's six restored to the
+     repository's exact text, `check_database_parity.ps1` given `-PrimaryLogicHash` and a
+     full-surface Check L2/P2, and a permanent rule that `apply_migration` receives migration text
+     VERBATIM. Byte-level parity now proven: `4821a18a9bf8193a4bc8c7dea6e345a8` on both sides.
+   * **LEAD-4 — CLOSED the day after it was recorded.** `reassignment_blocked` is now durable in
+     `scheduled_job_findings`, not merely returned to a cron that discards it.
    * **ATTR-3 / §8 item J — CLOSED 2026-08-29 (`202607056700`).** The owner's ATTRIBUTION BUSINESS
      RULE requires that reassignment never rewrite acquisition lineage. Item J's question is answered
      by measurement and now asserted on BOTH paths: `app.reassign_lead` and `app.process_lead_sla`

@@ -7,6 +7,13 @@
 # migration FILES and never opens a database. A guard that cannot fail on live drift must not be
 # read as evidence about live state, so the two concerns are separate scripts with separate verdicts.
 #
+# PAR-1 (2026-08-29): the ledger fingerprint alone is NOT parity. It proves the same migration NAMES
+# were applied; it says nothing about what the applied SQL actually created. Six `app` functions on
+# Primary were found carrying reformatted, comment-stripped source from earlier hand-transcribed
+# deploys, while every fingerprint check reported CLEAN -- because parity had only ever compared the
+# functions each package had just changed. -PrimaryLogicHash closes that: it covers the FULL function
+# surface, so drift anywhere is visible rather than drift only where someone thought to look.
+#
 # Scope: this script checks LOCAL only, because it reaches the database through docker/psql. Primary
 # is reached through the Supabase MCP connector, which is not available to a shell script; pass its
 # fingerprint with -PrimaryFingerprint to have it compared here too.
@@ -14,7 +21,8 @@
 # Exit 0 = parity proven. Exit 1 = drift, unreachable, or unproven.
 param(
     [string]$Container = 'supabase_db_ORVION',
-    [string]$PrimaryFingerprint = ''
+    [string]$PrimaryFingerprint = '',
+    [string]$PrimaryLogicHash = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -76,9 +84,33 @@ if ([string]::IsNullOrWhiteSpace($PrimaryFingerprint)) {
     Write-Host "  (caller-supplied: this proves Primary parity only if that value was READ FROM Primary)" -ForegroundColor DarkGray
 }
 
+# 4. The function surface. This is what the ledger fingerprint cannot see.
+Write-Host "== Check L2/P2: function surface ==" -ForegroundColor Cyan
+$logicSql = "select md5(string_agg(h, ',' order by h)) || '|' || count(*)::text from (select md5(n.nspname || '.' || p.proname || '|' || regexp_replace(regexp_replace(pg_get_functiondef(p.oid), '--[^' || chr(10) || ']*', '', 'g'), '\s+', ' ', 'g')) as h from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname in ('app','public') and p.prokind = 'f') t;"
+$localLogic = docker exec -i $Container psql -U postgres -d postgres -t -A -c $logicSql 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  UNREACHABLE: could not read the local function surface." -ForegroundColor Yellow
+    $issues++
+} else {
+    $lparts = ($localLogic | Select-Object -Last 1).Trim() -split '\|'
+    Write-Host "  local: $($lparts[1]) functions, logic hash $($lparts[0])"
+    if ([string]::IsNullOrWhiteSpace($PrimaryLogicHash)) {
+        Write-Host "  NOT CHECKED: no -PrimaryLogicHash supplied. Primary's FUNCTION SURFACE is UNPROVEN by this run." -ForegroundColor Yellow
+        Write-Host "  Run the same query on Primary and pass its result -- see PAR-1 in the header." -ForegroundColor DarkGray
+    } elseif ($PrimaryLogicHash -ne $lparts[0]) {
+        Write-Host "  PRIMARY FUNCTION DRIFT: Primary reports $PrimaryLogicHash, local produces $($lparts[0])" -ForegroundColor Red
+        Write-Host "  The ledgers may still agree -- that is exactly the PAR-1 blind spot." -ForegroundColor DarkGray
+        $issues++
+    } else {
+        Write-Host "  Primary's function surface matches local ($PrimaryLogicHash)" -ForegroundColor Green
+        Write-Host "  (caller-supplied, as above: it proves parity only if READ FROM Primary)" -ForegroundColor DarkGray
+    }
+}
+
 Write-Host ""
 if ($issues -eq 0) {
-    Write-Host "DATABASE PARITY: CLEAN (local proven$(if ($PrimaryFingerprint) { '; primary proven' } else { '; primary NOT checked' }))" -ForegroundColor Green
+    Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger $(if ($PrimaryFingerprint) { 'proven' } else { 'NOT checked' }); primary functions $(if ($PrimaryLogicHash) { 'proven' } else { 'NOT checked' }))" -ForegroundColor Green
     exit 0
 } else {
     Write-Host "DATABASE PARITY: $issues issue(s) found" -ForegroundColor Red

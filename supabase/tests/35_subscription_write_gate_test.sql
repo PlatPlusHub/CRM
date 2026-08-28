@@ -219,6 +219,13 @@ select is(
 
 -- =============================================================================================
 -- 19-20. COVERAGE -- what keeps the generated attachment honest in both directions.
+--
+-- `scheduled_job_findings` joined the exemption list with `202607056900`, and the reason is the
+-- inverse of the usual one: a restricted tenant is precisely the case those rows exist to RECORD.
+-- Gating the table would make a deferral unrecordable for exactly the tenant being deferred, which
+-- is how CONV-1's permanent conversion loss happened in the first place. Same reasoning as
+-- `document_storage_findings`, which it mirrors -- both are platform-operational state about a
+-- tenant rather than the tenant's own business data.
 -- =============================================================================================
 reset role;
 select is(
@@ -231,7 +238,7 @@ select is(
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                      'users','user_role_assignments','user_branch_assignments','branches','departments',
-                                     'tenant_license_activations','document_storage_findings'])
+                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
          where pc.relname = c.table_name and not tg.tgisinternal
@@ -247,7 +254,7 @@ select is(
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                   'users','user_role_assignments','user_branch_assignments','branches','departments',
-                                     'tenant_license_activations','document_storage_findings'])),
+                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');
 
