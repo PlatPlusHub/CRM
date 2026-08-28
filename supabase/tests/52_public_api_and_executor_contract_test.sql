@@ -161,14 +161,17 @@ update public.document_versions set is_current = true where id = '52000000-0000-
 select is(
   (select app.platform_resolve_storage_finding(
      (select id from public.document_storage_findings
-       where finding_type_code = 'retention_expired' and resolved_at is null),
+       where tenant_id = '52000000-0000-0000-0000-000000000001'
+         and finding_type_code = 'retention_expired' and resolved_at is null),
      'failed', 'simulated storage outage')),
   'failed',
   'a failure is accepted and reported back');
 
 select is(
   (select resolved_at is null and attempt_count = 1 and last_error = 'simulated storage outage'
-     from public.document_storage_findings where finding_type_code = 'retention_expired'),
+     from public.document_storage_findings
+    where tenant_id = '52000000-0000-0000-0000-000000000001'
+      and finding_type_code = 'retention_expired'),
   true,
   '...and the finding stays OPEN with the attempt counted and the reason kept');
 

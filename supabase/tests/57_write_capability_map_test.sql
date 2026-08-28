@@ -12,7 +12,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(12);
+select plan(11);
 
 insert into auth.users (id, email) values
   ('57000000-0000-0000-0000-0000000000a1','emp@wc.test'),
@@ -144,27 +144,25 @@ select lives_ok(
   '...and finance CAN still decide it -- FIN-2''s workflow survives this migration');
 
 -- =============================================================================================
--- 10-12. THE MAP IS COMPLETE AND HONEST. Every table carrying the guard must have a mapping, and
---        the guard must refuse rather than pass if one is ever attached without one.
+-- 10-11. THIS MIGRATION'S NINE ARE STILL GUARDED, and the approval_requests exclusion is structural.
+--
+--        The map-completeness pin (every trigger sits on a mapped table) moved to
+--        `58_write_grants_and_config_capability_test.sql` when `202607056100` added four more
+--        tables. One file owns that total; keeping a second copy here would only give the two
+--        somewhere to disagree.
 -- =============================================================================================
 reset role;
 select set_config('request.jwt.claims', null, true);
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
-    where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  9,
-  'exactly nine tables carry the write-capability guard');
-
-select is(
-  (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'
-      and c.relname not in ('approval_requests','conversation_messages','customer_contact_methods',
-                            'customer_identity_signals','customer_identity_merges',
-                            'internal_supplier_links','offline_conversions','document_links',
-                            'lead_assignments')),
-  0,
-  '...and every one of them is on a table the function has a permission mapping for');
+      and c.relname in ('approval_requests','conversation_messages','customer_contact_methods',
+                        'customer_identity_signals','customer_identity_merges',
+                        'internal_supplier_links','offline_conversions','document_links',
+                        'lead_assignments')),
+  9,
+  'all nine tables this migration mapped still carry the write-capability guard');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid

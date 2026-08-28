@@ -68,12 +68,12 @@ select lives_ok(
   'an employee can create a customer with naturally-typed phone and email');
 
 select is(
-  (select primary_email from public.customers where full_name = 'Ahmed Hassan'),
+  (select primary_email from public.customers where tenant_id = '11110000-0000-0000-0000-000000000001' and full_name = 'Ahmed Hassan'),
   'ahmed.hassan@gmail.com',
   'the email is canonicalized on the way in, not rejected');
 
 select is(
-  (select primary_phone from public.customers where full_name = 'Ahmed Hassan'),
+  (select primary_phone from public.customers where tenant_id = '11110000-0000-0000-0000-000000000001' and full_name = 'Ahmed Hassan'),
   '+201005551234',
   'the phone is canonicalized to one comparable form');
 
@@ -99,16 +99,16 @@ select lives_ok(
   'an employee can create a task');
 
 select is(
-  (select task_status_code from public.tasks where title = 'Call Ahmed back'),
+  (select task_status_code from public.tasks where tenant_id = '11110000-0000-0000-0000-000000000001' and title = 'Call Ahmed back'),
   'open',
   'a new task starts in the canonical initial state');
 
 select lives_ok(
-  $$select app.advance_task((select id from public.tasks where title = 'Call Ahmed back'), 'completed', 'done')$$,
+  $$select app.advance_task((select id from public.tasks where tenant_id = '11110000-0000-0000-0000-000000000001' and title = 'Call Ahmed back'), 'completed', 'done')$$,
   'the task can be completed');
 
 select throws_like(
-  $$select app.advance_task((select id from public.tasks where title = 'Call Ahmed back'), 'in_progress')$$,
+  $$select app.advance_task((select id from public.tasks where tenant_id = '11110000-0000-0000-0000-000000000001' and title = 'Call Ahmed back'), 'in_progress')$$,
   '%invalid task transition completed -> in_progress%',
   'a completed task cannot be moved back to in_progress');
 
@@ -117,21 +117,21 @@ select throws_like(
 -- ---------------------------------------------------------------------------------------------
 select lives_ok(
   $$select app.create_complaint(
-      (select id from public.customers where full_name = 'Ahmed Hassan'),
+      (select id from public.customers where tenant_id = '11110000-0000-0000-0000-000000000001' and full_name = 'Ahmed Hassan'),
       'Flight was delayed','service_quality','high')$$,
   'an employee can raise a complaint');
 
 select throws_like(
-  $$select app.advance_complaint((select id from public.complaints limit 1), 'resolved')$$,
+  $$select app.advance_complaint((select id from public.complaints where tenant_id = '11110000-0000-0000-0000-000000000001'), 'resolved')$$,
   '%invalid complaint transition new -> resolved%',
   'a complaint cannot jump straight from new to resolved');
 
 select lives_ok(
-  $$select app.advance_complaint((select id from public.complaints limit 1), 'acknowledged')$$,
+  $$select app.advance_complaint((select id from public.complaints where tenant_id = '11110000-0000-0000-0000-000000000001'), 'acknowledged')$$,
   'the canonical first step is allowed');
 
 select lives_ok(
-  $$select app.advance_complaint((select id from public.complaints limit 1), 'in_progress')$$,
+  $$select app.advance_complaint((select id from public.complaints where tenant_id = '11110000-0000-0000-0000-000000000001'), 'in_progress')$$,
   'and the lifecycle continues as canon defines it');
 
 -- ---------------------------------------------------------------------------------------------
@@ -140,7 +140,7 @@ select lives_ok(
 select lives_ok(
   $$select app.send_conversation_message(
       app.start_conversation('whatsapp',
-        (select id from public.customers where full_name = 'Ahmed Hassan')),
+        (select id from public.customers where tenant_id = '11110000-0000-0000-0000-000000000001' and full_name = 'Ahmed Hassan')),
       'outbound','user','Hello, following up on your delay.')$$,
   'an employee can start a conversation and send a message');
 
@@ -164,7 +164,7 @@ select is(app.current_tenant_id(), '11110000-0000-0000-0000-000000000001'::uuid,
   'the trainee resolves to the same tenant');
 
 select throws_like(
-  $$select app.advance_complaint((select id from public.complaints limit 1), 'resolved')$$,
+  $$select app.advance_complaint((select id from public.complaints where tenant_id = '11110000-0000-0000-0000-000000000001'), 'resolved')$$,
   '%permission denied%',
   'the trainee cannot resolve a complaint -- authorization is real, not documentation');
 

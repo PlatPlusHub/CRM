@@ -66,33 +66,33 @@ select lives_ok(
 select lives_ok(
   $$select app.create_lead('39000000-0000-0000-0000-00000000000a','39000000-0000-0000-0000-0000000000c1',
       'direct_call','Umrah enquiry',
-      p_customer_id => (select id from public.customers where full_name='Walk-in Customer'))$$,
+      p_customer_id => (select id from public.customers where tenant_id = '39000000-0000-0000-0000-000000000001' and full_name='Walk-in Customer'))$$,
   'DAY ONE 2/8: ...opens a lead for the enquiry');
 
 select lives_ok(
   $$select app.create_task('Call the customer back','call_customer',
       p_related_entity_type => 'lead',
-      p_related_entity_id => (select id from public.leads where title='Umrah enquiry'))$$,
+      p_related_entity_id => (select id from public.leads where tenant_id = '39000000-0000-0000-0000-000000000001' and title='Umrah enquiry'))$$,
   'DAY ONE 3/8: ...schedules the follow-up call');
 
 select lives_ok(
   $$select app.create_quotation(
-      (select id from public.customers where full_name='Walk-in Customer'), 'EGP',
-      p_lead_id => (select id from public.leads where title='Umrah enquiry'))$$,
+      (select id from public.customers where tenant_id = '39000000-0000-0000-0000-000000000001' and full_name='Walk-in Customer'), 'EGP',
+      p_lead_id => (select id from public.leads where tenant_id = '39000000-0000-0000-0000-000000000001' and title='Umrah enquiry'))$$,
   'DAY ONE 4/8: ...QUOTES the customer -- the step that was impossible before, and the reason the role existed');
 
 select lives_ok(
-  $$select app.add_quotation_item((select id from public.quotations limit 1), 'umrah', 25000)$$,
+  $$select app.add_quotation_item((select id from public.quotations where tenant_id = '39000000-0000-0000-0000-000000000001'), 'umrah', 25000)$$,
   'DAY ONE 5/8: ...prices the package');
 
 select lives_ok(
-  $$select app.advance_quotation((select id from public.quotations limit 1), 'sent', 'emailed to customer')$$,
+  $$select app.advance_quotation((select id from public.quotations where tenant_id = '39000000-0000-0000-0000-000000000001'), 'sent', 'emailed to customer')$$,
   'DAY ONE 6/8: ...sends it');
 
 select lives_ok(
   $$select app.create_booking(
-      p_customer_id => (select id from public.customers where full_name='Walk-in Customer'),
-      p_lead_id     => (select id from public.leads where title='Umrah enquiry'),
+      p_customer_id => (select id from public.customers where tenant_id = '39000000-0000-0000-0000-000000000001' and full_name='Walk-in Customer'),
+      p_lead_id     => (select id from public.leads where tenant_id = '39000000-0000-0000-0000-000000000001' and title='Umrah enquiry'),
       p_title       => 'Umrah booking',
       p_branch_id   => '39000000-0000-0000-0000-00000000000a',
       p_department_id => '39000000-0000-0000-0000-0000000000c1')$$,
@@ -100,7 +100,7 @@ select lives_ok(
 
 select lives_ok(
   $$select app.create_booking_item(
-      (select id from public.bookings where title='Umrah booking'), 'umrah', 'EGP')$$,
+      (select id from public.bookings where tenant_id = '39000000-0000-0000-0000-000000000001' and title='Umrah booking'), 'umrah', 'EGP')$$,
   'DAY ONE 8/8: ...and adds the service line. The journey completes end to end.');
 
 -- =============================================================================================
@@ -111,12 +111,12 @@ select lives_ok(
 select is(
   (select count(*)::int from public.events e
     where e.event_type_code='customer_created'
-      and e.entity_id = (select id from public.customers where full_name='Walk-in Customer')),
+      and e.entity_id = (select id from public.customers where tenant_id = '39000000-0000-0000-0000-000000000001' and full_name='Walk-in Customer')),
   1, 'the journey left a customer_created event for the customer the employee registered -- WP-01 and SPEC-154 compose');
 
 select is(
   (select t.event_type_code from app.customer_timeline(
-      (select id from public.customers where full_name='Walk-in Customer')) t order by t.seq limit 1),
+      (select id from public.customers where tenant_id = '39000000-0000-0000-0000-000000000001' and full_name='Walk-in Customer')) t order by t.seq limit 1),
   'customer_created',
   'CUSTOMER 360 begins at the beginning for a customer the EMPLOYEE created');
 
@@ -130,12 +130,12 @@ select is(
 -- colleague's-item case is proven in `40_financial_scope_test.sql`.
 select lives_ok(
   $$update public.booking_items set cost_amount = 12000
-     where id = (select id from public.booking_items limit 1)$$,
+     where id = (select id from public.booking_items where tenant_id = '39000000-0000-0000-0000-000000000001')$$,
   'NOW ALLOWED: the employee prices their OWN booking item -- canon 28 ENTER_COST, scope assigned');
 
 select throws_ok(
   $$update public.booking_items set finance_approval_status_code = 'approved'
-     where id = (select id from public.booking_items limit 1)$$,
+     where id = (select id from public.booking_items where tenant_id = '39000000-0000-0000-0000-000000000001')$$,
   '42501', null,
   'STILL DENIED: approving finance on their own item');
 

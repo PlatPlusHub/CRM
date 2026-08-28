@@ -81,7 +81,8 @@ select is(
 
 select is(
   (select count(*)::int from public.document_storage_findings
-    where finding_type_code = 'missing_object'),
+    where finding_type_code = 'missing_object'
+      and tenant_id in ('49000000-0000-0000-0000-00000000000a','49000000-0000-0000-0000-00000000000b')),
   2,
   '...on BOTH tenants, so the loop really iterated past the first one');
 
@@ -242,7 +243,8 @@ select is(
 select throws_ok(
   $$select app.platform_resolve_storage_finding(
       (select id from public.document_storage_findings
-        where finding_type_code = 'orphan_object' limit 1), 'made_up_code')$$,
+        where finding_type_code = 'orphan_object'
+          and tenant_id in ('49000000-0000-0000-0000-00000000000a','49000000-0000-0000-0000-00000000000b') limit 1), 'made_up_code')$$,
   'unknown resolution code: made_up_code',
   'an invented resolution code is refused rather than stored');
 
@@ -250,7 +252,8 @@ select throws_ok(
   $$select app.platform_resolve_storage_finding(
       (select id from public.document_storage_findings
         where finding_type_code = 'retention_expired'
-          and resolution_code = 'object_deleted'), 'dismissed')$$,
+          and resolution_code = 'object_deleted'
+          and tenant_id in ('49000000-0000-0000-0000-00000000000a','49000000-0000-0000-0000-00000000000b')), 'dismissed')$$,
   null, null,
   'an already-resolved finding cannot be resolved twice');
 

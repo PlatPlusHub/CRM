@@ -86,16 +86,16 @@ select set_config('request.jwt.claims', null, true);
 select is(
   (select dv.storage_path from public.document_versions dv
      join public.documents d on d.id = dv.document_id
-    where d.title = 'Layla passport'),
+    where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'),
   (select '46000000-0000-0000-0000-000000000001/' || d.id::text || '/1'
-     from public.documents d where d.title = 'Layla passport'),
+     from public.documents d where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'),
   'the object key is derived as tenant/document/version -- tenant first, so storage policy can isolate on segment 1');
 
 select set_config('request.jwt.claims','{"sub":"46000000-0000-0000-0000-0000000000a1"}', true);
 set local role authenticated;
 select lives_ok(
   $$select app.add_document_version(
-      (select id from public.documents where title = 'Layla passport'),
+      (select id from public.documents where tenant_id = '46000000-0000-0000-0000-000000000001' and title = 'Layla passport'),
       'layla-v2.pdf','pdf')$$,
   'superseding the document with a new version also needs no path');
 
@@ -105,9 +105,9 @@ select set_config('request.jwt.claims', null, true);
 select is(
   (select dv.version_number::text || ':' || dv.storage_path
      from public.document_versions dv join public.documents d on d.id = dv.document_id
-    where d.title = 'Layla passport' and dv.is_current),
+    where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport' and dv.is_current),
   (select '2:46000000-0000-0000-0000-000000000001/' || d.id::text || '/2'
-     from public.documents d where d.title = 'Layla passport'),
+     from public.documents d where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'),
   '...and the new version number AND its key are both derived, in step with each other');
 
 -- =============================================================================================
@@ -123,7 +123,7 @@ select lives_ok(
         (tenant_id, document_id, version_number, file_name, file_type_code, storage_path, is_current)
     select '46000000-0000-0000-0000-000000000001', d.id, 99, 'forged.pdf', 'pdf',
            '46000000-0000-0000-0000-000000000002/anything/i/like', false
-      from public.documents d where d.title = 'Layla passport'$$,
+      from public.documents d where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'$$,
   'a direct INSERT naming ANOTHER tenant''s storage prefix is accepted...');
 
 reset role;
@@ -132,9 +132,9 @@ select set_config('request.jwt.claims', null, true);
 select is(
   (select dv.version_number::text || ':' || dv.storage_path
      from public.document_versions dv join public.documents d on d.id = dv.document_id
-    where d.title = 'Layla passport' and dv.file_name = 'forged.pdf'),
+    where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport' and dv.file_name = 'forged.pdf'),
   (select '3:46000000-0000-0000-0000-000000000001/' || d.id::text || '/3'
-     from public.documents d where d.title = 'Layla passport'),
+     from public.documents d where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'),
   '...but NEITHER the version number 99 NOR the foreign prefix survived -- both were derived');
 
 -- =============================================================================================
@@ -162,7 +162,8 @@ reset role;
 select set_config('request.jwt.claims', null, true);
 select is(
   (select count(distinct uploaded_by)::int from public.document_versions dv
-     join public.documents d on d.id = dv.document_id where d.title = 'Layla passport'),
+     join public.documents d on d.id = dv.document_id
+    where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'),
   1,
   'every version is attributed to the actual caller -- uploaded_by is derived, not accepted');
 
@@ -180,7 +181,7 @@ select throws_ok(
   $$insert into public.document_versions
         (tenant_id, document_id, file_name, file_type_code, is_current)
     select '46000000-0000-0000-0000-000000000001', d.id, 'sneak.pdf', 'pdf', false
-      from public.documents d where d.title = 'Layla passport'$$,
+      from public.documents d where d.tenant_id = '46000000-0000-0000-0000-000000000001' and d.title = 'Layla passport'$$,
   '42501', null,
   '...and a direct INSERT is refused for want of it -- the RPC is no longer the only thing charging for this');
 

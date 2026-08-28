@@ -123,7 +123,7 @@ select lives_ok(
   'a customer is created');
 
 select is(
-  (select first_registered_user_id from public.customers where full_name = 'Aswan Customer'),
+  (select first_registered_user_id from public.customers where tenant_id = '24000000-0000-0000-0000-000000000001' and full_name = 'Aswan Customer'),
   '24000000-0000-0000-0000-000000000011'::uuid,
   'the customer records WHO first took them on -- canon 03 recorded only the branch, the owner directive adds the employee');
 

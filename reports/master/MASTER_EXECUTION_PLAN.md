@@ -348,6 +348,36 @@ additive capability.*
      **13**, now classified individually rather than counted -- 3 auth artifacts already owner-scoped
      by policy, 5 system-written, 5 whose RPCs authorize nothing. Guarded by
      `57_write_capability_map_test.sql` (12).
+   * **SEC-1 RESIDUE — CLOSED 2026-08-28 (`202607056100`), one table left.** Counting the thirteen
+     implied they shared an answer. They did not, and the three groups needed opposite actions.
+     **Five are system-owned** (`attribution_clicks`, `notifications`, `notification_deliveries`,
+     `offline_conversion_deliveries`, `usage_counters`): every writer is SECURITY DEFINER and none is
+     executable by `authenticated` (`orvion_integration` / `service_role`), and two have no writer at
+     all -- so the table grant was a second door only direct DML used. REVOKED rather than
+     permissioned, which is the directive's own preference. `notifications` keeps a column-level
+     `update (is_read, read_at)`: dismissing your own notification is a real user act with no RPC, and
+     removing the whole UPDATE would have deleted a capability instead of closing a hole.
+     **Four are tenant configuration** (`branch_business_hours`, `holidays`, `financial_accounts`,
+     `company_assets`) with no writer at all, so direct DML was the only path and it was open to a
+     trainee. Guarded with the permission ORVION already charges for the same object: `branches` ->
+     MANAGE_BRANCHES; `chart_of_accounts` / `journal_entries` -> CREATE_JOURNAL_ENTRY; `holidays`
+     takes the MANAGE_BRANCHES-or-MANAGE_TENANT_SETTINGS union because `branch_id` is nullable and
+     both resolve to {ceo, owner}. **Three are INTENTIONAL, not residue**: canon 34 states that
+     `otp_challenges`, `totp_enrollments` and `trusted_devices` belong to the Human Identity and that
+     row-ownership by `auth.uid()` IS their model -- now proven behaviourally rather than trusted.
+     Left open: **`lead_interactions` only**, where `record_lead_interaction` (SECURITY INVOKER,
+     granted to authenticated) authorizes nothing, so there is no bypass to close -- only an
+     undecided question about what logging an interaction costs. Ceilings 59/27/13 -> **54/18/4**.
+     Guarded by `58_write_grants_and_config_capability_test.sql` (27).
+   * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
+     fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
+     `postgres` with RLS off, and duly paired this fixture's payment with an invoice
+     `verify_role_journeys.ps1` had left behind. Scanning all 58 files found **40+ fixture subqueries
+     across 11 files** selecting their own rows by a non-unique attribute with no tenant predicate:
+     bounded only by RLS, and only while the actor happens to be `authenticated`. All scoped. The fix
+     is verified by REGIME, not by a green run: the suite is now proven order-independent -- 672
+     assertions, 0 failures, both on a fresh `db reset` and immediately after every HTTP suite has
+     deposited its deliberately non-teardownable residue.
    * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their

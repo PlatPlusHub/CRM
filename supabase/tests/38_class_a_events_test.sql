@@ -57,11 +57,11 @@ select lives_ok(
 
 -- An invoice must be issued before it can be paid; a draft invoice is not payable by design.
 select lives_ok(
-  $$select app.issue_invoice((select id from public.invoices limit 1))$$,
+  $$select app.issue_invoice((select id from public.invoices where tenant_id = '38000000-0000-0000-0000-000000000001'))$$,
   'BASELINE: finance can issue the invoice');
 
 select lives_ok(
-  $$select app.record_payment((select id from public.invoices limit 1), 400, 'cash')$$,
+  $$select app.record_payment((select id from public.invoices where tenant_id = '38000000-0000-0000-0000-000000000001'), 400, 'cash')$$,
   'BASELINE: finance can record a payment against it');
 
 select is(
@@ -104,11 +104,22 @@ reset role;
 -- resolved to the employee and FIN-3's new financial capability guard correctly refused: an
 -- employee holds no RECORD_PAYMENT. The insert below is a SYSTEM path, and now genuinely is one.
 -- (Third occurrence of this fixture artifact in the suite, after 31 and 37.)
+--
+-- The select below is SCOPED to this fixture's tenant. It was `from public.payments p,
+-- public.invoices i limit 1` -- an unscoped cross join that, running as postgres with RLS off, saw
+-- every tenant's rows and duly paired this fixture's payment with a foreign invoice, violating the
+-- COMPOSITE fk (tenant_id, invoice_id) as soon as `scripts/verify_role_journeys.ps1` left an invoice
+-- behind. Same class as the unscoped event counts corrected in 27 and at the end of this file: a
+-- fixture must never depend on what else is in the database. All ten sites in the suite (here, 17
+-- and 39) are now scoped.
 select set_config('request.jwt.claims', null, true);
 select lives_ok(
   $$insert into public.payment_allocations (tenant_id, payment_id, invoice_id, allocated_amount, currency_code)
     select '38000000-0000-0000-0000-000000000001', p.id, i.id, 100, 'EGP'
-      from public.payments p, public.invoices i limit 1$$,
+      from public.payments p
+      join public.invoices i on i.tenant_id = p.tenant_id
+     where p.tenant_id = '38000000-0000-0000-0000-000000000001'
+     limit 1$$,
   'a DIRECT allocation insert on the SYSTEM path succeeds -- exempt from the capability check, never from the record');
 
 select is(
@@ -130,7 +141,7 @@ select is(
   'an ordinary re-login touch does NOT emit reverified -- record_trusted_device updates last_seen_at every time, and firing there would spam an append-only spine');
 
 select lives_ok(
-  $$select app.revoke_trusted_device((select id from public.trusted_devices where device_identifier='wp2-device'))$$,
+  $$select app.revoke_trusted_device((select id from public.trusted_devices where auth_user_id = '38000000-0000-0000-0000-0000000000a2' and device_identifier='wp2-device'))$$,
   'BASELINE: the device can be revoked');
 
 select is(

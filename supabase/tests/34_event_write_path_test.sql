@@ -76,7 +76,7 @@ select lives_ok(
   'the ordinary RPC path still emits its event -- app.create_task succeeds end to end');
 
 select is(
-  (select count(*)::int from public.events where event_type_code = 'task_created'),
+  (select count(*)::int from public.events where tenant_id = '34000000-0000-0000-0000-000000000001' and event_type_code = 'task_created'),
   1,
   '...and exactly one task_created event reached the spine through app.record_event');
 
@@ -84,12 +84,12 @@ select is(
 -- 4-7. What record_event writes is authoritative, not caller-supplied.
 -- ---------------------------------------------------------------------------------------------
 select is(
-  (select actor_user_id from public.events where event_type_code = 'task_created'),
+  (select actor_user_id from public.events where tenant_id = '34000000-0000-0000-0000-000000000001' and event_type_code = 'task_created'),
   '34000000-0000-0000-0000-000000000011'::uuid,
   'the actor is the caller, taken from the session rather than from the arguments');
 
 select ok(
-  (select created_at from public.events where event_type_code = 'task_created') > now() - interval '1 minute',
+  (select created_at from public.events where tenant_id = '34000000-0000-0000-0000-000000000001' and event_type_code = 'task_created') > now() - interval '1 minute',
   'the timestamp is server-side: created_at is not in record_event''s column list, so it cannot be backdated');
 
 -- Reattribution attempt through the surviving RPC surface: authenticated keeps EXECUTE on
@@ -101,7 +101,7 @@ select lives_ok(
   'a direct record_event call naming a colleague as actor is accepted...');
 
 select is(
-  (select actor_user_id from public.events where event_type_code = 'customer_created'),
+  (select actor_user_id from public.events where tenant_id = '34000000-0000-0000-0000-000000000001' and event_type_code = 'customer_created'),
   '34000000-0000-0000-0000-000000000011'::uuid,
   '...but the colleague is ignored and the event is attributed to whoever actually called it -- self-incriminating, not forgery');
 

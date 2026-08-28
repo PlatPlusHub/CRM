@@ -51,7 +51,7 @@ select lives_ok(
   'an operations user can add a customer contact method');
 
 select is(
-  (select value from public.customer_contact_methods where contact_method_type_code = 'email'),
+  (select value from public.customer_contact_methods where tenant_id = '22220000-0000-0000-0000-000000000001' and contact_method_type_code = 'email'),
   'ahmed@gmail.com',
   'the contact value is canonicalized exactly as customers.primary_email is');
 
@@ -80,7 +80,7 @@ select lives_ok(
   'an operations user can create a supplier');
 
 select is(
-  (select email || ' / ' || phone from public.suppliers where name = 'EgyptAir'),
+  (select email || ' / ' || phone from public.suppliers where tenant_id = '22220000-0000-0000-0000-000000000001' and name = 'EgyptAir'),
   'bookings@egyptair.com / +20226960000',
   'supplier contact data is canonicalized the same way customer contact data is');
 

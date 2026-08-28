@@ -110,8 +110,8 @@ select cmp_ok(
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')),
-  '<=', 59,
-  'SEC-1 ceiling: at most 59 tables accept a direct INSERT from authenticated');
+  '<=', 54,
+  'SEC-1 ceiling: at most 54 tables accept a direct INSERT from authenticated');
 
 select cmp_ok(
   (select count(*)::int
@@ -122,17 +122,27 @@ select cmp_ok(
         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
          where t.tgrelid = c.oid and not t.tgisinternal
            and position('app.authorize' in pg_get_functiondef(p.oid)) > 0)),
-  '<=', 27,
-  '...and at most 27 of them have NO capability trigger on the direct write path');
+  '<=', 18,
+  '...and at most 18 of them have NO capability trigger on the direct write path');
 
 -- The residue that matters: neither a capability trigger NOR a policy WITH CHECK naming a real
--- write permission. Thirteen tables, and the list is understood rather than merely counted --
--- `otp_challenges`, `totp_enrollments` and `trusted_devices` are the caller's own auth artifacts
--- and are owner-scoped by policy; `attribution_clicks`, `notifications`,
--- `notification_deliveries`, `offline_conversion_deliveries` and `usage_counters` are
--- system-written; `branch_business_hours`, `company_assets`, `financial_accounts`, `holidays` and
--- `lead_interactions` have no RPC that authorizes anything, so no permission can be derived from
--- evidence. All of them stay under SEC-1 rather than being guessed at.
+-- write permission. Thirteen tables when this was first measured; FOUR now, and each of the three
+-- groups was closed by a different action rather than by one sweeping rule (`202607056100`):
+--
+--   * `attribution_clicks`, `notifications`, `notification_deliveries`,
+--     `offline_conversion_deliveries`, `usage_counters` -- every writer is SECURITY DEFINER and none
+--     is executable by `authenticated`, so the GRANT was revoked. They leave this count by leaving
+--     the population above it: authenticated can no longer INSERT them at all.
+--   * `branch_business_hours`, `holidays`, `financial_accounts`, `company_assets` -- no RPC writes
+--     them, so the permission was read out of what ORVION already charges for the same object
+--     (`branches` -> MANAGE_BRANCHES; `chart_of_accounts`/`journal_entries` -> CREATE_JOURNAL_ENTRY).
+--
+-- What remains is FOUR, and three of them are INTENTIONAL rather than residue: `otp_challenges`,
+-- `totp_enrollments` and `trusted_devices` belong to the Human Identity, and canon 34 states that
+-- row-ownership by `auth.uid()` IS their authorization model -- `58_...` proves that boundary holds
+-- instead of asserting it. The genuine open item is `lead_interactions`, where
+-- `app.record_lead_interaction` (SECURITY INVOKER, granted to authenticated) authorizes nothing:
+-- there is no bypass to close, only an undecided question about what logging an interaction costs.
 select cmp_ok(
   (select count(*)::int
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -147,8 +157,8 @@ select cmp_ok(
          where pp.schemaname = 'public' and pp.tablename = c.relname
            and pp.cmd in ('INSERT','ALL')
            and coalesce(pp.with_check,'') ~ 'has_permission\(''(?!VIEW_|SEE_)[A-Z_]+''')),
-  '<=', 13,
-  '...and at most 13 have no capability enforcement of ANY kind (SEC-1 residue)');
+  '<=', 4,
+  '...and at most 4 have no capability enforcement of ANY kind (3 INTENTIONAL by canon 34, 1 open)');
 
 select * from finish();
 rollback;

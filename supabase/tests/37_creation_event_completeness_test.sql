@@ -42,22 +42,22 @@ select lives_ok(
   'BASELINE: an employee can create a customer at all -- without this the counts below would prove nothing');
 
 select is(
-  (select count(*)::int from public.events where event_type_code = 'customer_created'),
+  (select count(*)::int from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'customer_created'),
   1,
   'exactly ONE customer_created event -- not zero, and not two from a duplicated path');
 
 select is(
-  (select entity_type from public.events where event_type_code = 'customer_created'),
+  (select entity_type from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'customer_created'),
   'customer',
   'the event names the right entity_type, so the read policy can dispatch it to the customer''s own RLS');
 
 select is(
-  (select e.entity_id from public.events e where e.event_type_code = 'customer_created'),
-  (select c.id from public.customers c where c.full_name = 'Timeline Customer'),
+  (select e.entity_id from public.events e where e.tenant_id = '37000000-0000-0000-0000-000000000001' and e.event_type_code = 'customer_created'),
+  (select c.id from public.customers c where c.tenant_id = '37000000-0000-0000-0000-000000000001' and c.full_name = 'Timeline Customer'),
   '...and points at the customer that was actually created');
 
 select is(
-  (select actor_user_id from public.events where event_type_code = 'customer_created'),
+  (select actor_user_id from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'customer_created'),
   '37000000-0000-0000-0000-000000000011'::uuid,
   'the actor is the employee who created it -- "who first received this customer" is now answerable');
 
@@ -67,16 +67,16 @@ select is(
 select lives_ok(
   $$select app.create_lead('37000000-0000-0000-0000-00000000000a','37000000-0000-0000-0000-0000000000c1',
       'manual_entry','New enquiry',
-      p_customer_id => (select id from public.customers where full_name = 'Timeline Customer'))$$,
+      p_customer_id => (select id from public.customers where tenant_id = '37000000-0000-0000-0000-000000000001' and full_name = 'Timeline Customer'))$$,
   'BASELINE: the employee can create a lead');
 
 select is(
-  (select count(*)::int from public.events where event_type_code = 'lead_created'),
+  (select count(*)::int from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'lead_created'),
   1,
   'exactly ONE lead_created event');
 
 select isnt(
-  (select new_state from public.events where event_type_code = 'lead_created'),
+  (select new_state from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'lead_created'),
   null,
   '...carrying the state the lead was BORN in, so the timeline''s first entry is not stateless');
 
@@ -107,7 +107,7 @@ select set_config('request.jwt.claims','{"sub":"37000000-0000-0000-0000-00000000
 
 select lives_ok(
   $$select app.create_passenger('Traveller','One', p_customer_id =>
-      (select id from public.customers where full_name = 'Timeline Customer'))$$,
+      (select id from public.customers where tenant_id = '37000000-0000-0000-0000-000000000001' and full_name = 'Timeline Customer'))$$,
   'BASELINE: a senior_employee can create a passenger');
 
 select is(
@@ -120,7 +120,7 @@ select is(
 -- =============================================================================================
 select is(
   (select t.event_type_code from app.customer_timeline(
-       (select id from public.customers where full_name = 'Timeline Customer')) t
+       (select id from public.customers where tenant_id = '37000000-0000-0000-0000-000000000001' and full_name = 'Timeline Customer')) t
     order by t.seq limit 1),
   'customer_created',
   'CUSTOMER 360 now BEGINS at customer_created -- previously the history started halfway through the relationship');
@@ -136,7 +136,7 @@ select lives_ok(
   'a direct INSERT (no RPC) succeeds -- SEC-1 still permits it');
 
 select is(
-  (select count(*)::int from public.events where event_type_code = 'customer_created'),
+  (select count(*)::int from public.events where tenant_id = '37000000-0000-0000-0000-000000000001' and event_type_code = 'customer_created'),
   2,
   '...and it ALSO emitted its creation event -- an in-RPC emission would have missed this entirely');
 
