@@ -423,6 +423,24 @@ additive capability.*
      `app.claim_storage_actions` rather than restating its rules, and `60_...` (11) asserts the
      monitor's count EQUALS what the executor would claim -- including under the RET-2 suspension
      exclusion, where a hand-written monitor would most easily have drifted. HTTP 175 -> **179**.
+   * **ATTR-1 — CLOSED 2026-08-28 (`202607056400`).** Found by sweeping the CLASS rather than
+     tripping over an instance: every table `authenticated` may INSERT was checked for columns
+     naming an actor. `archived_by`, `document_versions.uploaded_by` and
+     `approval_requests.requested_by` are already derived -- `created_by` was NOT, on twenty tables.
+     Every RPC sets it from the session; direct DML did not have to, so any tenant user could create
+     a customer, booking, invoice or payment ATTRIBUTED TO A COLLEAGUE. On `documents` that is worse
+     than misleading: `scope_isolation` reads `created_by = current_user_id()` as a VISIBILITY GRANT.
+     `app.derive_created_by()` applies FIN-4's ratified shape -- DERIVE, DO NOT VALIDATE -- on INSERT
+     and holds it IMMUTABLE on UPDATE, which is safe because no function anywhere updates the column
+     (verified against every body first). Session-less platform paths keep their own attribution.
+     `61_...` (8) pins the class: every insertable table with the column must carry the trigger.
+     Recorded, not swept in: **ATTR-2**, the ACTION attributions (`voided_by`, `reviewed_by`), which
+     are stamped at the moment of the action and need a different trigger shape.
+     Also widened here: `10`'s PUBLIC-EXECUTE guard covered the `app` schema ONLY, leaving `public`
+     -- where API-1 put the 74 endpoints and where `pg_default_acl` grants EXECUTE by default
+     (SPEC-124's class) -- unchecked. It now covers both, excluding extension-owned functions by
+     `pg_depend` rather than by name. Same shape of mistake as the transition guard that covered one
+     function out of ten, found by the same sweep.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice

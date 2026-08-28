@@ -68,18 +68,29 @@ select is(
   0,
   'events and security_events grant authenticated SELECT only -- no INSERT, UPDATE or DELETE');
 
--- 5. No app-schema function is executable by PUBLIC. Every app.* RPC carries an explicit grant to
---    its intended role, so a PUBLIC EXECUTE only widens reach -- and would become live exposure the
---    moment anyone granted anon USAGE on schema app, since 13 of these are SECURITY DEFINER.
+-- 5. No ORVION function -- in `app` OR in `public` -- is executable by PUBLIC. Every RPC carries an
+--    explicit grant to its intended role, so a PUBLIC EXECUTE only widens reach, and in `app` it
+--    would become live exposure the moment anyone granted anon USAGE on the schema, since 13 of
+--    those are SECURITY DEFINER.
+--
+--    WIDENED 2026-08-28 from `app` alone. `public` is where API-1 put the 74 HTTP endpoints and
+--    where `pg_default_acl` grants anon/authenticated EXECUTE on new functions by default (SPEC-124's
+--    class) -- so checking only `app` left the schema that is actually exposed unchecked. Same shape
+--    of mistake as the transition guard that covered one function out of ten.
+--
+--    Extension-owned functions are excluded by `pg_depend`, not by name: `public.moddatetime` is
+--    Supabase's, owned by supabase_admin, and its ACL is not ORVION's to manage. Excluding it by
+--    membership means a future extension is handled too, and a future ORVION function is not.
 select is(
   (select count(*)::int
      from pg_proc p
      join pg_namespace n on n.oid = p.pronamespace
      cross join lateral aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) as g(grantor, grantee, privilege_type, is_grantable)
-    where n.nspname = 'app' and p.prokind = 'f'
-      and g.privilege_type = 'EXECUTE' and g.grantee = 0),
+    where n.nspname in ('app', 'public') and p.prokind = 'f'
+      and g.privilege_type = 'EXECUTE' and g.grantee = 0
+      and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')),
   0,
-  'no app-schema function grants EXECUTE to PUBLIC');
+  'no ORVION function in app or public grants EXECUTE to PUBLIC');
 
 -- =============================================================================================
 -- 6-7. SEC-1, MEASURED. RLS scopes WHICH ROWS a caller reaches; it does not enforce WHAT they may
