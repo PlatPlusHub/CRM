@@ -453,6 +453,25 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **SLA-1 — CLOSED 2026-08-29 (`202607056600`).** canon 04 and canon 10 both require the
+     employee's MANAGER to be notified at 15 minutes and again on reassignment, and canon 10 lists
+     "Manager escalation" among the notifications a user CANNOT MUTE. It had never fired.
+     REPRODUCED first, with a positive control: in the standard configuration -- managers PLACED in
+     the branch through `user_branch_assignments`, holding TENANT-scoped roles, which is exactly what
+     `app.assign_user_role` produces by default -- one SLA pass gave the employee 1 notification and
+     both managers 0, while the same transaction proved they CAN see the lead. Root cause is the
+     recurring shape, this time in the operational layer: the lookup asked
+     `user_role_assignments.branch_id/department_id` ALONE, while ORVION's authoritative definition
+     of governance (`visible_branch_ids` / `visible_department_ids`) is a UNION that also includes
+     PLACEMENT -- the only source populated by default. Second instance in the same function: the
+     reassignment branch had no manager notification at all. Fixed with
+     `app.lead_responsible_managers`, used by BOTH paths so no second copy of the predicate exists,
+     and carrying the `is_active`/`starts_at`/`ends_at` bounds the inline version omitted.
+     NOT changed: which roles escalate, the 15/30 windows, the reassignment pool, the event
+     vocabulary. No existing test caught this -- 34 and 36 assert the EVENT and the tenant isolation,
+     never the recipient. Recorded while proving it: **LEAD-3**, the reassignment pool includes
+     managers and the tie broke to the branch manager; canon 04 says "another eligible employee" and
+     defines neither term, so it is an owner decision and was deliberately left alone.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice
