@@ -69,6 +69,11 @@ if ([string]::IsNullOrWhiteSpace($PrimaryFingerprint)) {
     $issues++
 } else {
     Write-Host "  Primary matches the repository ($PrimaryFingerprint)" -ForegroundColor Green
+    # The value is CALLER-SUPPLIED and this script cannot verify where it came from. Passing the
+    # repository's own expected fingerprint makes this check agree with itself, which is not the
+    # same as agreeing with Primary -- a real near-miss on 2026-08-29, caught only by querying
+    # Primary independently. The caveat belongs in the OUTPUT, not only in the header.
+    Write-Host "  (caller-supplied: this proves Primary parity only if that value was READ FROM Primary)" -ForegroundColor DarkGray
 }
 
 Write-Host ""

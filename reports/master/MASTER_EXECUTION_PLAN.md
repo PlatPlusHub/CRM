@@ -453,6 +453,55 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **ATTR-3 / §8 item J — CLOSED 2026-08-29 (`202607056700`).** The owner's ATTRIBUTION BUSINESS
+     RULE requires that reassignment never rewrite acquisition lineage. Item J's question is answered
+     by measurement and now asserted on BOTH paths: `app.reassign_lead` and `app.process_lead_sla`
+     move ownership and touch no lineage column. The STRONGER half of the rule was false —
+     `authenticated` holds UPDATE on `leads` and `scope_isolation` covers the whole department queue,
+     so any employee could re-anchor a lead to a different click, moving a future Google Ads
+     conversion and the revenue credited with it between campaigns. ORVION's own
+     `capture_attribution_click` already stated the rule ("First-touch anchor ... where
+     attribution_click_id is null"); it lived in the RPC and not on the table. One trigger,
+     `app.forbid_acquisition_lineage_rewrite`, now applies first-touch to the named lineage columns
+     of `leads` AND of `offline_conversions` — the revenue end of the same chain, where a ceo or
+     owner could re-point an already-recorded conversion. NO session-less exemption, because the only
+     post-insert writer performs the one transition the guard permits.
+   * **LEAD-3 — RESOLVED AND FIXED 2026-08-29 (`202607056800`).** Filed as an owner decision ("does
+     'another eligible employee' include a manager?"). The permission matrix answers it: CLOSE_LEAD,
+     CREATE_LEAD, CREATE_QUOTATION and VIEW_DEPARTMENT_QUEUE resolve to the same six roles, managers
+     among them — so managers stay. Underneath was a defect, reproduced first: the pool was everyone
+     PLACED in the branch and department, so an SLA-overdue lead was reassigned to a **trainee**
+     (`can_close_lead=f`, `can_quote=f`), and `finance_manager` and `system_administrator` were
+     equally eligible. SEC-1's shape in the one place with no human in the loop — capability by
+     proximity instead of by authority. `app.eligible_lead_handlers` now requires CLOSE_LEAD through
+     an active role assignment; when nobody qualifies the lead STAYS and the pass reports
+     `reassignment_blocked` (**LEAD-4**: nothing consumes that on a cron run yet). The HUMAN path is
+     deliberately untouched and this is settled, not deferred — `verify_lifecycle_branches` already
+     asserts that a trainee may work a lead they are ASSIGNED.
+   * **Business-decision audit 2026-08-29, per the owner's closure directive.** Every BLOCKED —
+     BUSINESS DECISION re-evaluated against canon, live evidence and the accumulated intent. SIX
+     resolved without asking again: **LEAD-2** (canon 25 declares `lead_source` a Tenant-Extendable
+     System Catalog with "Tenant additions: Allowed with admin permission", and
+     `catalog_tenant_insert` enforces exactly that — proven behaviourally, so ORVION must NOT ship
+     `walk_in` as a system default); **LEAD-3**; **RBAC-2** (`roles`/`role_permissions`/`permissions`
+     grant `authenticated` SELECT only — tenant-side role administration does not exist, so
+     MANAGE_ROLES gates nothing BY DESIGN, and attaching it to `assign_user_role` would have
+     mislabelled user administration); **PERM-1** (all three carry a `required_feature_code` and are
+     plan entitlements; API-1's surface is ORVION's OWN data path, so gating it on ACCESS_API_* would
+     disable the product per plan — the answer is no); **TASK-3** (canon 26 names both start
+     transitions and lists five required events, none of them a start — a choice, not a silence);
+     **ORPH-1** (a tenant cannot create an orphan through the API, so an orphan implies platform-side
+     failure — reviewed, never destroyed on sight). TWO narrowed with new evidence: **FIN-5** (six of
+     seven approval types have no producer at all, so the map is EVT-2's class, not a permission
+     decision) and **VOID-1** (canon DOES register a `voided` invoice status; void-vs-credit-note
+     remains an accounting model choice). The rest stay blocked on facts that are genuinely external
+     — a statutory retention period, one owner-placed secret, where platform-operator identity lives.
+   * **GUARD-1 — recorded and mitigated 2026-08-29.** `check_database_parity.ps1` printed "Primary
+     matches the repository" for a fingerprint **I** passed it — the repository's own expected value.
+     `apply_migration` had stamped its own `version` into Primary's ledger, so Primary actually
+     produced `ca253f45...` against the repository's `0c48b1fd...`. Caught by querying Primary
+     independently, not by the guard. The ledger rows were normalised to the repository convention,
+     and the script's success line now carries the caveat its header always had.
    * **SLA-1 — CLOSED 2026-08-29 (`202607056600`).** canon 04 and canon 10 both require the
      employee's MANAGER to be notified at 15 minutes and again on reassignment, and canon 10 lists
      "Manager escalation" among the notifications a user CANNOT MUTE. It had never fired.
