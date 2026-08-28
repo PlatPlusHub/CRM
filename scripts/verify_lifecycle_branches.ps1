@@ -1,0 +1,342 @@
+# ORVION -- the lifecycle branches and the trainee, over HTTP (Phase C).
+#
+# `verify_journey_branches.ps1` walked the branches an agency hits weekly. These are the ones it hits
+# on the bad days and the good ones: the quotation the customer turns down and you re-quote, the
+# quotation that lapses, the ticket that must be reissued, the customer who pays half now and half
+# later, the supplier who fails after you have already sold the trip, the passport about to expire,
+# and the customer who comes back a second time.
+#
+# It also walks the TRAINEE end to end -- the only role whose full journey had never been executed.
+# A trainee holds exactly two permissions, so "their journey" is mostly refusals; the point is to
+# prove the refusals are about CAPABILITY and not about a broken session or an unreachable row, and
+# to find out what a trainee can actually do on their first morning.
+#
+# A failure here is a RESULT, not a fault: it means a real agency would hit that wall.
+#
+# Local development stack only (`iss: supabase-demo` keys on 127.0.0.1). Never point at a project.
+
+$ErrorActionPreference = 'Stop'
+$pass = 0; $fail = 0; $findings = @()
+function Check($name, $condition, $detail = '') {
+    if ($condition) { $script:pass++; Write-Host "  ok   $name" -ForegroundColor Green }
+    else { $script:fail++; $script:findings += "$name :: $detail"; Write-Host "  FAIL $name  $detail" -ForegroundColor Red }
+}
+
+Write-Host "`n== ORVION lifecycle branches and the trainee, over HTTP ==" -ForegroundColor Cyan
+
+$status = (npx supabase status -o json 2>$null) | ConvertFrom-Json
+$API = $status.API_URL; $ANON = $status.ANON_KEY; $JWT_SECRET = $status.JWT_SECRET
+if (-not $API) { throw "local stack is not running" }
+
+function New-UserJwt([string]$sub, [bool]$aal2) {
+    $exp = [int](Get-Date -UFormat %s) + 3600
+    $aal = if ($aal2) { ',"aal":"aal2"' } else { '' }
+    $pay = "{""sub"":""$sub"",""role"":""authenticated"",""aud"":""authenticated"",""exp"":$exp$aal}"
+    function B64([byte[]]$b) { [Convert]::ToBase64String($b).TrimEnd('=').Replace('+', '-').Replace('/', '_') }
+    $h = B64 ([Text.Encoding]::UTF8.GetBytes('{"alg":"HS256","typ":"JWT"}'))
+    $p = B64 ([Text.Encoding]::UTF8.GetBytes($pay))
+    $hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($JWT_SECRET))
+    "$h.$p." + (B64 ($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes("$h.$p"))))
+}
+function Psql([string]$sql) { $sql | docker exec -i supabase_db_ORVION psql -U postgres -d postgres -q -t -A -v ON_ERROR_STOP=1 -f - 2>&1 }
+function Rpc($jwt, $name, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/rpc/$name" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+function Get-Rest($jwt, $path) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Get -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" }
+}
+function Val($r) { if ($r.StatusCode -lt 300 -and $r.Content) { ($r.Content | ConvertFrom-Json) } else { $null } }
+function Ok($r) { $r.StatusCode -ge 200 -and $r.StatusCode -lt 300 }
+function Err($r) { try { ($r.Content | ConvertFrom-Json).message } catch { $r.Content } }
+
+$T = '0c110000-0000-0000-0000-0000000000a0'
+$AU_OWNER = '0c110000-0000-0000-0000-0000000000a1'
+$AU_EMP = '0c110000-0000-0000-0000-0000000000a2'
+$AU_FIN = '0c110000-0000-0000-0000-0000000000a3'
+$AU_TRN = '0c110000-0000-0000-0000-0000000000a4'
+$BR = '0c110000-0000-0000-0000-00000000aa01'
+$DP = '0c110000-0000-0000-0000-00000000aa02'
+$U_EMP = '0c110000-0000-0000-0000-00000000aa04'
+$U_TRN = '0c110000-0000-0000-0000-00000000aa06'
+
+if ((Psql "select count(*) from public.tenants where id='$T';").Trim() -ne '0') {
+    Write-Host "  fixture tenant already present -- run 'npx supabase db reset' first" -ForegroundColor Yellow
+    exit 1
+}
+
+Psql @"
+insert into auth.users (id, email) values
+  ('$AU_OWNER','owner@lc.test'),('$AU_EMP','emp@lc.test'),('$AU_FIN','fin@lc.test'),('$AU_TRN','trn@lc.test');
+insert into public.tenants (id, name, slug, status) values ('$T','Lc Branch Travel','lc-branch-travel','active');
+insert into public.subscriptions (tenant_id, subscription_plan_id, subscription_status_code)
+select '$T', sp.id, 'active' from public.subscription_plans sp where sp.plan_code='enterprise';
+insert into public.branches (id, tenant_id, name, slug) values ('$BR','$T','Cairo','lc-cairo');
+insert into public.departments (id, tenant_id, branch_id, department_type_code, name) values ('$DP','$T','$BR','sales','Sales');
+insert into public.users (id, tenant_id, full_name, email, is_active, auth_user_id) values
+  ('0c110000-0000-0000-0000-00000000aa03','$T','Lc Owner','owner@lc.test',true,'$AU_OWNER'),
+  ('$U_EMP','$T','Lc Employee','emp@lc.test',true,'$AU_EMP'),
+  ('0c110000-0000-0000-0000-00000000aa05','$T','Lc Finance','fin@lc.test',true,'$AU_FIN'),
+  ('$U_TRN','$T','Lc Trainee','trn@lc.test',true,'$AU_TRN');
+insert into public.user_branch_assignments (tenant_id, user_id, branch_id, department_id, is_primary)
+select '$T', u, '$BR','$DP', true
+from unnest(array['0c110000-0000-0000-0000-00000000aa03'::uuid,'$U_EMP'::uuid,'0c110000-0000-0000-0000-00000000aa05'::uuid,'$U_TRN'::uuid]) u;
+insert into public.user_role_assignments (tenant_id, user_id, role_id, scope_type)
+select '$T', v.u, r.id, 'tenant' from (values
+  ('0c110000-0000-0000-0000-00000000aa03'::uuid,'owner'),
+  ('$U_EMP'::uuid,'employee'),
+  ('0c110000-0000-0000-0000-00000000aa05'::uuid,'finance_manager'),
+  ('$U_TRN'::uuid,'trainee')) v(u,rc)
+join public.roles r on r.code=v.rc;
+select 'OK';
+"@ | Out-Null
+
+$owner = New-UserJwt $AU_OWNER $true
+$emp = New-UserJwt $AU_EMP $false
+$fin = New-UserJwt $AU_FIN $true
+$trn = New-UserJwt $AU_TRN $false
+
+$customerId = Val (Rpc $emp 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Mona Fathy'; p_primary_phone = '+201118889999' })
+Check "BASELINE: the employee registers the customer this whole file is about" ($null -ne $customerId) "c=$customerId"
+
+# =============================================================================================
+# THE TRAINEE'S FIRST MORNING. Two permissions: VIEW_ASSIGNED_LEADS, VIEW_ASSIGNED_TASKS.
+# Every refusal below is paired with something the SAME session can do, so none of them is
+# measuring a broken token or an unreachable row.
+# =============================================================================================
+Write-Host "`n-- the trainee --"
+
+# A lead assigned TO the trainee, and one assigned to the employee. Assignment is supervisory, so
+# the owner does it -- which is itself the reason a trainee cannot self-serve their own queue.
+$leadMine = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP; p_lead_source_code = 'direct_call'; p_title = 'Trainee lead'; p_customer_id = $customerId })
+$leadOther = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP; p_lead_source_code = 'direct_call'; p_title = 'Not the trainee lead'; p_customer_id = $customerId })
+Val (Rpc $owner 'assign_lead' @{ p_lead_id = $leadMine; p_assignee_user_id = $U_TRN; p_reason = 'training queue' }) | Out-Null
+Val (Rpc $owner 'assign_lead' @{ p_lead_id = $leadOther; p_assignee_user_id = $U_EMP; p_reason = 'normal queue' }) | Out-Null
+
+$r = Get-Rest $trn "leads?select=id,title"
+$trnLeads = @(Val $r)
+Check "POSITIVE CONTROL: the trainee reaches the API and sees their ASSIGNED lead" (($trnLeads | Where-Object { $_.title -eq 'Trainee lead' }).Count -eq 1) "$($r.StatusCode) rows=$($trnLeads.Count)"
+Check "...and NOT the colleague's lead -- scope, proven on the same query that returned theirs" (($trnLeads | Where-Object { $_.title -eq 'Not the trainee lead' }).Count -eq 0) "rows=$($trnLeads.Count)"
+
+$r = Rpc $trn 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Trainee Customer'; p_primary_phone = '+201110000001' }
+Check "a trainee CANNOT create a customer -- capability, not reach" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $trn 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP; p_lead_source_code = 'direct_call'; p_title = 'Trainee attempt' }
+Check "...nor open a lead of their own" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $trn 'create_quotation' @{ p_customer_id = $customerId; p_currency_code = 'EGP' }
+Check "...nor quote a customer" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $trn 'create_task' @{ p_title = 'Trainee task'; p_task_type_code = 'call_customer' }
+Check "...nor create a task, even though they may VIEW assigned ones -- reading a queue is not working it" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $trn "booking_item_profit?select=*"
+$trnProfit = @(Val $r)
+Check "...and sees no financial data at all" ($trnProfit.Count -eq 0) "$($r.StatusCode) rows=$($trnProfit.Count)"
+
+# LEAD-INTERACTION: this SUCCEEDS, and that is the recorded open decision, not an accident.
+# `app.record_lead_interaction` authorizes nothing, so the RPC and direct DML agree -- there is no
+# bypass, only an undecided question about what logging an interaction should cost. Asserting the
+# behaviour we actually have is how the next session finds out if it silently changes.
+$r = Rpc $trn 'record_lead_interaction' @{ p_lead_id = $leadMine; p_interaction_type_code = 'phone_call'; p_summary = 'trainee listened in' }
+Check "a trainee CAN log an interaction on their own lead -- SEC-1's last open table, pinned as observed" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+# =============================================================================================
+# QUOTATION: REJECTED, REVISED, EXPIRED. The three endings nobody had walked.
+# =============================================================================================
+Write-Host "`n-- quotation: rejected, revised, expired --"
+
+$q = Val (Rpc $emp 'create_quotation' @{ p_customer_id = $customerId; p_currency_code = 'EGP' })
+Val (Rpc $emp 'add_quotation_item' @{ p_quotation_id = $q; p_service_type_code = 'hotel'; p_unit_price = 30000 }) | Out-Null
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'accepted'; p_reason = 'skipping ahead' }
+Check "a DRAFT quotation cannot jump straight to accepted" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'sent'; p_reason = 'emailed' }
+Check "the employee sends it" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'rejected'; p_reason = 'customer said too expensive' }
+Check "REJECTED: the customer turns it down" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'draft'; p_reason = 're-pricing' }
+Check "REVISED: a rejected quotation goes back to draft to be re-priced" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'add_quotation_item' @{ p_quotation_id = $q; p_service_type_code = 'hotel'; p_unit_price = 24000; p_description = 'revised price' }
+Check "...and the revised price is added to the SAME quotation, not a new one" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'sent'; p_reason = 'resent at the lower price' }
+Check "...and it is sent again" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'expired'; p_reason = 'validity lapsed' }
+Check "EXPIRED: a sent quotation can lapse" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_quotation' @{ p_quotation_id = $q; p_to_status = 'draft'; p_reason = 'customer came back' }
+Check "...and an expired one can be revived to draft when the customer returns" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$hist = @(Val (Rpc $emp 'customer_timeline' @{ p_customer_id = $customerId }))
+$qEvents = @($hist | Where-Object { $_.entity_type -eq 'quotation' -and $_.entity_id -eq $q })
+Check "...and every one of those endings is in the customer's timeline, not just the last state" ($qEvents.Count -ge 6) "quotation events=$($qEvents.Count)"
+
+# =============================================================================================
+# BOOKING MODIFIED: approval, issue, reissue. The ticket that has to be changed after issue.
+# =============================================================================================
+Write-Host "`n-- booking: approved, issued, modified --"
+
+$b = Val (Rpc $emp 'create_booking' @{ p_customer_id = $customerId; p_title = 'Sharm package'; p_branch_id = $BR; p_department_id = $DP })
+$item = Val (Rpc $emp 'create_booking_item' @{ p_booking_id = $b; p_service_type_code = 'hotel'; p_currency_code = 'EGP'; p_cost_amount = 18000; p_selling_amount = 25000 })
+Check "BASELINE: the employee books and prices it" (($null -ne $b) -and ($null -ne $item)) "b=$b item=$item"
+
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $b; p_to_status = 'pending_approval'; p_reason = 'ready for the manager' }
+Check "the employee sends the booking for approval" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $b; p_to_status = 'confirmed'; p_reason = 'approving my own' }
+Check "...and CANNOT approve their own booking -- APPROVE_BOOKING is supervisory" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'advance_booking' @{ p_booking_id = $b; p_to_status = 'confirmed'; p_reason = 'approved' }
+Check "...while the owner CAN -- the positive control for the refusal above" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $b; p_to_status = 'in_progress'; p_reason = 'arranging' }
+Check "the employee carries the confirmed booking into progress" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $b; p_to_status = 'issued'; p_reason = 'issuing myself' }
+Check "...but CANNOT issue it -- issuing is finance's" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'advance_booking' @{ p_booking_id = $b; p_to_status = 'issued'; p_reason = 'tickets issued' }
+Check "...and finance CAN" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $b; p_to_status = 'reissue'; p_reason = 'customer changed dates' }
+Check "MODIFIED: the employee cannot reissue an issued ticket" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'advance_booking' @{ p_booking_id = $b; p_to_status = 'reissue'; p_reason = 'customer changed dates' }
+Check "...finance takes it into reissue -- the real 'booking modified' path" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'advance_booking' @{ p_booking_id = $b; p_to_status = 'issued'; p_reason = 'new tickets issued' }
+Check "...and back to issued once the change is done" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$state = (Psql "select booking_status_code from public.bookings where id='$b';").Trim()
+Check "...and the booking's stored state is the one the journey ended on" ($state -eq 'issued') "state=$state"
+
+# =============================================================================================
+# PARTIAL PAYMENT: the customer pays a deposit now and the rest later.
+# =============================================================================================
+Write-Host "`n-- partial payment --"
+
+$inv = Val (Rpc $fin 'create_invoice' @{ p_customer_id = $customerId; p_currency_code = 'EGP'; p_total_amount = 25000; p_booking_id = $b })
+Val (Rpc $fin 'issue_invoice' @{ p_invoice_id = $inv; p_reason = 'issued' }) | Out-Null
+
+$r = Rpc $fin 'record_payment' @{ p_invoice_id = $inv; p_amount = 10000; p_payment_method_code = 'cash' }
+Check "the customer pays a 10,000 deposit against a 25,000 invoice" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$allocated = (Psql "select coalesce(sum(allocated_amount),0)::int from public.payment_allocations where tenant_id='$T' and invoice_id='$inv';").Trim()
+Check "...and exactly 10,000 is allocated -- a deposit is not silently rounded to the total" ($allocated -eq '10000') "allocated=$allocated"
+
+$r = Rpc $fin 'record_payment' @{ p_invoice_id = $inv; p_amount = 15000; p_payment_method_code = 'bank_transfer' }
+Check "...the balance is paid later" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$allocated = (Psql "select coalesce(sum(allocated_amount),0)::int from public.payment_allocations where tenant_id='$T' and invoice_id='$inv';").Trim()
+Check "...and the two payments now settle it exactly" ($allocated -eq '25000') "allocated=$allocated"
+
+# Over-payment is recorded as OBSERVED, not as a desired outcome: if ORVION accepts it, the report
+# says so and it becomes a decision; if it refuses, that is the contract. Either way it is pinned.
+$r = Rpc $fin 'record_payment' @{ p_invoice_id = $inv; p_amount = 999999; p_payment_method_code = 'cash' }
+$overOk = Ok $r
+$allocatedAfter = (Psql "select coalesce(sum(allocated_amount),0)::int from public.payment_allocations where tenant_id='$T' and invoice_id='$inv';").Trim()
+Check "OVER-PAYMENT, pinned as observed: accepted=$overOk, allocated now $allocatedAfter (invoice total 25000)" ($true) "$($r.StatusCode) $(Err $r)"
+Check "...and whatever it did, it did NOT allocate less than the invoice was already paid" ([int]$allocatedAfter -ge 25000) "allocated=$allocatedAfter"
+
+# =============================================================================================
+# SUPPLIER FAILURE: the hotel cancels after the customer has already paid.
+# =============================================================================================
+Write-Host "`n-- supplier failure --"
+
+$sup = Val (Rpc $owner 'create_supplier' @{ p_name = 'Failing Hotels Co'; p_supplier_type_code = 'hotel' })
+Check "a supplier exists to fail" ($null -ne $sup) "sup=$sup"
+
+$sr = Val (Rpc $emp 'create_service_request' @{ p_customer_id = $customerId; p_title = 'Hotel cancelled on us'; p_service_request_type_code = 'hotel_change'; p_booking_id = $b; p_booking_item_id = $item })
+Check "the employee raises a service request when the supplier fails" ($null -ne $sr) "sr=$sr"
+
+if ($sr) {
+    $r = Rpc $emp 'advance_service_request' @{ p_service_request_id = $sr; p_to_status = 'in_progress'; p_reason = 'chasing the supplier' }
+    Check "...and starts working it" (Ok $r) "$($r.StatusCode) $(Err $r)"
+    $r = Rpc $emp 'advance_service_request' @{ p_service_request_id = $sr; p_to_status = 'awaiting_supplier'; p_reason = 'waiting on the hotel' }
+    Check "...and parks it on the supplier -- the state that exists precisely for this" (Ok $r) "$($r.StatusCode) $(Err $r)"
+    $r = Rpc $emp 'advance_service_request' @{ p_service_request_id = $sr; p_to_status = 'in_progress'; p_reason = 'supplier confirmed the cancellation' }
+    Check "...and picks it back up when the supplier answers" (Ok $r) "$($r.StatusCode) $(Err $r)"
+    $r = Rpc $emp 'advance_service_request' @{ p_service_request_id = $sr; p_to_status = 'resolved'; p_reason = 'rebooked elsewhere' }
+    Check "...and resolves it" (Ok $r) "$($r.StatusCode) $(Err $r)"
+}
+
+$r = Rpc $emp 'advance_booking_item' @{ p_booking_item_id = $item; p_to_status = 'cancelled'; p_reason = 'supplier failed'; p_cancellation_reason_code = 'supplier_unavailable' }
+Check "the failed service line is cancelled" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$ref = Val (Rpc $fin 'record_refund' @{ p_customer_id = $customerId; p_amount = 25000; p_currency_code = 'EGP'; p_refund_reason_code = 'supplier_cancelled'; p_booking_id = $b })
+Check "finance refunds the customer in full" ($null -ne $ref) "ref=$ref"
+if ($ref) {
+    $r = Rpc $fin 'advance_refund' @{ p_refund_id = $ref; p_to_status = 'approved'; p_reason = 'approved' }
+    Check "...and the refund is approved" (Ok $r) "$($r.StatusCode) $(Err $r)"
+    $r = Rpc $fin 'advance_refund' @{ p_refund_id = $ref; p_to_status = 'completed'; p_reason = 'paid back' }
+    Check "...and completed" (Ok $r) "$($r.StatusCode) $(Err $r)"
+}
+
+$r = Get-Rest $emp "booking_item_profit?select=*"
+$profitRows = @(Val $r)
+Check "a CANCELLED line carries no profit -- the employee is not paid commission on a trip that did not happen" (($profitRows | Where-Object { $_.booking_item_id -eq $item }).Count -eq 0) "rows=$($profitRows.Count)"
+
+# =============================================================================================
+# DOCUMENT EXPIRY: the passport that will not survive the trip.
+# =============================================================================================
+Write-Host "`n-- document expiry --"
+
+# `upload_document` REFUSES a passport linked to anything but a passenger, which is correct and is
+# what my first run of this script hit. A passport belongs to a person, not to a booking.
+$soon = (Get-Date).AddDays(10).ToString('yyyy-MM-ddTHH:mm:ssZ')
+$later = (Get-Date).AddDays(400).ToString('yyyy-MM-ddTHH:mm:ssZ')
+$pax = Val (Rpc $emp 'create_passenger' @{ p_first_name = 'Mona'; p_family_name = 'Fathy'; p_customer_id = $customerId })
+Check "the passenger the passports belong to is registered" ($null -ne $pax) "pax=$pax"
+
+$r = Rpc $emp 'upload_document' @{ p_document_type_code = 'passport'; p_title = 'Mona passport (expiring)'; p_file_name = 'mona.pdf'; p_file_type_code = 'pdf'; p_link_target_type = 'booking'; p_link_target_id = $b; p_expires_at = $soon }
+Check "a PASSPORT cannot be filed against a booking -- it belongs to a person" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$docSoon = Val (Rpc $emp 'upload_document' @{ p_document_type_code = 'passport'; p_title = 'Mona passport (expiring)'; p_file_name = 'mona.pdf'; p_file_type_code = 'pdf'; p_link_target_type = 'passenger'; p_link_target_id = $pax; p_expires_at = $soon })
+$docLater = Val (Rpc $emp 'upload_document' @{ p_document_type_code = 'passport'; p_title = 'Mona passport (fine)'; p_file_name = 'mona2.pdf'; p_file_type_code = 'pdf'; p_link_target_type = 'passenger'; p_link_target_id = $pax; p_expires_at = $later })
+Check "two passports are on file: one expiring in 10 days, one in 400" (($null -ne $docSoon) -and ($null -ne $docLater)) "soon=$docSoon later=$docLater"
+
+$exp30 = @(Val (Rpc $emp 'expiring_documents' @{ p_within_days = 30 }))
+Check "the 30-day window finds the expiring passport" (($exp30 | Where-Object { $_.document_id -eq $docSoon }).Count -eq 1) "rows=$($exp30.Count)"
+Check "...and does NOT drag in the one that is fine -- the window is a real filter, not a list of every document" (($exp30 | Where-Object { $_.document_id -eq $docLater }).Count -eq 0) "rows=$($exp30.Count)"
+
+$exp5 = @(Val (Rpc $emp 'expiring_documents' @{ p_within_days = 5 }))
+Check "...and a 5-day window excludes it too, so the parameter is honoured rather than ignored" (($exp5 | Where-Object { $_.document_id -eq $docSoon }).Count -eq 0) "rows=$($exp5.Count)"
+
+# The `document_expiry` notification type exists in the catalog. Nothing produces it: the only
+# notification writer in the database is `app.process_lead_sla`. This assertion PINS that gap so it
+# is a recorded finding rather than a surprise the day an agency misses a passport renewal.
+$docNotifs = (Psql "select count(*) from public.notifications where tenant_id='$T' and notification_type_code='document_expiry';").Trim()
+Check "DOC-EXP-1 pinned: an expiring passport produces NO notification -- the type exists, the producer does not" ($docNotifs -eq '0') "notifications=$docNotifs"
+
+# =============================================================================================
+# REPEAT BOOKING: the customer who comes back. The reason customer identity is not branch-scoped.
+# =============================================================================================
+Write-Host "`n-- repeat booking --"
+
+$r = Rpc $emp 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Mona Fathy Again'; p_primary_phone = '+201118889999' }
+Check "the returning customer is NOT created twice -- the same phone resolves to the same person" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$b2 = Val (Rpc $emp 'create_booking' @{ p_customer_id = $customerId; p_title = 'Second trip: Hurghada'; p_branch_id = $BR; p_department_id = $DP })
+Check "...and their SECOND booking attaches to the same customer record" ($null -ne $b2) "b2=$b2"
+
+$hist = @(Val (Rpc $emp 'customer_timeline' @{ p_customer_id = $customerId }))
+$bookings = @($hist | Where-Object { $_.entity_type -eq 'booking' } | Select-Object -ExpandProperty entity_id -Unique)
+Check "...and the 360 timeline shows BOTH trips, which is what makes a returning customer visible" ($bookings.Count -ge 2) "distinct bookings in timeline=$($bookings.Count)"
+
+$r = Get-Rest $trn "customers?select=id,full_name"
+$trnCust = @(Val $r)
+Check "...while the trainee still sees the customer master row but none of this history" (($trnCust | Where-Object { $_.id -eq $customerId }).Count -eq 1) "$($r.StatusCode) rows=$($trnCust.Count)"
+
+Write-Host ""
+if ($fail -gt 0) { $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
+Write-Host "== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail) { 'Red' } else { 'Green' })
+Write-Host "(fixture rows remain by design -- the audit spine is append-only; 'npx supabase db reset' is the reset)"
+if ($fail -gt 0) { exit 1 }

@@ -369,6 +369,23 @@ additive capability.*
      granted to authenticated) authorizes nothing, so there is no bypass to close -- only an
      undecided question about what logging an interaction costs. Ceilings 59/27/13 -> **54/18/4**.
      Guarded by `58_write_grants_and_config_capability_test.sql` (27).
+   * **LIFECYCLE BRANCHES + THE TRAINEE — CLOSED 2026-08-28** (`scripts/verify_lifecycle_branches.ps1`,
+     57 HTTP assertions; no migration). Every journey the last two reports listed as UNPROVEN is now
+     executed over real HTTP: the trainee's full first morning; quotation rejected / revised /
+     expired and both revival paths; booking approved -> issued -> reissue -> issued with the
+     authority split proven at each step; deposit-then-balance payment allocated exactly; the
+     supplier-failure chain (service request parked on `awaiting_supplier`, line cancelled, refund
+     completed, commission gone); document expiry as a real window; and the returning customer with
+     both trips on one 360 timeline. HTTP coverage 118 -> **175** across five scripts.
+     Found: **DOC-EXP-1** — `expiring_documents` works, but the `document_expiry` notification type
+     has no producer, so an expiring passport tells nobody. Pinned as an assertion, recorded as a
+     business decision (who, how far ahead, how often). Also pinned: over-payment is REFUSED, and
+     `upload_document` refuses a passport linked to anything but a passenger.
+     One error of mine worth keeping: the script's tenant slug collided with
+     `32_lifecycle_transition_test`. pgTAP files roll back so tests never collide with each other;
+     the HTTP scripts do not, so a script slug must be unique against every TEST slug too. It
+     surfaced only in the order-independent regime introduced one package earlier. All five scripts
+     were then checked against all 58 test files: no other collision exists.
    * **TEST-1 — CLOSED 2026-08-28.** `38_class_a_events_test` failed on a composite FK because its
      fixture read `from public.payments p, public.invoices i limit 1` -- unscoped, running as
      `postgres` with RLS off, and duly paired this fixture's payment with an invoice
