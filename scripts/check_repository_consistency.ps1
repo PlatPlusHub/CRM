@@ -445,6 +445,38 @@ if (-not (Test-Path $migDir)) {
     }
 }
 
+# 10. GOV-1: the README's Latest-session pointer must be CURRENT. The README states its own rule --
+#     "an unlinked report is invisible to the boot sequence, which is the one job this pointer has" --
+#     and nothing checked it, so on 2026-08-29 the pointer was found FIVE reports stale. Check 1
+#     verifies that references RESOLVE, which is a different question from whether they are current.
+#     The manifest's `Narrative:` field is updated every package by construction, so the two must
+#     name the same file; disagreement means one of them was forgotten.
+Write-Host "== Check 10: latest-session pointer is current ==" -ForegroundColor Cyan
+$manifestText = Get-Content (Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md') -Raw
+$readmeText   = Get-Content (Join-Path $RepoRoot 'reports/README.md') -Raw
+$mNarr = [regex]::Match($manifestText, 'Narrative:\s*`([^`]+\.md)`')
+$mPtr  = [regex]::Match($readmeText,   'Latest session report:\*\*\s*`(?:history/)?([^`]+\.md)`')
+if (-not $mNarr.Success) {
+    Write-Host "  MANIFEST has no 'Narrative: <file>.md' field -- cannot verify the pointer" -ForegroundColor Red
+    $issues++
+} elseif (-not $mPtr.Success) {
+    Write-Host "  README has no 'Latest session report: <file>.md' pointer" -ForegroundColor Red
+    $issues++
+} else {
+    $narr = $mNarr.Groups[1].Value.Trim()
+    $ptr  = $mPtr.Groups[1].Value.Trim()
+    if ($narr -ne $ptr) {
+        Write-Host "  STALE POINTER: README names '$ptr' but the manifest's narrative is '$narr'" -ForegroundColor Red
+        Write-Host "  Remedy: update the 'Latest session report' row in reports/README.md in this same commit." -ForegroundColor DarkGray
+        $issues++
+    } elseif (-not (Test-Path (Join-Path $RepoRoot "reports/history/$ptr"))) {
+        Write-Host "  POINTER TARGET MISSING: reports/history/$ptr does not exist" -ForegroundColor Red
+        $issues++
+    } else {
+        Write-Host "  README and manifest both name $ptr" -ForegroundColor Green
+    }
+}
+
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green
