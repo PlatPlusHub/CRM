@@ -14,7 +14,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(16);
+select plan(18);
 
 insert into auth.users (id, email) values
   ('72000000-0000-0000-0000-0000000000a1','fin@alloc.test'),
@@ -174,6 +174,53 @@ select cmp_ok(
       and c.relname in ('journal_entries','journal_entry_lines','payment_allocations','invoices')),
   '>=', 4,
   'THE CLASS: every money table carrying a SET-LEVEL invariant now enforces it as a constraint trigger -- FIN-8 and FIN-10 are the same defect, and this is where a third instance would be added');
+
+-- =============================================================================================
+-- 17-18. LOAD-BEARING: are the NAMED triggers what refuses, or would something else have anyway?
+--
+-- PAR-3 (2026-08-30) made this necessary. Every assertion above proves the violation IS refused;
+-- none proves WHAT refuses it, and a test that passes for the wrong reason stops failing the moment
+-- the real enforcer is removed. That is not hypothetical here: dropping
+-- `payment_allocations_within_invoice_total` on a clean local left the repository guard, the parity
+-- guard, the API contract and the smoke test ALL reporting success -- this file was the only layer
+-- that noticed, so it is worth knowing precisely which line of it does the noticing.
+--
+-- The mutation is applied inside a SAVEPOINT and rolled back, so it never outlives the assertion
+-- (and the whole file is inside a transaction that rolls back regardless). Both directions are
+-- asserted: the violation must SUCCEED while the triggers are gone, and be REFUSED once restored.
+-- One without the other proves half of it.
+-- =============================================================================================
+-- Back to the finance_manager who legitimately holds CREATE_INVOICE. Assertion 15 left the EMPLOYEE
+-- session in place, and without this the mutation probe fails on 42501 before it ever reaches the
+-- ceiling -- which would have proved authorization, not enforcement. Exactly the confusion this pair
+-- exists to prevent: "operation denied" and "operation never attempted" are different results.
+select set_config('request.jwt.claims','{"sub":"72000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
+set local role authenticated;
+
+savepoint before_enforcer_mutation;
+reset role;
+drop trigger payment_allocations_within_invoice_total on public.payment_allocations;
+drop trigger invoices_total_covers_allocations on public.invoices;
+set local role authenticated;
+
+select lives_ok(
+  $q$do $x$
+     begin
+       update public.invoices set total_amount = 1 where tenant_id = '72000000-0000-0000-0000-000000000001';
+       execute 'set constraints all immediate';
+     end $x$$q$,
+  'MUTATION: with both ceiling triggers dropped, the SAME violation now SUCCEEDS -- 1000 allocated against a total of 1. The refusals above are those triggers, not some other constraint doing the work');
+
+rollback to savepoint before_enforcer_mutation;
+
+select throws_ok(
+  $q$do $x$
+     begin
+       update public.invoices set total_amount = 1 where tenant_id = '72000000-0000-0000-0000-000000000001';
+       execute 'set constraints all immediate';
+     end $x$$q$,
+  '23514', null,
+  'RESTORED: and with the triggers back, the identical statement is refused again -- so the mutation, not a leftover, is what changed the outcome');
 
 select finish();
 rollback;

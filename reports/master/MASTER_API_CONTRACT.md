@@ -45,7 +45,9 @@ business, what a caller should DO about an error -- this contract says so rather
 (a literal regex misses these because they authorize a VARIABLE -- the same detector-shape mistake
 SEC-1b was); `-` means no capability check, which for a read is correct and governed by RLS.
 
-`http` is whether a `verify_*.ps1` suite actually calls the endpoint over the wire.
+`http` is a REPOSITORY fact, not an execution one: a `verify_*.ps1` suite contains a
+call-shaped reference to the endpoint (comment lines excluded). It says a suite is WRITTEN to
+call it -- see section 6 for what that does and does not establish.
 
 | endpoint | args | returns | sec | permission | inserts | updates | raises | http |
 |---|---|---|---|---|---|---|---|---|
@@ -245,3 +247,12 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 - Endpoints with `http = --` are NOT proven reachable. pgTAP proves database behaviour; only an
   HTTP suite proves the browser-facing door. API-1 was 600 green pgTAP assertions over an entirely
   unreachable API, and that is the standing reason this column exists.
+- `http = yes` is a REPOSITORY fact and NOT an execution fact. It is derived from suite SOURCE
+  TEXT, so it establishes that a suite is written to call the endpoint -- not that the call ran,
+  returned, or was even reached on the last run. The execution fact lives in the suite's own
+  pass/fail output, which is recorded in the session report. Keeping these two evidence classes
+  apart is the point: on 2026-08-26 a repository-only guard's CLEAN was read as live parity while
+  the local database sat 29 migrations behind.
+- **This whole file describes ONE database** -- the local one it was generated from. It is not
+  evidence about Primary. `scripts/check_database_parity.ps1` (Check L4/P4, PAR-3) is what
+  compares the two, across all ten structural surfaces.

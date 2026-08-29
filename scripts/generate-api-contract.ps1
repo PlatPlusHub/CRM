@@ -126,10 +126,21 @@ $tableRows = @(Psql $tableSql | Where-Object { $_ -match "`t" })
 
 # -------------------------------------------------------------------------------------------------
 # 4. HTTP coverage, read from the suites themselves rather than asserted. An endpoint counts as
-#    covered when some verify_*.ps1 actually calls `rpc/<name>`.
+#    covered when some verify_*.ps1 contains a CALL-SHAPED reference to `rpc/<name>`.
+#
+#    STATE THE EVIDENCE CLASS HONESTLY (2026-08-30): this is a REPOSITORY fact -- source text -- not
+#    an EXECUTION fact. It says a suite is written to call the endpoint; it does not observe a
+#    response. Audited on 2026-08-30: all 46 endpoints then marked covered do have a live invocation,
+#    so there is no current false positive. The one concrete way to manufacture one is a call that
+#    has been COMMENTED OUT, so comment lines are stripped before matching -- cheap, and it removes
+#    the only demonstrated path. A runtime-emitted coverage file was considered and REJECTED: it
+#    would be stale whenever the suites had not just run, which trades a theoretical false positive
+#    for a guaranteed one. The residual limit is stated in section 6 rather than hidden.
 # -------------------------------------------------------------------------------------------------
 $suiteText = (Get-ChildItem (Join-Path $RepoRoot 'scripts') -Filter 'verify_*.ps1' |
-              ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+              ForEach-Object { Get-Content $_.FullName }) |
+             Where-Object { $_ -notmatch '^\s*#' } |
+             Out-String
 
 $sb = [System.Text.StringBuilder]::new()
 function W($s) { [void]$sb.AppendLine($s) }
@@ -181,7 +192,9 @@ W "``app.status_transitions``, which is the source ``app.enforce_status_transiti
 W "(a literal regex misses these because they authorize a VARIABLE -- the same detector-shape mistake"
 W "SEC-1b was); ``-`` means no capability check, which for a read is correct and governed by RLS."
 W ""
-W "``http`` is whether a ``verify_*.ps1`` suite actually calls the endpoint over the wire."
+W "``http`` is a REPOSITORY fact, not an execution one: a ``verify_*.ps1`` suite contains a"
+W "call-shaped reference to the endpoint (comment lines excluded). It says a suite is WRITTEN to"
+W "call it -- see section 6 for what that does and does not establish."
 W ""
 W "| endpoint | args | returns | sec | permission | inserts | updates | raises | http |"
 W "|---|---|---|---|---|---|---|---|---|"
@@ -257,6 +270,15 @@ W "  implementation; it does not say what a client should do about each one."
 W "- Endpoints with ``http = --`` are NOT proven reachable. pgTAP proves database behaviour; only an"
 W "  HTTP suite proves the browser-facing door. API-1 was 600 green pgTAP assertions over an entirely"
 W "  unreachable API, and that is the standing reason this column exists."
+W "- ``http = yes`` is a REPOSITORY fact and NOT an execution fact. It is derived from suite SOURCE"
+W "  TEXT, so it establishes that a suite is written to call the endpoint -- not that the call ran,"
+W "  returned, or was even reached on the last run. The execution fact lives in the suite's own"
+W "  pass/fail output, which is recorded in the session report. Keeping these two evidence classes"
+W "  apart is the point: on 2026-08-26 a repository-only guard's CLEAN was read as live parity while"
+W "  the local database sat 29 migrations behind."
+W "- **This whole file describes ONE database** -- the local one it was generated from. It is not"
+W "  evidence about Primary. ``scripts/check_database_parity.ps1`` (Check L4/P4, PAR-3) is what"
+W "  compares the two, across all ten structural surfaces."
 
 $outDir = Split-Path -Parent $OutFile
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Force $outDir | Out-Null }

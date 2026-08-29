@@ -16,7 +16,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(17);
+select plan(19);
 
 insert into auth.users (id, email) values
   ('70000000-0000-0000-0000-0000000000a1','fin@ledger.test'),
@@ -212,6 +212,56 @@ select is(
                        where t.tgrelid = c.oid and t.tgconstraint <> 0 and not t.tgisinternal)),
   0,
   'journal_entry_lines carries at least one CONSTRAINT trigger -- pinned so the ledger cannot lose its set-level invariant silently');
+
+-- =============================================================================================
+-- 18-19. LOAD-BEARING: are the NAMED triggers what refuses, or would something else have anyway?
+--
+-- Assertion 17 counts that a constraint trigger EXISTS; assertion 14 proves the forcing mechanism
+-- can pass. Neither proves that THESE triggers are what refuse an unbalanced ledger -- and a test
+-- passing for the wrong reason goes quiet the moment the real enforcer is removed. PAR-3 showed
+-- that is not hypothetical: with FIN-10's ceiling trigger dropped, every guard in the repository
+-- still reported success and only the pgTAP file noticed.
+--
+-- The mutation lives inside a SAVEPOINT and is rolled back; the whole file is a transaction that
+-- rolls back regardless. Both halves are asserted, because either alone proves half of it.
+-- =============================================================================================
+-- Back to THIS tenant's finance manager. The cross-tenant assertions above left the rival tenant's
+-- session in place, and `journal_entries.created_by` defaults from the JWT -- so without this the
+-- probe dies on TENANT-1's composite FK (23503) instead of reaching the balance rule at all. That is
+-- the difference between "refused" and "never attempted", and a mutation probe that cannot tell them
+-- apart proves nothing.
+select set_config('request.jwt.claims','{"sub":"70000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
+
+savepoint before_enforcer_mutation;
+drop trigger journal_entries_must_balance on public.journal_entries;
+drop trigger journal_entry_lines_must_balance on public.journal_entry_lines;
+
+select lives_ok(
+  $q$do $x$
+     begin
+       insert into public.journal_entries (id, tenant_id, source_type_code, entry_date)
+       values ('70000000-0000-0000-0000-0000000000f9','70000000-0000-0000-0000-000000000001','manual_entry', current_date);
+       insert into public.journal_entry_lines (tenant_id, journal_entry_id, chart_account_id, debit_amount, credit_amount, currency_code)
+       select '70000000-0000-0000-0000-000000000001','70000000-0000-0000-0000-0000000000f9', id, 1000000, 0, 'EGP'
+       from public.chart_of_accounts where tenant_id = '70000000-0000-0000-0000-000000000001' and code = '1000';
+       execute 'set constraints all immediate';
+     end $x$$q$,
+  'MUTATION: with both balance triggers dropped, the ORIGINAL probe succeeds again -- a 1,000,000 debit against no credit. Those triggers are what refuse it, not a CHECK and not the harness');
+
+rollback to savepoint before_enforcer_mutation;
+
+select throws_ok(
+  $q$do $x$
+     begin
+       insert into public.journal_entries (id, tenant_id, source_type_code, entry_date)
+       values ('70000000-0000-0000-0000-0000000000f9','70000000-0000-0000-0000-000000000001','manual_entry', current_date);
+       insert into public.journal_entry_lines (tenant_id, journal_entry_id, chart_account_id, debit_amount, credit_amount, currency_code)
+       select '70000000-0000-0000-0000-000000000001','70000000-0000-0000-0000-0000000000f9', id, 1000000, 0, 'EGP'
+       from public.chart_of_accounts where tenant_id = '70000000-0000-0000-0000-000000000001' and code = '1000';
+       execute 'set constraints all immediate';
+     end $x$$q$,
+  '23514', null,
+  'RESTORED: and once the mutation is rolled back the identical statement is refused again -- so the drop, not a leftover, is what changed the outcome');
 
 select finish();
 rollback;

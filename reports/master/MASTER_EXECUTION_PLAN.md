@@ -480,6 +480,36 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **PAR-3 / PAR-4 — VERIFICATION-METHODOLOGY REVIEW, 2026-08-30. No migration; the database did
+     not change.** The owner asked that ORVION's METHODS of discovery, testing and measurement be
+     reviewed adversarially rather than extended. Done by controlled mutation on local — never on
+     Primary — rather than by reading the scripts.
+     **PAR-3, the finding: the parity guard compared 233 objects out of 3,341.** It proved the
+     migration ledger and the FUNCTION surface, and was blind to triggers, RLS policies, RLS
+     *enablement*, grants, constraints, columns, views, indexes and the `app.status_transitions`
+     rows — which is to say, blind to the deliverable of DOC-LC-1, FIN-8, FIN-10 and QUO-1, every
+     one of which shipped a TRIGGER. Reproduced by dropping `payment_allocations_within_invoice_total`
+     on a clean reset: repository guard CLEAN exit 0, parity guard **CLEAN exit 0**, API contract
+     "matches the live surface", smoke ALL CHECKS PASSED — and only `72_*.sql` failed. **pgTAP runs
+     against LOCAL only**, so nothing could have caught the same drift on Primary.
+     Closed with **Check L4/P4** over ten surfaces, SQL in **`scripts/parity_surface.sql` which BOTH
+     SIDES RUN** (PAR-1a: two hand-copied queries is how two databases agree while differing).
+     `-PrimaryStructureHash` is required for CLEAN, per AUD-05's rule that unmeasured is not passed.
+     **The fix was then attacked and found incomplete** — `DISABLE ROW LEVEL SECURITY` left the hash
+     byte-identical, because `pg_policies` lists policies that cannot fire; RLS enablement added as a
+     tenth surface, and `ordinal_position` added to columns because CUST-1 was positional.
+     **PAR-4:** tests 70/72/73 now prove their own enforcer is load-bearing — drop the named trigger
+     in a savepoint, the violation must SUCCEED, roll back, it must be REFUSED again. Suite 899 → 905.
+     **VER-1** the contract's `http` column restated as a repository fact (audited first: no current
+     false positive; comment lines now excluded). **VER-2 REJECTED on measurement** — a mechanical
+     vacuous-test detector matched 31 sites across 15 of 73 files and its one tightened hit was a
+     false positive, because what makes a test vacuous is whether the actor can SEE the rows it
+     selects, which is not statically decidable. Also rejected: mutation tooling, property-based
+     testing, a contract broker, a runtime coverage file, a second handoff document, and raising the
+     manifest budget Check 5 tripped on this session's own additions.
+     **Deferred with a trigger:** catalog-row parity beyond `status_transitions` (`role_permissions`
+     is the authorization matrix) — not bundled here because it needs its own reproduction.
+     **THE ROADMAP IS UNCHANGED. API-3 remains next, booking/passenger family.**
    * **SEC-1 EVALUATED 2026-08-29 — ACCEPT WITH REFINEMENT, awaiting owner ratification.** The
      owner's proposed model was tested against the live system, not judged by opinion, and it is
      **not a change of direction**: it is what ORVION has already converged on. Measured writable

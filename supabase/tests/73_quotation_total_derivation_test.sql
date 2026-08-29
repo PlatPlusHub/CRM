@@ -19,7 +19,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(11);
+select plan(13);
 
 insert into auth.users (id, email) values ('73000000-0000-0000-0000-0000000000a1','emp@quo.test');
 insert into public.tenants (id, name, slug, status) values
@@ -129,6 +129,37 @@ select cmp_ok(
       and c.relname in ('journal_entries','journal_entry_lines','payment_allocations','invoices','quotation_items')),
   '>=', 5,
   'THE CLASS: FIN-8, FIN-10 and QUO-1 are one defect -- a set-level rule living in a single function -- and every money table that carries one now enforces it path-independently');
+
+-- =============================================================================================
+-- 12-13. LOAD-BEARING: is `quotation_items_recompute_total` what keeps the total honest?
+--
+-- QUO-1 RECOMPUTES rather than refuses, so the mutation reads the other way round from FIN-8/FIN-10:
+-- with the trigger dropped the total must go STALE, and on restore the next write must repair it.
+-- Assertion 11 only counts that a trigger EXISTS; a trigger that exists and does nothing would pass
+-- it. This pair is what makes that count mean something (PAR-3, 2026-08-30).
+-- =============================================================================================
+savepoint before_enforcer_mutation;
+drop trigger quotation_items_recompute_total on public.quotation_items;
+
+insert into public.quotation_items (tenant_id, quotation_id, service_type_code, quantity, unit_price, total_amount, currency_code)
+select '73000000-0000-0000-0000-000000000001', q.id, 'flight_ticket', 1, 777, 777, 'EGP'
+from public.quotations q where q.tenant_id = '73000000-0000-0000-0000-000000000001';
+
+select isnt(
+  (select q.total_amount::text from public.quotations q where q.tenant_id = '73000000-0000-0000-0000-000000000001'),
+  (select coalesce(sum(qi.total_amount),0)::text from public.quotation_items qi where qi.tenant_id = '73000000-0000-0000-0000-000000000001'),
+  'MUTATION: with the recompute trigger dropped the headline total goes STALE against its own items -- which is exactly the QUO-1 defect, so that trigger is what closes it');
+
+rollback to savepoint before_enforcer_mutation;
+
+insert into public.quotation_items (tenant_id, quotation_id, service_type_code, quantity, unit_price, total_amount, currency_code)
+select '73000000-0000-0000-0000-000000000001', q.id, 'flight_ticket', 1, 777, 777, 'EGP'
+from public.quotations q where q.tenant_id = '73000000-0000-0000-0000-000000000001';
+
+select is(
+  (select q.total_amount::text from public.quotations q where q.tenant_id = '73000000-0000-0000-0000-000000000001'),
+  (select coalesce(sum(qi.total_amount),0)::text from public.quotation_items qi where qi.tenant_id = '73000000-0000-0000-0000-000000000001'),
+  'RESTORED: with the trigger back the identical insert leaves header and lines agreeing again');
 
 select finish();
 rollback;

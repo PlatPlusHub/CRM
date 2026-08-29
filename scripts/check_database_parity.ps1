@@ -31,6 +31,16 @@
 # while genuinely differing -- which is how `app.document_retention_days` stayed different between
 # local and Primary through a session that reported the whole surface identical.
 #
+# PAR-3 (2026-08-30): THE LEDGER AND THE FUNCTIONS WERE THE ONLY THINGS COMPARED. Reproduced on a
+# clean local reset -- dropping `payment_allocations_within_invoice_total`, FIN-10's financial
+# ceiling, shipped the day before -- and every gate still reported success: this script CLEAN exit 0,
+# check_repository_consistency CLEAN, MASTER_API_CONTRACT "matches the live surface", and
+# verify_database.sql ALL CHECKS PASSED. Only `72_invoice_allocation_ceiling_test.sql` noticed, and
+# pgTAP runs against LOCAL only -- so the sole bridge to Primary was comparing 233 objects out of
+# 3,265, blind to triggers, policies, grants, constraints, columns, views, indexes and the
+# status-transition rows. Every one of the last four packages shipped a TRIGGER. Check L4/P4 closes
+# it: the surface is defined ONCE in scripts/parity_surface.sql and BOTH SIDES RUN THAT FILE.
+#
 # Scope: this script checks LOCAL only, because it reaches the database through docker/psql. Primary
 # is reached through the Supabase MCP connector, which is not available to a shell script; pass its
 # fingerprint with -PrimaryFingerprint to have it compared here too.
@@ -39,7 +49,8 @@
 param(
     [string]$Container = 'supabase_db_ORVION',
     [string]$PrimaryFingerprint = '',
-    [string]$PrimaryLogicHash = ''
+    [string]$PrimaryLogicHash = '',
+    [string]$PrimaryStructureHash = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -125,6 +136,53 @@ if ($LASTEXITCODE -ne 0) {
     }
 }
 
+# 4b. PAR-3: everything the function hash cannot see. The SQL lives in scripts/parity_surface.sql so
+#     that local and Primary cannot be compared with two subtly different queries -- the PAR-1a
+#     mistake one layer up. The per-surface breakdown prints either way, so a mismatch names WHICH
+#     surface drifted instead of only reporting that something did.
+Write-Host "== Check L4/P4: structural surface (triggers, policies, grants, constraints, columns, views, indexes, transitions) ==" -ForegroundColor Cyan
+$surfaceFile = Join-Path $PSScriptRoot 'parity_surface.sql'
+if (-not (Test-Path $surfaceFile)) {
+    Write-Host "  MISSING: scripts/parity_surface.sql -- the structural surface cannot be computed." -ForegroundColor Red
+    $issues++
+} else {
+    $surfaceOut = Get-Content $surfaceFile -Raw |
+                  docker exec -i $Container psql -U postgres -d postgres -q -t -A -F '|' -v ON_ERROR_STOP=1 -f - 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  UNREACHABLE: could not read the local structural surface." -ForegroundColor Yellow
+        Write-Host "  $surfaceOut" -ForegroundColor DarkGray
+        $issues++
+    } else {
+        $rows = @($surfaceOut | Where-Object { $_ -match '\|' })
+        $localCombined = $null; $localTotal = 0
+        foreach ($row in $rows) {
+            $c = $row.Trim() -split '\|'
+            if ($c.Count -lt 3) { continue }
+            if ($c[0] -eq '_combined') { $localCombined = $c[1]; $localTotal = $c[2] }
+            else { Write-Host ("    {0,-20} {1}  ({2})" -f $c[0], $c[1], $c[2]) -ForegroundColor DarkGray }
+        }
+        if (-not $localCombined) {
+            Write-Host "  MALFORMED: parity_surface.sql returned no _combined row." -ForegroundColor Red
+            $issues++
+        } else {
+            Write-Host "  local: $localTotal objects, structure hash $localCombined"
+            if ([string]::IsNullOrWhiteSpace($PrimaryStructureHash)) {
+                Write-Host "  NOT CHECKED: no -PrimaryStructureHash supplied. Primary's STRUCTURE is UNPROVEN by this run." -ForegroundColor Yellow
+                Write-Host "  Run scripts/parity_surface.sql on Primary (supabase-primary MCP) and pass its _combined value." -ForegroundColor DarkGray
+            } elseif ($PrimaryStructureHash -ne $localCombined) {
+                Write-Host "  PRIMARY STRUCTURE DRIFT: Primary reports $PrimaryStructureHash, local produces $localCombined" -ForegroundColor Red
+                Write-Host "  The ledger and the function surface can both still agree -- that is the PAR-3 blind spot." -ForegroundColor DarkGray
+                Write-Host "  Remedy: run scripts/parity_surface.sql on BOTH sides and compare the per-surface rows above" -ForegroundColor DarkGray
+                Write-Host "  to find which surface moved, then reconcile from supabase/migrations (never from a database)." -ForegroundColor DarkGray
+                $issues++
+            } else {
+                Write-Host "  Primary's structural surface matches local ($PrimaryStructureHash)" -ForegroundColor Green
+                Write-Host "  (caller-supplied, as above: it proves parity only if READ FROM Primary)" -ForegroundColor DarkGray
+            }
+        }
+    }
+}
+
 # 5. The API contract is GENERATED from this database. A generated document that nobody regenerates
 #    is a stale claim, which is the failure mode this whole file exists to catch. Same shape as
 #    Check 7's ai-map freshness test.
@@ -165,7 +223,10 @@ Write-Host ""
 #   exit 0  CLEAN    -- everything this script claims was actually measured
 #   exit 1  DRIFT    -- something was measured and disagreed
 #   exit 2  UNPROVEN -- local is fine but Primary was never contacted; nothing to disagree with
-$primaryProven = $PrimaryFingerprint -and $PrimaryLogicHash
+# PAR-3: the structural hash joins the other two in what "proven" REQUIRES. Leaving it optional
+# would have re-created exactly the defect AUD-05 fixed -- a value that is not measured quietly
+# counting as one that passed.
+$primaryProven = $PrimaryFingerprint -and $PrimaryLogicHash -and $PrimaryStructureHash
 
 if ($issues -gt 0) {
     Write-Host "DATABASE PARITY: $issues issue(s) found" -ForegroundColor Red
@@ -174,11 +235,13 @@ if ($issues -gt 0) {
     Write-Host "DATABASE PARITY: UNPROVEN -- local matches the repository, but PRIMARY WAS NOT CONTACTED." -ForegroundColor Yellow
     Write-Host "  primary ledger    : $(if ($PrimaryFingerprint) { 'proven' } else { 'NOT CHECKED' })" -ForegroundColor Yellow
     Write-Host "  primary functions : $(if ($PrimaryLogicHash) { 'proven' } else { 'NOT CHECKED' })" -ForegroundColor Yellow
-    Write-Host "  This is NOT a pass. Read both values live from Primary (supabase-primary MCP) and re-run" -ForegroundColor DarkGray
-    Write-Host "  with -PrimaryFingerprint / -PrimaryLogicHash. Never report this run as parity CLEAN." -ForegroundColor DarkGray
+    Write-Host "  primary structure : $(if ($PrimaryStructureHash) { 'proven' } else { 'NOT CHECKED' })" -ForegroundColor Yellow
+    Write-Host "  This is NOT a pass. Read all three values live from Primary (supabase-primary MCP) and re-run" -ForegroundColor DarkGray
+    Write-Host "  with -PrimaryFingerprint / -PrimaryLogicHash / -PrimaryStructureHash (the last from" -ForegroundColor DarkGray
+    Write-Host "  scripts/parity_surface.sql). Never report this run as parity CLEAN." -ForegroundColor DarkGray
     exit 2
 } else {
-    Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger proven; primary functions proven)" -ForegroundColor Green
-    Write-Host "  (both primary values are CALLER-SUPPLIED -- this is parity only if they were READ FROM Primary; GUARD-1)" -ForegroundColor DarkGray
+    Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger, functions and structure proven)" -ForegroundColor Green
+    Write-Host "  (all three primary values are CALLER-SUPPLIED -- this is parity only if they were READ FROM Primary; GUARD-1)" -ForegroundColor DarkGray
     exit 0
 }
