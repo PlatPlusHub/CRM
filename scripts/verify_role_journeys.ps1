@@ -267,6 +267,89 @@ Check "the source is archived, not deleted" ($arch -eq 't' -or $arch -eq 'true')
 $r = Rpc $owner 'merge_customer_identity' @{ p_source_customer_id = $mDup; p_target_customer_id = $mReal; p_reason = 'again' }
 Check "IDEMPOTENCY BOUNDARY: re-merging an already-archived source is refused rather than repeated" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
+
+# =================================================================================================
+# IDENT-1 -- the canon-34 Human Identity family over the wire.
+#
+# These five endpoints had NO behavioural coverage at all before this: the family's entire test
+# footprint was a name-existence list in 53_api_surface_test.sql, which is the CUST-2 shape (a guard
+# that checks an endpoint EXISTS cannot see what it does). Behind that sat a full account takeover.
+#
+# HTTP is a distinct evidence class here, not a formality: the anon path, PostgREST's own table
+# endpoint for the identity tables, and two genuinely different JWTs are things pgTAP cannot exercise.
+# =================================================================================================
+
+# A pre-provisioned, unclaimed membership -- what create_tenant_user leaves when p_auth_user_id is
+# null. Two identities compete for it: one that confirmed the mailbox and one that never did.
+Psql @"
+insert into auth.users (id, email, email_confirmed_at) values
+  ('0d110000-0000-0000-0000-0000000000f1','claimant.http@ident.test', now()),
+  ('0d110000-0000-0000-0000-0000000000f2','unconfirmed.http@ident.test', null);
+insert into public.users (id, tenant_id, full_name, email, is_active, auth_user_id) values
+  ('0d110000-0000-0000-0000-0000000000f5','$T','HTTP Claimant','claimant.http@ident.test',true,null),
+  ('0d110000-0000-0000-0000-0000000000f6','$T','HTTP Unclaimed','unconfirmed.http@ident.test',true,null);
+"@ | Out-Null
+
+$claimant = New-UserJwt '0d110000-0000-0000-0000-0000000000f1' $false
+$unconf   = New-UserJwt '0d110000-0000-0000-0000-0000000000f2' $false
+
+# anon holds EXECUTE on none of these; PostgREST must refuse before any body is evaluated.
+$r = Invoke-WebRequest -Uri "$API/rest/v1/rpc/activate_membership" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON } -ContentType 'application/json' -Body '{}'
+Check "anon cannot call activate_membership over HTTP -- the claim endpoint is not a public door" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $claimant 'activate_membership' @{}
+Check "POSITIVE CONTROL: a CONFIRMED invitee claims their membership over HTTP -- activate_membership's first behavioural evidence" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$linked = (Psql "select coalesce(auth_user_id::text,'NULL') from public.users where id='0d110000-0000-0000-0000-0000000000f5';").Trim()
+Check "...and the membership really was linked, not merely returned" ($linked -eq '0d110000-0000-0000-0000-0000000000f1') "auth_user_id=$linked"
+
+$r = Rpc $claimant 'my_memberships' @{}
+Check "my_memberships now returns it over HTTP" ((Ok $r) -and ((Val $r).Count -ge 1)) "$($r.StatusCode) $(Err $r)"
+
+# The reproduction: identical shape, one column different.
+$r = Rpc $unconf 'activate_membership' @{}
+Check "IDENT-1 CLOSED: an UNCONFIRMED identity is refused over HTTP -- it previously claimed the membership and gained the role attached to it" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$still = (Psql "select coalesce(auth_user_id::text,'NULL') from public.users where id='0d110000-0000-0000-0000-0000000000f6';").Trim()
+Check "NON-MUTATION: that membership is still unclaimed after the refusal" ($still -eq 'NULL') "auth_user_id=$still"
+
+# Trusted devices, and then the attack shape pgTAP cannot reach: PostgREST's TABLE endpoint.
+$r = Rpc $claimant 'record_trusted_device' @{ p_device_identifier = 'http-device-1' }
+Check "record_trusted_device registers a device over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $claimant 'my_trusted_devices' @{}
+Check "...and my_trusted_devices returns it to its owner" ((Ok $r) -and ((Val $r).Count -eq 1)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'my_trusted_devices' @{}
+Check "a DIFFERENT authenticated user sees none of them -- owner_only RLS over the wire" ((Ok $r) -and ((Val $r).Count -eq 0)) "$($r.StatusCode) $(Err $r)"
+
+# POST /rest/v1/trusted_devices naming SOMEONE ELSE as the owner. This is the direct-DML path for an
+# identity table, and it exists only over HTTP.
+$r = Invoke-WebRequest -Uri "$API/rest/v1/trusted_devices" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $emp" } -ContentType 'application/json' `
+        -Body '{"auth_user_id":"0d110000-0000-0000-0000-0000000000f1","device_identifier":"planted","status_code":"trusted"}'
+Check "and cannot PLANT a trusted device on another user via the TABLE endpoint -- owner_only WITH CHECK holds on the direct path too" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$planted = (Psql "select count(*) from public.trusted_devices where device_identifier='planted';").Trim()
+Check "NON-MUTATION: no planted device row exists" ($planted -eq '0') "planted=$planted"
+
+# Revocation. The negative comes FIRST so the positive below cannot be mistaken for a guard that
+# happens to allow everything, and the device id is a real one the other user genuinely owns.
+$devId = (Psql "select id from public.trusted_devices where device_identifier='http-device-1';").Trim()
+$r = Rpc $emp 'revoke_trusted_device' @{ p_device_id = $devId }
+Check "a different user cannot revoke someone else's device over HTTP -- it answers 'device not found', which is also what a nonexistent id gets, so it is not an existence oracle" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$stillTrusted = (Psql "select status_code from public.trusted_devices where id='$devId';").Trim()
+Check "NON-MUTATION: the device is still trusted after the failed revocation" ($stillTrusted -eq 'trusted') "status=$stillTrusted"
+
+$r = Rpc $claimant 'revoke_trusted_device' @{ p_device_id = $devId }
+Check "POSITIVE CONTROL: the OWNER can revoke it over HTTP -- so the refusal above was ownership, not a blanket denial" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$revoked = (Psql "select status_code from public.trusted_devices where id='$devId';").Trim()
+Check "...and the row really changed to revoked -- a 204 alone would not prove the UPDATE ran" ($revoked -eq 'revoked') "status=$revoked"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

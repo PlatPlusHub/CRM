@@ -51,7 +51,7 @@ call it -- see section 6 for what that does and does not establish.
 
 | endpoint | args | returns | sec | permission | inserts | updates | raises | http |
 |---|---|---|---|---|---|---|---|---|
-| `activate_membership` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | users | 2 | -- |
+| `activate_membership` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | users | 4 | yes |
 | `add_customer_contact_method` | p_customer_id uuid, p_contact_method_type_code text, p_value text, p_is_primary boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_contact_methods | customer_contact_methods | 4 | -- |
 | `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | yes |
 | `add_document_version` | p_document_id uuid, p_file_name text, p_file_type_code text, p_file_size bigint | `uuid` | invoker | CREATE_DOCUMENT_VERSION | document_versions | document_versions, documents | 4 | yes |
@@ -102,19 +102,19 @@ call it -- see section 6 for what that does and does not establish.
 | `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | -- |
 | `link_passenger_to_booking_item` | p_booking_item_id uuid, p_passenger_id uuid, p_selling_amount_override numeric, p_cost_... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_item_passengers | - | 7 | yes |
 | `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 6 | yes |
-| `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | -- |
-| `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | -- |
+| `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | yes |
+| `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | yes |
 | `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | -- |
 | `record_lead_interaction` | p_lead_id uuid, p_interaction_type_code text, p_summary text, p_metadata jsonb | `uuid` | invoker | inline has_permission check | lead_interactions | leads | 5 | yes |
 | `record_offline_conversion` | p_conversion_event_type_code text, p_lead_id uuid, p_booking_id uuid, p_booking_item_id... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | offline_conversions | - | 6 | -- |
 | `record_payment` | p_invoice_id uuid, p_amount numeric, p_payment_method_code text, p_paid_at timestamp wi... | `uuid` | invoker | RECORD_PAYMENT | payment_allocations, payments | invoices | 7 | yes |
 | `record_refund` | p_customer_id uuid, p_amount numeric, p_currency_code text, p_refund_reason_code text, ... | `uuid` | invoker | RECORD_REFUND | refunds | - | 6 | yes |
 | `record_supplier_payment` | p_supplier_id uuid, p_amount numeric, p_currency_code text, p_payment_method_code text,... | `uuid` | invoker | RECORD_PAYMENT | payments | - | 5 | yes |
-| `record_trusted_device` | p_device_identifier text | `uuid` | invoker | - | trusted_devices | trusted_devices | 1 | -- |
+| `record_trusted_device` | p_device_identifier text | `uuid` | invoker | - | trusted_devices | trusted_devices | 1 | yes |
 | `redeem_license_token` | p_token text | `void` | invoker | MANAGE_TENANT_SETTINGS | security_events | tenant_license_activations | 2 | -- |
 | `request_finance_approval` | p_booking_item_id uuid, p_reason text | `uuid` | invoker | CREATE_BOOKING_ITEM | approval_requests | booking_items | 5 | yes |
 | `review_finance_approval` | p_approval_request_id uuid, p_decision text, p_reason text | `text` | invoker | APPROVE_FINANCE or CREATE_BOOKING_ITEM | - | approval_requests, booking_items | 6 | yes |
-| `revoke_trusted_device` | p_device_id uuid | `void` | invoker | - | - | trusted_devices | 2 | -- |
+| `revoke_trusted_device` | p_device_id uuid | `void` | invoker | - | - | trusted_devices | 2 | yes |
 | `revoke_user_role` | p_assignment_id uuid | `void` | invoker | MANAGE_USERS | - | user_role_assignments | 2 | -- |
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
@@ -123,7 +123,7 @@ call it -- see section 6 for what that does and does not establish.
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | -- |
 
-**71 RPC endpoints executable by `authenticated`; 46 exercised over HTTP by a suite.**
+**71 RPC endpoints executable by `authenticated`; 51 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

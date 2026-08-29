@@ -480,6 +480,36 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **IDENT-1 / IDENT-4 — API-3 CANON-34 IDENTITY FAMILY, 2026-08-30 (`202607057800`, `202607057900`).**
+     The family SEC-1 called INTENTIONAL because its tables are owned by `auth.uid()` rather than by
+     a tenant permission. That classification was asserted STRUCTURALLY and never tested
+     BEHAVIOURALLY: before this package the family’s entire coverage was a name-existence list in
+     `53_api_surface_test.sql` — the CUST-2 shape, a guard that cannot see what an endpoint does.
+     **IDENT-1 (Critical) was an account takeover.** `activate_membership()` claimed a
+     pre-provisioned membership on an email STRING match, its own comment asserting that an
+     `auth.users` row proves Supabase verified the address. `config.toml` sets
+     `enable_confirmations = false`, and `email_confirmed_at` appeared NOWHERE in the repository.
+     An attacker signing up as the CEO’s address claimed the membership and held APPROVE_FINANCE,
+     VIEW_FINANCIAL_DOCUMENTS and MANAGE_USERS. **Fixed in the FUNCTION, not a trigger** — the
+     alternate paths were measured closed first (direct UPDATE 0 rows, INSERT 42501), and 49 test
+     files create `auth.users` without that column, so a trigger would break all 49 and would also
+     impose confirmation on the ADMIN provisioning path. Banned and soft-deleted identities are
+     refused in the same breath, because a JWT issued before a ban outlives it.
+     **IDENT-4 (Medium), found by continuing after the first fix looked correct:** the claim matches
+     case-INSENSITIVELY while `users_tenant_email_key` is case-SENSITIVE, so two case-variant rows
+     in one tenant locked that human out permanently with a raw 23505. Fixed at the CONSTRAINT
+     layer — a case-insensitive unique index — because the real fault was that two rows for one
+     human existed at all; the failure now lands at provisioning time, where it is actionable.
+     **IDENT-2 and IDENT-3 recorded, not invented into rules.** IDENT-2 (the claim emits no event)
+     is blocked on the same side-effect question as FIN-9/FIN-11, with a specific obstacle:
+     `record_event` validates the tenant against `current_tenant_id()`, which is `limit 1` with no
+     ORDER BY, so a multi-tenant claim would audit one tenant arbitrarily. IDENT-3 records that
+     `otp_challenges`/`totp_enrollments` have zero consumers (MFA runs off the JWT `aal2` claim), so
+     they are Fundamental Domain Structure rather than dead code.
+     Test **75** (24) is the family’s first behavioural test. HTTP 267 → 282. **API-3 25 → 20.**
+     Next: the tenant-administration family (`create_tenant_user`, `assign_user_branch`,
+     `revoke_user_role`, `create_department`) — the group that CREATES the unlinked memberships
+     IDENT-1 exploited and GRANTS the roles it inherited.
    * **BOOK-1 — API-3 BOOKING/PASSENGER FAMILY, 2026-08-30 (`202607057700`).**
      **Begins with a correction:** the previous report named this family as the next of API-3's 25
      uncovered endpoints. It was wrong — all three ALREADY had HTTP evidence and none is among the
