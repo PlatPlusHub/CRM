@@ -17,7 +17,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(19);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('71000000-0000-0000-0000-0000000000a1','owner@merge.test'),
@@ -192,6 +192,29 @@ select throws_ok(
       '71000000-0000-0000-0000-0000000000f1'::uuid,'71000000-0000-0000-0000-0000000000f2'::uuid,'x')$q$,
   '42501', null,
   'and an ordinary employee is refused outright -- identity merge is an owner/ceo capability');
+
+-- =============================================================================================
+-- 20. THE CONSUMER-IMPACT RULE, made measurable.
+--
+--     CUST-1's real lesson is not about foreign keys. It is that a structurally CORRECT migration
+--     (TENANT-1's composite FKs) silently broke a CONSUMER that derived its behaviour from the old
+--     shape -- and nothing connected the two. The generalisation "audit everything that reads what
+--     you changed" is true but unguardable.
+--
+--     What IS guardable: functions whose behaviour is DERIVED FROM THE CATALOG rather than written
+--     out. Those are the only ones that can change meaning without their own source changing, which
+--     is exactly the failure mode. Measured live, ORVION has EXACTLY ONE -- so the set is pinned
+--     here rather than described in prose. A second one cannot arrive unnoticed: this assertion
+--     fails, and whoever adds it must also add a behavioural test proving what it does, because a
+--     structural assertion about such a function (as `07_event_vocabulary_registry_test` had for
+--     this very function) provably cannot detect a no-op.
+-- =============================================================================================
+select set_eq(
+  $q$select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'app' and p.prokind = 'f'
+        and p.prosrc ~ 'pg_constraint|pg_attribute|information_schema|pg_class'$q$,
+  $q$values ('merge_customer_identity')$q$,
+  'CONSUMER-IMPACT GUARD: exactly one app function derives its behaviour from the catalog, and it is this one. A new catalog-driven function must arrive WITH a behavioural test -- CUST-1 is what happens otherwise');
 
 select finish();
 rollback;

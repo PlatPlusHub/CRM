@@ -480,6 +480,33 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **SEC-1 EVALUATED 2026-08-29 — ACCEPT WITH REFINEMENT, awaiting owner ratification.** The
+     owner's proposed model was tested against the live system, not judged by opinion, and it is
+     **not a change of direction**: it is what ORVION has already converged on. Measured writable
+     surface — 54 tables, of which 35 carry a capability trigger, 15 are permission-gated in RLS
+     `WITH CHECK`, one is guarded by DOC-3's integrity trigger, and the residual three are the
+     canon-34 Human Identity tables (INTENTIONAL). **Option A (revoke `authenticated` writes) is NOT
+     recommended**: it needs 56 INVOKER functions converted to DEFINER, replacing RLS with 56
+     hand-written tenant checks — the second authorization system canon 35 forbids.
+     **Refinement 1:** clause 3 needs a decision procedure. "Has no business invariant" is not
+     decidable by inspection — FIN-8, FIN-10 and QUO-1 all looked fine. The operational test that
+     actually found them: *a rule comparing an AGGREGATE ACROSS ROWS cannot be a CHECK constraint,
+     so it will live in exactly one function unless deliberately extracted.*
+     **Refinement 2:** authorization guards exempt session-less platform paths (canon 35 principle
+     6); **integrity constraints must not** — now pinned by assertion in three tests.
+   * **FIN-10 + QUO-1 — CLOSED 2026-08-29 (`202607057500`, `202607057600`), the refinement applied.**
+     FIN-10: `record_payment` refuses to over-allocate an invoice and takes an advisory lock doing
+     it — nothing else did, so a `finance_manager` put **1300 against a 1000 invoice** by direct DML.
+     Guarded on BOTH sides of the inequality, since the total can also shrink beneath the
+     allocations. QUO-1: `quotations.total_amount` is DEFINED as the sum of its items and maintained
+     on one path, so an employee left a quotation reading **1000 while its items summed to 6000** —
+     the price offered to a customer. Recomputed rather than refused, because a derived value with
+     no independent source can simply be kept right. **FIN-11** recorded (missing status/event side
+     effect on the direct path — one answer wanted with FIN-9, not two bolted-on producers).
+   * **GOV-7 — the consumer-impact rule, made durable 2026-08-29.** `AGENTS.md §3 5b` gains a SECOND
+     question: *which code consumes, parses or derives from the structure this package changed?*
+     Guarded narrowly rather than broadly — the consumers that change meaning without their own
+     source changing are the catalog-driven ones, ORVION has exactly one, and test 71 pins that set.
    * **API-3, second instalment — the two named endpoints, and both hid a defect (2026-08-29,
      `202607057300`/`202607057400`).** The owner's instruction was not to manufacture HTTP
      assertions but to audit the capability behind each uncovered endpoint. Both delivered.
