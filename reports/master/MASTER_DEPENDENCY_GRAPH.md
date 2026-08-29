@@ -1,8 +1,14 @@
 # ORVION MASTER DEPENDENCY GRAPH
 
-Status: **Permanent cumulative dependency map.** Never recreate; evolve. Resolves Depends-On / Blocks / Required-Before/After / Parallelizable / Migration-order for every finding. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_EXECUTION_PLAN.md`.
+Status: **Permanent cumulative dependency map for the Batch 0–5 STRUCTURAL findings.** Never recreate; evolve. Resolves Depends-On / Blocks / Required-Before/After / Parallelizable / Migration-order for the design-era findings whose ORDER genuinely constrains the foundation. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_EXECUTION_PLAN.md`.
 
-Last updated: 2026-07-11.
+Last updated: 2026-08-29 (**scope corrected — AUD-07**). Chains below unchanged since 2026-07-11.
+
+> **Scope correction (AUD-07, 2026-08-29).** This file previously claimed to resolve ordering **"for every finding"**. Measured: it names **46** finding ids while `MASTER_GAP_REGISTER.md` carries **135** — so **100 findings had no entry**, including every one minted since 2026-07-11 (SEC-1, the FIN/ATTR/CAT/RPC/TENANT families, the whole Foundation Completion Programme). The claim was therefore stronger than the content, which is the same class as the guards this programme keeps repairing.
+>
+> **The ordering authority for those findings is `MASTER_EXECUTION_PLAN.md` Batch 6**, which sequences them explicitly "by evidence (highest day-one/business impact first)" and states each package's dependencies inline. That is how the programme has actually been executed since 2026-08-24. The information is not missing — it is simply not *here*, and duplicating it into a second ordering document would create the competing authority `GOVERNANCE.md §2` forbids.
+>
+> **What this file still owns and is still correct for:** the Batch 0–5 structural chains below, where a wrong order means an expensive migration rather than a rescheduled package. Do not add Batch-6 packages here; add them to the execution plan.
 
 ## Foundational chains (must respect order)
 

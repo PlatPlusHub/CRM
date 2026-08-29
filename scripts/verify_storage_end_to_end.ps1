@@ -214,6 +214,32 @@ Check "tenant B got no findings for tenant A's object" ($orphanCross -eq '0') "c
 # 6. RETENTION -> EXECUTOR CONTRACT -> BYTES DESTROYED.
 # ---------------------------------------------------------------------------------------------
 Write-Host "`n-- retention and the executor --"
+
+# PAR-2 (2026-08-29): CAPTURE THE SHIPPED DEFINITION BEFORE OVERRIDING IT.
+# This script overrides `app.document_retention_days` to exercise retention, and section 8 used to
+# "restore" it by RETYPING an equivalent one-liner (`as 'select null::integer'`) instead of putting
+# back the migration's `$fn$ ... $fn$` body. Behaviour was identical; the TEXT was not -- and the
+# parity guard compares `pg_get_functiondef`. So every run of this suite left the local database
+# permanently unequal to the repository, in exactly one function.
+#
+# That is the root cause PAR-1, PAR-1a and PAR-1b were all circling: three sessions chased this one
+# function, and PAR-1b concluded local "had been hand-modified mid-session" -- close, but wrong in
+# the way that mattered. It was not a hand edit. It was this script, doing it deterministically on
+# every run, which is why the drift kept coming back. One of those sessions then read the polluted
+# local body and pushed it to Primary.
+#
+# The fix reads the definition FROM THE DATABASE rather than restating it, so it cannot drift from
+# the migration no matter how the migration later changes.
+$RetentionFnDef = ((Psql "select pg_get_functiondef('app.document_retention_days()'::regprocedure);") -join "`n").Trim()
+if ([string]::IsNullOrWhiteSpace($RetentionFnDef) -or $RetentionFnDef -notmatch 'document_retention_days') {
+    throw "PAR-2: could not capture the shipped app.document_retention_days definition -- refusing to run, because this suite would otherwise leave the database drifted with no way back."
+}
+# Capture the FINGERPRINT in SQL, using the parity guard's own expression. The first version of this
+# check recomputed that normalization in PowerShell and failed against a restore that was actually
+# correct -- which is PAR-1a's lesson repeating one layer over: do not reimplement the comparison,
+# reuse it. Both sides are now computed by the same engine with the same expression.
+$RetentionFnMd5 = (Psql "select md5(regexp_replace(regexp_replace(pg_get_functiondef('app.document_retention_days()'::regprocedure), '--[^' || chr(10) || ']*', '', 'g'), '\s+', ' ', 'g'));").Trim()
+
 # Rebuild v1 metadata so there is a genuine superseded version to age out.
 Psql @"
 delete from public.document_storage_findings where tenant_id='$TA';
@@ -315,9 +341,18 @@ if ($openId) {
 # ---------------------------------------------------------------------------------------------
 # 8. Restore the shipped retention policy and clean up.
 # ---------------------------------------------------------------------------------------------
-Psql @"
-create or replace function app.document_retention_days() returns integer language sql immutable set search_path='' as 'select null::integer';
-"@ | Out-Null
+# PAR-2: restore the definition captured above, VERBATIM. Not a retyped equivalent -- see the note
+# in section 6. `create or replace function` preserves the existing ACL, so the migration's
+# `revoke execute ... from public` survives; that is asserted below rather than assumed.
+Psql $RetentionFnDef | Out-Null
+
+# PAR-2 positive control: the point of this suite is that it must leave the database EQUAL to the
+# repository. Proving the restore actually happened is what turns that from an intention into a
+# guarantee -- and it is the assertion whose absence let three sessions chase the same drift.
+$restored = (Psql "select md5(regexp_replace(regexp_replace(pg_get_functiondef('app.document_retention_days()'::regprocedure), '--[^' || chr(10) || ']*', '', 'g'), '\s+', ' ', 'g'));").Trim()
+Check "PAR-2: the shipped retention policy is restored VERBATIM, so local still equals the repository" ($restored -eq $RetentionFnMd5) "restored=$restored captured=$RetentionFnMd5"
+$pubExec = (Psql "select has_function_privilege('public','app.document_retention_days()','execute')::text;").Trim()
+Check "PAR-2: and the revoke from PUBLIC survived the replace" ($pubExec -eq 'false') "public_execute=$pubExec"
 $hdrCleanup = $hdrS
 foreach ($p in @($V2, "$TA/0000dead-0000-0000-0000-00000000000f/1")) { Req DELETE "$API/storage/v1/object/documents/$p" $hdrCleanup $null $null | Out-Null }
 # Remove what CAN be removed. `events`, `tenants` and `users` are deliberately left: the spine is

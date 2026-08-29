@@ -152,10 +152,33 @@ if (-not (Test-Path $contract)) {
 }
 
 Write-Host ""
-if ($issues -eq 0) {
-    Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger $(if ($PrimaryFingerprint) { 'proven' } else { 'NOT checked' }); primary functions $(if ($PrimaryLogicHash) { 'proven' } else { 'NOT checked' }))" -ForegroundColor Green
-    exit 0
-} else {
+
+# AUD-05 (2026-08-29): THIS SCRIPT USED TO PRINT "CLEAN" AND EXIT 0 WHEN PRIMARY WAS NEVER CONTACTED.
+# The parenthetical did say "primary ledger NOT checked" -- but the verdict word was CLEAN and the
+# exit status was 0, and an exit status is what a caller, a CI job or a future agent actually reads.
+# That contradicted this file's OWN header contract ("Exit 0 = parity proven. Exit 1 = drift,
+# unreachable, or unproven") and `AGENTS.md §4` Stage B step 8b, which already states that without
+# -PrimaryFingerprint "Primary is reported UNPROVEN, which is not CLEAN". The governance was right
+# and the script did not honour it; the script is what changed.
+#
+# Three outcomes now, deliberately distinct, because "not measured" is not a kind of "passed":
+#   exit 0  CLEAN    -- everything this script claims was actually measured
+#   exit 1  DRIFT    -- something was measured and disagreed
+#   exit 2  UNPROVEN -- local is fine but Primary was never contacted; nothing to disagree with
+$primaryProven = $PrimaryFingerprint -and $PrimaryLogicHash
+
+if ($issues -gt 0) {
     Write-Host "DATABASE PARITY: $issues issue(s) found" -ForegroundColor Red
     exit 1
+} elseif (-not $primaryProven) {
+    Write-Host "DATABASE PARITY: UNPROVEN -- local matches the repository, but PRIMARY WAS NOT CONTACTED." -ForegroundColor Yellow
+    Write-Host "  primary ledger    : $(if ($PrimaryFingerprint) { 'proven' } else { 'NOT CHECKED' })" -ForegroundColor Yellow
+    Write-Host "  primary functions : $(if ($PrimaryLogicHash) { 'proven' } else { 'NOT CHECKED' })" -ForegroundColor Yellow
+    Write-Host "  This is NOT a pass. Read both values live from Primary (supabase-primary MCP) and re-run" -ForegroundColor DarkGray
+    Write-Host "  with -PrimaryFingerprint / -PrimaryLogicHash. Never report this run as parity CLEAN." -ForegroundColor DarkGray
+    exit 2
+} else {
+    Write-Host "DATABASE PARITY: CLEAN (local proven; primary ledger proven; primary functions proven)" -ForegroundColor Green
+    Write-Host "  (both primary values are CALLER-SUPPLIED -- this is parity only if they were READ FROM Primary; GUARD-1)" -ForegroundColor DarkGray
+    exit 0
 }

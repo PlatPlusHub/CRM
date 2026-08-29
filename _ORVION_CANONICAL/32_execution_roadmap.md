@@ -219,11 +219,11 @@ Outputs:
 
 # Phase 8: Offline Conversion
 
-Status: **In Progress — CURRENT phase** (started 2026-07-17 after Phase 9 Tier A completed). Re-verified against live systems 2026-08-30 during the pre-Phase-10 reconciliation; **it is NOT complete, and the single reason is precise.**
+Status: **In Progress — CURRENT phase** (started 2026-07-17 after Phase 9 Tier A completed). Re-verified against live systems 2026-08-29 during the pre-Phase-10 reconciliation; **it is NOT complete, and the single reason is precise.**
 
-**Done:** the ORVION-side pipeline (capture→map→claim→ack, migrations 049200/049300/049400), the SPEC-123 delivery lease, the in-DB consent gate, and the Integration Catalog workflow contract. All deployed to **Primary `vrvtsxexkiiiivlkdxzp`**, this repository's sole Supabase deployment target (`MASTER_INTEGRATION_CATALOG.md §0`); Secondary `brplkqmbzffpxqgkkdzo` is the separate `Shehabhub/ORVION` environment and is **never a CRM deployment target**. Migration parity between the two was **permanently revoked** (owner-ratified 2026-08-20) — differences are valid, never a defect to reconcile. *(Live migration/fingerprint state is not restated here — `manifest.md` owns it, proven by `scripts/check_database_parity.ps1`. This paragraph carried "Primary carries 90 migrations" until 2026-08-30, seventy migrations stale: **GOV-5**.)*
+**Done:** the ORVION-side pipeline (capture→map→claim→ack, migrations 049200/049300/049400), the SPEC-123 delivery lease, the in-DB consent gate, and the Integration Catalog workflow contract. All deployed to **Primary `vrvtsxexkiiiivlkdxzp`**, this repository's sole Supabase deployment target (`MASTER_INTEGRATION_CATALOG.md §0`); Secondary `brplkqmbzffpxqgkkdzo` is the separate `Shehabhub/ORVION` environment and is **never a CRM deployment target**. Migration parity between the two was **permanently revoked** (owner-ratified 2026-08-20) — differences are valid, never a defect to reconcile. *(Live migration/fingerprint state is not restated here — `manifest.md` owns it, proven by `scripts/check_database_parity.ps1`. This paragraph carried "Primary carries 90 migrations" until 2026-08-29, seventy migrations stale: **GOV-5**.)*
 
-**Not done — the whole of what remains:** the **n8n workflow itself**. Verified live 2026-08-30: the n8n instance holds **zero workflows**. Nothing delivers a conversion to Google Ads, so the founding feedback loop this phase exists to close is open.
+**Not done — the whole of what remains:** the **n8n workflow itself**. Verified live 2026-08-29: the n8n instance holds **zero workflows**. Nothing delivers a conversion to Google Ads, so the founding feedback loop this phase exists to close is open.
 
 **Why it has not been built — a gate, not a blocker:** the workflow build is **GATED behind the Foundation Completion Programme** (owner-directed 2026-08-21; the programme is `MASTER_EXECUTION_PLAN.md` Batch 6). That gate is still shut — Batch 6 has open engineering items (the table-by-table audit, `notification_deliveries` having no producer, the Employee/Supplier/Branch 360 primitives, DOC-LC-1, API-3's remaining endpoints, SPEC-154-B) and open owner decisions (**SEC-1**'s write-path model above all). *(The gate list previously named here — "AUDIT-3 read-scope model, ~13 write permissions, CAT-5/CAT-6" — was itself stale: AUDIT-3 was resolved 2026-08-24 by SPEC-137. Read Batch 6 for the live list rather than any summary of it.)*
 
@@ -248,7 +248,7 @@ Outputs:
 
 Status: **Complete (Tier A)** — 2026-07-17, migration 048900: `reporting` schema + `security_invoker` views per ADR-0022. Tier B aggregates remain evidence-gated (a report must prove measured cost) and do not hold the phase open.
 
-**Acceptance re-proven live 2026-08-30** (the reconciliation did not take this status on trust): the `reporting` schema holds **8** views, each exposed over HTTP and pinned by name in `53_api_surface_test.sql`, and all six of the phase's required outputs map to one — lead performance → `lead_performance`; sales activity → `sales_activity`; booking pipeline → `booking_pipeline`; finance outstanding balances → `customer_outstanding` + `supplier_outstanding`; profit by booking item → `booking_item_profit`; subscription state → `subscription_state`. The eighth, `my_sales_performance`, was added later by SPEC-159 and is a Phase-9-shaped addition rather than an outstanding deliverable. **No output is missing, so nothing about Phase 9 gates Phase 10.**
+**Acceptance re-proven live 2026-08-29** (the reconciliation did not take this status on trust): the `reporting` schema holds **8** views, each exposed over HTTP and pinned by name in `53_api_surface_test.sql`, and all six of the phase's required outputs map to one — lead performance → `lead_performance`; sales activity → `sales_activity`; booking pipeline → `booking_pipeline`; finance outstanding balances → `customer_outstanding` + `supplier_outstanding`; profit by booking item → `booking_item_profit`; subscription state → `subscription_state`. The eighth, `my_sales_performance`, was added later by SPEC-159 and is a Phase-9-shaped addition rather than an outstanding deliverable. **No output is missing, so nothing about Phase 9 gates Phase 10.**
 
 Objective:
 
@@ -267,11 +267,11 @@ Outputs:
 
 # Phase 10: Automation And Integrations
 
-Status: **Pending — NOT READY TO BEGIN. Determination made 2026-08-30 against live systems, per the owner's pre-Phase-10 reconciliation directive.**
+Status: **Pending — NOT READY TO BEGIN. Determination made 2026-08-29 against live systems, per the owner's pre-Phase-10 reconciliation directive.**
 
 **Verdict: NOT READY.** Two prerequisites are unmet, and neither is a matter of opinion:
 
-1. **Phase 8 is not complete.** Its sole remaining deliverable is the n8n workflow, and the n8n instance holds **zero workflows** (verified live 2026-08-30). Phase 8 precedes Phase 10 in the owner's own 7→9→8→10 sequencing.
+1. **Phase 8 is not complete.** Its sole remaining deliverable is the n8n workflow, and the n8n instance holds **zero workflows** (verified live 2026-08-29). Phase 8 precedes Phase 10 in the owner's own 7→9→8→10 sequencing.
 2. **The Foundation Completion Programme gate is still shut.** The owner gated the Phase-8 workflow build behind it on 2026-08-21, and `MASTER_EXECUTION_PLAN.md` Batch 6 still carries open engineering items and open owner decisions — **SEC-1**'s write-path architecture chief among them.
 
 **These are the same blocker seen twice, not two.** Phase 10's own first output is *"n8n workflows"*, and Phase 8's remaining deliverable **is** an n8n workflow — so the work that finishes Phase 8 is literally the opening move of Phase 10, under a gate the owner placed. Starting Phase 10 now would mean building Phase 8's deliverable while calling it Phase 10, which changes the label and not the dependency.

@@ -4,7 +4,7 @@ Status: **Permanent engineering reference.** Never recreate; evolve. One entry p
 
 Last updated: 2026-07-11. **Design Completion %** = how completely the domain is *designed* (owner's standard: a new team needs no rediscovery), not how much is implemented. `[B]` built (Phases 2–7), `[D]` designed-in-register, `[H]` hooks-pending.
 
-**Grounding — a DATED DESIGN SNAPSHOT, not live state (GOV-5, 2026-08-30).** As measured **2026-07-15**: 71 tables · 55 app RPCs · 65 catalog types · 64 permissions · 9 roles · 137 indexes · 12 CHECKs · 0 views. Every one of those has since moved (views alone went 0 → 8), and this file was still presenting them as current. They are kept, dated, because the domain map below was *drawn against them* — deleting them would strand the analysis from its basis. **For live counts read `_ORVION_CANONICAL/manifest.md`; for the client-facing surface read `MASTER_API_CONTRACT.md`, which is generated from the database.** This document owns the *domain index and completion assessment*, never the counts.
+**Grounding — a DATED DESIGN SNAPSHOT, not live state (GOV-5, 2026-08-29).** As measured **2026-07-15**: 71 tables · 55 app RPCs · 65 catalog types · 64 permissions · 9 roles · 137 indexes · 12 CHECKs · 0 views. Every one of those has since moved (views alone went 0 → 8), and this file was still presenting them as current. They are kept, dated, because the domain map below was *drawn against them* — deleting them would strand the analysis from its basis. **For live counts read `_ORVION_CANONICAL/manifest.md`; for the client-facing surface read `MASTER_API_CONTRACT.md`, which is generated from the database.** This document owns the *domain index and completion assessment*, never the counts.
 
 ---
 

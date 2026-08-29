@@ -2,7 +2,7 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-08-30 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
+Last updated: 2026-08-29 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
 
 **Guarantee:** once Batch 0 + Batch 1 are designed into canon and implemented, no later batch reopens the foundation. Every later batch is additive new tables/logic.
 
@@ -727,7 +727,7 @@ additive capability.*
      enter directly into its destination — so those options carry a BLOCKED — EXTERNAL DEPENDENCY
      step that Supabase Storage does not, and the evaluation must weigh that honestly rather than let
      it silently decide the outcome.
-4. **Notifications — NARROWED 2026-08-30 (GOV-6), verified live before editing.** This read
+4. **Notifications — NARROWED 2026-08-29 (GOV-6), verified live before editing.** This read
    "`notifications` / `notification_deliveries` have **no producer at all**"; `notifications` gained
    its first producer on 2026-08-29 when SLA-1 wired the manager escalation. What remains true:
    **`notification_deliveries` still has no producer** — nothing records that a notification was
@@ -736,8 +736,8 @@ additive capability.*
    on recipient/lead-time/cadence). So the delivery half is an engineering gap and the producer half
    is one owner decision, not a single undifferentiated hole.
 5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist
-   (`app.customer_timeline`, `app.lead_timeline` — re-verified live 2026-08-30); these three do not.
-6. ~~**`public.security_events` has zero producers.**~~ **OBSOLETE 2026-08-30 (GOV-6).** It has
+   (`app.customer_timeline`, `app.lead_timeline` — re-verified live 2026-08-29); these three do not.
+6. ~~**`public.security_events` has zero producers.**~~ **OBSOLETE 2026-08-29 (GOV-6).** It has
    **four**, all added by SPEC-158 on 2026-08-27: `platform_issue_license_token`,
    `platform_review_payment_proof`, `platform_revoke_license_tokens`, `redeem_license_token`. This
    item contradicted **item 1c of this same document**, which records SPEC-158 giving the table "its

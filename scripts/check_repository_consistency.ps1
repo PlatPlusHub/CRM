@@ -6,21 +6,28 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Eleven checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Twelve checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
-  11 manifest decision IDs resolve in the findings SSOT):
+  11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
     Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity ·
     Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
-    Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3).
+    Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
+    Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01).
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
-  told to look up actually EXIST in the register that claims to define it (11).
+  told to look up actually EXIST in the register that claims to define it (11). Check 12 asks the
+  fourth: is the evidence even dated plausibly (a record dated tomorrow claims evidence that could
+  not yet have been gathered, and sorts ahead of records that are genuinely newer).
+
+  Check 2 compares status BOTH within a file and ACROSS every reports/master/*.md (AUD-04) -- the
+  cross-file half exists because MASTER_REPOSITORY_HEALTH published "conflicting status across
+  Masters = 0" while nothing had ever compared two Masters to each other.
 
   Details inline. Original two checks documented below:
 
@@ -82,7 +89,7 @@ foreach ($md in $livingDocs) {
 Write-Host "== Check 2: intra-file status contradiction in reports/master ==" -ForegroundColor Cyan
 
 $masterDir = Join-Path $RepoRoot 'reports/master'
-# GOV-4 (2026-08-30): this pattern used to enumerate the 2026-07 prefixes literally --
+# GOV-4 (2026-08-29): this pattern used to enumerate the 2026-07 prefixes literally --
 # DC/R/A/B/N/CDD/BF/RC/OPS/INV -- so it matched NONE of the finding IDs minted since
 # (SEC-, FIN-, ATTR-, CONV-, LEAD-, SCHED-, TRANS-, API-, PAR-, TEST-, GOV-, DOC-EXP-, ...).
 # Check 2 was therefore structurally blind to every finding created in the last month while
@@ -92,6 +99,15 @@ $masterDir = Join-Path $RepoRoot 'reports/master'
 # N1) keep their own alternatives because they carry no dash. Safe to widen because Check 2
 # only ever treats an id as a row's SUBJECT when it leads a table row or a `###` heading.
 $idPat = '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|R[0-9]+|A[0-9]+|B[0-9]+|N[0-9]+)\b'
+
+# AUD-04 (2026-08-29): `MASTER_REPOSITORY_HEALTH.md §3` published the indicator "Conflicting finding
+# status across MASTERS = 0", but this check has only ever compared a file against ITSELF -- the
+# hashtables below are rebuilt per file. The 0 was asserted, never measured, which is the exact
+# "guard claims a property stronger than it measures" class the programme keeps finding. These two
+# cross-file tables make the published indicator real: an id shown OPEN in one Master while another
+# Master marks it resolved is now a reported contradiction.
+$xOpen = @{}      # id -> "file:line" where some Master shows it OPEN
+$xResolved = @{}  # id -> "file:line" where some Master marks it resolved
 
 if (Test-Path $masterDir) {
     foreach ($md in Get-ChildItem $masterDir -Filter *.md -File) {
@@ -105,7 +121,7 @@ if (Test-Path $masterDir) {
             # own `- **Status:** FIXED` field far more often than in the heading, and the check
             # previously read ONLY the heading -- so the row-vs-detail contradiction it was built
             # for (the DC-16 bug) was invisible in exactly the form the register actually writes.
-            # Proven by a cross-line probe on 2026-08-30 that the heading-only version did not catch.
+            # Proven by a cross-line probe on 2026-08-29 that the heading-only version did not catch.
             $blockHead = [regex]::Match($line, '^###\s+(?<id>' + $idPat.Trim('\b') + ')')
             if ($line -match '^#{1,3}\s') { $blockId = $(if ($blockHead.Success) { $blockHead.Groups['id'].Value } else { $null }) }
             if ($blockId -and $line -match '^\s*-\s*\*\*Status:?\*\*.*\b(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b') {
@@ -141,8 +157,8 @@ if (Test-Path $masterDir) {
                 if ($h.Success) { $ids = @($h.Groups['id'].Value) }
             }
             foreach ($id in $ids) {
-                if ($rowOpen)     { $openAt[$id]     = $lineNo }
-                if ($rowResolved) { $resolvedAt[$id] = $lineNo }
+                if ($rowOpen)     { $openAt[$id]     = $lineNo; if (-not $xOpen.ContainsKey($id))     { $xOpen[$id]     = "$($md.Name):$lineNo" } }
+                if ($rowResolved) { $resolvedAt[$id] = $lineNo; if (-not $xResolved.ContainsKey($id)) { $xResolved[$id] = "$($md.Name):$lineNo" } }
             }
         }
         foreach ($id in $openAt.Keys) {
@@ -151,6 +167,21 @@ if (Test-Path $masterDir) {
                 $issues++
             }
         }
+    }
+    # AUD-04: the cross-file pass. Only ids whose two verdicts live in DIFFERENT Masters are reported
+    # here -- same-file contradictions were already reported above and must not be counted twice.
+    $xConflicts = 0
+    foreach ($id in $xOpen.Keys) {
+        if ($xResolved.ContainsKey($id)) {
+            $a = $xOpen[$id]; $b = $xResolved[$id]
+            if (($a -split ':')[0] -ne ($b -split ':')[0]) {
+                Write-Host "  CROSS-MASTER STATUS CONTRADICTION: $id is OPEN in $a but resolved in $b" -ForegroundColor Yellow
+                $issues++; $xConflicts++
+            }
+        }
+    }
+    if ($xConflicts -eq 0) {
+        Write-Host "  cross-Master status agreement measured over $($xOpen.Count) open id(s) -- no contradiction" -ForegroundColor Green
     }
 }
 
@@ -521,7 +552,7 @@ if (-not $mNarr.Success) {
 }
 
 # 11. GOV-3: the manifest lists its open owner decisions as IDs ONLY, and states that "every
-#     definition, its evidence and its status live in MASTER_GAP_REGISTER.md". On 2026-08-30 that
+#     definition, its evidence and its status live in MASTER_GAP_REGISTER.md". On 2026-08-29 that
 #     promise was false for five of twenty-five ids -- A3, BLOCKED-4, BLOCKED-5, CANON-26-1 and
 #     LIC-1 appeared in NO register row, so a fresh agent following the boot sequence to look one
 #     up reached a dead end in the governance chain. GOVERNANCE.md section 2 makes the register the
@@ -552,6 +583,57 @@ if (-not $decLine) {
         $issues += $orphans.Count
     } else {
         Write-Host "  all $($found.Count) manifest decision IDs resolve in the register" -ForegroundColor Green
+    }
+}
+
+# 12. AUD-01: CURRENT-STATE EVIDENCE MUST NOT BE DATED IN THE FUTURE.
+#     On 2026-08-29 an entire reconciliation was stamped ONE DAY AHEAD across 13 files and 43 places
+#     -- register rows, a GOVERNANCE version bump, a session report's filename and Date field --
+#     while the commit carrying them was authored that same 2026-08-29. The date had been ASSUMED
+#     ("this feels like a new session") rather than read from the clock, and nothing checked it. A
+#     future-dated record is worse than a stale one: it claims evidence that could not yet have been
+#     gathered, and it sorts ahead of records that are actually newer.
+#     NOTE: this check has NO exemption list, deliberately. It flagged its own explanatory comment on
+#     the first run, because that comment quoted the offending date literally. The fix was to stop
+#     writing the future date in prose -- describe it ("one day ahead") instead. An exemption
+#     mechanism would have been the weaker answer: every exemption is a place the next future date
+#     can hide.
+#     Two questions, because either alone can be fooled: (a) does any file carry a date later than
+#     today, and (b) is the clock itself plausible, cross-checked against the newest commit.
+Write-Host "== Check 12: no future-dated evidence ==" -ForegroundColor Cyan
+$today = (Get-Date).Date
+$dateRx = '\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b'
+$futureHits = 0
+$scan = $allFiles | Where-Object { $_.Extension -in '.md', '.json', '.ps1', '.sql' }
+foreach ($f in $scan) {
+    $lineNo = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($f.FullName)) {
+        $lineNo++
+        foreach ($m in [regex]::Matches($line, $dateRx)) {
+            $d = [datetime]::MinValue
+            if ([datetime]::TryParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null, 'None', [ref]$d) -and $d -gt $today) {
+                $rel = $f.FullName.Substring($RepoRoot.Length + 1)
+                Write-Host "  FUTURE-DATED: $rel : $lineNo -> $($m.Groups[1].Value) (today is $($today.ToString('yyyy-MM-dd')))" -ForegroundColor Red
+                $futureHits++
+            }
+        }
+    }
+}
+if ($futureHits -gt 0) {
+    Write-Host "  Remedy: read the clock (`Get-Date`) and restamp. Never infer today's date from how the session feels." -ForegroundColor DarkGray
+    $issues += $futureHits
+}
+# Clock sanity: a commit cannot have been authored after 'now'. If one was, the clock is wrong and
+# every date written this session is suspect -- including any this check just passed.
+$newestCommit = (& git -C $RepoRoot log -1 --format=%aI 2>$null)
+if ($newestCommit) {
+    $cd = [datetimeoffset]::Parse($newestCommit)
+    if ($cd -gt [datetimeoffset]::Now.AddMinutes(5)) {
+        Write-Host "  CLOCK SKEW: newest commit is authored $($cd.ToString('u')) but 'now' is $([datetimeoffset]::Now.ToString('u'))" -ForegroundColor Red
+        Write-Host "  Every date written this session is suspect. Fix the clock before recording evidence." -ForegroundColor DarkGray
+        $issues++
+    } elseif ($futureHits -eq 0) {
+        Write-Host "  no future-dated evidence; clock agrees with the newest commit ($($cd.ToString('yyyy-MM-dd')))" -ForegroundColor Green
     }
 }
 

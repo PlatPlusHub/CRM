@@ -8,7 +8,7 @@
 -- Expected values track the frozen baseline: 75 public base tables, 71 catalog types, 601 catalog
 -- values (565 + 4 refund lifecycle events registered by 202607049800, audit 2026-08-10; + 14
 -- related_entity_type values seeded by 202607050700 / SPEC-130, which also added the 68th type).
--- NOTE (2026-08-30, GOV-5): this comment said "74 public base tables" while CHECK 2 eighteen lines
+-- NOTE (2026-08-29, GOV-5): this comment said "74 public base tables" while CHECK 2 eighteen lines
 -- below asserted 75 -- the prose in a guard drifted from the guard's own code. The ASSERTIONS are
 -- authoritative here; treat any count in this header as a reading aid, never as the expectation.
 -- Documented referential exceptions to the restrict default (30 Referential Action Standard):
