@@ -2,7 +2,7 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-07-15 (date corrected — the batch statuses below already reflect SPEC-113/114/117/118/119, all post-2026-07-11; content unchanged this sync, only the stale header date).
+Last updated: 2026-08-30 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
 
 **Guarantee:** once Batch 0 + Batch 1 are designed into canon and implemented, no later batch reopens the foundation. Every later batch is additive new tables/logic.
 
@@ -642,7 +642,7 @@ additive capability.*
      deposited its deliberately non-teardownable residue.
    * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
-     swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 74 tables and their
+     swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
      relationships — schema, FKs, RLS, grants, functions, SECURITY DEFINER, triggers, catalogs,
      permissions, events and their producers/consumers, reporting views, scheduled jobs,
      integrations, RPCs, direct-DML surfaces, test families, governance — inspected for BEHAVIOURAL
@@ -727,11 +727,25 @@ additive capability.*
      enter directly into its destination — so those options carry a BLOCKED — EXTERNAL DEPENDENCY
      step that Supabase Storage does not, and the evaluation must weigh that honestly rather than let
      it silently decide the outcome.
-4. **Notifications.** `notifications` / `notification_deliveries` have **no producer at all**.
-5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist; these three do not.
-6. **`public.security_events` has zero producers** — the 13 authentication event types are Supabase
-   Auth events with no ORVION hook.
-7. **Table/column completeness sweep** across all 72 tables — never finished.
+4. **Notifications — NARROWED 2026-08-30 (GOV-6), verified live before editing.** This read
+   "`notifications` / `notification_deliveries` have **no producer at all**"; `notifications` gained
+   its first producer on 2026-08-29 when SLA-1 wired the manager escalation. What remains true:
+   **`notification_deliveries` still has no producer** — nothing records that a notification was
+   actually *delivered* on any channel — and `app.process_lead_sla` is still the **only** writer of
+   `notifications`, which is why an expiring passport notifies nobody (**DOC-EXP-1**, owner-blocked
+   on recipient/lead-time/cadence). So the delivery half is an engineering gap and the producer half
+   is one owner decision, not a single undifferentiated hole.
+5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist
+   (`app.customer_timeline`, `app.lead_timeline` — re-verified live 2026-08-30); these three do not.
+6. ~~**`public.security_events` has zero producers.**~~ **OBSOLETE 2026-08-30 (GOV-6).** It has
+   **four**, all added by SPEC-158 on 2026-08-27: `platform_issue_license_token`,
+   `platform_review_payment_proof`, `platform_revoke_license_tokens`, `redeem_license_token`. This
+   item contradicted **item 1c of this same document**, which records SPEC-158 giving the table "its
+   first producers" — an intra-document contradiction that survived because Check 2 could not see
+   modern finding IDs (**GOV-4**) and nothing at all checks prose open-items against the database.
+   Kept struck through rather than deleted: the 13 *authentication* event types are still Supabase
+   Auth events with no ORVION hook, which is **AUTH-1**'s territory, not a producer gap.
+7. **Table/column completeness sweep** across all **75** tables — never finished.
 8. **SEC-1 write-path model** — remains the open owner decision; three further forgeries of
    authoritative history are recorded as its evidence.
 

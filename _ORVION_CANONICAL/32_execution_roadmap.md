@@ -219,7 +219,15 @@ Outputs:
 
 # Phase 8: Offline Conversion
 
-Status: In Progress — CURRENT phase (started 2026-07-17 after Phase 9 Tier A completed). ORVION-side pipeline COMPLETE (capture→map→claim→ack, migrations 049200/049300/049400) and Integration Catalog seeded. CRM database deployment is complete and verified live on **Primary `vrvtsxexkiiiivlkdxzp`**, this repository's sole Supabase deployment target (`MASTER_INTEGRATION_CATALOG.md §0`): Primary carries 90 migrations, latest `202607050100_conversion_delivery_lease` (includes SPEC-120/121/122/123). Secondary `brplkqmbzffpxqgkkdzo` is the separate `Shehabhub/ORVION` environment (89 migrations) and is **never a CRM deployment target**; SPEC-123 is intentionally present on Primary and intentionally absent from Secondary. **Migration parity/synchronization between the two was permanently revoked (owner-ratified 2026-08-20)** — differences are valid and expected, never a defect to reconcile. Remaining: **the Foundation Completion Programme first — the workflow build is GATED behind it (owner-directed 2026-08-21)**; see `manifest.md` for the ordered remaining work (AUDIT-3 read-scope model, ~13 write permissions, CAT-5/CAT-6, table-by-table and configuration audits). The workflow's own prerequisites are ready and unchanged when that gate is earned: the previously recorded Google OAuth / `orvion_integration` credential prerequisite is **no longer an outstanding blocker**. Both n8n credentials are agent-verified **present** (`ORVION Google Data Manager` and `Postgres account`, 2026-08-20), and `orvion_integration` login is independently verified (`pg_roles.rolcanlogin = true`). Zero workflows currently exist on the instance; **workflow build is the remaining work**. *(Presence only — neither credential's target or scope is independently verified, and neither has been observed to authenticate.)*
+Status: **In Progress — CURRENT phase** (started 2026-07-17 after Phase 9 Tier A completed). Re-verified against live systems 2026-08-30 during the pre-Phase-10 reconciliation; **it is NOT complete, and the single reason is precise.**
+
+**Done:** the ORVION-side pipeline (capture→map→claim→ack, migrations 049200/049300/049400), the SPEC-123 delivery lease, the in-DB consent gate, and the Integration Catalog workflow contract. All deployed to **Primary `vrvtsxexkiiiivlkdxzp`**, this repository's sole Supabase deployment target (`MASTER_INTEGRATION_CATALOG.md §0`); Secondary `brplkqmbzffpxqgkkdzo` is the separate `Shehabhub/ORVION` environment and is **never a CRM deployment target**. Migration parity between the two was **permanently revoked** (owner-ratified 2026-08-20) — differences are valid, never a defect to reconcile. *(Live migration/fingerprint state is not restated here — `manifest.md` owns it, proven by `scripts/check_database_parity.ps1`. This paragraph carried "Primary carries 90 migrations" until 2026-08-30, seventy migrations stale: **GOV-5**.)*
+
+**Not done — the whole of what remains:** the **n8n workflow itself**. Verified live 2026-08-30: the n8n instance holds **zero workflows**. Nothing delivers a conversion to Google Ads, so the founding feedback loop this phase exists to close is open.
+
+**Why it has not been built — a gate, not a blocker:** the workflow build is **GATED behind the Foundation Completion Programme** (owner-directed 2026-08-21; the programme is `MASTER_EXECUTION_PLAN.md` Batch 6). That gate is still shut — Batch 6 has open engineering items (the table-by-table audit, `notification_deliveries` having no producer, the Employee/Supplier/Branch 360 primitives, DOC-LC-1, API-3's remaining endpoints, SPEC-154-B) and open owner decisions (**SEC-1**'s write-path model above all). *(The gate list previously named here — "AUDIT-3 read-scope model, ~13 write permissions, CAT-5/CAT-6" — was itself stale: AUDIT-3 was resolved 2026-08-24 by SPEC-137. Read Batch 6 for the live list rather than any summary of it.)*
+
+**The workflow's own prerequisites are ready** and unchanged when the gate is earned: both n8n credentials are agent-verified **present** (`ORVION Google Data Manager`, `Postgres account`, 2026-08-20) and `orvion_integration` login is independently verified (`pg_roles.rolcanlogin = true`). *(Presence only — neither credential's target or scope is independently verified, and neither has been observed to authenticate. That is an UNPROVEN, not a PROVEN.)*
 
 Objective:
 
@@ -238,7 +246,9 @@ Outputs:
 
 # Phase 9: Reports And Dashboards
 
-Status: Complete (Tier A, 2026-07-17 — migration 048900: `reporting` schema + 7 security_invoker views serving all six outputs per ADR-0022). Tier B aggregates remain evidence-gated (a report must prove measured cost) and do not hold the phase open.
+Status: **Complete (Tier A)** — 2026-07-17, migration 048900: `reporting` schema + `security_invoker` views per ADR-0022. Tier B aggregates remain evidence-gated (a report must prove measured cost) and do not hold the phase open.
+
+**Acceptance re-proven live 2026-08-30** (the reconciliation did not take this status on trust): the `reporting` schema holds **8** views, each exposed over HTTP and pinned by name in `53_api_surface_test.sql`, and all six of the phase's required outputs map to one — lead performance → `lead_performance`; sales activity → `sales_activity`; booking pipeline → `booking_pipeline`; finance outstanding balances → `customer_outstanding` + `supplier_outstanding`; profit by booking item → `booking_item_profit`; subscription state → `subscription_state`. The eighth, `my_sales_performance`, was added later by SPEC-159 and is a Phase-9-shaped addition rather than an outstanding deliverable. **No output is missing, so nothing about Phase 9 gates Phase 10.**
 
 Objective:
 
@@ -257,7 +267,22 @@ Outputs:
 
 # Phase 10: Automation And Integrations
 
-Status: Pending
+Status: **Pending — NOT READY TO BEGIN. Determination made 2026-08-30 against live systems, per the owner's pre-Phase-10 reconciliation directive.**
+
+**Verdict: NOT READY.** Two prerequisites are unmet, and neither is a matter of opinion:
+
+1. **Phase 8 is not complete.** Its sole remaining deliverable is the n8n workflow, and the n8n instance holds **zero workflows** (verified live 2026-08-30). Phase 8 precedes Phase 10 in the owner's own 7→9→8→10 sequencing.
+2. **The Foundation Completion Programme gate is still shut.** The owner gated the Phase-8 workflow build behind it on 2026-08-21, and `MASTER_EXECUTION_PLAN.md` Batch 6 still carries open engineering items and open owner decisions — **SEC-1**'s write-path architecture chief among them.
+
+**These are the same blocker seen twice, not two.** Phase 10's own first output is *"n8n workflows"*, and Phase 8's remaining deliverable **is** an n8n workflow — so the work that finishes Phase 8 is literally the opening move of Phase 10, under a gate the owner placed. Starting Phase 10 now would mean building Phase 8's deliverable while calling it Phase 10, which changes the label and not the dependency.
+
+**What is NOT blocking, and was checked rather than assumed:**
+- **Phase 9** — complete, all six outputs re-proven live (above).
+- **The database foundation** — repository, local and Primary agree on 160 migrations, the ledger fingerprint **and** the full 230-function surface, both sides read live (`check_database_parity.ps1` L1/P1/L2/P2).
+- **API reachability** — 71 RPC endpoints + 8 reporting views are live and generated into `MASTER_API_CONTRACT.md`; **API-3** tracks the 30 still lacking HTTP evidence, which is a coverage debt, not a reachability blocker.
+- **The architecture does not make Phase 10 impossible** (directive §14). The WhatsApp/AI data model is present — nullable customer/owner/sender, external ids, whatsapp catalog values, `orvion_integration` attribution capture. **CONV-3** records the one genuine gap: there is no session-less inbound *door*, which is integration-phase work with an in-house precedent, not a redesign.
+
+**Do not mark this phase started until:** the Foundation Completion Programme gate is released by the owner, and Phase 8's workflow is built and verified against `MASTER_INTEGRATION_CATALOG.md §2` with its `§2a` corrections.
 
 Objective:
 

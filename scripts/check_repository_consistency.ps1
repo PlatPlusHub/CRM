@@ -6,14 +6,22 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Nine checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Eleven checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
-  9 manifest migration state vs the actual migration files):
+  9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
+  11 manifest decision IDs resolve in the findings SSOT):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
     Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity ·
-    Check 9 manifest migration count/latest/fingerprint vs supabase/migrations.
+    Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
+    Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
+    Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3).
+
+  Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
+  another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
+  told to look up actually EXIST in the register that claims to define it (11).
+
   Details inline. Original two checks documented below:
 
     1) BROKEN REFERENCES — in Living docs (repo-root *.md, _ORVION_CANONICAL/** except the
@@ -74,18 +82,53 @@ foreach ($md in $livingDocs) {
 Write-Host "== Check 2: intra-file status contradiction in reports/master ==" -ForegroundColor Cyan
 
 $masterDir = Join-Path $RepoRoot 'reports/master'
-$idPat = '\b(DC-[0-9]+|R[0-9]+|A[0-9]+|B[0-9]+|N[0-9]+|CDD-[0-9]+|BF-[0-9]+|RC-[0-9]+|OPS-[0-9]+|INV-[0-9]+)\b'
+# GOV-4 (2026-08-30): this pattern used to enumerate the 2026-07 prefixes literally --
+# DC/R/A/B/N/CDD/BF/RC/OPS/INV -- so it matched NONE of the finding IDs minted since
+# (SEC-, FIN-, ATTR-, CONV-, LEAD-, SCHED-, TRANS-, API-, PAR-, TEST-, GOV-, DOC-EXP-, ...).
+# Check 2 was therefore structurally blind to every finding created in the last month while
+# still printing a verdict, which is the "guard written against the first instance takes that
+# instance's shape" class this repository keeps re-discovering. The generic alternative below
+# matches any PREFIX-N / PREFIX-SUB-N / PREFIX-Nx id; the bare single-letter forms (R8, A3, B3,
+# N1) keep their own alternatives because they carry no dash. Safe to widen because Check 2
+# only ever treats an id as a row's SUBJECT when it leads a table row or a `###` heading.
+$idPat = '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|R[0-9]+|A[0-9]+|B[0-9]+|N[0-9]+)\b'
 
 if (Test-Path $masterDir) {
     foreach ($md in Get-ChildItem $masterDir -Filter *.md -File) {
         $openAt = @{}      # id -> "line" where a table-row status cell is exactly OPEN
         $resolvedAt = @{}  # id -> "line" where the id is marked resolved
+        $blockId = $null   # id of the `### <ID> — ...` detail block currently being read
         $lineNo = 0
         foreach ($line in [System.IO.File]::ReadAllLines($md.FullName)) {
             $lineNo++
+            # Track which detail block we are inside. The register states a block's verdict on its
+            # own `- **Status:** FIXED` field far more often than in the heading, and the check
+            # previously read ONLY the heading -- so the row-vs-detail contradiction it was built
+            # for (the DC-16 bug) was invisible in exactly the form the register actually writes.
+            # Proven by a cross-line probe on 2026-08-30 that the heading-only version did not catch.
+            $blockHead = [regex]::Match($line, '^###\s+(?<id>' + $idPat.Trim('\b') + ')')
+            if ($line -match '^#{1,3}\s') { $blockId = $(if ($blockHead.Success) { $blockHead.Groups['id'].Value } else { $null }) }
+            if ($blockId -and $line -match '^\s*-\s*\*\*Status:?\*\*.*\b(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b') {
+                $resolvedAt[$blockId] = $lineNo
+            }
             # OPEN only when it is a padded table cell: | OPEN | (kills prose false-positives)
             $rowOpen = $line -match '\|\s*OPEN\s*\|'
-            $rowResolved = $line -match '✅|\bRESOLVED\b|\bIMPLEMENTED\b'
+            # The resolved marker must LEAD a table cell, not merely appear somewhere on the line.
+            # Found when GOV-4 widened $idPat above: AUDIT-2 is legitimately OPEN, and its title cell
+            # says "(`subscription_plans` itself resolved by SPEC-120)" -- prose about a DIFFERENT
+            # object. A whole-line match (PowerShell -match is case-insensitive) read that as the
+            # row's own status and reported a contradiction with itself. Cell-anchoring keeps the
+            # precision this script's header demands, since every real status cell leads with the
+            # marker (`✅RESOLVED (SPEC-117)`, `**RESOLVED 2026-08-24 ...**`, `✅IMPLEMENTED ...`).
+            # `###` detail-block headings keep the loose match: they are prose, not cells.
+            if ($line -match '^###\s') {
+                $rowResolved = $line -match '✅|\bRESOLVED\b|\bIMPLEMENTED\b'
+            } else {
+                $rowResolved = $false
+                foreach ($cell in ($line -split '\|')) {
+                    if ($cell.Trim() -match '^(\*\*)?\s*(✅|RESOLVED\b|IMPLEMENTED\b)') { $rowResolved = $true; break }
+                }
+            }
             if (-not ($rowOpen -or $rowResolved)) { continue }
             # Only the row's leading ID (first table cell) is the row's subject — avoids
             # counting every id mentioned in a multi-id justification line.
@@ -474,6 +517,41 @@ if (-not $mNarr.Success) {
         $issues++
     } else {
         Write-Host "  README and manifest both name $ptr" -ForegroundColor Green
+    }
+}
+
+# 11. GOV-3: the manifest lists its open owner decisions as IDs ONLY, and states that "every
+#     definition, its evidence and its status live in MASTER_GAP_REGISTER.md". On 2026-08-30 that
+#     promise was false for five of twenty-five ids -- A3, BLOCKED-4, BLOCKED-5, CANON-26-1 and
+#     LIC-1 appeared in NO register row, so a fresh agent following the boot sequence to look one
+#     up reached a dead end in the governance chain. GOVERNANCE.md section 2 makes the register the
+#     SSOT for accepted findings and requires every other Master to reference an ID rather than
+#     restate the finding; an id the manifest raises that the register does not define is that rule
+#     broken in the one direction the boot sequence actually walks. Check 1 cannot see this: these
+#     are finding IDs, not document filenames.
+Write-Host "== Check 11: manifest open-decision IDs resolve in the gap register ==" -ForegroundColor Cyan
+$manifestRaw = Get-Content (Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md') -Raw
+$registerRaw = Get-Content (Join-Path $RepoRoot 'reports/master/MASTER_GAP_REGISTER.md') -Raw
+$decLine = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
+if (-not $decLine) {
+    Write-Host "  MANIFEST has no 'Open owner decisions' line -- cannot verify" -ForegroundColor Red
+    $issues++
+} else {
+    # Same id shape as Check 2, plus the bare A<n> form. Deliberately applied to the WHOLE line,
+    # resolved ids included: an id the manifest calls resolved must still be findable, because the
+    # register is where its evidence lives.
+    $found = [regex]::Matches($decLine, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
+             ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    $orphans = @($found | Where-Object { $registerRaw -notmatch ('(?m)\b' + [regex]::Escape($_) + '\b') })
+    if ($orphans.Count -gt 0) {
+        foreach ($o in $orphans) {
+            Write-Host "  ORPHAN ID: manifest raises '$o' but MASTER_GAP_REGISTER.md defines no such finding" -ForegroundColor Red
+        }
+        Write-Host "  Remedy: add the row to MASTER_GAP_REGISTER.md (a pointer row is fine when another" -ForegroundColor DarkGray
+        Write-Host "  document legitimately owns it), or stop raising the id in the manifest." -ForegroundColor DarkGray
+        $issues += $orphans.Count
+    } else {
+        Write-Host "  all $($found.Count) manifest decision IDs resolve in the register" -ForegroundColor Green
     }
 }
 
