@@ -480,6 +480,31 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **ADMIN-1 — API-3 TENANT-ADMINISTRATION FAMILY, 2026-08-30 (`202607058000`).**
+     The group that CREATES the unlinked memberships IDENT-1 exploited and GRANTS the roles it
+     inherited. **ADMIN-1 (High):** `create_tenant_user` accepted `p_auth_user_id` from the caller
+     and validated it against NOTHING — the FK proves an identity exists, not whose it is. Canon 34
+     settles the rule: the Human Identity owns the verified email, the membership owns only what the
+     person may DO. Reproduced — Agency A’s owner bound ‘Alice’ to BOB’S identity from Agency B:
+     actions misattributed, the real Alice PERMANENTLY LOCKED OUT, and Bob’s `my_memberships()`
+     returned both agencies. Fixed with a BEFORE I/U trigger on `users`, **layer chosen by
+     measurement and deliberately unlike IDENT-1’s**: 120 linked rows carry ZERO divergent emails,
+     and `users.scope_update` lets any MANAGE_USERS holder rebind by direct DML, so a function-only
+     check was a half-fix. SECURITY DEFINER is mandatory because `authenticated` cannot read
+     `auth.users` — under INVOKER the guard would allow every divergence.
+     **Proven NOT defects, each by experiment rather than inspection:** zero-owner is unreachable
+     (ADMIN-2 — `emit_role_change` is AFTER and re-checks MANAGE_USERS once the granting row is
+     inactive; real but ACCIDENTAL, so test 76 pins it), 42 unproduced event codes are Fundamental
+     Domain Structure (ADMIN-3), and `one_primary_idx`, the department-name index and the
+     transfer/role events all work. **MEAS-1:** my own ‘no producer’ detector over-reported by 7
+     because generic emitters carry the code in TRIGGER ARGUMENTS — caught by a contradiction with a
+     test I had just run, and corrected before any finding was recorded. **TEST-65:** ten fixture
+     rows modelled impossible humans; the static pre-check missed them and the suite caught them.
+     **No owner decision was needed from this family** — every question was derivable from canon,
+     schema or experiment. Test 76 (23); HTTP 282 → 298; **API-3 20 → 16.**
+     Next: the lead-routing family (`assign_lead_round_robin`, `reassign_lead`, `lead_origin`,
+     `lead_booking_readiness`) — the largest remaining coherent group, and the one carrying
+     acquisition-attribution consequences.
    * **IDENT-1 / IDENT-4 — API-3 CANON-34 IDENTITY FAMILY, 2026-08-30 (`202607057800`, `202607057900`).**
      The family SEC-1 called INTENTIONAL because its tables are owned by `auth.uid()` rather than by
      a tenant permission. That classification was asserted STRUCTURALLY and never tested

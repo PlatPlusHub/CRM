@@ -350,6 +350,93 @@ $revoked = (Psql "select status_code from public.trusted_devices where id='$devI
 Check "...and the row really changed to revoked -- a 204 alone would not prove the UPDATE ran" ($revoked -eq 'revoked') "status=$revoked"
 
 
+
+# =================================================================================================
+# ADMIN-1 -- the tenant-administration family over the wire.
+#
+# create_tenant_user, assign_user_branch, revoke_user_role and create_department had no HTTP
+# evidence at all. The one that matters here is the TABLE endpoint: PostgREST serves
+# POST /rest/v1/users as readily as rpc/create_tenant_user, and users.scope_update grants UPDATE to
+# any MANAGE_USERS holder -- so a check living only inside the RPC would have been a half-fix.
+# =================================================================================================
+
+# A spare identity to play the "foreign human". Its email is deliberately NOT the one the
+# memberships below claim, which is the whole shape of ADMIN-1.
+Psql @"
+insert into auth.users (id, email, email_confirmed_at)
+values ('0d110000-0000-0000-0000-0000000000f9','foreign.human@elsewhere.test', now());
+"@ | Out-Null
+
+$r = Rpc $owner 'create_tenant_user' @{ p_full_name = 'HTTP Invitee'; p_email = 'http.invitee@ident.test' }
+Check "POSITIVE CONTROL: create_tenant_user creates an UNLINKED membership over HTTP -- the invite flow IDENT-1's claim path consumes" (Ok $r) "$($r.StatusCode) $(Err $r)"
+$inviteeId = (Val $r)
+
+$unlinked = (Psql "select coalesce(auth_user_id::text,'NULL') from public.users where id='$inviteeId';").Trim()
+Check "...and it really is unlinked, waiting to be claimed" ($unlinked -eq 'NULL') "auth_user_id=$unlinked"
+
+# ADMIN-1 over the wire: name one human, attach a different one.
+$r = Rpc $owner 'create_tenant_user' @{ p_full_name = 'Impersonated'; p_email = 'victim@ident.test'
+                                        p_auth_user_id = '0d110000-0000-0000-0000-0000000000f9' }
+Check "ADMIN-1 CLOSED: binding a membership to a DIFFERENT human's identity is refused over HTTP -- it previously succeeded, locking the named person out and granting the bound one a tenant they never joined" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# The direct-DML half, which exists only over HTTP.
+$body = "{""tenant_id"":""$T"",""full_name"":""Planted"",""email"":""planted@ident.test""," +
+        """is_active"":true,""auth_user_id"":""0d110000-0000-0000-0000-0000000000f9""}"
+$r = Invoke-WebRequest -Uri "$API/rest/v1/users" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $owner" } -ContentType 'application/json' -Body $body
+Check "and the TABLE endpoint is refused too -- a MANAGE_USERS holder can POST /rest/v1/users directly, so the rule had to live below the RPC" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$planted = (Psql "select count(*) from public.users where email in ('victim@ident.test','planted@ident.test');").Trim()
+Check "NON-MUTATION: neither impersonating membership exists" ($planted -eq '0') "rows=$planted"
+
+# An employee holds no MANAGE_USERS -- the capability itself, not just its rules.
+$r = Rpc $emp 'create_tenant_user' @{ p_full_name = 'By Employee'; p_email = 'by.employee@ident.test' }
+Check "an ordinary employee cannot create a tenant user over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# create_department, and its set-level uniqueness.
+$r = Rpc $owner 'create_department' @{ p_branch_id = '0d110000-0000-0000-0000-00000000aa01'; p_department_type_code = 'sales'; p_name = 'HTTP Sales Floor' }
+Check "create_department creates a department over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'create_department' @{ p_branch_id = '0d110000-0000-0000-0000-00000000aa01'; p_department_type_code = 'sales'; p_name = 'HTTP Sales Floor' }
+Check "...and a duplicate active name in the same branch is refused -- departments_unique_name_per_branch_idx over the wire" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# assign_user_branch, and the audit row the RPC does not write itself.
+# The invitee created above, which is certainly a membership in this tenant. Assigned TWICE on
+# purpose: emit_user_branch_transfer only fires when a PRIOR assignment exists, because a first
+# posting is not a transfer. Guessing an id from the fixture is what made this fail the first time.
+$r = Rpc $owner 'assign_user_branch' @{ p_user_id = $inviteeId; p_branch_id = '0d110000-0000-0000-0000-00000000aa01'
+                                        p_is_primary = $true; p_transfer_type_code = $null }
+Check "assign_user_branch gives the new member their first posting over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'assign_user_branch' @{ p_user_id = $inviteeId; p_branch_id = '0d110000-0000-0000-0000-00000000aa01'
+                                        p_is_primary = $false; p_transfer_type_code = 'permanent' }
+Check "assign_user_branch records a SECOND assignment over HTTP -- which is what makes it a transfer" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$xfer = (Psql "select count(*) from public.events where tenant_id='$T' and event_type_code='user_branch_transfer_completed';").Trim()
+Check "...and the transfer reached the audit spine -- the RPC emits nothing, so this is the trigger" ($xfer -ne '0') "events=$xfer"
+
+# revoke_user_role. The grant is seeded from the platform because ORVION exposes no assign-role RPC;
+# roles are granted by direct DML through user_role_assignments' MANAGE_USERS-gated policy.
+$roleAsg = (Psql @"
+insert into public.user_role_assignments (tenant_id, user_id, role_id, scope_type)
+select '$T', '$inviteeId', r.id, 'tenant' from public.roles r where r.code = 'employee'
+returning id;
+"@).Trim()
+Check "a role grant exists to revoke -- the fixture is real, not an empty target" ($roleAsg -ne '') "id=$roleAsg"
+
+$r = Rpc $owner 'revoke_user_role' @{ p_assignment_id = $roleAsg }
+Check "revoke_user_role ends a grant over HTTP -- its first behavioural evidence" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$live = (Psql "select is_active::text from public.user_role_assignments where id='$roleAsg';").Trim()
+Check "...and the grant really is inactive -- a 204 alone would not prove the UPDATE ran" ($live -eq 'f' -or $live -eq 'false') "is_active=$live"
+
+$removed = (Psql "select count(*) from public.events where tenant_id='$T' and event_type_code='role_removed';").Trim()
+Check "...and role_removed reached the audit spine -- revoke_user_role emits nothing itself, so emit_role_change is what records the privilege change" ($removed -ne '0') "events=$removed"
+
+$r = Rpc $emp 'revoke_user_role' @{ p_assignment_id = $roleAsg }
+Check "and an ordinary employee cannot revoke a role over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

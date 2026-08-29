@@ -158,11 +158,15 @@ select is(
   0,
   'the unclaimed attacker sees NO users at all -- current_tenant_id() is null, so RLS hides every row and a direct UPDATE has nothing to hit');
 
+-- The email deliberately MATCHES the attacker's own identity. ADMIN-1's binding trigger is a BEFORE
+-- trigger, so it answers before RLS's WITH CHECK does; using a mismatched address here would prove
+-- only that the binding rule works and would say nothing about RLS. Making the row otherwise valid
+-- leaves RLS as the only thing that can refuse it, which is what this assertion claims to show.
 select throws_ok(
   $q$insert into public.users (tenant_id, full_name, email, is_active, auth_user_id)
-     values ('75000000-0000-0000-0000-000000000001','Self','self@ident.test',true,'75000000-0000-0000-0000-0000000000a9')$q$,
+     values ('75000000-0000-0000-0000-000000000001','Self','cfo@ident.test',true,'75000000-0000-0000-0000-0000000000a9')$q$,
   '42501', null,
-  'and cannot self-provision a membership either -- so the RPC is the ONLY reachable claim path, which is where the rule belongs');
+  'and cannot self-provision a membership either -- the row is otherwise VALID (its email matches its own identity), so RLS is what refuses it, and the RPC is the only reachable claim path');
 
 -- =============================================================================================
 -- 12-13. A banned or deleted identity may not claim. A JWT issued before the ban stays valid until
