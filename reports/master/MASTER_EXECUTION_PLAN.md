@@ -480,6 +480,29 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **BOOK-1 — API-3 BOOKING/PASSENGER FAMILY, 2026-08-30 (`202607057700`).**
+     **Begins with a correction:** the previous report named this family as the next of API-3's 25
+     uncovered endpoints. It was wrong — all three ALREADY had HTTP evidence and none is among the
+     25. The audit was run regardless, because a 200 is not evidence of a capability, and it found a
+     High-severity money defect behind endpoints that had been "covered" for weeks.
+     **BOOK-1:** both writer RPCs refuse to attach to a closed booking; nothing else did. Reproduced
+     as an ordinary employee holding every permission the RPC charges — RPC refused, direct INSERT
+     succeeded with **selling 5000 on a CANCELLED booking**, `commission_rate` 0.10 derived
+     automatically, and **no event**, so unaudited too. The RLS `WITH CHECK` requires the PARENT TO
+     BE VISIBLE rather than the actor permitted, and the financial guard checks scope against a
+     caller-supplied column.
+     Closed with BEFORE INSERT/UPDATE triggers carrying the RPCs' rules verbatim. Three decisions
+     recorded as decisions: plain BEFORE rather than deferred (this invariant holds at every
+     instant, unlike FIN-8/FIN-10); **no trigger on `bookings`**, because cancelling a booking that
+     already has items is correct behaviour — deliberately asymmetric with FIN-10; SECURITY DEFINER
+     plus a mandatory REVOKE, because under INVOKER the check would be RLS-blind to the parent.
+     **NOT the aggregate-across-rows subclass** — SEC-1's clause-3 filter would not have found it.
+     `10_grant_model_test.sql` caught the first draft leaving EXECUTE to PUBLIC. **BOOK-2** recorded
+     and NOT fixed: the per-passenger overrides are read by nothing, so no invariant is derivable.
+     **API-3 stays at 25.** Next by evidence: the canon-34 identity family (`my_trusted_devices`,
+     `record_trusted_device`, `revoke_trusted_device`, `my_memberships`, `activate_membership`) —
+     SEC-1 found those the ONLY writable tables with no governing trigger, classified INTENTIONAL,
+     and that classification has never been tested over HTTP.
    * **PAR-3 / PAR-4 — VERIFICATION-METHODOLOGY REVIEW, 2026-08-30. No migration; the database did
      not change.** The owner asked that ORVION's METHODS of discovery, testing and measurement be
      reviewed adversarially rather than extended. Done by controlled mutation on local — never on

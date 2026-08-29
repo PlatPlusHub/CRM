@@ -287,6 +287,65 @@ Check "FIN-8 CLOSED: a bare journal_entries row via PATCH/POST on the TABLE endp
 $orphans = (Psql "select count(*) from public.journal_entries je where je.tenant_id='$T' and (select count(*) from public.journal_entry_lines l where l.journal_entry_id=je.id) < 2;").Trim()
 Check "NON-MUTATION: no entry in this tenant has fewer than two lines" ($orphans -eq '0') "bad_entries=$orphans"
 
+
+# =================================================================================================
+# BOOK-1 -- a closed booking cannot earn new revenue, proven over the wire.
+#
+# The three booking/passenger endpoints ALREADY had HTTP evidence, and still hid this: the RPC
+# refused, the TABLE endpoint did not. That is the whole reason API-3 audits capability rather than
+# status codes. PostgREST serves `POST /rest/v1/booking_items` as readily as `rpc/create_booking_item`,
+# and one request is one transaction -- so this is the real attack shape, not a contrived one.
+# =================================================================================================
+$closingId = Val (Rpc $emp 'create_booking' @{ p_customer_id = $customerId; p_title = 'Cancelled trip'
+                                               p_branch_id = '0b110000-0000-0000-0000-00000000aa01'
+                                               p_department_id = '0b110000-0000-0000-0000-00000000aa02' })
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $closingId; p_to_status = 'pending_approval'; p_reason = 'submit' }
+$r = Rpc $emp 'advance_booking' @{ p_booking_id = $closingId; p_to_status = 'cancelled'; p_reason = 'customer withdrew' }
+Check "a booking is cancelled over HTTP -- advance_booking's branch path" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$state = (Psql "select booking_status_code from public.bookings where id='$closingId';").Trim()
+Check "POSITIVE CONTROL: it really is cancelled, so the refusals below are the lifecycle rule" ($state -eq 'cancelled') "status=$state"
+
+$r = Rpc $emp 'create_booking_item' @{ p_booking_id = $closingId; p_service_type_code = 'hotel'
+                                       p_currency_code = 'EGP'; p_cost_amount = 3000; p_selling_amount = 5000 }
+Check "the RPC refuses an item on a cancelled booking over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# The attack: the same insert through the TABLE endpoint, which charges no capability when it names
+# itself as owner, and which used to succeed -- selling 5000 with commission_rate derived at 0.10.
+$body = "{""tenant_id"":""$T"",""booking_id"":""$closingId"",""service_type_code"":""hotel""," +
+        """base_status_code"":""draft"",""currency_code"":""EGP"",""cost_amount"":3000,""selling_amount"":5000," +
+        """owner_user_id"":""0b110000-0000-0000-0000-00000000aa04""," +
+        """sales_owner_user_id"":""0b110000-0000-0000-0000-00000000aa04""," +
+        """operational_owner_user_id"":""0b110000-0000-0000-0000-00000000aa04""," +
+        """owner_branch_id"":""0b110000-0000-0000-0000-00000000aa01""," +
+        """owner_department_id"":""0b110000-0000-0000-0000-00000000aa02""}"
+$r = Invoke-WebRequest -Uri "$API/rest/v1/booking_items" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $emp" } -ContentType 'application/json' -Body $body
+Check "BOOK-1 CLOSED: the TABLE endpoint is refused too -- 5000 of selling on a cancelled booking was the original reproduction" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$leaked = (Psql "select count(*) from public.booking_items where booking_id='$closingId';").Trim()
+Check "NON-MUTATION: the cancelled booking carries zero items after both refusals" ($leaked -eq '0') "items=$leaked"
+
+# And the passenger half. NOT on $itemId: the refund branch above cancels that item, so linking to
+# it is refused for the RIGHT reason and a "positive control" pointing at it proves nothing. Found by
+# this assertion failing with `cannot add a passenger to a cancelled booking item` -- the control was
+# not positive. A fresh OPEN booking and item is what makes the next line evidence.
+$openBk = Val (Rpc $emp 'create_booking' @{ p_customer_id = $customerId; p_title = 'Open trip'
+                                            p_branch_id = '0b110000-0000-0000-0000-00000000aa01'
+                                            p_department_id = '0b110000-0000-0000-0000-00000000aa02' })
+$openItem = Val (Rpc $emp 'create_booking_item' @{ p_booking_id = $openBk; p_service_type_code = 'hotel'
+                                                   p_currency_code = 'EGP'; p_cost_amount = 1000; p_selling_amount = 1500 })
+$r = Rpc $emp 'link_passenger_to_booking_item' @{ p_booking_item_id = $openItem; p_passenger_id = $paxId }
+Check "POSITIVE CONTROL: a passenger still links to an item on an OPEN booking -- link_passenger_to_booking_item over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$linked = (Psql "select count(*) from public.booking_item_passengers where booking_item_id='$openItem';").Trim()
+Check "...and it actually wrote the link row -- a 2xx alone would not prove a row exists" ($linked -ne '0') "links=$linked"
+
+# The item-level half of BOOK-1, which is a different rule from the booking-level half above.
+$r = Rpc $emp 'link_passenger_to_booking_item' @{ p_booking_item_id = $itemId; p_passenger_id = $paxId }
+Check "and a passenger is refused on the CANCELLED item from the refund branch -- the item-level rule, distinct from the booking-level one" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }
