@@ -51,7 +51,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 |---|---|---|---|---|---|---|---|---|
 | `activate_membership` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | users | 2 | -- |
 | `add_customer_contact_method` | p_customer_id uuid, p_contact_method_type_code text, p_value text, p_is_primary boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_contact_methods | customer_contact_methods | 4 | -- |
-| `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | -- |
+| `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | yes |
 | `add_document_version` | p_document_id uuid, p_file_name text, p_file_type_code text, p_file_size bigint | `uuid` | invoker | CREATE_DOCUMENT_VERSION | document_versions | document_versions, documents | 4 | yes |
 | `add_quotation_item` | p_quotation_id uuid, p_service_type_code text, p_unit_price numeric, p_quantity numeric... | `uuid` | invoker | CREATE_QUOTATION | quotation_items | quotations | 5 | yes |
 | `advance_booking` | p_booking_id uuid, p_to_status text, p_reason text | `text` | invoker | ALLOW_ISSUE_WITH_NEGATIVE_BALANCE + per transition: APPROVE_BOOKING, CANCEL_BOOKING, CREATE_BOOKING, ISSUE_BOOKING, REFUND_BOOKING, REISSUE_BOOKING | - | bookings | 5 | yes |
@@ -78,7 +78,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `create_customer` | p_customer_type_code text, p_full_name text, p_first_name text, p_family_name text, p_c... | `uuid` | invoker | CREATE_CUSTOMER | customer_identity_signals, customers | - | 5 | yes |
 | `create_department` | p_branch_id uuid, p_department_type_code text, p_name text | `uuid` | invoker | MANAGE_DEPARTMENTS | departments | - | 3 | -- |
 | `create_invoice` | p_customer_id uuid, p_currency_code text, p_total_amount numeric, p_booking_id uuid, p_... | `uuid` | invoker | CREATE_INVOICE | invoices | - | 5 | yes |
-| `create_journal_entry` | p_source_type_code text, p_entry_date date, p_description text, p_lines jsonb, p_source... | `uuid` | invoker | CREATE_JOURNAL_ENTRY | journal_entries, journal_entry_lines | - | 7 | -- |
+| `create_journal_entry` | p_source_type_code text, p_entry_date date, p_description text, p_lines jsonb, p_source... | `uuid` | invoker | CREATE_JOURNAL_ENTRY | journal_entries, journal_entry_lines | - | 7 | yes |
 | `create_lead` | p_branch_id uuid, p_department_id uuid, p_lead_source_code text, p_title text, p_priori... | `uuid` | invoker | CREATE_LEAD | leads | - | 6 | yes |
 | `create_marketing_campaign` | p_campaign_name text, p_platform_code text, p_external_campaign_id text, p_started_at t... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | marketing_campaigns | - | 3 | -- |
 | `create_passenger` | p_first_name text, p_family_name text, p_full_name text, p_passenger_type_code text, p_... | `uuid` | invoker | CREATE_BOOKING_ITEM | passengers | - | 7 | yes |
@@ -99,7 +99,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `lead_timeline` | p_lead_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
 | `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | -- |
 | `link_passenger_to_booking_item` | p_booking_item_id uuid, p_passenger_id uuid, p_selling_amount_override numeric, p_cost_... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_item_passengers | - | 7 | yes |
-| `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customers | 5 | -- |
+| `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 6 | yes |
 | `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | -- |
 | `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | -- |
 | `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | -- |
@@ -114,14 +114,14 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `review_finance_approval` | p_approval_request_id uuid, p_decision text, p_reason text | `text` | invoker | APPROVE_FINANCE or CREATE_BOOKING_ITEM | - | approval_requests, booking_items | 6 | yes |
 | `revoke_trusted_device` | p_device_id uuid | `void` | invoker | - | - | trusted_devices | 2 | -- |
 | `revoke_user_role` | p_assignment_id uuid | `void` | invoker | MANAGE_USERS | - | user_role_assignments | 2 | -- |
-| `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | -- |
+| `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
 | `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | -- |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | -- |
 
-**71 RPC endpoints executable by `authenticated`; 42 exercised over HTTP by a suite.**
+**71 RPC endpoints executable by `authenticated`; 46 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

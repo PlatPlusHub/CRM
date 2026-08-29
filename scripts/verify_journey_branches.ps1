@@ -242,6 +242,51 @@ $r = Get-Rest $emp2 "my_sales_performance?select=*"
 $theirPerf = @(Val $r)
 Check "...and their personal report is empty, not the other employee's" ($theirPerf.Count -eq 0) "rows=$($theirPerf.Count)"
 
+# ---------------------------------------------------------------------------------------------
+# API-3 / FIN-8 -- the general ledger over HTTP.
+# `create_journal_entry` had NO HTTP evidence at all, and auditing it found FIN-8: the double-entry
+# invariant lived only inside the RPC, so a CREATE_JOURNAL_ENTRY holder could INSERT an unbalanced
+# entry through the PostgREST TABLE endpoint. PostgREST serves tables, and each request is its own
+# transaction -- so the deferred balance constraint now fires on that request's COMMIT, which is
+# what makes the table endpoint safe rather than merely discouraged.
+# ---------------------------------------------------------------------------------------------
+Write-Host "`n-- the general ledger (API-3 / FIN-8) --"
+
+# Seeded through the RPC as finance, deliberately: calling it via psql runs as `postgres`, where
+# app.current_tenant_id() is null and the seed lands nowhere -- which is how the first run of this
+# block failed with "unknown or inactive chart account code: 1000" while looking like a real defect.
+$r = Rpc $fin 'seed_default_chart_of_accounts' @{}
+Check "finance seeds the tenant's chart of accounts over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'create_journal_entry' @{ p_source_type_code = 'manual_entry'; p_entry_date = '2026-08-29'; p_description = 'employee attempt'
+                                        p_lines = @(@{account_code='1000';debit=100;currency='EGP'}, @{account_code='4000';credit=100;currency='EGP'}) }
+Check "an employee CANNOT post to the general ledger over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'create_journal_entry' @{ p_source_type_code = 'manual_entry'; p_entry_date = '2026-08-29'; p_description = 'http balanced'
+                                        p_lines = @(@{account_code='1000';debit=2500;currency='EGP'}, @{account_code='4000';credit=2500;currency='EGP'}) }
+Check "POSITIVE CONTROL: finance posts a BALANCED entry over HTTP -- create_journal_entry's first HTTP evidence (API-3)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+$jeId = (Val $r)
+
+$lineSum = (Psql "select coalesce(sum(debit_amount),0)::text || '/' || coalesce(sum(credit_amount),0)::text || '/' || count(*)::text from public.journal_entry_lines where journal_entry_id='$jeId';").Trim()
+Check "...and it really landed: two lines, debits = credits" ($lineSum -eq '2500.0000/2500.0000/2') "sum=$lineSum"
+
+$evt = (Psql "select count(*) from public.events where entity_id='$jeId' and event_type_code='journal_entry_created';").Trim()
+Check "...and the audit spine recorded it" ($evt -eq '1') "events=$evt"
+
+$r = Rpc $fin 'create_journal_entry' @{ p_source_type_code = 'manual_entry'; p_entry_date = '2026-08-29'; p_description = 'http unbalanced'
+                                        p_lines = @(@{account_code='1000';debit=2500;currency='EGP'}, @{account_code='4000';credit=1;currency='EGP'}) }
+Check "an UNBALANCED entry is refused over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# FIN-8's real attack shape: the TABLE endpoint, not the RPC. One request = one transaction, so the
+# entry row commits alone with zero lines and the deferred constraint fires.
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entries" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $fin" } -ContentType 'application/json' `
+        -Body "{""tenant_id"":""$T"",""source_type_code"":""manual_entry"",""entry_date"":""2026-08-29"",""description"":""forged""}"
+Check "FIN-8 CLOSED: a bare journal_entries row via PATCH/POST on the TABLE endpoint is refused -- an entry with no lines is not an entry" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$orphans = (Psql "select count(*) from public.journal_entries je where je.tenant_id='$T' and (select count(*) from public.journal_entry_lines l where l.journal_entry_id=je.id) < 2;").Trim()
+Check "NON-MUTATION: no entry in this tenant has fewer than two lines" ($orphans -eq '0') "bad_entries=$orphans"
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

@@ -233,6 +233,40 @@ if ($empPerf.Count -eq 1) {
 $alexPerf = @(Val (Get-Rest $alexEmp "my_sales_performance?select=*"))
 Check "the Alexandria employee sees only their own" ($alexPerf.Count -eq 1) "rows=$($alexPerf.Count)"
 
+# ---------------------------------------------------------------------------------------------
+# API-3 / CUST-1 -- customer identity merge over HTTP.
+# `merge_customer_identity` had NO HTTP evidence, and auditing it found CUST-1: the re-pointing loop
+# read the FIRST column of each foreign key, which TENANT-1 had silently turned into `tenant_id` when
+# it made the customer FKs composite. The merge archived the source, wrote its audit row and emitted
+# a CRITICAL event while moving nothing. This block walks the real deduplication an agency performs.
+# ---------------------------------------------------------------------------------------------
+Write-Host "`n-- customer identity merge (API-3 / CUST-1) --"
+
+$mDup = Val (Rpc $owner 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Merge Dup'; p_primary_phone = '+201000000901' })
+$mReal = Val (Rpc $owner 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Merge Real'; p_primary_phone = '+201000000902' })
+Check "two duplicate customer records exist" ($mDup -and $mReal -and $mDup -ne $mReal) "dup=$mDup real=$mReal"
+
+$r = Rpc $owner 'add_customer_note' @{ p_customer_id = $mDup; p_note_text = 'history on the duplicate' }
+Check "the DUPLICATE carries history that must survive the merge" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'merge_customer_identity' @{ p_source_customer_id = $mDup; p_target_customer_id = $mReal; p_reason = 'employee attempt' }
+Check "an employee CANNOT merge customer identities over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'merge_customer_identity' @{ p_source_customer_id = $mDup; p_target_customer_id = $mReal; p_reason = 'duplicate record' }
+Check "POSITIVE CONTROL: the owner merges over HTTP -- merge_customer_identity's first HTTP evidence (API-3)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$moved = (Psql "select count(*) from public.customer_notes where customer_id='$mReal' and note_text='history on the duplicate';").Trim()
+Check "CUST-1 CLOSED: the duplicate's note is now on the SURVIVING customer -- before the fix it never moved" ($moved -eq '1') "notes_on_target=$moved"
+
+$left = (Psql "select count(*) from public.customer_notes where customer_id='$mDup';").Trim()
+Check "...and nothing is left stranded on the archived source" ($left -eq '0') "notes_on_source=$left"
+
+$arch = (Psql "select is_archived::text from public.customers where id='$mDup';").Trim()
+Check "the source is archived, not deleted" ($arch -eq 't' -or $arch -eq 'true') "archived=$arch"
+
+$r = Rpc $owner 'merge_customer_identity' @{ p_source_customer_id = $mDup; p_target_customer_id = $mReal; p_reason = 'again' }
+Check "IDEMPOTENCY BOUNDARY: re-merging an already-archived source is refused rather than repeated" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

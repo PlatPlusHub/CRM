@@ -480,6 +480,24 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **API-3, second instalment — the two named endpoints, and both hid a defect (2026-08-29,
+     `202607057300`/`202607057400`).** The owner's instruction was not to manufacture HTTP
+     assertions but to audit the capability behind each uncovered endpoint. Both delivered.
+     **`create_journal_entry` -> FIN-8**: the double-entry invariant lived only inside the RPC, so a
+     `finance_manager` INSERTed a single 1,000,000-debit line with no credit by direct DML in the
+     same transaction the RPC refused it, emitting no event. `debit_xor_credit` is PER-ROW and
+     cannot express a statement about a SET of rows. Closed with deferred CONSTRAINT triggers
+     carrying the RPC's own three rules, and **no session-less exemption** — integrity, not
+     authorization. **FIN-9** recorded: a transactional client can still create a *valid* entry with
+     no event, and an event trigger would double-emit.
+     **`merge_customer_identity` -> CUST-1**, the more serious of the two: it archived the source,
+     wrote its audit row, emitted a CRITICAL event and **re-pointed nothing** — a silent no-op since
+     2026-08-21, because **TENANT-1's composite FKs turned the loop's first-key-column into
+     `tenant_id`**. A prior fix broke it and nothing noticed. Closed by pairing `conkey` with
+     `confkey`, plus the contact-method collision handling the correct loop immediately exposes
+     (delete an exact duplicate, DEMOTE a colliding primary — the target is the surviving identity).
+     **CUST-2** records why no guard caught it: the only tests naming the function checked its event
+     VOCABULARY and its endpoint's EXISTENCE. **API-3 30 -> 25**; contract regenerated to 46 of 71.
    * **DOC-LC-1 — CLOSED 2026-08-29 (`202607057200`).** Canon 26's Document Lifecycle machine had
      never been wired: `app.status_transitions` held zero rows for `documents`, and
      `enforce_archive_authority` returns early unless `is_archived` changes -- it watches the
