@@ -336,6 +336,72 @@ $r = Get-Rest $trn "customers?select=id,full_name"
 $trnCust = @(Val $r)
 Check "...while the trainee still sees the customer master row but none of this history" (($trnCust | Where-Object { $_.id -eq $customerId }).Count -eq 1) "$($r.StatusCode) rows=$($trnCust.Count)"
 
+# =================================================================================================
+Write-Host "`n-- the lead state machine (API-3) --" -ForegroundColor Cyan
+# =================================================================================================
+# `advance_lead` and `convert_lead` were among the 33 endpoints MASTER_API_CONTRACT.md marked as
+# having no HTTP evidence -- and leads are where acquisition becomes revenue, so they are the worst
+# place to be relying on pgTAP alone. This walks the machine over the wire and, more importantly,
+# proves the TRANS-2 HANDLER RULE through PostgREST: that rule has only ever been asserted in pgTAP.
+
+$leadJ = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
+                                        p_lead_source_code = 'google_ads_call'
+                                        p_title = 'Umrah, family of four'; p_customer_id = $customerId })
+Check "the employee opens an attributed lead" ($null -ne $leadJ) "lead=$leadJ"
+
+$r = Rpc $emp 'advance_lead' @{ p_lead_id = $leadJ; p_to_status = 'won'; p_reason = 'skip the machine' }
+Check "a NEW lead cannot jump straight to won -- the state machine holds over HTTP" (-not (Ok $r)) "$($r.StatusCode)"
+
+$r = Rpc $owner 'assign_lead' @{ p_lead_id = $leadJ; p_assignee_user_id = $U_EMP; p_reason = 'front line' }
+Check "the owner assigns it: new -> assigned" (Ok $r) (Err $r)
+
+# assigned -> contacted is NOT advance_lead's to make. Logging a real interaction is what makes a
+# lead contacted, so `record_lead_interaction` owns that transition -- one of three the transition
+# table permits and `advance_lead`'s own VALUES list deliberately omits (TRANS-1 documented this;
+# the first draft of this walk assumed advance_lead drove everything and was refused).
+$r = Rpc $emp 'record_lead_interaction' @{ p_lead_id = $leadJ; p_interaction_type_code = 'phone_call'
+                                           p_summary = 'Called the customer back, discussed dates' }
+Check "logging an interaction is what carries assigned -> contacted" (Ok $r) (Err $r)
+
+foreach ($step in @(
+    @{ to = 'qualified';      why = 'budget and dates confirmed' },
+    @{ to = 'quotation_sent'; why = 'quotation emailed' },
+    @{ to = 'negotiation';    why = 'customer asked about a cheaper hotel' },
+    @{ to = 'won';            why = 'customer accepted' })) {
+    $r = Rpc $emp 'advance_lead' @{ p_lead_id = $leadJ; p_to_status = $step.to; p_reason = $step.why }
+    Check "lead -> $($step.to)" (Ok $r) (Err $r)
+}
+
+# TRANS-2 over HTTP. A SECOND lead assigned to the owner: the employee can SEE it (canon 28 gives
+# `employee` VIEW_DEPARTMENT_QUEUE) but is not its handler and holds no ASSIGN_LEAD, so the handler
+# rule -- not RLS -- must refuse them. Seeing it is asserted first, or the refusal proves nothing.
+$leadO = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
+                                        p_lead_source_code = 'direct_call'
+                                        p_title = 'A colleague''s lead'; p_customer_id = $customerId })
+$r = Rpc $owner 'assign_lead' @{ p_lead_id = $leadO; p_assignee_user_id = '0c110000-0000-0000-0000-00000000aa03'; p_reason = 'owner keeps this one' }
+Check "a second lead is assigned to the OWNER, not the employee" (Ok $r) (Err $r)
+
+$r = Get-Rest $emp "leads?id=eq.$leadO&select=id,lead_status_code"
+Check "POSITIVE CONTROL: the employee CAN SEE the colleague's lead (VIEW_DEPARTMENT_QUEUE)" `
+    ((Ok $r) -and (Val $r).Count -eq 1) "$($r.StatusCode) $($r.Content)"
+
+$r = Rpc $emp 'advance_lead' @{ p_lead_id = $leadO; p_to_status = 'contacted'; p_reason = 'not mine to work' }
+Check "TRANS-2 over HTTP: ...but CANNOT advance it -- the handler rule, not RLS, is what refuses" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# convert_lead: won -> converted, the step where a lead becomes a customer relationship.
+$r = Rpc $emp 'convert_lead' @{ p_lead_id = $leadJ; p_customer_id = $customerId; p_reason = 'booking to follow' }
+Check "convert_lead carries the won lead to converted" (Ok $r) (Err $r)
+
+$r = Get-Rest $emp "leads?id=eq.$leadJ&select=lead_status_code,lead_source_code,attribution_click_id"
+$lj = @(Val $r)[0]
+Check "...and the stored state is 'converted'" ($lj.lead_status_code -eq 'converted') "status=$($lj.lead_status_code)"
+Check "ATTR-3 over HTTP: the acquisition source survived the entire machine unchanged" `
+    ($lj.lead_source_code -eq 'google_ads_call') "source=$($lj.lead_source_code)"
+
+$r = Rpc $emp 'lead_timeline' @{ p_lead_id = $leadJ }
+$tl = @(Val $r)
+Check "the lead timeline records the walk, not just its last state" ($tl.Count -ge 5) "timeline rows=$($tl.Count)"
+
 Write-Host ""
 if ($fail -gt 0) { $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 Write-Host "== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail) { 'Red' } else { 'Green' })

@@ -58,7 +58,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `advance_booking_item` | p_booking_item_id uuid, p_to_status text, p_reason text, p_sub_status_code text, p_canc... | `text` | invoker | UPDATE_BOOKING_ITEM_STATUS + per transition: UPDATE_BOOKING_ITEM_STATUS | - | booking_items | 9 | yes |
 | `advance_complaint` | p_complaint_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_COMPLAINT | - | complaints | 3 | yes |
 | `advance_conversation` | p_conversation_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: CLOSE_CONVERSATION, ESCALATE_CONVERSATION, SEND_MESSAGE | - | conversations | 3 | yes |
-| `advance_lead` | p_lead_id uuid, p_to_status text, p_reason text, p_closure_reason_code text | `text` | invoker | CLOSE_LEAD + per transition: ASSIGN_LEAD, CLOSE_LEAD | - | leads | 7 | -- |
+| `advance_lead` | p_lead_id uuid, p_to_status text, p_reason text, p_closure_reason_code text | `text` | invoker | CLOSE_LEAD + per transition: ASSIGN_LEAD, CLOSE_LEAD | - | leads | 7 | yes |
 | `advance_marketing_campaign` | p_campaign_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: MANAGE_MARKETING_CAMPAIGN | - | marketing_campaigns | 3 | -- |
 | `advance_quotation` | p_quotation_id uuid, p_to_status text, p_reason text | `text` | invoker | per transition: ACCEPT_QUOTATION, CREATE_QUOTATION, SEND_QUOTATION | - | quotations | 4 | yes |
 | `advance_refund` | p_refund_id uuid, p_to_status text, p_reason text | `text` | invoker | RECORD_REFUND + per transition: RECORD_REFUND | - | refunds | 3 | yes |
@@ -70,7 +70,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `assign_task` | p_task_id uuid, p_owner_user_id uuid, p_owner_department_id uuid, p_owner_branch_id uui... | `void` | invoker | ASSIGN_TASK | - | tasks | 4 | -- |
 | `assign_user_branch` | p_user_id uuid, p_branch_id uuid, p_department_id uuid, p_is_primary boolean, p_transfe... | `uuid` | invoker | MANAGE_USERS | user_branch_assignments | - | 4 | -- |
 | `assign_user_role` | p_user_id uuid, p_role_code text, p_scope_type text, p_branch_id uuid, p_department_id ... | `uuid` | invoker | MANAGE_USERS | user_role_assignments | - | 3 | yes |
-| `convert_lead` | p_lead_id uuid, p_customer_id uuid, p_reason text | `uuid` | invoker | inline has_permission check | - | leads | 7 | -- |
+| `convert_lead` | p_lead_id uuid, p_customer_id uuid, p_reason text | `uuid` | invoker | inline has_permission check | - | leads | 7 | yes |
 | `create_booking` | p_customer_id uuid, p_lead_id uuid, p_title text, p_branch_id uuid, p_department_id uui... | `uuid` | invoker | CREATE_BOOKING | bookings | - | 10 | yes |
 | `create_booking_item` | p_booking_id uuid, p_service_type_code text, p_currency_code text, p_cost_amount numeri... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_items | - | 9 | yes |
 | `create_branch` | p_name text, p_slug text, p_branch_type text, p_primary_phone text, p_address text | `uuid` | invoker | MANAGE_BRANCHES | branches | - | 1 | yes |
@@ -96,7 +96,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `issue_receipt` | p_payment_id uuid | `uuid` | invoker | CREATE_RECEIPT | receipts | - | 3 | yes |
 | `lead_booking_readiness` | p_lead_id uuid | `TABLE(lead_id uuid, is_ready boolean, reason_code text, reason text, customer_id uuid, lead_status_code text, requested_service_type_code text, branch_id uuid, department_id uuid, assigned_user_id uuid, expected_value numeric, title text)` | invoker | - | - | - | 2 | -- |
 | `lead_origin` | p_lead_id uuid | `TABLE(first_user_id uuid, first_assigned_at timestamp with time zone, current_user_id uuid, assignment_count integer)` | invoker | - | - | - | 0 | -- |
-| `lead_timeline` | p_lead_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | -- |
+| `lead_timeline` | p_lead_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
 | `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | -- |
 | `link_passenger_to_booking_item` | p_booking_item_id uuid, p_passenger_id uuid, p_selling_amount_override numeric, p_cost_... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_item_passengers | - | 7 | yes |
 | `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customers | 5 | -- |
@@ -121,7 +121,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | -- |
 
-**71 RPC endpoints executable by `authenticated`; 38 exercised over HTTP by a suite.**
+**71 RPC endpoints executable by `authenticated`; 41 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

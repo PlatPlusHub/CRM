@@ -14,6 +14,15 @@
 # functions each package had just changed. -PrimaryLogicHash closes that: it covers the FULL function
 # surface, so drift anywhere is visible rather than drift only where someone thought to look.
 #
+# PAR-1b (2026-08-29): CHECK L2 COMPARES *LOCAL*, AND LOCAL EQUALS THE REPOSITORY ONLY IMMEDIATELY
+# AFTER `npx supabase db reset`. Applying a migration to local by hand mid-session -- which is normal
+# while iterating -- makes local diverge from the migration FILES, and anything read out of it after
+# that is not "the repository's text". That mistake was made twice: once it pushed a non-repository
+# form of `app.document_retention_days` onto Primary while reporting the opposite, and once it
+# produced a false PRIMARY FUNCTION DRIFT alarm. If this check reports drift, RESET LOCAL AND RE-READ
+# BOTH SIDES BEFORE CHANGING ANYTHING ON PRIMARY. The source of truth is supabase/migrations, not any
+# running database.
+#
 # PAR-1a (2026-08-29): USE THIS SCRIPT'S EXPRESSION, NOT AN AD-HOC ONE. The comment-stripping pattern
 # below is built with `chr(10)` deliberately. Writing it as '--[^\n]*' does NOT mean "up to the next
 # newline": inside a POSIX bracket expression the backslash is not an escape, so `[^\n]` reads as

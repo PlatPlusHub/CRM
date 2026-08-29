@@ -453,6 +453,40 @@ additive capability.*
      perform would dress a missing capability as a solved one. STRUCTURALLY UNFILLABLE:
      `subscription_payment_proofs.reviewed_by`, whose FK points at the TENANT membership table while
      the reviewer is the PLATFORM -- recorded as **SPP-3**.
+   * **SEC-2 — RESOLVED 2026-08-29, and it was never one question.** Searching the evidence split it
+     in two. DESCRIPTIVE fields: INTENTIONAL, derived from three independent facts — the permission
+     catalog holds only SPECIFIC mutation permissions (`EDIT_LOCKED_COST`, `UPDATE_BOOKING_ITEM_STATUS`)
+     and no generic `EDIT_<entity>`; not one `app` function updates a descriptive field; canon 28
+     names none. There is no `update_customer` anywhere, so the table endpoint is not a bypass of an
+     intended door -- it IS the door, and RLS scope is the control ORVION chose. CONSEQUENCE-BEARING
+     fields with no guard: DEFECTS, and searching for them found **FIN-6**.
+   * **FIN-6 — CLOSED 2026-08-29 (`202607057100`).** An employee holding CREATE_INVOICE = f and
+     RECORD_PAYMENT = f marked a 50,000 EGP invoice PAID with no payment; changing its AMOUNT was
+     refused in the same transaction, which is what made it conclusive. `guard_financial_capability`
+     charged capability on UPDATE only for MONETARY columns -- right for refunds and quotations,
+     whose status is governed by canon machines, wrong for invoices, where canon defines no machine
+     and `app.status_transitions` has no rows. Status and tax-submission columns now cost the
+     permission the table already charges; finance proven still able to advance an invoice.
+     **FIN-6b** found alongside: the guard mapped `receipts` to a column that does not exist, so its
+     UPDATE branch had been inert since FIN-3 -- the price of the `to_jsonb` comparison that fixed
+     SPEC-159-A. A class assertion now checks every mapped column against the catalog.
+     **FIN-7** recorded: canon defines sixteen state machines and no INVOICE one, so WHICH status
+     changes are legal remains undecided. **DOC-LC-1** recorded: canon's Document Lifecycle machine
+     was never wired into `status_transitions`; derivable, next package.
+   * **API-3 — first instalment paid down (33 → 30).** The lead state machine now has an HTTP walk
+     in `verify_lifecycle_branches.ps1` (57 → 72 assertions): create, assign, contact, qualify,
+     quote, negotiate, win, convert -- plus the discovery that `assigned -> contacted` is owned by
+     `record_lead_interaction` and not `advance_lead` (TRANS-1's documented split; the first draft
+     assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
+     time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
+     source proven to survive the whole machine.
+   * **PAR-1b — a correction to yesterday's correction.** The API-contract report claimed Primary's
+     `document_retention_days` was restored to the repository's exact text. It was not: I read it out
+     of a LOCAL database that had been hand-modified mid-session, so the "fix" moved Primary away
+     from the repository. Settled by experiment -- the migration file's own statement and a clean
+     `db reset` both produce the 27-character form, which both environments now hold, and the
+     function returns NULL on both, so RET-1 was never at risk. The parity script's header now says
+     that local equals the repository ONLY immediately after a reset.
    * **API CAPABILITY CONTRACT — DELIVERED 2026-08-29 (API-2).** `MASTER_API_CONTRACT.md`, GENERATED
      from `pg_catalog` and `app.status_transitions` by `scripts/generate-api-contract.ps1` and kept
      honest by a new **Check L3** in `check_database_parity.ps1` that regenerates and diffs it
