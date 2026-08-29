@@ -79,7 +79,12 @@ create temporary table _rpc_owned (table_name text, from_status text, to_status 
 insert into _rpc_owned values
   ('leads','new',       'assigned',  'app.assign_lead'),
   ('leads','assigned',  'contacted', 'app.record_lead_interaction'),
-  ('leads','won',       'converted', 'app.convert_lead');
+  ('leads','won',       'converted', 'app.convert_lead'),
+  -- DOC-LC-1. `documents` has no `advance_document` -- canon 26's Document Lifecycle machine is
+  -- driven by a named operation, not a generic advancer. `app.archive_document` refuses only when
+  -- the document is ALREADY archived, so it performs both registered moves.
+  ('documents','active',    'archived','app.archive_document'),
+  ('documents','superseded','archived','app.archive_document');
 
 -- =============================================================================================
 -- 1. COVERAGE. Every one of the ten functions must be parsed. This is the assertion the previous
@@ -137,6 +142,13 @@ select is(
   0,
   'every transition the TRIGGER permits is offered by an advance_* function or named to the RPC that owns it');
 
+-- DOC-LC-1 fixed a defect in THIS assertion. It hardcoded `lead_status_code`, because every
+-- exclusion was a `leads` row when it was written -- so the moment a non-leads exclusion appeared it
+-- would have failed for the wrong reason, or (worse, had the column been a substring of another)
+-- passed for the wrong one. The status column is now DERIVED per table from
+-- `app.status_transitions.status_column`, which is the same source the trigger itself reads. Third
+-- instance of the class in this file's history: SEC-1b's ceiling, this file's own one-function
+-- regex, and now this.
 select is(
   (select count(*)::int
      from _rpc_owned o
@@ -147,9 +159,11 @@ select is(
       select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
        where n.nspname = 'app' and p.prokind = 'f'
          and 'app.' || p.proname = o.owner_fn
-         and pg_get_functiondef(p.oid) ~ 'lead_status_code\s*=')),
+         and pg_get_functiondef(p.oid) ~ ((select distinct st.status_column
+                                             from app.status_transitions st
+                                            where st.table_name = o.table_name) || '\s*='))),
   0,
-  '...and each named owner really is a function that writes the status -- the exclusion list is evidence, not an excuse');
+  '...and each named owner really is a function that writes THAT TABLE''s status column -- the exclusion list is evidence, not an excuse');
 
 select finish();
 rollback;

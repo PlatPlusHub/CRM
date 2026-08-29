@@ -339,6 +339,39 @@ if ($openId) {
 }
 
 # ---------------------------------------------------------------------------------------------
+# 7b. DOC-LC-1 -- canon 26's Document Lifecycle machine, over the wire.
+#     Placed LAST because it archives the fixture document, which every section above still needs.
+#     The PATCH is the real-world shape of the original reproduction: PostgREST serves TABLES, not
+#     only RPCs, so `PATCH /rest/v1/documents` is the door a browser client actually has -- and it
+#     was the door with no state machine behind it. `archive_document` also had NO HTTP evidence
+#     before this block (API-3), which is a poor thing to be true of the endpoint that retires a
+#     customer's passport.
+# ---------------------------------------------------------------------------------------------
+Write-Host "`n-- document lifecycle (DOC-LC-1) --"
+$hdrJson = $hdrA + @{ 'Content-Type' = 'application/json' }
+
+$toSup = Req PATCH "$API/rest/v1/documents?id=eq.$DOC" $hdrJson '{"lifecycle_status_code":"superseded"}' 'application/json'
+Check "active -> superseded is refused over HTTP, even for the OWNER -- nothing produces that state (DOC-LC-2)" `
+      ($toSup.StatusCode -ge 400) "$($toSup.StatusCode) 197121.Content)"
+
+$lifeNow = (Psql "select lifecycle_status_code from public.documents where id='$DOC';").Trim()
+Check "NON-MUTATION: the document is still active after the refused PATCH" ($lifeNow -eq 'active') "lifecycle=$lifeNow"
+
+$arch = Req POST "$API/rest/v1/rpc/archive_document" $hdrJson "{""p_document_id"":""$DOC"",""p_reason"":""passport expired""}" 'application/json'
+Check "POSITIVE CONTROL: an ARCHIVE_DOCUMENT holder archives over HTTP -- archive_document's first HTTP evidence (API-3)" `
+      ($arch.StatusCode -eq 200) "$($arch.StatusCode) 197121.Content)"
+
+$after = (Psql "select lifecycle_status_code || '/' || is_archived::text from public.documents where id='$DOC';").Trim()
+Check "...and both representations moved together" ($after -eq 'archived/true') "state=$after"
+
+$toActive = Req PATCH "$API/rest/v1/documents?id=eq.$DOC" $hdrJson '{"lifecycle_status_code":"active"}' 'application/json'
+Check "archived -> active is refused over HTTP -- canon 26 lists no way back, and an un-archive anyone could do would make the archive meaningless" `
+      ($toActive.StatusCode -ge 400) "$($toActive.StatusCode) 197121.Content)"
+
+$finalLife = (Psql "select lifecycle_status_code from public.documents where id='$DOC';").Trim()
+Check "NON-MUTATION: still archived after the refused un-archive" ($finalLife -eq 'archived') "lifecycle=$finalLife"
+
+# ---------------------------------------------------------------------------------------------
 # 8. Restore the shipped retention policy and clean up.
 # ---------------------------------------------------------------------------------------------
 # PAR-2: restore the definition captured above, VERBATIM. Not a retyped equivalent -- see the note

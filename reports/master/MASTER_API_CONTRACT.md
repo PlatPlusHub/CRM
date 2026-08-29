@@ -64,7 +64,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `advance_refund` | p_refund_id uuid, p_to_status text, p_reason text | `text` | invoker | RECORD_REFUND + per transition: RECORD_REFUND | - | refunds | 3 | yes |
 | `advance_service_request` | p_service_request_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_SERVICE_REQUEST | - | service_requests | 3 | yes |
 | `advance_task` | p_task_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: COMPLETE_TASK | - | tasks | 3 | yes |
-| `archive_document` | p_document_id uuid, p_reason text | `text` | invoker | ARCHIVE_DOCUMENT | - | documents | 4 | -- |
+| `archive_document` | p_document_id uuid, p_reason text | `text` | invoker | ARCHIVE_DOCUMENT | - | documents | 4 | yes |
 | `assign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | ASSIGN_LEAD | lead_assignments | leads | 4 | yes |
 | `assign_lead_round_robin` | p_lead_id uuid, p_reason text | `uuid` | invoker | ASSIGN_LEAD | - | - | 4 | -- |
 | `assign_task` | p_task_id uuid, p_owner_user_id uuid, p_owner_department_id uuid, p_owner_branch_id uui... | `void` | invoker | ASSIGN_TASK | - | tasks | 4 | -- |
@@ -121,7 +121,7 @@ SEC-1b was); `-` means no capability check, which for a read is correct and gove
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | -- |
 
-**71 RPC endpoints executable by `authenticated`; 41 exercised over HTTP by a suite.**
+**71 RPC endpoints executable by `authenticated`; 42 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

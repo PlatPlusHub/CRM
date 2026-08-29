@@ -95,8 +95,9 @@ begin
     -- 5g. Lifecycle transition enforcement (SPEC-149). Asserted per table by trigger name: without
     --     these, `update bookings set booking_status_code = 'issued'` skips the state machine, the
     --     authorization and the events entirely, which is what the guard was built to stop.
+    --     11 since DOC-LC-1 wired canon 26's Document Lifecycle machine onto `documents`.
     select count(*) into n from pg_trigger where tgname like '%_enforce_status_transition' and not tgisinternal;
-    if n <> 10 then raise exception 'CHECK 5g FAILED: expected 10 status-transition triggers, found %', n; end if;
+    if n <> 11 then raise exception 'CHECK 5g FAILED: expected 11 status-transition triggers, found %', n; end if;
     select count(*) into n from app.status_transitions;
     if n < 100 then raise exception 'CHECK 5g FAILED: transition registry holds only % rows', n; end if;
 

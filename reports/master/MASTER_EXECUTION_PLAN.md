@@ -480,6 +480,27 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **DOC-LC-1 — CLOSED 2026-08-29 (`202607057200`).** Canon 26's Document Lifecycle machine had
+     never been wired: `app.status_transitions` held zero rows for `documents`, and
+     `enforce_archive_authority` returns early unless `is_archived` changes -- it watches the
+     BOOLEAN, so `lifecycle_status_code` was governed only by the catalog check, which asks whether
+     a code EXISTS and never whether the MOVE is legal. REPRODUCED: a `trainee` with
+     ARCHIVE_DOCUMENT = false, proven to SEE the document first, was refused by the RPC and
+     succeeded by direct DML in the same transaction. Not cosmetic -- both document write paths read
+     `archived` as a refusal condition, so any tenant user could **permanently freeze a colleague's
+     passport**. Two transitions registered (`active`/`superseded` -> `archived`, ARCHIVE_DOCUMENT
+     read out of `archive_document`), and `archived -> active` now refused, which canon lists
+     nowhere. No role gained or lost authority. **`active -> superseded` deliberately NOT
+     registered** -- nothing produces that state (**DOC-LC-2**); supersede is an EVENT about the
+     version pointer, not a document status. **DOC-LC-3** recorded: the `is_archived` boolean and
+     the status column are two representations of one concept and an authorized holder can still
+     split them -- blocked on a canonical contradiction, pinned rather than guessed.
+     Guard: `69_document_lifecycle_test.sql` (19) plus 6 HTTP assertions including
+     `PATCH /rest/v1/documents`, the real attack shape. **API-3 30 -> 29**: `archive_document` had no
+     HTTP evidence at all before this, which was a poor thing to be true of the endpoint that
+     retires a customer's passport. Also repaired here: `54_transition_permission_parity_test`'s
+     final assertion hardcoded `lead_status_code` because every exclusion was a `leads` row when it
+     was written; the status column is now derived per table from `app.status_transitions`.
    * **PAR-1b — a correction to yesterday's correction.** The API-contract report claimed Primary's
      `document_retention_days` was restored to the repository's exact text. It was not: I read it out
      of a LOCAL database that had been hand-modified mid-session, so the "fix" moved Primary away
