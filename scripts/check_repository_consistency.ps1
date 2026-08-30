@@ -6,10 +6,11 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Twelve checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Thirteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
-  11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence):
+  11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
+  13 no Master table row escaped out of its own table):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
@@ -17,7 +18,8 @@
     Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
-    Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01).
+    Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) ·
+    Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1).
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -636,6 +638,37 @@ if ($newestCommit) {
         Write-Host "  no future-dated evidence; clock agrees with the newest commit ($($cd.ToString('yyyy-MM-dd')))" -ForegroundColor Green
     }
 }
+
+Write-Host ""
+Write-Host "== Check 13: no Master table row is escaped out of its own table ==" -ForegroundColor Cyan
+# REG-1 (2026-08-30). The IDENT-1 row in MASTER_GAP_REGISTER.md opened with a BACKSLASH-ESCAPED
+# leading pipe. Two consequences, and the second is why this is a guard and not a typo:
+#   1. Rendering -- an escaped leading pipe is cell CONTENT, so every column shifts left by one and
+#      the register's only Critical finding displayed its title in the ID column.
+#   2. Measurement -- Check 2 extracts a row's subject with '^\|\s*(<id>)'. A row starting with a
+#      backslash matches nothing, so IDENT-1 was structurally INVISIBLE to the cross-Master status
+#      comparison, and Check 2's "no contradiction over N open id(s)" was computed over a set that
+#      silently excluded the highest-severity finding in the file. That is the same false-green
+#      class as PAR-3 and SEC-1b: a guard reporting a verdict over less than it claims to cover.
+# Deliberately narrow: ONLY a leading escaped pipe, which is never legitimate in a table row and
+# has no other meaning at the start of a line. Escaped pipes INSIDE a cell are legal and common
+# (they are how a literal '|' is written in a cell), so they are not touched. No exemption list --
+# the check derives its scope from reports/master/*.md and nothing is enumerated by name.
+$escapedRows = 0
+if (Test-Path $masterDir) {
+    foreach ($md in Get-ChildItem $masterDir -Filter *.md -File) {
+        $lineNo = 0
+        foreach ($line in [System.IO.File]::ReadAllLines($md.FullName)) {
+            $lineNo++
+            if ($line -match '^\\\|') {
+                Write-Host "  ESCAPED TABLE ROW: $($md.Name):$lineNo begins with a backslash-escaped pipe -- the row is invisible to Check 2 and renders one column to the left" -ForegroundColor Yellow
+                $escapedRows++
+            }
+        }
+    }
+}
+if ($escapedRows -gt 0) { $issues += $escapedRows }
+else { Write-Host "  every reports/master table row opens with an unescaped pipe" -ForegroundColor Green }
 
 Write-Host ""
 if ($issues -eq 0) {
