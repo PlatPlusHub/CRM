@@ -151,7 +151,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 
 | table | SIUD | insert guard | update guard | RLS policies |
 |---|---|---|---|---|
-| `approval_requests` | `SIU-` | yes | no | scope_insert, scope_read, scope_update |
+| `approval_requests` | `SIU-` | yes | conditional | scope_insert, scope_read, scope_update |
 | `attribution_clicks` | `S---` | no | no | tenant_isolation |
 | `booking_item_passengers` | `-IU-` | yes | conditional | scope_isolation |
 | `booking_items` | `-IU-` | yes | conditional | scope_isolation |

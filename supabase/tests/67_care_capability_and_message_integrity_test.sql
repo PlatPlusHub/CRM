@@ -15,7 +15,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(24);
+select plan(25);
 
 insert into auth.users (id, email) values
   ('67000000-0000-0000-0000-0000000000a1','emp@care-pgtap.test'),
@@ -137,6 +137,16 @@ select is(
   12,
   '...and all twelve newly guarded tables carry the guard ON INSERT');
 
+-- SUPERSEDED BY SEC-1c (202607059100). This demanded ZERO on UPDATE, and its stated reason was
+-- correct: charging CREATE_BOOKING to ISSUE a booking would break finance, because finance_manager
+-- holds ISSUE/CANCEL/REFUND/REISSUE_BOOKING and NOT CREATE_BOOKING. SEC-1b avoided that by
+-- attaching on INSERT only -- and thereby left UPDATE with no capability check on all twelve, which
+-- SEC-1c reproduced: a trainee holding none of CREATE_CUSTOMER / CREATE_PASSENGER / ASSIGN_SUPPLIER,
+-- with the rows proven visible and its own INSERT refused in the same session, rewrote a customer
+-- name, a passenger name, and a supplier's credit limit 1000 -> 999999.
+-- The fix removes the PREMISE rather than the guard: on UPDATE the charged set is the object-class
+-- permission UNION that table's `app.status_transitions.permission_key` values, so finance issues a
+-- booking with ISSUE_BOOKING exactly as canon 28 grants it. Both halves are pinned below.
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'
@@ -144,8 +154,26 @@ select is(
                                  'documents','leads','passengers','quotations','service_requests',
                                  'suppliers','tasks'])
       and (t.tgtype & 16) <> 0),
+  12,
+  'SEC-1c: all twelve now carry the guard ON UPDATE as well -- the INSERT-only shape was the defect');
+
+-- The guard against the guard. Attaching the UPDATE trigger while leaving a CREATE-only mapping
+-- would satisfy the assertion above and silently strip finance of the ability to issue a booking.
+-- `app.status_transitions` is the canonical record of which permission may move each object, so
+-- assert the guard accepts every one of them: this fails the moment the two drift apart.
+select is(
+  (select count(*)::int
+     from (select distinct st.permission_key
+             from app.status_transitions st
+            where st.table_name = any (array['bookings','complaints','conversations','documents',
+                                             'leads','quotations','service_requests','tasks'])
+              and st.permission_key is not null) k
+     where not exists (
+       select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'app' and p.proname = 'guard_write_capability'
+          and p.prosrc like '%' || k.permission_key || '%')),
   0,
-  '...and NONE of them on UPDATE -- charging CREATE_BOOKING to issue a booking would break finance');
+  '...and every transition permission canon records for those tables is accepted by the guard -- no role loses a mutation it is granted');
 
 -- =============================================================================================
 -- 10-14. ATTR-4 and CONV-2, on a real conversation started through the real RPC.

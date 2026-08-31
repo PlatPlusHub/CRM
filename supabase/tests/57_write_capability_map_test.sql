@@ -5,14 +5,21 @@
 -- (`app.record_lead_interaction`, `app.capture_attribution_click`) or no RPC writes the table at
 -- all, there is no evidence-based answer and nothing was guessed -- those tables remain under SEC-1.
 --
--- Assertion 9 is the one that matters most and is the reason the UPDATE exclusion exists:
--- `approval_requests` is updated by `app.review_finance_approval`, and `finance_manager` does NOT
--- hold `CREATE_BOOKING_ITEM`. Charging the insert permission on UPDATE would have broken the
--- approval workflow FIN-2 repaired one migration earlier. This file proves it did not.
+-- Assertion 9 is still the one that matters most: `approval_requests` is updated by
+-- `app.review_finance_approval`, and `finance_manager` does NOT hold `CREATE_BOOKING_ITEM`, so
+-- charging the INSERT permission on UPDATE would break the approval workflow FIN-2 repaired one
+-- migration earlier. This file proves it does not.
+--
+-- What CHANGED (SEC-1c, 202607059100): that fact used to justify attaching the guard on INSERT
+-- ONLY, and this file pinned the absence of an UPDATE trigger as "structural". The absence was the
+-- defect -- SEC-1c reproduced a trainee rewriting a supplier's credit limit through exactly that
+-- gap. The guard now fires on UPDATE too, charging the object-class permission UNION the
+-- permissions canon already grants for mutating the object. Assertion 9's `lives_ok` is unchanged
+-- and still passes, which is what makes the new shape a correction rather than a relaxation.
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, email) values
   ('57000000-0000-0000-0000-0000000000a1','emp@wc.test'),
@@ -164,12 +171,36 @@ select is(
   9,
   'all nine tables this migration mapped still carry the write-capability guard');
 
+-- SUPERSEDED BY SEC-1c (202607059100). This assertion used to demand ZERO here, pinning the
+-- INSERT-only shape as "structural, not a comment". The reasoning above it was sound and is
+-- unchanged -- charging CREATE_BOOKING_ITEM to DECIDE an approval would break finance, because
+-- finance_manager does not hold it. What was wrong was the CONCLUSION drawn from it: attaching on
+-- INSERT only avoided the breakage by leaving the UPDATE path with no capability check at all,
+-- which SEC-1c then reproduced across the class (a trainee rewrote a supplier's credit limit).
+-- The premise is now removed instead of the guard: on UPDATE the guard charges the object-class
+-- permission UNION the permissions canon already says may mutate the object -- here
+-- APPROVE_FINANCE / REVIEW_APPROVAL_REQUEST / REVIEW_SUBSCRIPTION_PAYMENT. So finance decides with
+-- the permission canon gives it, and nobody without any of them writes the row.
+-- The invariant this file actually protects is asserted two assertions above and is UNCHANGED:
+-- `lives_ok` proves finance can still approve. That control passing is what makes this edit a
+-- correction rather than a test bent to fit new code.
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'
       and c.relname = 'approval_requests' and (t.tgtype::int & 16) > 0),
-  0,
-  'approval_requests carries the guard on INSERT only -- the UPDATE exclusion is structural, not a comment');
+  1,
+  'approval_requests now carries the guard on UPDATE too (SEC-1c) -- with the DECIDE permissions, not the request one');
+
+-- The union is the whole point, so pin its contents rather than only its existence: a future edit
+-- that attached the UPDATE trigger while leaving the CREATE-only mapping would satisfy the
+-- assertion above and re-break finance. This one fails if APPROVE_FINANCE stops being accepted.
+select is(
+  (select count(*)::int from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'app' and p.proname = 'guard_write_capability'
+      and p.prosrc ~ 'APPROVE_FINANCE'
+      and p.prosrc ~ 'REVIEW_APPROVAL_REQUEST'),
+  1,
+  'the UPDATE branch still names the approval DECIDE permissions -- attaching the trigger without them would re-break FIN-2');
 
 select finish();
 rollback;
