@@ -98,6 +98,11 @@ insert into _expected_endpoints (name) values
     ('seed_default_chart_of_accounts'),
     ('send_conversation_message'),
     ('start_conversation'),
+    -- PD-24 / SUP-1: the gated reader for `suppliers.credit_limit_amount`, whose column grant was
+    -- revoked from `authenticated` in the same migration. Tenant-facing on purpose -- it returns
+    -- `permitted=false` rather than the amount when the caller lacks VIEW_FINANCIAL_DOCUMENTS,
+    -- mirroring `app.item_financials`, so a UI can render the field as withheld.
+    ('supplier_credit'),
     ('tenant_capabilities'),
     ('upload_document'),
     ('upload_subscription_payment_proof');
@@ -122,7 +127,7 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  75,
+  76,
   'POSITIVE CONTROL: 75 endpoints are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================

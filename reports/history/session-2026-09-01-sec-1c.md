@@ -3,10 +3,10 @@
 Class: History (point-in-time record; superseded by later reports, never edited retroactively)
 Date: 2026-09-01
 Author: Claude Opus 5
-Scope: SEC-1c, owner-approved as the first engineering action. Migration `202607059100`; test
-`85_write_capability_on_update_test.sql` (14); assertions in tests 57 and 67 superseded with their
-reasoning. **Not deployed to Primary — awaiting explicit approval per the owner's standing rule.**
-Status: Implemented and verified on local; deployment pending.
+Scope: SEC-1c (`202607059100`) and SUP-1/PD-24 (`202607059200`) — the write and read halves of the
+supplier credit question. Tests `85` (14) and `86` (11); 5 HTTP assertions; assertions in tests 57,
+67 and 53 superseded with their reasoning. PD-05's deduplication limitation recorded. Both deployed.
+Status: Complete. Both migrations DEPLOYED to Primary and reconciled; parity CLEAN at 181.
 
 **Branch:** `main` · **Start HEAD:** `0eadf79` · **Environment:** local only this package.
 
@@ -97,25 +97,61 @@ paths, preserving PP-4. The session-less early return is untouched.
   is now mirrored verbatim from the RPC, and it does not reopen the defect because the reproduced
   trainee was assigned nothing.
 
+## SUP-1 — the same question's READ half (PD-24, `202607059200`)
+
+`suppliers.credit_limit_amount` — the agency's commercial exposure ceiling — was returned to every
+tenant user by one GET, because `suppliers` carries only `tenant_isolation FOR ALL` and PostgREST
+serves the table.
+
+**Both halves derived, per the instruction not to assume it belongs behind
+VIEW_FINANCIAL_DOCUMENTS merely for looking financial:**
+
+- *Which permission* — `app.supplier_balance`, ORVION's own reader for a supplier's financial
+  position, **already raises 42501 without VIEW_FINANCIAL_DOCUMENTS**. The credit limit is the
+  ceiling on precisely that balance; guarding the amount owed while publishing the maximum owable
+  protects half of one fact.
+- *Which mechanism* — `booking_items` **already** withholds `cost_amount` and `commission_rate` from
+  `authenticated` by column grant while leaving the row readable, served instead by the gated
+  `app.item_financials`. Identical problem, already solved here.
+
+**The first draft was a silent non-fix.** A column-level `revoke select (credit_limit_amount)`
+against a role holding TABLE-level SELECT is a no-op — the table grant already covers every column.
+The migration reported success while assertions 1 and 5 of test 86 failed. Corrected to revoke the
+table grant and re-grant every other column, with the list **derived from `information_schema`** so a
+future column is readable by default and only the named exception is withheld.
+
+**Proven at the real door, not inferred:** `GET /suppliers?select=id,name` → 200 with the row;
+`select=id,credit_limit_amount` → **403**; `select=*` → **403**. That last is *not* new damage —
+`booking_items?select=*` already returns 403 and `booking_items?select=id,selling_amount` returns
+200, so clients on such tables must name their columns. The cost belongs to the pattern and is
+recorded here rather than discovered by someone later.
+
+**One of my own controls was weak and is fixed:** test 86 first proved "the trainee still sees the
+row" with `count(*)`, which needs no column privilege and would have passed even if the table were
+closed. It now selects `name`.
+
 ## TEST
 
-`85_write_capability_on_update_test.sql` (14). Every refusal is paired with both controls — the
-actor proven to lack the permission, and the row proven visible first. Assertions 9–12 are the
-positive controls, including the specific regression SEC-1b avoided: finance holds ISSUE_BOOKING and
-not CREATE_BOOKING, and still writes the booking. Tests 57 and 67 had their superseded assertions
-rewritten **with their reasoning preserved**, and each gained a companion that fails if the guard
-stops accepting the decide/transition permissions — so the union cannot be silently narrowed back.
+`85_write_capability_on_update_test.sql` (14) and `86_supplier_credit_visibility_test.sql` (11).
+Every refusal is paired with both controls — the actor proven to lack the permission, and the row
+proven visible first. Assertions 9–12 of test 85 are the positive controls, including the specific
+regression SEC-1b avoided: finance holds ISSUE_BOOKING and not CREATE_BOOKING, and still writes the
+booking. Tests 57, 67 and 53 had their superseded assertions rewritten **with their reasoning
+preserved**, and 57/67 each gained a companion that fails if the guard stops accepting the
+decide/transition permissions — so the union cannot be silently narrowed back.
 
 | Axis | Result |
 |---|---|
-| Reproducers | all four now **REFUSED** (`42501`), controls intact |
-| pgTAP **Pass A** | **85 files / 1143 assertions / 0 failures** |
-| pgTAP **Pass B** (no reset, post-HTTP residue) | **85 files / 1143 assertions / 0 failures** |
-| HTTP, six suites | **366/366** (29 + 102 + 74 + 66 + 38 + 57) |
+| Reproducers | all four write probes **REFUSED** (`42501`); the read probe **403** |
+| pgTAP **Pass A** | **86 files / 1154 assertions / 0 failures** |
+| pgTAP **Pass B** (no reset, post-HTTP residue) | **86 files / 1154 assertions / 0 failures** |
+| HTTP, six suites | **371/371** (29 + 102 + 74 + 71 + 38 + 57) |
 | Smoke | `ALL CHECKS PASSED (75 tables …)` |
-| API contract | regenerated — 71 of 71 endpoints with HTTP evidence |
-| Local ledger | `180\|1b9b3c585513fc40897fe10e68e0bf5f` |
-| Local structural surface | `0b4ffdeff4299cf78ea0d231657014e5` (3,372 objects) |
+| API contract | regenerated — **72 endpoints, 72 with HTTP evidence** |
+| Ledger, repo = local = **Primary** | `181\|67a9e05e43c733594a76dd7e6ce6da31` |
+| Function surface | `d9b0dd9cb6dfaa3ac2f38a9cc7601408` (247) |
+| Structural surface | `71f87b282df0598ccc100e367e6f7e4c` (3,373 objects) |
+| Parity guard | **CLEAN exit 0**, all three Primary values read live FROM Primary |
 
 ## RE-SCAN
 
@@ -133,12 +169,27 @@ scan written this way inherits the blind spot.
 
 ## REMAINING
 
-**The migration is NOT deployed to Primary.** The owner's standing rule for this directive is "no
-Primary writes unless explicitly approved", and that outranks the "no undeployed migrations"
-invariant, so repository and local sit at **180** while Primary remains at **179**
-(`1f64a99ca835e0a54a222944c1aadcf5`). This is a deliberate, stated divergence, not drift. The parity
-guard will correctly report DRIFT until the deployment is approved and applied.
+**Both migrations are DEPLOYED and reconciled.** `202607059100` and `202607059200` were applied to
+Primary `vrvtsxexkiiiivlkdxzp`, each ledger row normalised from the version `apply_migration` stamps
+itself (GUARD-1), and all three fingerprints re-read live **from Primary**: repository = local =
+Primary at **181**. The parity guard reports CLEAN exit 0.
 
-Next: the remaining approved engineering items whose prerequisites are satisfied — PD-05's
-dedup-identifier limitation record, PD-23's `usage_counters` zero-producer investigation, and PD-24's
-supplier-credit *visibility* question (its UPDATE half is closed by this package).
+**PD-05 recorded, with its limit stated rather than glossed.** `offline_conversions.id` as Google's
+`transactionId` guarantees the same local record cannot be counted twice however often ORVION
+re-sends it — which is exactly the PH8-1 lease risk, the only duplication ORVION can itself create.
+It does **not** deduplicate against a conversion the website tag already reported, because Google
+matches on an exact string and a `gen_random_uuid()` will never equal a tag-generated id. Cross-source
+dedup needs a *shared* transaction identity minted where the customer transacts; no such column or
+upstream producer exists. That is a distinct unopened question, deliberately not designed here.
+
+**Not started this package, and stated rather than implied:** PD-23 (`usage_counters`' zero-producer
+gap), ATTR-2's remaining `_by` actor columns, and the care/conversation slice
+(`complaints`, `service_requests`, `conversations`, `conversation_messages`, `quotation_items`).
+Their write-capability half is now covered by SEC-1c, so the slice starts from a closed write door
+rather than an open one.
+
+**Next executable step:** PD-23. Establish, before building anything, which entitlement limits are
+enforced today (measured: **none** — `app.plan_allows` / `app.plan_limit` read `feature_entitlements`,
+which is seeded with canon 17's numbers, while `usage_counters` has **zero producers**), which writes
+should increment, and whether hard-block or allow-and-flag is canonical. Separate the derivable
+architecture from the business policy rather than mixing them.

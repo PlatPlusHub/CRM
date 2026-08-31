@@ -437,6 +437,40 @@ $r = Rpc $emp 'revoke_user_role' @{ p_assignment_id = $roleAsg }
 Check "and an ordinary employee cannot revoke a role over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
 
+
+# =================================================================================================
+# PD-24 / SUP-1 -- the supplier credit ceiling over the wire.
+#
+# SEC-1c closed the WRITE half. This is the READ half, and it exists as HTTP assertions because the
+# defect lives at the door PostgREST actually serves: `suppliers` is a tenant-readable table and
+# `credit_limit_amount` was in every row it returned. A pgTAP-only proof would miss the two things
+# that matter here -- that `select=*` behaves like `booking_items` does, and that the gated RPC is
+# not a way around the column grant.
+# =================================================================================================
+
+Psql @"
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount)
+values ('0d110000-0000-0000-0000-0000000000c7','$T','Credit Ceiling Air','airline', 25000);
+"@ | Out-Null
+
+$r = Get-Rest $emp 'suppliers?select=id,name&id=eq.0d110000-0000-0000-0000-0000000000c7'
+Check "POSITIVE CONTROL: an employee still LISTS suppliers by explicit columns -- the column grant withheld a field, not the table" ((Ok $r) -and $r.Content -match 'Credit Ceiling Air') "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $emp 'suppliers?select=id,credit_limit_amount'
+Check "SUP-1: ...and asking for credit_limit_amount is REFUSED 403 -- it was returned to every tenant user until 202607059200" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $emp 'suppliers?select=*'
+Check "...and select=* is refused too, exactly as booking_items already behaves -- clients on such tables name their columns" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+$v = Val $r
+Check "the gated reader answers an unprivileged employee with permitted=false and NO amount -- the RPC is not a way around the grant" ((Ok $r) -and $v[0].permitted -eq $false -and $null -eq $v[0].credit_limit_amount) "$($r.StatusCode) $($r.Content)"
+
+$r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+$v = Val $r
+Check "POSITIVE CONTROL: finance, holding VIEW_FINANCIAL_DOCUMENTS, receives the REAL ceiling -- a null here would pass a weaker assertion" ((Ok $r) -and $v[0].permitted -eq $true -and [decimal]$v[0].credit_limit_amount -eq 25000) "$($r.StatusCode) $($r.Content)"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }
