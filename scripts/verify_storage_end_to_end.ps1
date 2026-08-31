@@ -379,6 +379,75 @@ Check "NON-MUTATION: still archived after the refused un-archive" ($finalLife -e
 # `revoke execute ... from public` survives; that is asserted below rather than assumed.
 Psql $RetentionFnDef | Out-Null
 
+# =================================================================================================
+# SPEC-154-B -- a financial document follows the work, not the department (`202607058700`).
+#
+# pgTAP proves this against the table. This proves it on the door a browser client actually has:
+# `authenticated` holds SELECT on `public.documents`, so PostgREST serves it beside every RPC, and a
+# rule that holds only in the database session is half a rule (BOOK-1).
+#
+# Two employees, same tenant, same branch, same department, same role, same permissions. One owns
+# the booking; the other does not. Both documents are created by the OWNER, so `created_by` explains
+# no read below.
+# =================================================================================================
+$AUE1 = '0e2e0000-0000-0000-0000-0000000000e1'
+$AUE2 = '0e2e0000-0000-0000-0000-0000000000e2'
+$E1   = '0e2e0000-0000-0000-0000-00000000aa11'
+$E2   = '0e2e0000-0000-0000-0000-00000000aa12'
+$DINV = '0e2e0000-0000-0000-0000-0000000000d7'
+$DQUO = '0e2e0000-0000-0000-0000-0000000000d8'
+$fx154 = @"
+insert into auth.users (id, email) values ('$AUE1','e2e-resp@orvion.test'),('$AUE2','e2e-coll@orvion.test');
+insert into public.users (id, tenant_id, full_name, email, is_active, auth_user_id) values
+  ('$E1','$TA','A Responsible','e2e-resp@orvion.test',true,'$AUE1'),
+  ('$E2','$TA','A Colleague','e2e-coll@orvion.test',true,'$AUE2');
+insert into public.user_branch_assignments (tenant_id, user_id, branch_id, department_id, is_primary) values
+  ('$TA','$E1','0e2e0000-0000-0000-0000-00000000aa01','0e2e0000-0000-0000-0000-00000000aa02',true),
+  ('$TA','$E2','0e2e0000-0000-0000-0000-00000000aa01','0e2e0000-0000-0000-0000-00000000aa02',true);
+insert into public.user_role_assignments (tenant_id, user_id, role_id, scope_type)
+select '$TA', v.u, r.id, 'tenant' from (values ('$E1'::uuid),('$E2'::uuid)) v(u)
+join public.roles r on r.code='employee';
+insert into public.customers (id, tenant_id, customer_type_code, full_name, first_registered_branch_id)
+values ('0e2e0000-0000-0000-0000-0000000000c7','$TA','person','E2E 154B Customer','0e2e0000-0000-0000-0000-00000000aa01');
+insert into public.bookings (id, tenant_id, customer_id, title, booking_reference, branch_id, department_id,
+                             owner_user_id, owner_branch_id, owner_department_id, booking_status_code)
+values ('0e2e0000-0000-0000-0000-0000000000b7','$TA','0e2e0000-0000-0000-0000-0000000000c7','E2E 154B booking','E2E-154B-1',
+        '0e2e0000-0000-0000-0000-00000000aa01','0e2e0000-0000-0000-0000-00000000aa02',
+        '$E1','0e2e0000-0000-0000-0000-00000000aa01','0e2e0000-0000-0000-0000-00000000aa02','draft');
+insert into public.documents (id, tenant_id, document_type_code, title, lifecycle_status_code, is_confidential, created_by) values
+  ('$DINV','$TA','invoice','E2E 154B invoice','active',false,'0e2e0000-0000-0000-0000-00000000aa03'),
+  ('$DQUO','$TA','quotation','E2E 154B quotation','active',false,'0e2e0000-0000-0000-0000-00000000aa03');
+insert into public.document_links (tenant_id, document_id, booking_id) values
+  ('$TA','$DINV','0e2e0000-0000-0000-0000-0000000000b7'),
+  ('$TA','$DQUO','0e2e0000-0000-0000-0000-0000000000b7');
+select 'FX154_OK';
+"@
+$r154 = Psql $fx154
+Check "SPEC-154-B fixture seeded" ($r154 -match 'FX154_OK') "$r154"
+
+$hdrE1 = @{ apikey = $SERVICE; Authorization = "Bearer $(New-UserJwt $AUE1 $false)" }
+$hdrE2 = @{ apikey = $SERVICE; Authorization = "Bearer $(New-UserJwt $AUE2 $false)" }
+
+$bkgE2 = Req GET "$API/rest/v1/bookings?id=eq.0e2e0000-0000-0000-0000-0000000000b7&select=id" $hdrE2 $null $null
+Check "SPEC-154-B positive control: the colleague reads the BOOKING over HTTP -- department continuity is intact, so the denial below means something" `
+    ($bkgE2.StatusCode -eq 200 -and (AsText $bkgE2.Content) -match '0e2e0000-0000-0000-0000-0000000000b7') "$($bkgE2.StatusCode) $(AsText $bkgE2.Content)"
+
+$invE1 = Req GET "$API/rest/v1/documents?id=eq.$DINV&select=id" $hdrE1 $null $null
+Check "SPEC-154-B: the RESPONSIBLE employee reads the invoice document over HTTP" `
+    ($invE1.StatusCode -eq 200 -and (AsText $invE1.Content) -match $DINV) "$($invE1.StatusCode) $(AsText $invE1.Content)"
+
+$invE2 = Req GET "$API/rest/v1/documents?id=eq.$DINV&select=id" $hdrE2 $null $null
+Check "SPEC-154-B: the DEPARTMENT COLLEAGUE gets an EMPTY set for the same document -- RLS filters, it does not raise" `
+    ($invE2.StatusCode -eq 200 -and (AsText $invE2.Content).Trim() -eq '[]') "$($invE2.StatusCode) $(AsText $invE2.Content)"
+
+$quoE2 = Req GET "$API/rest/v1/documents?id=eq.$DQUO&select=id" $hdrE2 $null $null
+Check "SPEC-154-B negative control: that same colleague still reads the QUOTATION document -- the change is confined to financial types" `
+    ($quoE2.StatusCode -eq 200 -and (AsText $quoE2.Content) -match $DQUO) "$($quoE2.StatusCode) $(AsText $quoE2.Content)"
+
+$invOwner = Req GET "$API/rest/v1/documents?id=eq.$DINV&select=id" $hdrA $null $null
+Check "SPEC-154-B: the tenant owner still reads it -- finance/management visibility is untouched" `
+    ($invOwner.StatusCode -eq 200 -and (AsText $invOwner.Content) -match $DINV) "$($invOwner.StatusCode) $(AsText $invOwner.Content)"
+
 # PAR-2 positive control: the point of this suite is that it must leave the database EQUAL to the
 # repository. Proving the restore actually happened is what turns that from an intention into a
 # guarantee -- and it is the assertion whose absence let three sessions chase the same drift.
@@ -395,8 +464,11 @@ foreach ($p in @($V2, "$TA/0000dead-0000-0000-0000-00000000000f/1")) { Req DELET
 Psql @"
 update public.documents set current_version_id = null where tenant_id in ('$TA','$TB');
 delete from public.document_storage_findings where tenant_id in ('$TA','$TB');
+delete from public.document_links where tenant_id in ('$TA','$TB');
 delete from public.document_versions where tenant_id in ('$TA','$TB');
 delete from public.documents where tenant_id in ('$TA','$TB');
+delete from public.bookings where tenant_id in ('$TA','$TB');
+delete from public.customers where tenant_id in ('$TA','$TB');
 "@ | Out-Null
 
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })

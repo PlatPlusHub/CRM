@@ -2,7 +2,9 @@
 
 Version: 0.1
 Status: Living document (not a Change Request; preserves the reasoning behind major architectural decisions)
-Convention: append-only. Each ADR is numbered and dated. A superseded ADR is marked Superseded and points to its replacement; it is never deleted (history is the record). New ADRs are added when a genuinely architectural decision is made — routine implementation choices stay in their Change Request.
+Convention: append-only. Each ADR is numbered and dated. A superseded ADR is marked Superseded and points to its replacement; it is never deleted (history is the record). New ADRs are added when a genuinely architectural decision is made — routine implementation choices stay in their Change Request, and an ordinary defect never earns one.
+
+**Record shape (from ADR-0024 onward, owner-directed 2026-08-31).** Earlier records carry Date · Status · Source · Decision · Why · Consequences, and are left as they are. New records add four fields, because those six could not answer the questions a session with no chat history actually asks: **Alternatives rejected** (with why — previously present in 1 of 23 records, which is how the same idea gets re-proposed), **Constraints on future work** (what a later change may not break), **Evidence basis** (PROVEN / INFERENCE, and the test or migration that proves it), and **Revisit trigger** (the condition under which this decision should be reopened). Plus **Class** and **Basis** (owner-ratified vs system-derived), so a reader can tell a business decision from a derived one. No fact with an SSOT elsewhere — live state, schema truth, roadmap, finding status, test results — is copied into an ADR; it is referenced (`GOVERNANCE.md §2`).
 
 ---
 
@@ -180,3 +182,53 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
   6. **Channel-generic boundary:** the claim/ack outbox is not Google-specific — `offline_conversion_deliveries.platform_code` (seeded catalog) keys the destination, so Meta CAPI (Phase 10) reuses the identical mechanism with a different n8n workflow. One delivery model, many platforms.
 - Why: n8n-first was re-evaluated against the existing design (owner directive 2026-07-17): the transport-agnostic adapter boundary survives unchanged — only the *caller* changes from an Edge Function to n8n workflows. The outbox + claim/ack pattern is the standard reliable-delivery design for external orchestrators (at-least-once with idempotent acks); it makes n8n swappable (any orchestrator — or a future Edge Function — can drive the same RPC pair), preserving ORVION-owns-the-truth (PROJECT_CONTEXT §11). Rejected: queue infrastructure (pg_mq/external broker — unearned; the deliveries table IS the queue at ORVION's volume, escalation trigger per ADR-0018 stands); Edge-Function-internal delivery logic (would bury state where the confirmed orchestrator cannot see it); per-platform delivery tables (duplicate structure; platform_code already discriminates).
 - Consequences: Phase 8 implements — conversion mapping (verified outcome → `offline_conversions` row; value = revenue, never profit — margins are not leaked to ad platforms; industry-standard) → the claim/ack RPC pair + integration role → the n8n workflow (Data Manager API + OAuth `datamanager` scope + Consent Mode). GTM/GA4 client-side tagging coexists via Google's unified enhanced-conversions setting. The Integration Catalog (future-backlog, Adopt-Later) seeds with this integration when Phase 8 lands.
+
+## ADR-0024 — Every rule an RPC enforces must also hold on the table door
+- Date: 2026-08-31 · Status: Accepted (owner-ratified 2026-08-31, with the directive to record durable rules as ADRs rather than leave them in migration comments) · Class: SECURITY / AUTHORIZATION · Scope: every write path and every read rule in `public`/`app`.
+- Context: `authenticated` holds direct `INSERT`/`UPDATE`/`SELECT` on tenant tables, so PostgREST publishes each table beside its RPC. A rule implemented only inside an `app.*` function is therefore enforced on one of the two doors a browser client actually has. This is not theory: **BOOK-1** (a cancelled booking still earned revenue and commission), **ADMIN-1**, **FIN-8**, **FIN-10**, **QUO-1**, **TASK-1** (an employee reassigned a task by direct DML, unauthorized and unaudited), **SUP-1** and **SPEC-154-B** were each reproduced by calling the table after the RPC had refused.
+- Decision: a business rule is enforced at a layer BOTH doors traverse — a trigger, a constraint, or an RLS policy — never in the RPC alone. An RPC-only check is treated as incomplete, and a package that adds one is not finished until the table path is proven by an independent negative control.
+- Why: the RPC is a convenience surface, not a security boundary, for as long as direct table access exists.
+- Alternatives rejected: (a) revoke direct DML from `authenticated` and make RPCs the only door — this is **SEC-1**, still an open owner decision; it would make this ADR unnecessary but has not been taken, and designing as though it had been is how the defects above shipped. (b) Rely on code review to catch RPC-only rules — five packages' evidence says it does not.
+- Consequences: every guard is written as a trigger/constraint/policy; `SECURITY DEFINER` + `REVOKE` is used where the guard must read a parent past RLS (**SUP-1**, `app.is_document_responsible`); tests assert both doors.
+- Constraints on future work: do not add a rule to an RPC without asking what the table does with the same write. Do not treat HTTP coverage of an endpoint as coverage of its table.
+- Evidence basis: PROVEN — reproduced per finding in `MASTER_GAP_REGISTER.md`; verification conduct in `AGENTS.md §6`.
+- Basis: system-derived, owner-ratified.
+- Related: SEC-1 (open) · `AGENTS.md §4` step 13, `§6` · ADR-0003, ADR-0013.
+- Revisit trigger: SEC-1 is decided in favour of revoking direct table DML. At that point this ADR is superseded, not deleted.
+
+## ADR-0025 — The enforcement layer is chosen from the measured surface; authorization may exempt session-less paths, integrity may not
+- Date: 2026-08-31 · Status: Accepted (owner-ratified 2026-08-31) · Class: AUTHORIZATION / INTEGRITY · Scope: every new guard.
+- Context: **IDENT-1** and **ADMIN-1** are the same family — an unvalidated argument binding a membership to the wrong human — and landed in **opposite** layers, each chosen on counted evidence about who writes the column and from where. Copying the previous package's answer would have been wrong in one of the two cases. Separately, guards that raise inside `pg_cron` jobs, batch sweeps and `SECURITY DEFINER` system paths have twice aborted processing for every tenant because one tenant was ineligible (**WP-03**).
+- Decision: (1) Before writing a guard, measure the complete write/read surface for the column or rule — which RPCs, triggers, batch paths, scheduled jobs and direct-DML routes touch it — and choose the narrowest layer that covers all of them. (2) A guard that expresses **authorization** may exempt session-less paths (`auth.uid() is null`), because a system job has no session to authorize. (3) A guard that expresses **integrity** may NOT: a fact that must be true of the row is true whoever wrote it.
+- Why: authorization answers "may this actor do this", which is meaningless without an actor; integrity answers "is this row coherent", which is meaningful always.
+- Alternatives rejected: (a) one blanket rule for every privileged function — disproven by inventorying all 13 `SECURITY DEFINER`/`service_role` functions, 5 of which are deliberately cross-tenant by job description (`MASTER_ARCHITECTURE_DECISIONS.md` item 15). (b) Widening an existing capability guard instead of adding a targeted trigger — rejected in **TASK-1**, where the shared guard cannot see WHICH column moved and would have blocked an employee completing their own task.
+- Consequences: guards state their class in their header; session-less exemptions are justified per guard, never inherited.
+- Constraints on future work: never weaken a gate because a system path collided with it — move the eligibility decision into the system path (`AGENTS.md §3` step 5b).
+- Evidence basis: PROVEN — IDENT-1, ADMIN-1, TASK-1, SUP-1, CONV-4, WP-03 in `MASTER_GAP_REGISTER.md`.
+- Basis: system-derived, owner-ratified.
+- Related: ADR-0024 · `AGENTS.md §3` step 5b, `§4` step 13 · canon 35.
+- Revisit trigger: a guard class appears that is neither authorization nor integrity (an availability or rate rule would be the first).
+
+## ADR-0026 — Scoped access is expressed as a predicate, never by granting a coarser permission
+- Date: 2026-08-31 · Status: Accepted (owner-ratified 2026-08-31 as part of the SPEC-154-B decision) · Class: AUTHORIZATION / DATA · Scope: any canon rule of the form "assigned/related only".
+- Context: canon repeatedly scopes a permission to the holder's own work — canon 28 records `VIEW_FINANCIAL_DOCUMENTS` as "Assigned related only" for `employee` and `senior_employee`, and canon 08 grants the responsible employee the financial documents "directly related to that lead or booking" while forbidding them to "browse unrelated finance documents". ORVION's permission model is deliberately binary (`role_permissions`, ADR-0015), so a permission cannot carry a scope. Granting the binary permission to satisfy the canon sentence is measurably unsafe: the `documents` policy's confidential branch carries no link-visibility conjunct, so granting `VIEW_FINANCIAL_DOCUMENTS` to `employee` would expose every confidential financial document in the tenant.
+- Decision: express the scope as a predicate evaluated per row — `has_permission(<coarse permission>) OR <caller is a responsible user of this row's subject>` — and mint nothing. The permission keeps its canonical role set.
+- Why: it satisfies both halves of the canon sentence at once, keeps one authority for which rows appear, and leaves the role model unchanged.
+- Alternatives rejected: (a) grant the binary permission to the scoped roles — unsafe as measured above, and it would make the canon's "Assigned related only" unrepresentable. (b) Mint a second, narrower permission (`VIEW_OWN_FINANCIAL_DOCUMENTS`) — rejected: it doubles the vocabulary for every scoped rule and canon names no such permission. (c) A `SECURITY DEFINER` read that re-implements the row scope — rejected in SPEC-139 because a definer function bypasses RLS and would restate the scope in a second place that eventually disagrees.
+- Consequences: two shipped instances, and they are the pattern to copy — `app.item_financials` (SPEC-139: the money on a booking item) and `app.is_document_responsible` (SPEC-154-B, `202607058700`: the financial document on a booking). Both gate on permission-or-responsibility; neither grants anything.
+- Constraints on future work: a future "assigned only" canon rule is implemented this way. Do not read a canon scope column as a reason to widen a role.
+- Evidence basis: PROVEN — `23_financial_privacy_test.sql`, `82_financial_document_responsibility_test.sql`, and the HTTP door in `verify_storage_end_to_end.ps1`.
+- Basis: owner-decided (SPEC-154-B, 2026-08-31); mechanism system-derived from SPEC-139.
+- Related: ADR-0015 (binary permissions) · ADR-0024 · canon 08 §Document Permissions · canon 28 Finance/Document tables · SPEC-139 · SPEC-154-B.
+- Revisit trigger: the permission model stops being binary (a scope column on `role_permissions`), which would make ADR-0015 the decision to revisit first.
+
+---
+
+## Programme lesson numbering (resolved 2026-08-31)
+
+Migrations `202607058200`, `202607058400` and `202607058600` cite **"LESSON 4"** and **"LESSON 6"** by ordinal, and no file in the repository defined the numbering — a citation a fresh reader could not resolve. The ordinals are retired in favour of the stable homes those rules already had:
+
+- **LESSON 4 — "a comment is a claim."** A shipped comment is evidence of intent, never of behaviour; verify it before relying on it. Home: `AGENTS.md §6` (Measurement is not evidence until the measurement itself has been attacked) and `§4` step 13. Instances: IDENT-1, CM-2, LIC-2, FIN-DOC-1.
+- **LESSON 6 — "authorization may exempt session-less paths; integrity must not."** Home: **ADR-0025** above.
+
+Cite the stable ID from here on. Those three migrations are immutable and keep their ordinals; this note is what resolves them.

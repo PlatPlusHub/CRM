@@ -14,7 +14,8 @@ begin;
 select plan(27);
 
 insert into auth.users (id, email) values
-  ('35000000-0000-0000-0000-0000000000a1','emp@sub.test');
+  ('35000000-0000-0000-0000-0000000000a1','emp@sub.test'),
+  ('35000000-0000-0000-0000-0000000000a2','own@sub.test');
 insert into public.tenants (id, name, slug, status) values
   ('35000000-0000-0000-0000-000000000001','Sub Travel','sub-travel','active');
 insert into public.branches (id, tenant_id, name, slug) values
@@ -22,12 +23,21 @@ insert into public.branches (id, tenant_id, name, slug) values
 insert into public.departments (id, tenant_id, branch_id, department_type_code, name) values
   ('35000000-0000-0000-0000-0000000000c1','35000000-0000-0000-0000-000000000001','35000000-0000-0000-0000-00000000000a','sales','Cairo Sales');
 insert into public.users (id, tenant_id, full_name, email, is_active, auth_user_id) values
-  ('35000000-0000-0000-0000-000000000011','35000000-0000-0000-0000-000000000001','Employee','emp@sub.test',true,'35000000-0000-0000-0000-0000000000a1');
+  ('35000000-0000-0000-0000-000000000011','35000000-0000-0000-0000-000000000001','Employee','emp@sub.test',true,'35000000-0000-0000-0000-0000000000a1'),
+  ('35000000-0000-0000-0000-000000000012','35000000-0000-0000-0000-000000000001','Owner','own@sub.test',true,'35000000-0000-0000-0000-0000000000a2');
 insert into public.user_branch_assignments (tenant_id, user_id, branch_id, department_id, is_primary) values
   ('35000000-0000-0000-0000-000000000001','35000000-0000-0000-0000-000000000011','35000000-0000-0000-0000-00000000000a','35000000-0000-0000-0000-0000000000c1',true);
 insert into public.user_role_assignments (tenant_id, user_id, role_id, scope_type)
 select '35000000-0000-0000-0000-000000000001','35000000-0000-0000-0000-000000000011'::uuid, r.id,'tenant'
 from public.roles r where r.code = 'employee';
+-- LIC-3/PP-4 (202607058500): the payment-proof block below needs an actor who may LEGALLY file one.
+-- A payment_proof document now costs MANAGE_TENANT_SETTINGS -- the permission its own RPC charges
+-- -- so an mployee can no longer plant one, which is PP-4's fix. This fixture used the employee
+-- for a block whose stated subject is the SUBSCRIPTION gate rather than the permission model, so it
+-- now uses an owner there and the block still isolates exactly what it always meant to.
+insert into public.user_role_assignments (tenant_id, user_id, role_id, scope_type)
+select '35000000-0000-0000-0000-000000000001','35000000-0000-0000-0000-000000000012'::uuid, r.id,'tenant'
+from public.roles r where r.code = 'owner';
 
 -- Pre-existing data, so the read assertions below have something to find -- without it the "reads
 -- still work" tests would pass vacuously. The gate is already live at this point (it fires for every
@@ -171,6 +181,8 @@ select throws_ok(
 -- fixture now says what it always meant. `47_payment_proof_lifecycle_test.sql` asserts the other
 -- half -- that an ordinary document from the same lapsed tenant is refused.
 reset role;
+-- LIC-3/PP-4: act as the OWNER here -- filing a payment proof costs MANAGE_TENANT_SETTINGS.
+select set_config('request.jwt.claims','{"sub":"35000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 select lives_ok(
   $$insert into public.documents (id, tenant_id, document_type_code, title, lifecycle_status_code, is_confidential)
     values ('35000000-0000-0000-0000-0000000000e1','35000000-0000-0000-0000-000000000001',
@@ -191,6 +203,7 @@ select is(
     where tenant_id = '35000000-0000-0000-0000-000000000001'),
   1,
   '...and the proof row is really there -- asserted because the previous version of this test passed on zero rows');
+select set_config('request.jwt.claims','{"sub":"35000000-0000-0000-0000-0000000000a1"}', true);
 
 reset role;
 select lives_ok(

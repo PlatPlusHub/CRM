@@ -124,8 +124,10 @@ additive capability.*
    inevitable in a travel agency and AGENTS.md §3 keeps inevitable structure); **DEAD-2**
    `refunds.booking_item_id` and `payments.booking_item_id` have no producer, so item-level refund
    and payment attribution is a genuine gap for the finance package.
-2. **SPEC-154-B — `VIEW_FINANCIAL_DOCUMENTS` cannot express canon's "assigned related only."**
-   Binary tenant-wide gate; granting it would regress SPEC-139 financial privacy.
+2. **SPEC-154-B — RESOLVED 2026-08-31 (`202607058700`).** The binary gate genuinely could not express
+   canon's "assigned related only", and granting it would have regressed SPEC-139 — so the scope was
+   expressed as a *predicate* instead (`app.is_document_responsible`), minting nothing. Owner adopted
+   Option C. Status and evidence: `MASTER_GAP_REGISTER.md`; the durable rule is **ADR-0026**.
 3. **WP-04 — documents/storage. NEXT.** Discovery pass run 2026-08-27; findings proven live and
    recorded here so the package starts from evidence rather than from a re-scan:
    * **`storage.buckets` = 0, `storage.objects` = 0, `pg_policies` in schema `storage` = 0 on
@@ -480,6 +482,147 @@ additive capability.*
      assumed otherwise and was refused), **TRANS-2's handler rule proven over HTTP for the first
      time** (the employee can SEE a colleague's lead and cannot advance it), and ATTR-3's acquisition
      source proven to survive the whole machine.
+   * **API-3 CLOSED — TASK-1 / TASK-2 / SUP-1, 2026-08-30 (`202607058600`).**
+     The final three endpoints (`assign_task`, `financial_documents`, `link_internal_supplier`) now
+     carry HTTP execution evidence: **71 of 71**. **TASK-1 (High):** `app.assign_task` charges
+     ASSIGN_TASK (managers only) while `public.tasks` charged CREATE_TASK, which `employee` also
+     holds — genuinely different role sets, unlike ASSIGN_LEAD/REASSIGN_LEAD. Reproduced in one
+     transaction: the RPC refused an employee, their direct UPDATE returned UPDATE 1, and
+     `task_assigned` events numbered 0. Closed with a trigger firing ONLY on a change of owner,
+     chosen over widening `guard_write_capability` because that guard cannot see which column moved
+     and would have stopped an employee completing their own task. **TASK-2 (Medium):** a THIRD,
+     narrower copy of "current placement" (`ends_at is null`) — a Cairo task handed to Giza staff
+     with a scheduled transfer kept CAIRO. Fixed with PLACE-1's strictly-additive shape.
+     **SUP-1 (Low):** provider pair, derived requester and item lifecycle were all absent from the
+     supplier-link table; all three reproduced. Severity is Low because `internal_supplier_links`
+     has **no consumer** — measured, not assumed — so corrupt rows misstate history and change no
+     behaviour today.
+     **financial_documents produced EVIDENCE, not a fix:** the confidentiality boundary IS enforced
+     (a confidential invoice is invisible to an employee through the table) but a NON-confidential
+     one is readable there while the endpoint refuses them. That breadth is **SPEC-154-B**, which
+     canon 28 frames on both sides at once, so it was pinned by assertion rather than decided.
+     Test 81 (20); HTTP 349 → 360; **API-3 6 → 3 → 0.** `202607058600` verified but **NOT
+     deployed**; Primary stays at 169, now six migrations behind by intent.
+   * **SPEC-154-B — decided by the owner and implemented, 2026-08-31 (`202607058700`).** The pin left
+     by the session above became a rule. Reproduced first with a control that made responsibility the
+     ONLY variable: two `employee`s in the same branch, department, role and permission set, one
+     owning the booking and one not, read the manager-uploaded invoice document identically — the
+     read arriving through the *department* axis, because a visible LINK was the whole test the
+     policy applied. Owner adopted **Option C**; the scope is a predicate, not a grant (**ADR-0026**).
+     `quotation` left `app.is_financial_document_type` on canon evidence, and the measured cost — a
+     `finance_manager` without VIEW_TRAVEL_DOCUMENTS no longer sees quotation *documents* — is
+     asserted rather than left to be discovered. Also **TEST-3**, found in test 80 from the session
+     above: a pgTAP mutation assertion placed last is never counted, because `rollback to savepoint`
+     undoes the temp-table counter — the harness printed `planned 18 but ran 17` and the suite's PASS
+     hid it. Both files now re-assert after the rollback, which is also PAR-4's missing closing move.
+     Test 82 (21); HTTP 360 → 366. **ADR-0024/0025/0026 ratified**, the ADR record shape extended,
+     and the undefined `LESSON 4`/`LESSON 6` ordinals resolved. `202607058700` verified but **NOT
+     deployed**; Primary stays at 169, now seven migrations behind by intent.
+   * **LIC-2 / LIC-3 / PP-4 — API-3 SUBSCRIPTION-LICENSING FAMILY, 2026-08-30**
+     (`202607058400`, `202607058500`). **LIC-2 (High):** the single-use activation code could be
+     redeemed TWICE, concurrently. `redeem_license_token` checked `consumed_at is null` and then
+     updated `where id = ...` -- check-then-act with no guard on the act, so under READ COMMITTED the
+     second redeemer's UPDATE re-evaluates only the id and still matches. **The repository states the
+     opposite twice** -- the function comment and test 43 assertion 11 both say replay is closed --
+     and both are true only in sequence (LESSON 4). Reproduced with TWO LIVE psql sessions:
+     `security_events` recorded **2** redemptions of one token and the subscription activated twice,
+     while the row said consumed once. Closed with a compare-and-swap raising the same generic
+     message, and the FUNCTION is the complete layer here -- measured, not assumed: `authenticated`
+     holds no grant on `tenant_license_activations` and its RLS is `platform_only`, so unlike
+     BOOK-1/ASGN-1/CM-2 there is no second door. The identical experiment after the fix produced one
+     redemption. **LIC-3 (High):** `UPLOAD_DOCUMENT` and `CREATE_DOCUMENT_VERSION` both carry
+     `required_feature_code = documents`, which `starter` disables -- so the entry-level tenant could
+     not file the payment proof canon 09/28 call *the only way back from read_only*. WP-04-B narrowed
+     the SUBSCRIPTION gate for exactly this case; the PLAN gate was never considered. Proven by a
+     discriminating experiment: two tenants identical but for the plan, same role, same claim --
+     professional succeeds, starter is refused. **PP-4 (Medium):** an employee could plant a
+     confidential `payment_proof` document by direct DML (SPP-2 one table over). Both closed by
+     charging `MANAGE_TENANT_SETTINGS` for payment-proof documents -- the permission the RPC already
+     charges, and the only one not gated on the entitlement the tenant is trying to restore:
+     **paying for your plan cannot itself be a plan feature.** The `starter` entitlement was
+     deliberately NOT changed -- plan contents are a commercial decision belonging to the owner.
+     **CAP-1 recorded, not reproducible:** `tenant_capabilities` is the only one of eight subscription
+     readers without "latest row wins", but `provision_tenant` is the sole inserter and no role holds
+     MANAGE_SUBSCRIPTION, so a second row is unreachable. **Two fixture corrections:** test 35 used an
+     `employee` for a block whose subject is the subscription gate (PP-4 correctly refused it), and my
+     first draft of the guard named a record field inside a CASE shared by 21 tables -- the suite
+     caught both. Test 80 (18); HTTP 339 -> 349; **API-3 6 -> 3.** Both migrations verified,
+     **NOT deployed**; Primary stays at 169, now five migrations behind by intent.
+   * **PLACE-1 / CM-1 / CM-2 — API-3 CUSTOMER-DATA FAMILY, 2026-08-30 (`202607058300`).**
+     Every defect here was resolved against a rule the repository had ALREADY written down, which
+     is why none of them needed an owner decision. **PLACE-1 (High):** `app.current_placement()`
+     matched `ends_at is null` only, so an employee with a SCHEDULED transfer — canon 03 provides
+     for exactly that — returned NOTHING. Its **five** consumers (`create_customer`,
+     `create_quotation`, `create_complaint`, `create_service_request`, `start_conversation`) all
+     read it with `SELECT ... INTO`, so empty is not an error but a silent NULL. Reproduced end to
+     end: an owner set `ends_at = now() + 30 days` through the door RLS already permits, the
+     function returned 0 rows, and the next customer was stored with `first_registered_branch_id`
+     NULL — re-creating what `create_customer`'s own comment says it had fixed. The repository
+     already held the better answer: `eligible_lead_handlers` (LEAD-3) tests the full window. The
+     fix is **strictly additive** — ordering prefers the open-ended row, so every answer the old
+     predicate gave is unchanged and only the empty case is filled. **CM-2 (High):**
+     `202607052100` claimed its unique index made the duplicate check hold "on the direct path";
+     it does not, because that index covers the RAW value. Reproduced: the RPC stored
+     `mona@example.com` and a direct INSERT of `'  MONA@example.com  '` succeeded, while the
+     identical value was REFUSED on `customers.primary_email`. The CHECK reuses
+     `normalize_email`/`normalize_phone` (verified IMMUTABLE) rather than restating them.
+     **CM-1 (Medium):** the RPC demoted "primary" across ALL channels while the index encodes one
+     per channel — adding a primary email silently unset the primary phone.
+     **PLACE-2 recorded UNPROVEN:** `current_placement` still omits a `starts_at` test, diverging
+     from `eligible_lead_handlers`; no harm was reproduced and adding it would change behaviour in
+     an unproven case, which is why the fix stayed additive.
+     Test 79 (19); HTTP 328 → 339; **API-3 9 → 6.** `202607058300` is verified but **NOT
+     deployed**; Primary stays at 169, now three migrations behind by intent.
+   * **CONV-4 / CONV-5 / CAMP-1 — API-3 MARKETING-CAMPAIGN FAMILY, 2026-08-30 (`202607058200`).**
+     The family Phase 8's offline-conversion pipeline consumes, and the reason its defects matter
+     more than their row count: `app.claim_conversion_deliveries` returns `conversion_value` and
+     `currency_code` **verbatim** into the payload n8n hands to the Google Data Manager API, and
+     filters only on platform, delivery status and attempt count — so a value that should never
+     have existed is not caught downstream, it is DELIVERED. **CONV-4 (High):** the RPC refuses a
+     negative value; nothing else did. Reproduced as an `owner` with `aal2` over the real
+     `authenticated` role, in the same transaction the RPC had just refused — a direct INSERT
+     stored **-5000.0000 EGP**. **CONV-5 (High):** an amount with NO currency, same door,
+     **7777.0000 / NULL**. **CAMP-1 (Medium):** a campaign INSERTed with no status was permanently
+     unadvanceable while `advance_marketing_campaign` reported "campaign not found in your tenant"
+     about a row that existed. All three closed with **row-level constraints rather than triggers**
+     — each is decidable from the single row, and a constraint cannot be reached around by any door
+     or session-less path. **Every legal writer proven compatible BEFORE the constraint was
+     written:** `payments_amount_nonneg_check` and a NOT NULL currency make the session-less
+     `map_outcomes_to_conversions` structurally incapable of violating either money rule.
+     **H-M4 was investigated and is NOT a defect** — `app.enforce_status_transition` already
+     refuses an illegal campaign transition on the table door, so nothing was changed there.
+     **CAMP-2 recorded UNPROVEN:** INSERT does not constrain which state a row opens in, but no
+     harm was reproduced and the question spans every status-bearing table, not this family.
+     `64_acquisition_lineage_test`'s positive control was corrected (TEST-64): it set an amount
+     with no currency — a row the RPC has always refused — and passed only because nothing
+     enforced the pair. Test 78 (19); HTTP 315 → 328; **API-3 12 → 9.** `202607058200` is verified
+     but **NOT deployed**; Primary stays at 169, now two migrations behind by intent.
+     Next: the customer-data group (`add_customer_contact_method`, `find_customer_duplicates`,
+     `current_placement`).
+   * **LEAD-6 / ASGN-1/2/3 — API-3 LEAD-ROUTING FAMILY, 2026-08-30 (`202607058100`).**
+     Two of the four endpoints had no coverage but a NAME: `assign_lead_round_robin` and
+     `lead_booking_readiness` appeared only in `53_api_surface_test`'s inventory, the CUST-2 shape,
+     and all four had zero HTTP evidence. **LEAD-6 (High):** canon 04 routes round-robin "among
+     ELIGIBLE employees", and LEAD-3 had already resolved "eligible" from the permission matrix
+     (`CLOSE_LEAD`) — but applied it to `process_lead_sla` and nothing else. Round-robin still
+     selected on PLACEMENT, the definition LEAD-3 rejected in writing. Reproduced: the pool
+     returned ONE eligible candidate, round-robin's predicate returned TWO, and it chose the
+     **trainee** — then refused `permission denied: CLOSE_LEAD` on the lead they owned. Fixed by
+     CALLING the DEFINER authority, not inlining it: `user_role_assignments` carries `scope_read`
+     RLS, so the join inside an INVOKER function would be row-filtered and silently wrong. The
+     EXECUTE grant it needed ships with a tenant guard, because a DEFINER function taking
+     `p_tenant_id` would otherwise be a cross-tenant staff-enumeration oracle. **ASGN-1 (High):**
+     two current assignments for one lead by direct DML — closed with a partial unique index after
+     verifying all three legal writers compatible first. **ASGN-2 (High):** `assigned_by` was
+     caller-supplied, recording a manager's act as a subordinate's — ATTR-1's class in a column
+     its twenty tables never reached. **ASGN-3:** a lead legally advanced to `lost` was refused by
+     the RPC and accepted by the table door in the same transaction.
+     Both new guards mutation-tested; **two existing guards caught regressions in this package's
+     own drafts** — `10_grant_model_test` on a function inheriting EXECUTE TO PUBLIC, and **Pass B**
+     on a slug collision with a committed HTTP fixture (TEST-2 class, Pass A green / Pass B dead).
+     **No owner decision created.** Test 77 (22); HTTP 298 → 315; **API-3 16 → 12.** `202607058100`
+     is verified but **NOT deployed** — Primary stays at 169 pending owner approval.
+     Next: the marketing-campaign family, which Phase 8's pipeline consumes.
    * **ADMIN-1 — API-3 TENANT-ADMINISTRATION FAMILY, 2026-08-30 (`202607058000`).**
      The group that CREATES the unlinked memberships IDENT-1 exploited and GRANTS the roles it
      inherited. **ADMIN-1 (High):** `create_tenant_user` accepted `p_auth_user_id` from the caller
@@ -814,7 +957,32 @@ additive capability.*
      is verified by REGIME, not by a green run: the suite is now proven order-independent -- 672
      assertions, 0 failures, both on a fresh `db reset` and immediately after every HTTP suite has
      deposited its deliberately non-teardownable residue.
-   * **PHASE C CONTINUED — NEXT: the table-by-table audit.** WHY IT EXISTS: every package so far has
+   * **TABLE-BY-TABLE AUDIT — SLICE 1 DONE 2026-08-31 (`202607058800`, `202607058900`).** The 54
+     tables `authenticated` can write were ranked by guard and test coverage, and the ranking was
+     ATTACKED before it was used: a first pass keyed on `guard_write_capability` scored the finance
+     tables as unguarded, which is false (FIN-3 gave them dedicated triggers under other names).
+     Corrected, it produced three clean results — SPEC-138 covers every identity/organization write
+     with per-command `MANAGE_*` policies; the accounting core requires its exact canon-28
+     permission and journal entries must balance; every FK into `exchange_rates` is tenant-qualified
+     — and four defects. **FX-1** a negative or zero exchange rate was insertable (`rate = -48.5`
+     returned `INSERT 0 1`); **FX-2** its `set_by` was accepted from the caller; **FX-3 (Medium)**
+     `user_role_assignments.assigned_by` — the record of who GRANTED a role — was accepted from the
+     caller, reproduced two-door in one transaction where `app.assign_user_role` recorded the owner
+     who called it and the direct INSERT recorded **the manager being promoted**; **FX-4**
+     `subscription_payment_proofs.reviewed_by`, unreachable today (no role holds
+     REVIEW_SUBSCRIPTION_PAYMENT and the platform path never writes it) and guarded anyway because
+     canon 28 assigns that permission. `otp_challenges`/`totp_enrollments` were found owner-scoped
+     with NO reader and deliberately left alone — inventing a consumer to justify a guard is this
+     audit's stated non-goal. **The durable output is not the migrations.** A hand-written
+     actor-column list reported ONE gap and looked finished; adding `assigned_by` produced FX-3 and
+     `reviewed_by` produced FX-4, so the detector became `83_actor_attribution_test.sql` assertion
+     22, which asks `information_schema` with **no exemption list** and **closes GOV-8**. Test 83
+     (22); HTTP unchanged at 366. No ADR added: all four are instances of ADR-0024/0025.
+     **NEXT SLICE: the care and conversation family** (`complaints`, `service_requests`,
+     `conversations`, `conversation_messages`, `quotation_items`) — the journey branches this
+     document already lists as not yet walked over HTTP, and the largest remaining block with thin
+     behavioural coverage.
+   * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
      relationships — schema, FKs, RLS, grants, functions, SECURITY DEFINER, triggers, catalogs,
@@ -889,9 +1057,8 @@ additive capability.*
      `payment_proof` to exist first — that type is the discriminator by which the gate tells a
      renewal proof from an ordinary document — so sequencing it before DOC-2 would have meant
      inventing a placeholder.
-   * Also owns SPEC-154-B's
-     document-classification boundary (`VIEW_FINANCIAL_DOCUMENTS` is a binary tenant-wide gate that
-     cannot express canon's "assigned related only").
+   * SPEC-154-B's document-classification boundary is **no longer carried here** — it was decided by
+     the owner and closed on 2026-08-31 by `202607058700`, ahead of this package.
    * **Provider evaluation is the gate** (owner directive §14): decided on tenant isolation, private
      objects, signed URLs, versioning, retention, deletion, recovery, backups, size limits,
      operational simplicity, scalability, auditability and n8n integration — explicitly **not** on

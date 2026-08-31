@@ -28,6 +28,9 @@ Last updated: 2026-08-10 (Decision-reconciliation pass — corrected item 11 (A3
 | 0019 | Customer-merge dynamic FK discovery | Reaffirmed (extend to party-merge under CDD-1) |
 | 0020 | Finance-approval gate; capability-driven booking perms | Reaffirmed |
 | 0021 | Derived customer_balance primitive | **Amend (INV-1..4):** contract-stable, source-evolving; conditional on DC-1 money fix |
+| 0024 | Every RPC rule must also hold on the table door | **New (2026-08-31)** — ratifies the Foundation programme's enforcement rule; superseded if SEC-1 revokes direct table DML |
+| 0025 | Enforcement layer chosen from the measured surface; session-less exemption for authorization only | **New (2026-08-31)** — resolves the "LESSON 6" citation that had no defined home |
+| 0026 | Scoped access is a predicate, never a coarser grant | **New (2026-08-31)** — owner decision SPEC-154-B; mechanism derived from SPEC-139 `app.item_financials` |
 
 ## B. Proposed ADRs — awaiting owner ratification (design recorded, not withheld)
 Consolidated set (from Baseline/Physical/Synthesis §9, confirmed by ARB):

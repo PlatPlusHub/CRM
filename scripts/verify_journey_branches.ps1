@@ -346,6 +346,179 @@ $r = Rpc $emp 'link_passenger_to_booking_item' @{ p_booking_item_id = $itemId; p
 Check "and a passenger is refused on the CANCELLED item from the refund branch -- the item-level rule, distinct from the booking-level one" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
 
+# =============================================================================================
+# API-3: THE CUSTOMER-DATA FAMILY OVER HTTP -- add_customer_contact_method, find_customer_duplicates,
+# current_placement. All three had ZERO HTTP evidence; current_placement had no behavioural coverage
+# at all beyond its name in 53_api_surface_test's inventory, while FIVE write RPCs read it to decide
+# which branch a new record belongs to.
+# =============================================================================================
+Write-Host "`n-- API-3: customer data --" -ForegroundColor Cyan
+
+function Post-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+
+$r = Rpc $emp 'current_placement' @{}
+$cp = @(Val $r)[0]
+Check "current_placement executes over HTTP (first execution evidence this endpoint has ever had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+Check "...and it returns the employee's own branch and department -- the value five write RPCs stamp onto new records" `
+    (($cp.branch_id -eq '0b110000-0000-0000-0000-00000000aa01') -and ($cp.department_id -eq '0b110000-0000-0000-0000-00000000aa02')) "$($r.Content)"
+
+$cdCust = Val (Rpc $emp 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Hala Nabil'; p_primary_phone = '+201005558888' })
+Check "a customer exists for the contact-method walk" ($null -ne $cdCust) "c=$cdCust"
+
+$r = Rpc $emp 'add_customer_contact_method' @{ p_customer_id = $cdCust; p_contact_method_type_code = 'primary_phone'; p_value = '+201005558888'; p_is_primary = $true }
+Check "add_customer_contact_method executes over HTTP (first execution evidence this endpoint has had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'add_customer_contact_method' @{ p_customer_id = $cdCust; p_contact_method_type_code = 'email'; p_value = 'Hala@Example.COM'; p_is_primary = $true }
+Check "...and a primary EMAIL is added on the same customer" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $emp "customer_contact_methods?customer_id=eq.$cdCust&select=contact_method_type_code,value,is_primary&order=contact_method_type_code"
+$cms = @(Val $r)
+Check "CM-1 over HTTP: the primary PHONE is still primary after a primary EMAIL was added -- 'primary' is per channel" `
+    ((($cms | Where-Object { $_.contact_method_type_code -eq 'primary_phone' }).is_primary -eq $true) -and
+     (($cms | Where-Object { $_.contact_method_type_code -eq 'email' }).is_primary -eq $true)) "$($r.Content)"
+Check "...and the RPC stored the email in canonical form" `
+    ((($cms | Where-Object { $_.contact_method_type_code -eq 'email' }).value) -eq 'hala@example.com') "$($r.Content)"
+
+$r = Post-Rest $emp "customer_contact_methods" @{ tenant_id = $T; customer_id = $cdCust
+                                                   contact_method_type_code = 'email'; value = '  HALA@example.com  ' }
+Check "CM-2 over HTTP: POST /rest/v1/customer_contact_methods cannot store a DENORMALIZED value -- the RPC is not the only door, and the unique index covers the raw value" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $emp "customer_contact_methods" @{ tenant_id = $T; customer_id = $cdCust
+                                                   contact_method_type_code = 'secondary_phone'; value = '+201004443333' }
+Check "POSITIVE CONTROL: an already-canonical value still POSTs successfully -- the rule does not over-reach" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'find_customer_duplicates' @{ p_phone = '+20 100 555-8888' }
+$dupes = @(Val $r)
+Check "find_customer_duplicates executes over HTTP (first execution evidence this endpoint has had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+Check "...and it matches THROUGH normalization: a presentationally formatted phone finds the customer stored canonically" `
+    (($dupes | Where-Object { $_.customer_id -eq $cdCust }).Count -ge 1) "$($r.Content)"
+
+# =============================================================================================
+# API-3: THE SUBSCRIPTION/LICENSING FAMILY OVER HTTP -- tenant_capabilities,
+# upload_subscription_payment_proof, redeem_license_token. All three had ZERO HTTP evidence, and
+# tenant_capabilities had no behavioural coverage beyond a name in 53_api_surface_test's inventory.
+#
+# Placed last on purpose: redeeming a licence changes this tenant's plan, so nothing above depends
+# on it. The owner JWT already carries aal2, which MANAGE_TENANT_SETTINGS requires.
+# =============================================================================================
+Write-Host "`n-- API-3: subscription and licensing --" -ForegroundColor Cyan
+
+$r = Rpc $emp 'tenant_capabilities' @{}
+$caps = @(Val $r)
+Check "tenant_capabilities executes over HTTP (first execution evidence this endpoint has ever had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+Check "...and an ordinary EMPLOYEE gets the tenant's capability list -- INTENTIONAL: client capability discovery, exposing no price, billing date or payment data" `
+    ($caps.Count -gt 0) "rows=$($caps.Count)"
+
+$r = Get-Rest $emp "subscriptions?select=subscription_status_code"
+Check "...while the SUBSCRIPTION row itself stays behind VIEW_SUBSCRIPTION_STATUS for that same employee -- RLS returns an empty set rather than an error" `
+    ((Ok $r) -and (@(Val $r)).Count -eq 0) "$($r.StatusCode) $($r.Content)"
+
+$r = Post-Rest $emp "documents" @{ tenant_id = $T; document_type_code = 'payment_proof'
+                                   title = 'Forged proof'; lifecycle_status_code = 'active'; is_confidential = $true }
+Check "PP-4 over HTTP: an employee cannot POST a payment_proof document -- the table charges MANAGE_TENANT_SETTINGS, the same permission its RPC does" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$proofId = Val (Rpc $owner 'upload_subscription_payment_proof' @{ p_file_name = 'transfer.pdf'
+                                                                   p_file_type_code = 'pdf'; p_file_size = 20480; p_note = 'renewal' })
+Check "upload_subscription_payment_proof executes over HTTP (first execution evidence this endpoint has had)" ($null -ne $proofId) "p=$proofId"
+
+$r = Get-Rest $owner "subscription_payment_proofs?id=eq.$proofId&select=status_code,uploaded_by"
+Check "...and the proof is stored in canon 26 status 'pending', attributed to the caller" `
+    ((@(Val $r)[0]).status_code -eq 'pending') "$($r.Content)"
+
+# The token is issued through the platform path (service_role only), then redeemed over the door.
+$tok = (Psql "select app.platform_issue_license_token('$T','professional','monthly',true,30,'http test');").Trim()
+Check "a licence token is issued through the platform path" ($tok -match '^[0-9a-f]{32}$') "tok=$tok"
+
+$r = Rpc $owner 'redeem_license_token' @{ p_token = $tok }
+Check "redeem_license_token executes over HTTP (first execution evidence this endpoint has had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'redeem_license_token' @{ p_token = $tok }
+Check "LIC-2 over HTTP: the SAME code is refused the second time -- single-use, and with one generic message that is never an oracle" `
+    ((-not (Ok $r)) -and ((Err $r) -match 'activation code is not valid')) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'redeem_license_token' @{ p_token = 'ffffffffffffffffffffffffffffffff' }
+Check "...and an employee without MANAGE_TENANT_SETTINGS cannot redeem at all" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# =============================================================================================
+# API-3 FINAL THREE OVER HTTP -- assign_task, link_internal_supplier, financial_documents.
+# These are the last three endpoints without HTTP execution evidence; after this run the generated
+# contract reaches 71/71 because all three were actually CALLED, not merely referenced.
+# =============================================================================================
+Write-Host "`n-- API-3: tasks, internal suppliers, financial documents --" -ForegroundColor Cyan
+
+function Patch-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+
+# A second branch/department, so a MISMATCHED provider pair is expressible at all.
+Psql @"
+insert into public.branches (id, tenant_id, name, slug) values
+  ('0b110000-0000-0000-0000-00000000bb01','$T','Giza','br-giza');
+insert into public.departments (id, tenant_id, branch_id, department_type_code, name) values
+  ('0b110000-0000-0000-0000-00000000bb02','$T','0b110000-0000-0000-0000-00000000bb01','sales','Giza Sales');
+select 'OK';
+"@ | Out-Null
+
+$f3Task = Val (Rpc $emp 'create_task' @{ p_title = 'API-3 closing task'; p_task_type_code = 'call_customer'
+                                          p_owner_user_id = $U_EMP
+                                          p_owner_department_id = '0b110000-0000-0000-0000-00000000aa02'
+                                          p_owner_branch_id = '0b110000-0000-0000-0000-00000000aa01' })
+Check "a task exists for the assignment walk" ($null -ne $f3Task) "t=$f3Task"
+
+$r = Rpc $emp 'assign_task' @{ p_task_id = $f3Task; p_owner_user_id = '0b110000-0000-0000-0000-00000000aa03'; p_reason = 'employee tries' }
+Check "the EMPLOYEE cannot reassign through the RPC -- ASSIGN_TASK is a manager permission" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "tasks?id=eq.$f3Task" @{ owner_user_id = '0b110000-0000-0000-0000-00000000aa03' }
+Check "TASK-1 over HTTP: nor through PATCH /rest/v1/tasks -- before 202607058600 the table charged only CREATE_TASK and the task changed hands unaudited" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "tasks?id=eq.$f3Task" @{ title = 'API-3 closing task (edited)' }
+Check "NEGATIVE CONTROL: the same employee can still EDIT their own task over HTTP -- the rule fires only on a change of owner" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'assign_task' @{ p_task_id = $f3Task; p_owner_user_id = '0b110000-0000-0000-0000-00000000aa03'; p_reason = 'owner takes it' }
+Check "assign_task executes over HTTP for a holder of ASSIGN_TASK (first execution evidence this endpoint has had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $owner "tasks?id=eq.$f3Task&select=owner_user_id"
+Check "...and the task really changed hands" ((@(Val $r)[0]).owner_user_id -eq '0b110000-0000-0000-0000-00000000aa03') "$($r.Content)"
+
+# A fresh booking item to link a provider to (the baseline item is cancelled by the refund branch).
+$supBooking = Val (Rpc $emp 'create_booking' @{ p_customer_id = $customerId; p_title = 'Supplier link booking'
+                                                 p_branch_id = '0b110000-0000-0000-0000-00000000aa01'
+                                                 p_department_id = '0b110000-0000-0000-0000-00000000aa02' })
+$supItem = Val (Rpc $emp 'create_booking_item' @{ p_booking_id = $supBooking; p_service_type_code = 'hotel'
+                                                   p_currency_code = 'EGP'; p_cost_amount = 5000; p_selling_amount = 7000 })
+$linkId = Val (Rpc $owner 'link_internal_supplier' @{ p_booking_item_id = $supItem
+                                                       p_provider_branch_id = '0b110000-0000-0000-0000-00000000bb01'
+                                                       p_provider_department_id = '0b110000-0000-0000-0000-00000000bb02'
+                                                       p_reason = 'Giza fulfils' })
+Check "link_internal_supplier executes over HTTP (first execution evidence this endpoint has had)" ($null -ne $linkId) "l=$linkId"
+
+$r = Get-Rest $owner "internal_supplier_links?id=eq.$linkId&select=requester_branch_id,provider_branch_id"
+Check "...and the requester is the ITEM's own branch, derived rather than supplied" `
+    ((@(Val $r)[0]).requester_branch_id -eq '0b110000-0000-0000-0000-00000000aa01') "$($r.Content)"
+
+$r = Post-Rest $owner "internal_supplier_links" @{ tenant_id = $T; booking_item_id = $supItem
+                                                    provider_branch_id = '0b110000-0000-0000-0000-00000000aa01'
+                                                    provider_department_id = '0b110000-0000-0000-0000-00000000bb02'
+                                                    requester_branch_id = '0b110000-0000-0000-0000-00000000aa01'
+                                                    requester_department_id = '0b110000-0000-0000-0000-00000000aa02' }
+Check "SUP-1 over HTTP: a provider department that is not IN the provider branch is refused on the table door too" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'financial_documents' @{}
+Check "financial_documents executes over HTTP for a finance_manager (first execution evidence this endpoint has had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'financial_documents' @{}
+Check "...and an employee without VIEW_FINANCIAL_DOCUMENTS is refused by the endpoint" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

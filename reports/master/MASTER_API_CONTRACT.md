@@ -52,7 +52,7 @@ call it -- see section 6 for what that does and does not establish.
 | endpoint | args | returns | sec | permission | inserts | updates | raises | http |
 |---|---|---|---|---|---|---|---|---|
 | `activate_membership` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | users | 4 | yes |
-| `add_customer_contact_method` | p_customer_id uuid, p_contact_method_type_code text, p_value text, p_is_primary boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_contact_methods | customer_contact_methods | 4 | -- |
+| `add_customer_contact_method` | p_customer_id uuid, p_contact_method_type_code text, p_value text, p_is_primary boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_contact_methods | customer_contact_methods | 4 | yes |
 | `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | yes |
 | `add_document_version` | p_document_id uuid, p_file_name text, p_file_type_code text, p_file_size bigint | `uuid` | invoker | CREATE_DOCUMENT_VERSION | document_versions | document_versions, documents | 4 | yes |
 | `add_quotation_item` | p_quotation_id uuid, p_service_type_code text, p_unit_price numeric, p_quantity numeric... | `uuid` | invoker | CREATE_QUOTATION | quotation_items | quotations | 5 | yes |
@@ -61,15 +61,15 @@ call it -- see section 6 for what that does and does not establish.
 | `advance_complaint` | p_complaint_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_COMPLAINT | - | complaints | 3 | yes |
 | `advance_conversation` | p_conversation_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: CLOSE_CONVERSATION, ESCALATE_CONVERSATION, SEND_MESSAGE | - | conversations | 3 | yes |
 | `advance_lead` | p_lead_id uuid, p_to_status text, p_reason text, p_closure_reason_code text | `text` | invoker | CLOSE_LEAD + per transition: ASSIGN_LEAD, CLOSE_LEAD | - | leads | 7 | yes |
-| `advance_marketing_campaign` | p_campaign_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: MANAGE_MARKETING_CAMPAIGN | - | marketing_campaigns | 3 | -- |
+| `advance_marketing_campaign` | p_campaign_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: MANAGE_MARKETING_CAMPAIGN | - | marketing_campaigns | 3 | yes |
 | `advance_quotation` | p_quotation_id uuid, p_to_status text, p_reason text | `text` | invoker | per transition: ACCEPT_QUOTATION, CREATE_QUOTATION, SEND_QUOTATION | - | quotations | 4 | yes |
 | `advance_refund` | p_refund_id uuid, p_to_status text, p_reason text | `text` | invoker | RECORD_REFUND + per transition: RECORD_REFUND | - | refunds | 3 | yes |
 | `advance_service_request` | p_service_request_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_SERVICE_REQUEST | - | service_requests | 3 | yes |
 | `advance_task` | p_task_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: COMPLETE_TASK | - | tasks | 3 | yes |
 | `archive_document` | p_document_id uuid, p_reason text | `text` | invoker | ARCHIVE_DOCUMENT | - | documents | 4 | yes |
 | `assign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | ASSIGN_LEAD | lead_assignments | leads | 4 | yes |
-| `assign_lead_round_robin` | p_lead_id uuid, p_reason text | `uuid` | invoker | ASSIGN_LEAD | - | - | 4 | -- |
-| `assign_task` | p_task_id uuid, p_owner_user_id uuid, p_owner_department_id uuid, p_owner_branch_id uui... | `void` | invoker | ASSIGN_TASK | - | tasks | 4 | -- |
+| `assign_lead_round_robin` | p_lead_id uuid, p_reason text | `uuid` | invoker | ASSIGN_LEAD | - | - | 4 | yes |
+| `assign_task` | p_task_id uuid, p_owner_user_id uuid, p_owner_department_id uuid, p_owner_branch_id uui... | `void` | invoker | ASSIGN_TASK | - | tasks | 4 | yes |
 | `assign_user_branch` | p_user_id uuid, p_branch_id uuid, p_department_id uuid, p_is_primary boolean, p_transfe... | `uuid` | invoker | MANAGE_USERS | user_branch_assignments | - | 4 | yes |
 | `assign_user_role` | p_user_id uuid, p_role_code text, p_scope_type text, p_branch_id uuid, p_department_id ... | `uuid` | invoker | MANAGE_USERS | user_role_assignments | - | 3 | yes |
 | `convert_lead` | p_lead_id uuid, p_customer_id uuid, p_reason text | `uuid` | invoker | inline has_permission check | - | leads | 7 | yes |
@@ -82,36 +82,36 @@ call it -- see section 6 for what that does and does not establish.
 | `create_invoice` | p_customer_id uuid, p_currency_code text, p_total_amount numeric, p_booking_id uuid, p_... | `uuid` | invoker | CREATE_INVOICE | invoices | - | 5 | yes |
 | `create_journal_entry` | p_source_type_code text, p_entry_date date, p_description text, p_lines jsonb, p_source... | `uuid` | invoker | CREATE_JOURNAL_ENTRY | journal_entries, journal_entry_lines | - | 7 | yes |
 | `create_lead` | p_branch_id uuid, p_department_id uuid, p_lead_source_code text, p_title text, p_priori... | `uuid` | invoker | CREATE_LEAD | leads | - | 6 | yes |
-| `create_marketing_campaign` | p_campaign_name text, p_platform_code text, p_external_campaign_id text, p_started_at t... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | marketing_campaigns | - | 3 | -- |
+| `create_marketing_campaign` | p_campaign_name text, p_platform_code text, p_external_campaign_id text, p_started_at t... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | marketing_campaigns | - | 3 | yes |
 | `create_passenger` | p_first_name text, p_family_name text, p_full_name text, p_passenger_type_code text, p_... | `uuid` | invoker | CREATE_BOOKING_ITEM | passengers | - | 7 | yes |
 | `create_quotation` | p_customer_id uuid, p_currency_code text, p_lead_id uuid, p_valid_until timestamp with ... | `uuid` | invoker | CREATE_QUOTATION | quotations | - | 5 | yes |
 | `create_service_request` | p_customer_id uuid, p_title text, p_service_request_type_code text, p_service_request_s... | `uuid` | invoker | CREATE_SERVICE_REQUEST | service_requests | - | 6 | yes |
 | `create_supplier` | p_name text, p_supplier_type_code text, p_phone text, p_email text, p_payment_term_code... | `uuid` | invoker | ASSIGN_SUPPLIER | suppliers | - | 4 | yes |
 | `create_task` | p_title text, p_task_type_code text, p_owner_user_id uuid, p_owner_department_id uuid, ... | `uuid` | invoker | CREATE_TASK | tasks | - | 7 | yes |
 | `create_tenant_user` | p_full_name text, p_email text, p_phone text, p_auth_user_id uuid | `uuid` | invoker | MANAGE_USERS | users | - | 1 | yes |
-| `current_placement` |  | `TABLE(branch_id uuid, department_id uuid)` | invoker | - | - | - | 0 | -- |
+| `current_placement` |  | `TABLE(branch_id uuid, department_id uuid)` | invoker | - | - | - | 0 | yes |
 | `customer_timeline` | p_customer_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
 | `expiring_documents` | p_within_days integer | `TABLE(document_id uuid, document_type_code text, title text, expires_at timestamp with time zone, days_until_expiry integer, is_confidential boolean)` | invoker | - | - | - | 2 | yes |
-| `financial_documents` |  | `TABLE(document_id uuid, document_type_code text, title text, lifecycle_status_code text, is_confidential boolean, invoice_id uuid, receipt_id uuid)` | invoker | VIEW_FINANCIAL_DOCUMENTS | - | - | 1 | -- |
-| `find_customer_duplicates` | p_phone text, p_email text, p_whatsapp text, p_passport_number text, p_document_number ... | `TABLE(customer_id uuid, full_name text, matched_signal_type text, matched_value text)` | invoker | - | - | - | 0 | -- |
+| `financial_documents` |  | `TABLE(document_id uuid, document_type_code text, title text, lifecycle_status_code text, is_confidential boolean, invoice_id uuid, receipt_id uuid)` | invoker | VIEW_FINANCIAL_DOCUMENTS | - | - | 1 | yes |
+| `find_customer_duplicates` | p_phone text, p_email text, p_whatsapp text, p_passport_number text, p_document_number ... | `TABLE(customer_id uuid, full_name text, matched_signal_type text, matched_value text)` | invoker | - | - | - | 0 | yes |
 | `issue_invoice` | p_invoice_id uuid, p_reason text | `text` | invoker | CREATE_INVOICE | - | invoices | 4 | yes |
 | `issue_receipt` | p_payment_id uuid | `uuid` | invoker | CREATE_RECEIPT | receipts | - | 3 | yes |
-| `lead_booking_readiness` | p_lead_id uuid | `TABLE(lead_id uuid, is_ready boolean, reason_code text, reason text, customer_id uuid, lead_status_code text, requested_service_type_code text, branch_id uuid, department_id uuid, assigned_user_id uuid, expected_value numeric, title text)` | invoker | - | - | - | 2 | -- |
-| `lead_origin` | p_lead_id uuid | `TABLE(first_user_id uuid, first_assigned_at timestamp with time zone, current_user_id uuid, assignment_count integer)` | invoker | - | - | - | 0 | -- |
+| `lead_booking_readiness` | p_lead_id uuid | `TABLE(lead_id uuid, is_ready boolean, reason_code text, reason text, customer_id uuid, lead_status_code text, requested_service_type_code text, branch_id uuid, department_id uuid, assigned_user_id uuid, expected_value numeric, title text)` | invoker | - | - | - | 2 | yes |
+| `lead_origin` | p_lead_id uuid | `TABLE(first_user_id uuid, first_assigned_at timestamp with time zone, current_user_id uuid, assignment_count integer)` | invoker | - | - | - | 0 | yes |
 | `lead_timeline` | p_lead_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
-| `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | -- |
+| `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | yes |
 | `link_passenger_to_booking_item` | p_booking_item_id uuid, p_passenger_id uuid, p_selling_amount_override numeric, p_cost_... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_item_passengers | - | 7 | yes |
 | `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 6 | yes |
 | `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | yes |
 | `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | yes |
-| `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | -- |
+| `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | yes |
 | `record_lead_interaction` | p_lead_id uuid, p_interaction_type_code text, p_summary text, p_metadata jsonb | `uuid` | invoker | inline has_permission check | lead_interactions | leads | 5 | yes |
-| `record_offline_conversion` | p_conversion_event_type_code text, p_lead_id uuid, p_booking_id uuid, p_booking_item_id... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | offline_conversions | - | 6 | -- |
+| `record_offline_conversion` | p_conversion_event_type_code text, p_lead_id uuid, p_booking_id uuid, p_booking_item_id... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | offline_conversions | - | 6 | yes |
 | `record_payment` | p_invoice_id uuid, p_amount numeric, p_payment_method_code text, p_paid_at timestamp wi... | `uuid` | invoker | RECORD_PAYMENT | payment_allocations, payments | invoices | 7 | yes |
 | `record_refund` | p_customer_id uuid, p_amount numeric, p_currency_code text, p_refund_reason_code text, ... | `uuid` | invoker | RECORD_REFUND | refunds | - | 6 | yes |
 | `record_supplier_payment` | p_supplier_id uuid, p_amount numeric, p_currency_code text, p_payment_method_code text,... | `uuid` | invoker | RECORD_PAYMENT | payments | - | 5 | yes |
 | `record_trusted_device` | p_device_identifier text | `uuid` | invoker | - | trusted_devices | trusted_devices | 1 | yes |
-| `redeem_license_token` | p_token text | `void` | invoker | MANAGE_TENANT_SETTINGS | security_events | tenant_license_activations | 2 | -- |
+| `redeem_license_token` | p_token text | `void` | invoker | MANAGE_TENANT_SETTINGS | security_events | tenant_license_activations | 3 | yes |
 | `request_finance_approval` | p_booking_item_id uuid, p_reason text | `uuid` | invoker | CREATE_BOOKING_ITEM | approval_requests | booking_items | 5 | yes |
 | `review_finance_approval` | p_approval_request_id uuid, p_decision text, p_reason text | `text` | invoker | APPROVE_FINANCE or CREATE_BOOKING_ITEM | - | approval_requests, booking_items | 6 | yes |
 | `revoke_trusted_device` | p_device_id uuid | `void` | invoker | - | - | trusted_devices | 2 | yes |
@@ -119,11 +119,11 @@ call it -- see section 6 for what that does and does not establish.
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
-| `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | -- |
+| `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | yes |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
-| `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | -- |
+| `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |
 
-**71 RPC endpoints executable by `authenticated`; 55 exercised over HTTP by a suite.**
+**71 RPC endpoints executable by `authenticated`; 71 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

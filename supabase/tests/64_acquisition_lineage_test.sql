@@ -264,8 +264,13 @@ where ac.tenant_id = '64000000-0000-0000-0000-000000000001' and ac.gclid = 'GCLI
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"64000000-0000-0000-0000-0000000000a4","aal":"aal2"}', true);
 
+-- The currency moves WITH the value. CONV-5 (202607058200) made that pairing a constraint, and
+-- this fixture is why it needed to be one: it set an amount with no currency, which
+-- `app.record_offline_conversion` has always refused, so the row it produced was a state no legal
+-- caller could reach. The assertion's intent is unchanged -- the owner CAN update this conversion --
+-- it is now expressed with a row that could actually exist.
 select lives_ok(
-  $$update public.offline_conversions set conversion_value = 15000
+  $$update public.offline_conversions set conversion_value = 15000, currency_code = 'EGP'
      where id = '64000000-0000-0000-0000-0000000000f9'$$,
   'POSITIVE CONTROL: the owner holds MANAGE_MARKETING_CAMPAIGN and CAN update this conversion');
 

@@ -402,6 +402,156 @@ $r = Rpc $emp 'lead_timeline' @{ p_lead_id = $leadJ }
 $tl = @(Val $r)
 Check "the lead timeline records the walk, not just its last state" ($tl.Count -ge 5) "timeline rows=$($tl.Count)"
 
+# =============================================================================================
+# API-3: THE LEAD-ROUTING FAMILY OVER HTTP -- assign_lead_round_robin, reassign_lead, lead_origin,
+# lead_booking_readiness. All four had ZERO HTTP evidence; two had no behavioural coverage at all,
+# only a name in 53_api_surface_test's endpoint list.
+#
+# The fixture is what makes the routing assertion discriminating: FOUR people are placed in this
+# branch/department, and only TWO of them (owner, employee) hold CLOSE_LEAD. The finance manager
+# and the trainee are placed here and are NOT eligible handlers.
+# =============================================================================================
+Write-Host "`n-- API-3: lead routing --" -ForegroundColor Cyan
+
+function Post-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+
+$leadRR = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
+                                          p_lead_source_code = 'direct_call'; p_title = 'Round robin target' })
+Check "a new unassigned lead exists for round-robin" ($null -ne $leadRR) "l=$leadRR"
+
+$r = Rpc $owner 'assign_lead_round_robin' @{ p_lead_id = $leadRR; p_reason = 'auto' }
+Check "assign_lead_round_robin executes over HTTP (first execution evidence this endpoint has ever had)" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $owner "leads?id=eq.$leadRR&select=assigned_user_id,lead_status_code"
+$rrLead = @(Val $r)[0]
+Check "...and the lead is now assigned" ($null -ne $rrLead.assigned_user_id) "assignee=$($rrLead.assigned_user_id)"
+Check "LEAD-6 over HTTP: round-robin did NOT route to the TRAINEE, who is placed in this department but holds no CLOSE_LEAD" `
+    ($rrLead.assigned_user_id -ne $U_TRN) "assignee=$($rrLead.assigned_user_id)"
+Check "LEAD-6 over HTTP: nor to the FINANCE MANAGER, also placed here and also not an eligible handler" `
+    ($rrLead.assigned_user_id -ne '0c110000-0000-0000-0000-00000000aa05') "assignee=$($rrLead.assigned_user_id)"
+
+$r = Rpc $owner 'lead_origin' @{ p_lead_id = $leadRR }
+$lo = @(Val $r)[0]
+Check "lead_origin executes over HTTP and reports the first handler" ((Ok $r) -and $lo.first_user_id -eq $rrLead.assigned_user_id) "$($r.StatusCode) $($r.Content)"
+Check "...with an assignment_count of 1 before any handover" ($lo.assignment_count -eq 1) "count=$($lo.assignment_count)"
+
+$otherEligible = if ($rrLead.assigned_user_id -eq $U_EMP) { '0c110000-0000-0000-0000-00000000aa03' } else { $U_EMP }
+$r = Rpc $owner 'reassign_lead' @{ p_lead_id = $leadRR; p_assignee_user_id = $otherEligible; p_reason = 'handover' }
+Check "reassign_lead executes over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'lead_origin' @{ p_lead_id = $leadRR }
+$lo2 = @(Val $r)[0]
+Check "lead_origin distinguishes FIRST from CURRENT after the handover -- the fact canon 04 says must survive" `
+    (($lo2.first_user_id -eq $rrLead.assigned_user_id) -and ($lo2.current_user_id -eq $otherEligible)) "first=$($lo2.first_user_id) current=$($lo2.current_user_id)"
+Check "...and the timeline now counts 2 assignments, neither deleted" ($lo2.assignment_count -eq 2) "count=$($lo2.assignment_count)"
+
+# ASGN-1 through the door PostgREST actually opens: `authenticated` holds INSERT on this table.
+$r = Post-Rest $owner "lead_assignments" @{ tenant_id = $T; lead_id = $leadRR; assigned_user_id = $U_TRN
+                                            assigned_by = '0c110000-0000-0000-0000-00000000aa03'; is_current = $true }
+Check "ASGN-1 over HTTP: POST /rest/v1/lead_assignments cannot open a SECOND current assignment -- the RPC is not the only door and the table now refuses too" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $owner "lead_assignments?lead_id=eq.$leadRR&is_current=eq.true&select=assigned_user_id"
+Check "...and exactly one current assignment survives the attempt" (@(Val $r).Count -eq 1) "$($r.Content)"
+
+# ASGN-2 through the same door: a closed history row is legal; the attribution is not the caller's to choose.
+$r = Post-Rest $owner "lead_assignments" @{ tenant_id = $T; lead_id = $leadRR; assigned_user_id = $U_TRN
+                                            assigned_by = $U_TRN; is_current = $false }
+Check "POSITIVE CONTROL: a CLOSED history row is accepted over HTTP, so the next assertion is about the value stored" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $owner "lead_assignments?lead_id=eq.$leadRR&is_current=eq.false&assigned_user_id=eq.$U_TRN&select=assigned_by"
+Check "ASGN-2 over HTTP: assigned_by is the CALLER, not the id the caller put in the body -- attribution cannot be forged through PostgREST" `
+    (@(Val $r)[0].assigned_by -eq '0c110000-0000-0000-0000-00000000aa03') "$($r.Content)"
+
+# lead_booking_readiness: the derived verdict Booking Core consumes.
+$leadNoCust = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
+                                              p_lead_source_code = 'direct_call'; p_title = 'No customer yet' })
+$r = Rpc $emp 'lead_booking_readiness' @{ p_lead_id = $leadNoCust }
+$rd = @(Val $r)[0]
+Check "lead_booking_readiness executes over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+Check "...and a lead with no customer linked is NOT booking-ready, with the reason named" `
+    (($rd.is_ready -eq $false) -and ($rd.reason_code -eq 'no_customer_linked')) "ready=$($rd.is_ready) code=$($rd.reason_code)"
+
+$leadCust = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP; p_customer_id = $customerId
+                                            p_lead_source_code = 'direct_call'; p_title = 'Customer linked' })
+$r = Rpc $emp 'lead_booking_readiness' @{ p_lead_id = $leadCust }
+$rd2 = @(Val $r)[0]
+Check "POSITIVE CONTROL: the same endpoint returns READY once a customer is linked, so the refusal above was the rule and not a broken call" `
+    (($rd2.is_ready -eq $true) -and ($rd2.reason_code -eq 'ready')) "ready=$($rd2.is_ready) code=$($rd2.reason_code)"
+
+# =============================================================================================
+# API-3: THE MARKETING-CAMPAIGN FAMILY OVER HTTP -- create_marketing_campaign,
+# advance_marketing_campaign, record_offline_conversion. All three had ZERO HTTP evidence, and
+# record_offline_conversion had no behavioural coverage at all beyond its name in an inventory.
+#
+# The owner is the actor because MANAGE_MARKETING_CAMPAIGN resolves to `ceo` and `owner` only, and
+# this suite's owner JWT already carries aal2 -- without it every refusal would be an MFA refusal
+# wearing an integrity label.
+#
+# The money assertions matter because app.claim_conversion_deliveries hands conversion_value and
+# currency_code VERBATIM to the Google Ads payload without inspecting either.
+# =============================================================================================
+Write-Host "`n-- API-3: marketing campaigns and offline conversions --" -ForegroundColor Cyan
+
+$campId = Val (Rpc $owner 'create_marketing_campaign' @{ p_campaign_name = 'Umrah Ramadan'
+                                                          p_platform_code = 'google_ads'
+                                                          p_external_campaign_id = 'G-HTTP-1' })
+Check "create_marketing_campaign executes over HTTP (first execution evidence this endpoint has had)" ($null -ne $campId) "c=$campId"
+
+$r = Get-Rest $owner "marketing_campaigns?id=eq.$campId&select=status_code,campaign_name,external_campaign_id"
+$camp = @(Val $r)[0]
+Check "...and the campaign opens in canon 26 initial state 'draft'" ($camp.status_code -eq 'draft') "status=$($camp.status_code)"
+
+$r = Rpc $owner 'create_marketing_campaign' @{ p_campaign_name = 'Umrah Ramadan duplicate'
+                                                p_platform_code = 'google_ads'; p_external_campaign_id = 'G-HTTP-1' }
+Check "the same external campaign id cannot be recorded twice for one platform -- attribution would split across two rows" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'advance_marketing_campaign' @{ p_campaign_id = $campId; p_to_status = 'active'; p_reason = 'go live' }
+Check "advance_marketing_campaign executes over HTTP" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $owner "marketing_campaigns?id=eq.$campId&select=status_code,started_at"
+Check "...and the stored state is 'active'" ((@(Val $r)[0]).status_code -eq 'active') "$($r.Content)"
+
+$r = Rpc $owner 'advance_marketing_campaign' @{ p_campaign_id = $campId; p_to_status = 'draft'; p_reason = 'back' }
+Check "a transition canon 26 does not define is refused over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $owner "marketing_campaigns" @{ tenant_id = $T; platform_code = 'google_ads'
+                                                campaign_name = 'No status'; status_code = $null }
+Check "CAMP-1 over HTTP: a campaign cannot be POSTed with NO status -- which used to leave it permanently unadvanceable" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$convId = Val (Rpc $owner 'record_offline_conversion' @{ p_conversion_event_type_code = 'booking_created'
+                                                          p_marketing_campaign_id = $campId
+                                                          p_conversion_value = 5000; p_currency_code = 'EGP' })
+Check "record_offline_conversion executes over HTTP (first execution evidence this endpoint has had)" ($null -ne $convId) "c=$convId"
+
+$r = Get-Rest $owner "offline_conversions?id=eq.$convId&select=conversion_value,currency_code,marketing_campaign_id"
+$conv = @(Val $r)[0]
+Check "...and the recorded money is exactly what was sent -- this is the value Google Ads will receive" `
+    (([decimal]$conv.conversion_value -eq 5000) -and ($conv.currency_code -eq 'EGP')) "$($r.Content)"
+
+$r = Rpc $owner 'record_offline_conversion' @{ p_conversion_event_type_code = 'booking_created'
+                                                p_marketing_campaign_id = $campId
+                                                p_conversion_value = -5000; p_currency_code = 'EGP' }
+Check "the RPC refuses a NEGATIVE conversion value over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $owner "offline_conversions" @{ tenant_id = $T; conversion_event_type_code = 'booking_created'
+                                                conversion_value = -5000; currency_code = 'EGP'; marketing_campaign_id = $campId }
+Check "CONV-4 over HTTP: POST /rest/v1/offline_conversions cannot store a negative value either -- the RPC is not the only door to the Google Ads payload" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $owner "offline_conversions" @{ tenant_id = $T; conversion_event_type_code = 'booking_created'
+                                                conversion_value = 7777; marketing_campaign_id = $campId }
+Check "CONV-5 over HTTP: nor an amount with no currency" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $owner "offline_conversions" @{ tenant_id = $T; conversion_event_type_code = 'qualified_lead'
+                                                marketing_campaign_id = $campId }
+Check "POSITIVE CONTROL: a conversion carrying no money at all is still accepted -- the pair rule does not over-reach" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
 Write-Host ""
 if ($fail -gt 0) { $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 Write-Host "== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail) { 'Red' } else { 'Green' })
