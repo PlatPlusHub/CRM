@@ -575,7 +575,28 @@ if (-not $decLine) {
     # register is where its evidence lives.
     $found = [regex]::Matches($decLine, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
              ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-    $orphans = @($found | Where-Object { $registerRaw -notmatch ('(?m)\b' + [regex]::Escape($_) + '\b') })
+
+    # MEAS-2 (2026-09-01): this used to test `$registerRaw -notmatch '\bID\b'` -- a match ANYWHERE in
+    # a thousand lines of prose, including a cross-reference inside a DIFFERENT finding's row. PP-1
+    # passed that test for weeks while having no row, no detail block, no status and no evidence:
+    # it resolved solely because DOC-2's row ends "New: **PP-1**, **PP-2**". The check reported
+    # "defines no such finding" while measuring "the string appears somewhere", which is the same
+    # class as PAR-3, SEC-1b, VER-1 and REG-1 -- a guard whose description outruns its measurement.
+    #
+    # A finding is DEFINED where it is the SUBJECT of a register entry: the first cell of a table
+    # row, or a `###` detail heading. Sibling ids sharing one cell ("SPP-1/SPP-2", "DC-1/R7") are
+    # legitimate definitions, so the leading cell is split on '/'.
+    $subjects = @{}
+    foreach ($line in ($registerRaw -split "`n")) {
+        $m = [regex]::Match($line, '^\|\s*([A-Z][A-Za-z0-9\-/\.\s]*?)\s*\|')
+        if (-not $m.Success) { $m = [regex]::Match($line, '^###\s+([A-Z][A-Za-z0-9\-/\.\s]*?)\s+[-—]') }
+        if ($m.Success) {
+            foreach ($piece in ($m.Groups[1].Value -split '/')) {
+                $p = $piece.Trim(); if ($p) { $subjects[$p] = $true }
+            }
+        }
+    }
+    $orphans = @($found | Where-Object { -not $subjects.ContainsKey($_) })
     if ($orphans.Count -gt 0) {
         foreach ($o in $orphans) {
             Write-Host "  ORPHAN ID: manifest raises '$o' but MASTER_GAP_REGISTER.md defines no such finding" -ForegroundColor Red
