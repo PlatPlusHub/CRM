@@ -206,12 +206,14 @@ rollback to savepoint m2;
 -- The class guard. This is the assertion FX-3 would have needed to be found the first time.
 -- ================================================================================================
 select is(
-  (select coalesce(string_agg(c.table_name || '.' || c.column_name, ', ' order by c.table_name), ''))::text,
-  '',
-  'CLASS GUARD: every actor column in `public` is DERIVED by a BEFORE trigger, none accepted from the caller. A new actor column added without one fails here -- which is what FX-3 needed and did not have (GOV-8)')
+  (select coalesce(string_agg(c.table_name || '.' || c.column_name, ', ' order by c.table_name, c.column_name), ''))::text,
+  'booking_items.cancelled_by, booking_items.no_show_recorded_by, customer_identity_merges.merged_by, invoices.voided_by, journal_entries.voided_by, payments.received_by, payments.verified_by, tenant_license_activations.consumed_by',
+  'CLASS GUARD (ATTR-2): the actor columns still ACCEPTED from the caller are exactly these eight, and no others. The predicate asks the SCHEMA for every column ending `_by` -- it no longer takes a hand-written list, because a list is how FX-3 and FX-4 were nearly missed: the first sweep enumerated five names, found one gap and looked finished. This is a PINNED INVENTORY, not an exemption list: it fails when the set changes in EITHER direction, so a new unattributed column fails it and each fix must delete its own line. Every entry is an open finding in MASTER_GAP_REGISTER.md under ATTR-2.')
 from information_schema.columns c
+join information_schema.tables tb
+  on tb.table_schema = c.table_schema and tb.table_name = c.table_name and tb.table_type = 'BASE TABLE'
 where c.table_schema = 'public'
-  and c.column_name in ('created_by','set_by','uploaded_by','recorded_by','assigned_by','issued_by','reviewed_by','revoked_by')
+  and c.column_name like '%\_by'
   and not exists (
       select 1 from pg_trigger t
       join pg_class cl on cl.oid = t.tgrelid

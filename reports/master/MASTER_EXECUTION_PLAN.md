@@ -978,10 +978,27 @@ additive capability.*
      `reviewed_by` produced FX-4, so the detector became `83_actor_attribution_test.sql` assertion
      22, which asks `information_schema` with **no exemption list** and **closes GOV-8**. Test 83
      (22); HTTP unchanged at 366. No ADR added: all four are instances of ADR-0024/0025.
-     **NEXT SLICE: the care and conversation family** (`complaints`, `service_requests`,
-     `conversations`, `conversation_messages`, `quotation_items`) — the journey branches this
-     document already lists as not yet walked over HTTP, and the largest remaining block with thin
-     behavioural coverage.
+   * **CARE/CONVERSATION SLICE — DONE 2026-08-31 (`202607059000`), DEPLOYED.** Four of the five
+     tables clean and checked rather than counted: `complaints` and `service_requests` carry seven
+     triggers each; `conversation_messages` derives its sender and forbids rewriting a sent message;
+     `conversations` lacks two guards its siblings have and has neither `is_archived` nor an actor
+     column for them to apply to. `quotation_items` failed twice, both with the RPC as positive
+     control. **QUO-2 (Medium):** a line could be added to — and repriced on — a quotation already
+     SENT to the customer (a 7,777 line landed; an existing line went 10,000 → 1). The repricing half
+     has **no RPC at all**, so direct DML was the only path, and the rule for it is derived from
+     `add_quotation_item`'s stated reason rather than from a second function. **QUO-3:** the table
+     carried **no CHECK constraints whatsoever** and stored `-5000` and `quantity 0`, while
+     `total_amount` feeds `quotations.total_amount`. **QUO-4 is an OWNER DECISION**, reproduced and
+     deliberately not fixed: canon 28 scopes CREATE_QUOTATION "Assigned only" for `employee` and
+     NEITHER door enforces it — but canon's own scope column reads "assigned/department", so the
+     answer is a business rule, not a derivation. **ATTR-2:** assertion 22 was widened from a
+     hand-written name list to every column ending `_by`, which found **eight** more caller-supplied
+     actor columns. Test 84 (17); HTTP unchanged at 366. No ADR added: QUO-2/QUO-3 are instances of
+     ADR-0024/0025.
+     **NEXT SLICE: ATTR-2** — the eight remaining actor columns, one reproduction each, with
+     `payments.received_by` and `payments.verified_by` judged on their semantics before any trigger
+     is written (either may be a legitimate business fact rather than a session actor). Assertion 22
+     already fails the moment that set changes, so the work is bounded and self-checking.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
