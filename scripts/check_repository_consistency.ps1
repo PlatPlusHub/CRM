@@ -6,12 +6,13 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Fifteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Seventeen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
   11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
   13 no Master table row escaped out of its own table; 14 no manifest owner-decision id is already
-  decided; 15 manifest suite/endpoint figures match the repository):
+  decided; 15 manifest suite/endpoint figures match the repository; 16–17 canon carries neither a
+  settled decision presented as a current blocker nor a generated count copied out of its owner):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
@@ -22,7 +23,10 @@
     Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) ·
     Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1) ·
     Check 14 no id on the manifest's open-decision line is already marked decided in the register (OWNER-1) ·
-    Check 15 the manifest's suite and endpoint figures match the test files and the generated contract (META-1).
+    Check 15 the manifest's suite and endpoint figures match the test files and the generated contract (META-1) ·
+    Check 16 no canonical document names a settled finding as a CURRENT owner decision, judged against
+      the manifest's own open-decision line (the cold-start contradiction of 2026-09-01) ·
+    Check 17 no canonical document restates the RPC-endpoint count that MASTER_API_CONTRACT.md generates (REG-2).
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -821,6 +825,102 @@ if (Test-Path $masterDir) {
 }
 if ($escapedRows -gt 0) { $issues += $escapedRows }
 else { Write-Host "  every reports/master table row opens with an unescaped pipe" -ForegroundColor Green }
+
+# =================================================================================================
+Write-Host "== Check 16: canon does not name a settled finding as a CURRENT owner decision ==" -ForegroundColor Cyan
+# COLD-START CONTRADICTION (2026-09-01). `32_execution_roadmap.md` told a fresh session that SEC-1's
+# write-path architecture was an open owner decision BLOCKING PHASE 10 -- four days after the owner
+# ratified it (OWNER-1), and forty-seven lines below a paragraph in the SAME FILE recording that very
+# correction. A cold-start agent following the boot sequence would have re-litigated a settled
+# decision or escalated a blocker that does not exist. Neither Check 2 (scoped to reports/master) nor
+# Check 6 (phase agreement only) nor Check 11/14 (manifest -> register) could see it: no guard had
+# ever read canon prose against the decision list.
+#
+# THE AUTHORITY IS THE MANIFEST'S `Open owner decisions` LINE -- the same designated list Checks 11
+# and 14 already parse, and the line whose own text states that every ID on it is read as an open
+# decision. Nothing here maintains a list of closed IDs; a decision leaves this guard's "open" set by
+# leaving that line, which is the act OWNER-1 performs.
+#
+# FIVE GATES, and each is structural rather than linguistic. The hard problem is telling a CURRENT
+# CLAIM from HISTORICAL or EXPLANATORY prose -- exactly the failure Check 2 hit when a title cell's
+# aside about a different object read as the row's own status:
+#   1. SCOPE  -- `_ORVION_CANONICAL/**` only. Canon is the INTENT evidence class (AGENTS.md §5a): it
+#      records what was meant, never live status. `reports/master/**` is deliberately NOT covered --
+#      Check 2 owns status there, and those documents legitimately carry dated evidence.
+#   2. REGION -- the line must be a markdown LIST ITEM. This is the boundary that separates canon
+#      32's Phase-10 "prerequisites" list (a current assertion) from its correction PARAGRAPH
+#      (historical narrative). A structural feature of the document, not formatting inside a line --
+#      MEAS-4's lesson that a whitespace-sensitive predicate is a predicate about formatting.
+#   3. CLAIM  -- a small closed phrase set. No NLP, no inference.
+#   4. NEGATIVE -- the line must not also carry a resolution word. A sentence saying "X WAS open and
+#      is now decided" therefore exempts itself, which is how legitimate history stays legal.
+#   5. AUTHORITY -- the ID must be absent from the manifest's open-decision line.
+#
+# MEASURED BEFORE IT WAS TRUSTED: across all 37 canonical documents these gates produce exactly ONE
+# flag (the planted defect above) and zero false positives, and the ID parse deliberately reads the
+# WHOLE manifest line -- parenthetical references included -- so its only possible error is to be
+# MORE permissive, never to cry wolf.
+$canonDir = Join-Path $RepoRoot '_ORVION_CANONICAL'
+$decisionLine = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
+$canonClaims = 0
+if (-not $decisionLine) {
+    Write-Host "  MANIFEST has no 'Open owner decisions' line -- Check 16 cannot run" -ForegroundColor Red
+    $issues++
+} else {
+    $openDecisionIds = @{}
+    foreach ($m in [regex]::Matches($decisionLine, $idPat)) { $openDecisionIds[$m.Groups[1].Value] = $true }
+    $claimPat    = '(open owner decision|awaiting owner|owner must decide|blocked on)'
+    $resolvedPat = '(decided|resolved|closed|ratified|superseded|no longer|was an open)'
+    foreach ($md in Get-ChildItem $canonDir -Filter *.md -File) {
+        $lineNo = 0
+        foreach ($line in [System.IO.File]::ReadAllLines($md.FullName)) {
+            $lineNo++
+            if ($line -notmatch '^\s*(\d+\.|[-*])\s') { continue }   # gate 2: list item only
+            if ($line -notmatch $claimPat)            { continue }   # gate 3: asserts an open decision
+            if ($line -match $resolvedPat)            { continue }   # gate 4: self-exempting history
+            foreach ($m in [regex]::Matches($line, $idPat)) {
+                $id = $m.Groups[1].Value
+                if (-not $openDecisionIds.ContainsKey($id)) {        # gate 5: not on the open list
+                    Write-Host "  SETTLED FINDING PRESENTED AS A CURRENT OWNER DECISION: $($md.Name):$lineNo names $id, which the manifest's open-decision line does not carry" -ForegroundColor Yellow
+                    $issues++; $canonClaims++
+                }
+            }
+        }
+    }
+    if ($canonClaims -eq 0) {
+        Write-Host "  no canonical document asserts a current owner decision the manifest does not list (checked against $($openDecisionIds.Count) open id(s))" -ForegroundColor Green
+    }
+}
+
+# =================================================================================================
+Write-Host "== Check 17: canon does not restate the generated RPC-endpoint count ==" -ForegroundColor Cyan
+# The same cold-start defect, second half. `32_execution_roadmap.md` restated "71 RPC endpoints"
+# while `MASTER_API_CONTRACT.md` -- which is GENERATED from pg_catalog and diffed by the parity
+# guard's Check L3 -- had moved to 72. The sentence contradicted itself inside its own second clause,
+# which already said "The current count is read from the generated contract, never restated here".
+# A mutable fact copied out of its generator is a stale fact with a delay fuse; GOV-5 reached this
+# conclusion for migration counts, REG-2 for endpoint counts, and ROAD-1 for both.
+#
+# The fix that holds is DELETION, not refreshment, so this check forbids the restatement outright.
+# Scope is canon only, for the reason above: canon is INTENT and never measurement. No exemption
+# list exists and none is needed -- `MASTER_API_CONTRACT.md` is not in `_ORVION_CANONICAL/`, so the
+# generator that legitimately owns the number is outside this check by construction rather than by
+# a carve-out somebody has to maintain.
+$countRestated = 0
+foreach ($md in Get-ChildItem $canonDir -Filter *.md -File) {
+    $lineNo = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($md.FullName)) {
+        $lineNo++
+        $m = [regex]::Match($line, '\b\d+\s+RPC endpoints?\b')
+        if ($m.Success) {
+            Write-Host "  GENERATED COUNT RESTATED IN CANON: $($md.Name):$lineNo says '$($m.Value)' -- MASTER_API_CONTRACT.md owns this number; cite the contract instead" -ForegroundColor Yellow
+            $issues++; $countRestated++
+        }
+    }
+}
+if ($countRestated -eq 0) {
+    Write-Host "  no canonical document restates the endpoint count the generated contract owns" -ForegroundColor Green
+}
 
 Write-Host ""
 if ($issues -eq 0) {
