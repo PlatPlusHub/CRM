@@ -232,8 +232,24 @@ Check "...and an employee CAN close it -- closing is front-line, escalating is n
 $r = Rpc $EMP 'send_conversation_message' @{ p_conversation_id = $CONV; p_message_direction_code = 'outbound'
                                              p_sender_type_code = 'user'; p_body = 'one more thing' }
 Check "a CLOSED thread refuses new messages" (-not (Ok $r)) "$($r.StatusCode)"
+
+# PARENT-1. The assertion above and the table POST further down BOTH existed before 202607059400,
+# and the gap survived because they were never asked at the same moment: the RPC was refused while
+# the thread was closed, and the table was posted to after it had been reopened. This asks the table
+# door the identical question the RPC has just refused, at the identical moment.
+$r = Post-Rest $EMP 'conversation_messages' @{ tenant_id = $T; conversation_id = $CONV
+                                               sender_type_code = 'user'; message_direction_code = 'outbound'
+                                               message_text = 'one more thing, straight to the table' }
+Check "PARENT-1: ...and so does the TABLE door, with the RPC's own words -- before 202607059400 this POST returned 201 onto a finished engagement" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
 $r = Rpc $EMP 'advance_conversation' @{ p_conversation_id = $CONV; p_to_status = 'open'; p_reason = 'customer wrote again' }
 Check "...and reopening it is the supported way back -- closed -> open" (Ok $r) (Err $r)
+$r = Post-Rest $EMP 'conversation_messages' @{ tenant_id = $T; conversation_id = $CONV
+                                               sender_type_code = 'user'; message_direction_code = 'outbound'
+                                               message_text = 'accepted once reopened' }
+Check "NEGATIVE CONTROL: the identical POST succeeds once the thread is reopened -- the guard reads the parent's state, it does not close the door" `
+    (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 # =================================================================================================
 Write-Host "`n-- conversations: the message record --" -ForegroundColor Cyan

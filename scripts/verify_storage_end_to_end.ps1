@@ -371,6 +371,21 @@ Check "archived -> active is refused over HTTP -- canon 26 lists no way back, an
 $finalLife = (Psql "select lifecycle_status_code from public.documents where id='$DOC';").Trim()
 Check "NON-MUTATION: still archived after the refused un-archive" ($finalLife -eq 'archived') "lifecycle=$finalLife"
 
+# PARENT-1 (202607059400). The document is genuinely archived at this point, over HTTP, so this is
+# the real client asking both doors the same question.
+$verRpc = Req POST "$API/rest/v1/rpc/add_document_version" $hdrJson `
+          "{""p_document_id"":""$DOC"",""p_file_name"":""v9.pdf"",""p_file_type_code"":""pdf"",""p_file_size"":900}" 'application/json'
+Check "POSITIVE CONTROL: add_document_version refuses a version on an ARCHIVED document over HTTP" `
+      ($verRpc.StatusCode -ge 400) "$($verRpc.StatusCode)"
+
+$verTbl = Req POST "$API/rest/v1/document_versions" $hdrJson `
+          "{""tenant_id"":""$TA"",""document_id"":""$DOC"",""version_number"":0,""file_name"":""v9.pdf"",""file_type_code"":""pdf"",""file_size"":900,""storage_path"":""derived-anyway"",""is_current"":false}" 'application/json'
+Check "PARENT-1: ...and so does the TABLE door -- before 202607059400 this POST returned 201 and versioned a closed record" `
+      ($verTbl.StatusCode -ge 400) "$($verTbl.StatusCode)"
+
+$verCount = (Psql "select count(*) from public.document_versions where document_id='$DOC';").Trim()
+Check "NON-MUTATION: no version was added by either refusal" ($verCount -eq '1') "versions=$verCount"
+
 # ---------------------------------------------------------------------------------------------
 # 8. Restore the shipped retention policy and clean up.
 # ---------------------------------------------------------------------------------------------

@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-08-29 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
+Last updated: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
+
+Previously: 2026-08-29 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
 
 **Guarantee:** once Batch 0 + Batch 1 are designed into canon and implemented, no later batch reopens the foundation. Every later batch is additive new tables/logic.
 
@@ -995,10 +997,34 @@ additive capability.*
      hand-written name list to every column ending `_by`, which found **eight** more caller-supplied
      actor columns. Test 84 (17); HTTP unchanged at 366. No ADR added: QUO-2/QUO-3 are instances of
      ADR-0024/0025.
-     **NEXT SLICE: ATTR-2** — the eight remaining actor columns, one reproduction each, with
-     `payments.received_by` and `payments.verified_by` judged on their semantics before any trigger
-     is written (either may be a legitimate business fact rather than a session actor). Assertion 22
-     already fails the moment that set changes, so the work is bounded and self-checking.
+     *(The "NEXT SLICE: ATTR-2" line that stood here was **stale from 2026-09-01**, when
+     `202607059300` closed ATTR-2 — this plan recorded SEC-1c and SUP-1 that day and never replaced
+     the pointer. Corrected 2026-09-01 in the care/conversation re-audit; the entry below is the
+     current one.)*
+   * **CARE/CONVERSATION RE-AUDIT — PARENT-1, DONE 2026-09-01 (`202607059400`), DEPLOYED.** The
+     slice was re-entered from live state rather than from the report above, and the four tables
+     previously recorded as "checked, not counted" were re-measured against the doors the earlier
+     pass had not walked: the status machines (all three governed, every row carrying a
+     `permission_key`, `enforce_status_transition` failing closed on an unregistered transition),
+     resolution attributability, terminal-state immutability, tenant/branch/department scope, and
+     grants. **`conversations` and `complaints`/`service_requests` came back genuinely clean, and
+     this time the reason is recorded rather than the count:** `resolved_at` / `closed_at` /
+     `resolution_notes` have **no consumer anywhere** (no view, no function, no policy — measured),
+     and CREATE_COMPLAINT and RESOLVE_COMPLAINT are held by **identical role sets**, so
+     `guard_write_capability`'s union is behaviour-neutral; `conversations.current_branch_id` /
+     `current_department_id` are written by `start_conversation` and read by nothing (DEAD-1's
+     class); descriptive-field editability is SEC-2's ratified INTENTIONAL half.
+     **`conversation_messages` failed**, and it turned out to be a CLASS — see **PARENT-1** in
+     `MASTER_GAP_REGISTER.md`: four RPCs refuse a write because of the PARENT row's state
+     (`create_booking`, `request_finance_approval`, `add_document_version`,
+     `send_conversation_message`) and **not one of those rules existed on the table door**. Derived
+     from `app.status_transitions` + `pg_proc` + `pg_trigger`, not from a list; twelve candidate
+     pairs reduced to four by READING the function bodies rather than trusting the match. All four
+     reproduced live with the RPC as positive control. Closed by one guard function and four BEFORE
+     INSERT triggers. Test 88 (25) + 5 HTTP; suite 87/1186 → **88/1211**, HTTP 371 → **376**.
+     **QUO-4 remains the only open OWNER decision from this batch** and was not reopened (§10).
+     **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
+     order; the care/conversation family is now closed on every door it has.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
