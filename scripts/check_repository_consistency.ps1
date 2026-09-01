@@ -346,21 +346,44 @@ if ($null -eq $manifestCur) {
 Write-Host "== Check 7: ai-map freshness vs manifest ==" -ForegroundColor Cyan
 # Verified failure class (2026-07-17, INC-2): ai-map.json's live_state COPIES the manifest but
 # is regenerated only by repository-all.ps1, which is not in the doc-change DoD — so it drifted
-# (generated_at a day behind HEAD). Dependency-free freshness: the manifest's Current Phase
-# number and Last Completed SPEC id must both appear in ai-map's live_state. Skips cleanly if
-# ai-map has been retired (owner-gated recommendation, 2026-07-17).
+# (generated_at a day behind HEAD). Dependency-free freshness: the manifest's Current Phase number
+# must appear in ai-map's live_state, and its `Last Completed` and `Next capability` fields must
+# match ai-map's copies BY VALUE. Skips cleanly if ai-map has been retired (owner-gated
+# recommendation, 2026-07-17).
 $aiMapPath = Join-Path $RepoRoot 'ai-map.json'
 if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
     $mfRaw2 = Get-Content $mfPath -Raw
     $aiRaw  = Get-Content $aiMapPath -Raw
-    $lastSpec = [regex]::Match($mfRaw2, 'Last Completed:\s*(?<s>SPEC-[0-9]+)')
     if ($null -ne $manifestCur -and $aiRaw -notmatch "Phase\s+$manifestCur\b") {
         Write-Host "  AI-MAP STALE: ai-map.json live_state does not name manifest Current Phase $manifestCur — regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
         $issues++
     }
-    if ($lastSpec.Success -and $aiRaw -notmatch [regex]::Escape($lastSpec.Groups['s'].Value)) {
-        Write-Host "  AI-MAP STALE: ai-map.json does not name manifest Last Completed $($lastSpec.Groups['s'].Value) — regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
-        $issues++
+    # REPAIRED 2026-09-01. This comparison used to key on `Last Completed:\s*SPEC-[0-9]+`, so it ran
+    # ONLY while that field began with a literal SPEC id and did nothing whatsoever otherwise. The
+    # field stopped naming a SPEC id at 45a9463 (2026-08-27, WP-04-A), leaving the comparison INERT
+    # for roughly forty commits — and the drift it exists to catch then shipped in 302c7cb, where
+    # ai-map still described the finance-periphery package while the manifest had moved on to the
+    # cold-start guard. A guard keyed on the SHAPE of the value it checks stops guarding the moment
+    # that shape changes: the same class as GOV-4 (Check 2's id pattern, blind to every id minted
+    # after it was written) and MEAS-4 (an actor predicate that was really a question about a name).
+    # It was found by a post-fix reconciliation regenerating the artifact and diffing it, NOT by the
+    # guard — which is the whole reason this now compares a value instead of matching a token.
+    #
+    # Compared BY VALUE, extracted exactly as scripts/generate-ai-map.ps1's Get-Field extracts it
+    # (single line, trimmed) so the guard and the generator read the same thing by construction.
+    # Whitespace is collapsed for the reason the next_capability comparison below collapses it:
+    # reflowing must not cry wolf, a real change of content must fail loudly. Scope is deliberately
+    # this ONE field — no other ai-map key is brought under comparison by this repair.
+    $mfLast = [regex]::Match($mfRaw2, '(?m)^Last Completed:\s*(?<v>.+?)\s*$')
+    if ($mfLast.Success) {
+        $aiLast = $null
+        try { $aiLast = (ConvertFrom-Json $aiRaw).live_state.last_completed } catch { $aiLast = $null }
+        $aiLastN = if ($null -eq $aiLast) { '' } else { ($aiLast -replace '\s+', ' ').Trim() }
+        $mfLastN = ($mfLast.Groups['v'].Value -replace '\s+', ' ').Trim()
+        if ($aiLastN -ne $mfLastN) {
+            Write-Host "  AI-MAP STALE: ai-map.json live_state.last_completed does not match the manifest's current 'Last Completed:' — a fresh agent would be told the wrong work finished last; regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
+            $issues++
+        }
     }
     # Verified failure class (2026-08-17): the two checks above key on the phase NUMBER and the
     # Last-Completed SPEC id — tokens that survive most edits — so ai-map's live_state.next_capability
