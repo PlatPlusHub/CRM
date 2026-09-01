@@ -14,7 +14,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(22);
+select plan(23);
 
 insert into auth.users (id, email) values
   ('83000000-0000-0000-0000-0000000000a1','own@f83.example'),
@@ -207,8 +207,8 @@ rollback to savepoint m2;
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(c.table_name || '.' || c.column_name, ', ' order by c.table_name, c.column_name), ''))::text,
-  'booking_items.cancelled_by, booking_items.no_show_recorded_by, customer_identity_merges.merged_by, invoices.voided_by, journal_entries.voided_by, payments.received_by, payments.verified_by, tenant_license_activations.consumed_by',
-  'CLASS GUARD (ATTR-2): the actor columns still ACCEPTED from the caller are exactly these eight, and no others. The predicate asks the SCHEMA for every column ending `_by` -- it no longer takes a hand-written list, because a list is how FX-3 and FX-4 were nearly missed: the first sweep enumerated five names, found one gap and looked finished. This is a PINNED INVENTORY, not an exemption list: it fails when the set changes in EITHER direction, so a new unattributed column fails it and each fix must delete its own line. Every entry is an open finding in MASTER_GAP_REGISTER.md under ATTR-2.')
+  'invoices.voided_by, journal_entries.voided_by, payments.verified_by, tenant_license_activations.consumed_by',
+  'CLASS GUARD (ATTR-2): the columns ending `_by` still ACCEPTED from the caller are exactly these four, and no others. This is a PINNED INVENTORY, not an exemption list: it fails when the set changes in EITHER direction, so a new unattributed column fails it and each fix must delete its own line. Four of the original eight were closed by `202607059300`. The four that remain are NOT open work of the same kind, and the distinction matters: `invoices.voided_by` and `journal_entries.voided_by` are VOID-1, an OPEN OWNER DECISION -- voiding is unimplemented, so deriving an attribution for it would dress a missing capability as a solved one; `payments.verified_by` is VERIFY-1, the same shape with no VERIFY_PAYMENT permission in existence; and `tenant_license_activations` is granted to `postgres` and `service_role` ONLY, so no tenant caller can reach it by any door.')
 from information_schema.columns c
 join information_schema.tables tb
   on tb.table_schema = c.table_schema and tb.table_name = c.table_name and tb.table_type = 'BASE TABLE'
@@ -222,7 +222,64 @@ where c.table_schema = 'public'
       where not t.tgisinternal and n.nspname = 'public'
         and cl.relname = c.table_name
         and (t.tgtype::int & 2) = 2
-        and p.prosrc like '%new.' || c.column_name || ' :=%');
+        -- Regex, not `like '%new.<col> :=%'`. The `like` form was WHITESPACE-SENSITIVE, and the
+        -- migration that closed four of these columns aligned its assignments with padding -- so
+        -- the detector would have reported the fix as absent and the author would have "fixed" it
+        -- by un-aligning the code. A guard that constrains formatting instead of behaviour is the
+        -- MEAS-1 class; this asks for the assignment, at any spacing.
+        and p.prosrc ~ ('new\.' || c.column_name || '\s*:='));
+
+-- ================================================================================================
+-- ASSERTION 23 -- THE PREDICATE ASSERTION 22 SHOULD ALWAYS HAVE USED.
+--
+-- Assertion 22 asks the schema rather than a hand-written list, which is why its header says a list
+-- is where the next gap hides. It is still a NAME PATTERN: `%_by`. ATTR-2 found two actor columns it
+-- cannot see -- `lead_interactions.user_id` (who made the call) and
+-- `customers.first_registered_user_id` (who first took the customer on). Both were caller-supplied,
+-- both were reproduced, and both are the FOURTH repetition of ASGN-2's lesson: `lead_assignments`
+-- carried `created_by`'s meaning under a different name, and no name-shaped sweep could see it.
+--
+-- This predicate is STRUCTURAL instead of lexical: every FOREIGN KEY TO `public.users` on a table
+-- `authenticated` can write directly, that no BEFORE trigger derives. It therefore catches an actor
+-- column whatever it is called. The pinned set below is not "remaining work" -- it is a CLASSIFIED
+-- inventory, and a new entry appearing in it means somebody must classify it, which is the whole
+-- point. The families, all verified this pass:
+--   * `*owner_user_id` / `*assigned_user_id` -- ASSIGNMENT TARGETS, not actors. These name somebody
+--     OTHER than the caller by design; deriving them from the session would destroy the business
+--     fact. Their actor half (`assigned_by`, `created_by`) is already derived.
+--   * `*auth_user_id` -- IDENTITY BINDING, governed by `app.enforce_membership_identity_binding`
+--     (IDENT-1/ADMIN-1) and by the authentication flows, not by attribution.
+--   * `user_branch_assignments.user_id` / `user_role_assignments.user_id` -- the SUBJECT of the
+--     assignment. Again the actor half (`created_by`, `assigned_by`) is derived already.
+--   * `customers.last_interaction_user_id` -- DEAD-3: no writer anywhere in the database.
+--   * `invoices.voided_by`, `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22.
+-- ================================================================================================
+select is(
+  (select coalesce(string_agg(distinct ac.tbl || '.' || ac.col, ', ' order by ac.tbl || '.' || ac.col), ''))::text,
+  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_role_assignments.user_id, users.auth_user_id',
+  'CLASS GUARD (ATTR-2, structural): every column that FOREIGN-KEYS to public.users on a table `authenticated` can write directly, and that no BEFORE trigger derives, is exactly this classified set. Unlike assertion 22 this asks no question about the column NAME, so an actor column called anything at all appears here. A new entry is not necessarily a defect -- it is an unclassified column, and it must be classified in MASTER_GAP_REGISTER.md before this line is edited.')
+from (
+  select c.relname as tbl, a.attname as col
+  from pg_constraint k
+  join pg_class c on c.oid = k.conrelid
+  join pg_namespace n on n.oid = c.relnamespace and n.nspname = 'public'
+  join pg_class rc on rc.oid = k.confrelid
+  join unnest(k.conkey) with ordinality u(attnum, ord) on true
+  join pg_attribute a on a.attrelid = c.oid and a.attnum = u.attnum
+  where k.contype = 'f' and rc.relname = 'users' and a.attname <> 'tenant_id'
+) ac
+join (
+  select distinct table_name from information_schema.role_table_grants
+  where table_schema = 'public' and grantee = 'authenticated'
+    and privilege_type in ('INSERT', 'UPDATE')
+) w on w.table_name = ac.tbl
+where not exists (
+    select 1 from pg_trigger t
+    join pg_class cl on cl.oid = t.tgrelid
+    join pg_namespace n2 on n2.oid = cl.relnamespace and n2.nspname = 'public'
+    join pg_proc p on p.oid = t.tgfoid
+    where not t.tgisinternal and (t.tgtype::int & 2) = 2 and cl.relname = ac.tbl
+      and p.prosrc ~ ('new\.' || ac.col || '\s*:='));
 
 select * from finish();
 rollback;
