@@ -110,7 +110,7 @@ call it -- see section 6 for what that does and does not establish.
 | `record_payment` | p_invoice_id uuid, p_amount numeric, p_payment_method_code text, p_paid_at timestamp wi... | `uuid` | invoker | RECORD_PAYMENT | payment_allocations, payments | invoices | 7 | yes |
 | `record_refund` | p_customer_id uuid, p_amount numeric, p_currency_code text, p_refund_reason_code text, ... | `uuid` | invoker | RECORD_REFUND | refunds | - | 6 | yes |
 | `record_supplier_payment` | p_supplier_id uuid, p_amount numeric, p_currency_code text, p_payment_method_code text,... | `uuid` | invoker | RECORD_PAYMENT | payments | - | 5 | yes |
-| `record_trusted_device` | p_device_identifier text | `uuid` | invoker | - | trusted_devices | trusted_devices | 1 | yes |
+| `record_trusted_device` | p_device_identifier text | `uuid` | invoker | - | trusted_devices | - | 1 | yes |
 | `redeem_license_token` | p_token text | `void` | invoker | MANAGE_TENANT_SETTINGS | security_events | tenant_license_activations | 3 | yes |
 | `request_finance_approval` | p_booking_item_id uuid, p_reason text | `uuid` | invoker | CREATE_BOOKING_ITEM | approval_requests | booking_items | 5 | yes |
 | `review_finance_approval` | p_approval_request_id uuid, p_decision text, p_reason text | `text` | invoker | APPROVE_FINANCE or CREATE_BOOKING_ITEM | - | approval_requests, booking_items | 6 | yes |

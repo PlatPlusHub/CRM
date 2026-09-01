@@ -552,6 +552,35 @@ $r = Post-Rest $owner "offline_conversions" @{ tenant_id = $T; conversion_event_
                                                 marketing_campaign_id = $campId }
 Check "POSITIVE CONTROL: a conversion carrying no money at all is still accepted -- the pair rule does not over-reach" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
+# =============================================================================================
+Write-Host "`n-- PAY-1: money against an invoice that was never issued --" -ForegroundColor Cyan
+# Both doors, the SAME invoice, the SAME state, no transition in between. That arrangement is the
+# whole point: the partial-payment block above already proves the RPC path, and it proved nothing
+# about this because it only ever asked after issuing.
+# =============================================================================================
+$draftInv = Val (Rpc $fin 'create_invoice' @{ p_customer_id = $customerId; p_currency_code = 'EGP'
+                                              p_total_amount = 9000; p_booking_id = $b })
+$draftState = (Psql "select status_code from public.invoices where id='$draftInv';").Trim()
+Check "POSITIVE CONTROL: a freshly created invoice is DRAFT and was NOT issued ($draftState)" ($draftState -eq 'draft') "state=$draftState"
+
+$r = Rpc $fin 'record_payment' @{ p_invoice_id = $draftInv; p_amount = 1000; p_payment_method_code = 'cash' }
+Check "POSITIVE CONTROL: record_payment refuses a DRAFT invoice over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$payId = (Psql "insert into public.payments (tenant_id, payment_direction_code, customer_id, payment_method_code, currency_code, amount, paid_at) values ('$T','customer_payment','$customerId','cash','EGP',1000, now()) returning id;").Trim()
+$r = Post-Rest $fin "payment_allocations" @{ tenant_id = $T; payment_id = $payId; invoice_id = $draftInv
+                                             allocated_amount = 1000; currency_code = 'EGP' }
+Check "PAY-1 over HTTP: POST /rest/v1/payment_allocations cannot allocate to it either -- before 202607059500 this returned 201 and the customer's balance was wrong" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$stuck = (Psql "select count(*)::int from public.payment_allocations where invoice_id='$draftInv';").Trim()
+Check "NON-MUTATION: nothing was allocated against the draft invoice by either refusal" ($stuck -eq '0') "allocations=$stuck"
+
+Val (Rpc $fin 'issue_invoice' @{ p_invoice_id = $draftInv; p_reason = 'issued' }) | Out-Null
+$r = Post-Rest $fin "payment_allocations" @{ tenant_id = $T; payment_id = $payId; invoice_id = $draftInv
+                                             allocated_amount = 1000; currency_code = 'EGP' }
+Check "NEGATIVE CONTROL: the IDENTICAL POST succeeds once the invoice is issued -- the guard reads the invoice's state, it does not close the door" `
+    (Ok $r) "$($r.StatusCode) $(Err $r)"
+
 Write-Host ""
 if ($fail -gt 0) { $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 Write-Host "== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail) { 'Red' } else { 'Green' })

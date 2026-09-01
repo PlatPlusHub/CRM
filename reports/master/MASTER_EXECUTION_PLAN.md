@@ -1023,8 +1023,32 @@ additive capability.*
      reproduced live with the RPC as positive control. Closed by one guard function and four BEFORE
      INSERT triggers. Test 88 (25) + 5 HTTP; suite 87/1186 → **88/1211**, HTTP 371 → **376**.
      **QUO-4 remains the only open OWNER decision from this batch** and was not reopened (§10).
+   * **FINANCE PERIPHERY — PAY-1 / JE-1 / DEV-1, DONE 2026-09-01 (`202607059500`), DEPLOYED.** The
+     slice was chosen from the catalog, not from a list: of the 54 tables `authenticated` can write,
+     the ones with no capability guard AND no test **subjectship**. That ranking was ATTACKED before
+     use, twice — counting BEFORE triggers scores `moddatetime` and `emit_*` as protection, and
+     counting test-file mentions scores `branches`/`users`/`tenants` at 60–76 because every test
+     builds a tenant fixture. **Appearance is not subjectship.**
+     **PAY-1 (High):** `app.record_payment` refuses a draft, voided or archived invoice and
+     `payment_allocations` carried neither rule — 1,000 EGP allocated against a **voided** invoice,
+     and FIN-10's ceiling stayed green because it caps the AMOUNT and never reads the STATE.
+     **JE-1:** a line posted to a **retired** chart account; two of the RPC's three line rules were
+     already on the table door and were deliberately not re-added. **DEV-1:** two rows for one
+     device, reproduced **through the RPC alone** with two concurrent sessions — LIC-2's shape —
+     severity Low because `app.mfa_satisfied()` was measured to consult only the JWT.
+     **MEAS-5, the finding about my own guard:** PARENT-1's detector could not see PAY-1, because
+     `invoices` has no `app.status_transitions` rows (FIN-7) — a detector anchored on a catalog of
+     TRANSITIONS was blind to a STATE. Widened to catalog-coded columns read from trigger arguments,
+     narrowed by FK and writability (46 noisy pairs → 9 classified), counterexample-tested both ways.
+     Its residual — boolean-flag state — is stated in the test rather than hidden, and JE-1 is that
+     residual. **JE-2 recorded, NOT fixed:** a 100 USD debit balances a 100 EGP credit, on both
+     doors; canon defines no single-currency rule and DC-11 owns the model.
+     **DEAD-4 recorded:** `campaign_daily_metrics`, `exchange_rate_adjustments` and
+     `financial_accounts` have neither producer nor consumer — measured in both directions.
+     Test 89 (21); suite 88/1211 → **89/1232**, HTTP 376 → **381**.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
-     order; the care/conversation family is now closed on every door it has.
+     order; the care/conversation family and the finance periphery are now closed on every door
+     they have.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
