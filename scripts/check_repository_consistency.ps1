@@ -6,11 +6,12 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Fourteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Fifteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
   11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
-  13 no Master table row escaped out of its own table; 14 no manifest owner-decision id is already decided):
+  13 no Master table row escaped out of its own table; 14 no manifest owner-decision id is already
+  decided; 15 manifest suite/endpoint figures match the repository):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
@@ -20,7 +21,8 @@
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
     Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) ·
     Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1) ·
-    Check 14 no id on the manifest's open-decision line is already marked decided in the register (OWNER-1).
+    Check 14 no id on the manifest's open-decision line is already marked decided in the register (OWNER-1) ·
+    Check 15 the manifest's suite and endpoint figures match the test files and the generated contract (META-1).
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -714,6 +716,79 @@ if ($staleDecisions -gt 0) {
     $issues += $staleDecisions
 } else {
     Write-Host "  every manifest owner-decision ID is still open in the register" -ForegroundColor Green
+}
+
+Write-Host ""
+Write-Host "== Check 15: manifest suite/endpoint figures match what the repository actually holds ==" -ForegroundColor Cyan
+# META-1 (2026-09-01). A 14-mutation battery against this guard found nine caught and FIVE missed,
+# and the five were one coherent blind spot: the manifest publishes current-state FIGURES that
+# nothing verified. Check 9 already covers the migration count, latest filename and ledger
+# fingerprint; the suite and endpoint counts had no owner at all, so "86 files / 1154 assertions"
+# could drift to any value and stay CLEAN. That is the COLD-1 class in numeric form -- a restated
+# current-state fact with no source-of-truth relationship -- and a cold-start session reads those
+# figures as the size of the safety net it is inheriting.
+#
+# All three are DERIVED here, never listed: the file count and the assertion total come from the
+# test files themselves (every file carries a literal `select plan(N)`; verified 86 files summing to
+# 1154, matching the pgTAP run exactly), and the endpoint count comes from the GENERATED API
+# contract, which `check_database_parity.ps1` Check L3 already regenerates and diffs against the
+# live database. So the manifest is compared to the repository, and the contract to the database.
+#
+# Two of the five misses are deliberately NOT mechanised here, with reasons rather than silence:
+#   * the HTTP assertion total requires RUNNING the six suites -- it is LOCAL RUNTIME evidence and
+#     a file-only guard must not claim it (the evidence-class rule in AGENTS.md 5a);
+#   * "75 tables" is the smoke test's assertion and is a DIFFERENT measurement from the contract's
+#     count of tenant-reachable tables. Comparing them would create a false failure, which is worse
+#     than an unguarded number.
+$mfRaw = Get-Content $mfPath -Raw
+$figureIssues = 0
+
+$testFiles = @(Get-ChildItem (Join-Path $RepoRoot 'supabase/tests') -Filter *.sql -File)
+$plannedTotal = 0
+$noPlan = @()
+foreach ($tf in $testFiles) {
+    $pm = [regex]::Match([System.IO.File]::ReadAllText($tf.FullName), 'select\s+plan\(\s*(\d+)\s*\)')
+    if ($pm.Success) { $plannedTotal += [int]$pm.Groups[1].Value } else { $noPlan += $tf.Name }
+}
+# If a test ever uses a computed plan this check must say so rather than quietly under-counting.
+if ($noPlan.Count -gt 0) {
+    Write-Host "  NOT COMPARABLE: $($noPlan.Count) test file(s) have no literal plan(N) -- the assertion total cannot be derived: $($noPlan -join ', ')" -ForegroundColor Yellow
+    $figureIssues++
+} else {
+    $mSuite = [regex]::Match($mfRaw, 'Suite \*\*(\d+) files / ([\d,]+) assertions\*\*')
+    if (-not $mSuite.Success) {
+        Write-Host "  MANIFEST has no 'Suite **N files / M assertions**' figure -- cannot verify" -ForegroundColor Yellow
+        $figureIssues++
+    } else {
+        $claimFiles = [int]$mSuite.Groups[1].Value
+        $claimAsserts = [int]($mSuite.Groups[2].Value -replace ',', '')
+        if ($claimFiles -ne $testFiles.Count) {
+            Write-Host "  SUITE FIGURE DRIFT: manifest says $claimFiles test files, supabase/tests holds $($testFiles.Count)" -ForegroundColor Yellow
+            $figureIssues++
+        }
+        if ($claimAsserts -ne $plannedTotal) {
+            Write-Host "  SUITE FIGURE DRIFT: manifest says $claimAsserts assertions, the files plan $plannedTotal" -ForegroundColor Yellow
+            $figureIssues++
+        }
+    }
+}
+
+$contractPath = Join-Path $masterDir 'MASTER_API_CONTRACT.md'
+if (Test-Path $contractPath) {
+    $cm = [regex]::Match((Get-Content $contractPath -Raw), '\*\*(\d+) RPC endpoints executable by')
+    $mm = [regex]::Match($mfRaw, '\*\*(\d+) client RPCs\*\*')
+    if ($cm.Success -and $mm.Success -and $cm.Groups[1].Value -ne $mm.Groups[1].Value) {
+        Write-Host "  ENDPOINT FIGURE DRIFT: manifest says $($mm.Groups[1].Value) client RPCs, the GENERATED contract says $($cm.Groups[1].Value)" -ForegroundColor Yellow
+        $figureIssues++
+    }
+}
+
+if ($figureIssues -gt 0) {
+    Write-Host "  Remedy: correct the manifest, or regenerate the contract. These figures describe the" -ForegroundColor DarkGray
+    Write-Host "  safety net a fresh session inherits; a wrong one misrepresents how much is proven." -ForegroundColor DarkGray
+    $issues += $figureIssues
+} else {
+    Write-Host "  manifest suite figures ($($testFiles.Count) files / $plannedTotal assertions) and endpoint count match the repository" -ForegroundColor Green
 }
 
 Write-Host ""

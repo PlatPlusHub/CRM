@@ -183,6 +183,60 @@ if (-not (Test-Path $surfaceFile)) {
     }
 }
 
+# 4c. META-1 (2026-09-01): the manifest PUBLISHES the three live-state values, and until now nothing
+#     compared what it publishes against what the databases actually hold. Proven by mutation:
+#     corrupting the structural-surface hash in `manifest.md` left the repository guard CLEAN (it
+#     opens no database) and this guard CLEAN (it never read the manifest), so the one document a
+#     cold-start session reads for "is Primary synchronized?" could assert any value at all. The
+#     ledger fingerprint was already covered by repository Check 9; the function and structural
+#     surfaces were not covered by anything.
+#
+#     This compares the manifest against the LOCAL values computed above -- local is the repository's
+#     own state after a reset, so a mismatch means the manifest is stale or wrong. It deliberately
+#     does NOT compare against the caller-supplied Primary values: those are only Primary evidence if
+#     they were read from Primary (GUARD-1), and a guard must not launder a supplied value into a
+#     published fact.
+Write-Host "== Check L5: manifest's published live-state hashes match this database ==" -ForegroundColor Cyan
+$mfPath = Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md'
+if (-not (Test-Path $mfPath)) {
+    Write-Host "  MISSING: _ORVION_CANONICAL/manifest.md" -ForegroundColor Red
+    $issues++
+} else {
+    $mfText = Get-Content $mfPath -Raw
+    $mfIssues = 0
+    # Both values are produced by the checks above: $lparts[0] by Check L2/P2 and $localCombined by
+    # Check L4/P4. PowerShell scopes them to the script, not to the `if` blocks that assign them, so
+    # they are readable here -- but each is null when its own query failed, which the loop treats as
+    # NOT CHECKED rather than as a match. A guard that silently compares against an empty string
+    # would report agreement between two things it never read.
+    $localFnHash = if ($lparts -and $lparts.Count -gt 0) { $lparts[0] } else { $null }
+    $pairs = @(
+        @{ label = 'function surface';   rx = 'full-function-surface hash `([0-9a-f]{32})`'; actual = $localFnHash },
+        @{ label = 'structural surface'; rx = 'structural-surface hash `([0-9a-f]{32})`';    actual = $localCombined }
+    )
+    foreach ($pair in $pairs) {
+        if ([string]::IsNullOrWhiteSpace($pair.actual)) {
+            Write-Host "  NOT CHECKED: local $($pair.label) was not computed by this run" -ForegroundColor Yellow
+            continue
+        }
+        $m = [regex]::Match($mfText, $pair.rx)
+        if (-not $m.Success) {
+            Write-Host "  MANIFEST publishes no $($pair.label) hash -- cannot verify what a cold start would read" -ForegroundColor Yellow
+            $mfIssues++
+        } elseif ($m.Groups[1].Value -ne $pair.actual) {
+            Write-Host "  MANIFEST STALE: it publishes $($pair.label) $($m.Groups[1].Value), this database holds $($pair.actual)" -ForegroundColor Red
+            $mfIssues++
+        }
+    }
+    if ($mfIssues -gt 0) {
+        Write-Host "  Remedy: update manifest.md's 'Live state' line. It is what a fresh session reads to answer" -ForegroundColor DarkGray
+        Write-Host "  'is Primary synchronized?', so a wrong value there is worse than no value." -ForegroundColor DarkGray
+        $issues += $mfIssues
+    } else {
+        Write-Host "  manifest's published function and structural hashes match this database" -ForegroundColor Green
+    }
+}
+
 # 5. The API contract is GENERATED from this database. A generated document that nobody regenerates
 #    is a stale claim, which is the failure mode this whole file exists to catch. Same shape as
 #    Check 7's ai-map freshness test.

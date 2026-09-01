@@ -14,7 +14,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(14);
+select plan(16);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('85000000-0000-0000-0000-0000000000a1','owner@sec1c.test',   now()),
@@ -173,6 +173,44 @@ select is(
            and g.prosrc like '%''' || c.relname || '''%')),
   0,
   'every table carrying the guard is named in its mapping -- no attachment can reach the unmapped branch');
+
+-- =============================================================================================
+-- 15-16. PAR-4 LOAD-BEARING PAIR. Everything above proves the write is refused; none of it proves
+--        the REFUSAL COMES FROM THIS TRIGGER. Without this pair, deleting `202607059100` entirely
+--        could leave the file green if some other rule happened to refuse the same statement.
+--        So: drop the trigger inside a savepoint, assert the violation SUCCEEDS, roll back, assert
+--        it is refused again. A security test that cannot detect its own guard being removed is
+--        incomplete (`AGENTS.md §6`).
+-- =============================================================================================
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+savepoint before_mutation;
+drop trigger suppliers_guard_write_capability on public.suppliers;
+
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
+
+select lives_ok(
+  $$update public.suppliers set credit_limit_amount = 999999
+     where id = '85000000-0000-0000-0000-0000000000d3'$$,
+  'MUTATION: with the trigger dropped the trainee CAN rewrite the credit ceiling -- so the refusal above is this guard, not a coincidence');
+
+reset role;
+select set_config('request.jwt.claims', null, true);
+rollback to savepoint before_mutation;
+
+-- The session must be re-established after the rollback: an earlier assertion's role would make the
+-- next probe measure "never attempted" rather than "denied", which is the confusion this repository
+-- has already met twice in tests 70 and 72.
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
+
+select throws_ok(
+  $$update public.suppliers set credit_limit_amount = 999999
+     where id = '85000000-0000-0000-0000-0000000000d3'$$,
+  '42501', null,
+  '...and with the trigger restored it is refused again -- the pair is what makes assertion 7 load-bearing');
 
 select * from finish();
 rollback;
