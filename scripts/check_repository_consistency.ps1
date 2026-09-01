@@ -6,11 +6,11 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Thirteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Fourteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
   11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
-  13 no Master table row escaped out of its own table):
+  13 no Master table row escaped out of its own table; 14 no manifest owner-decision id is already decided):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
@@ -19,7 +19,8 @@
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
     Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) ·
-    Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1).
+    Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1) ·
+    Check 14 no id on the manifest's open-decision line is already marked decided in the register (OWNER-1).
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -658,6 +659,61 @@ if ($newestCommit) {
     } elseif ($futureHits -eq 0) {
         Write-Host "  no future-dated evidence; clock agrees with the newest commit ($($cd.ToString('yyyy-MM-dd')))" -ForegroundColor Green
     }
+}
+
+Write-Host ""
+Write-Host "== Check 14: no manifest owner-decision ID is already decided in the register ==" -ForegroundColor Cyan
+# OWNER-1 (2026-09-01). Check 11 proves the id RESOLVES; it never asks whether the thing it resolves
+# to is still OPEN. On 2026-09-01 the manifest listed EIGHTEEN decisions the owner had already made,
+# so a cold-start session would have read settled questions as live blockers -- the highest-value
+# cold-start failure there is, because it manufactures work that does not exist and invites
+# re-escalation of a decision the owner already gave. The same "restated moving list goes stale"
+# shape had by then bitten canon 32 twice and the execution plan once.
+#
+# The resolved-set is DERIVED from the register's own status cells (same cell-anchored markers
+# Check 2 uses), never from a list maintained here -- an exemption list would be one more thing to
+# go stale, which is the defect this check exists to catch.
+$decidedInRegister = @{}
+$regLines = Get-Content (Join-Path $masterDir 'MASTER_GAP_REGISTER.md')
+foreach ($line in $regLines) {
+    $lead = [regex]::Match($line, '^\|\s*([A-Z][A-Za-z0-9\-/\.]*)\s*\|')
+    if (-not $lead.Success) { continue }
+    $cells = $line -split '(?<!\\)\|'
+    if ($cells.Count -le 9) { continue }
+    $status = $cells[9].Trim()
+    # Cell-anchored, as in Check 2: the marker must LEAD the status, not merely appear in prose
+    # about some other object. "RESOLVED 2026-.." and "✅ FIXED .." lead; "...revisit if" does not.
+    if ($status -match '^(\*\*)?\s*(✅|RESOLVED\b|FIXED\b|IMPLEMENTED\b|CLOSED\b|DECIDED\b|PROVEN (NOT A DEFECT|INTENTIONAL)\b)') {
+        foreach ($piece in ($lead.Groups[1].Value -split '/')) {
+            $p = $piece.Trim(); if ($p) { $decidedInRegister[$p] = $status }
+        }
+    }
+}
+$staleDecisions = 0
+if ($decLine) {
+    # Only the ENUMERATION is the list of open decisions. The line legitimately also cites the
+    # register row that explains a reconciliation, and a citation is not a blocker -- reading it as
+    # one is how this check first reported its own evidence row as stale. The manifest marks the
+    # boundary with "Genuinely open:"; everything before it is prose about the list, not the list.
+    $enumeration = $decLine
+    $cut = $decLine.IndexOf('Genuinely open:')
+    if ($cut -ge 0) { $enumeration = $decLine.Substring($cut) }
+    $manifestIds = [regex]::Matches($enumeration, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
+                   ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    foreach ($id in $manifestIds) {
+        if ($decidedInRegister.ContainsKey($id)) {
+            $s = $decidedInRegister[$id]
+            Write-Host "  STALE OWNER DECISION: manifest lists '$id' as open, but the register marks it $($s.Substring(0,[Math]::Min(60,$s.Length)))" -ForegroundColor Yellow
+            $staleDecisions++
+        }
+    }
+}
+if ($staleDecisions -gt 0) {
+    Write-Host "  Remedy: remove the id from the manifest's 'Open owner decisions' line. A decided item is an" -ForegroundColor DarkGray
+    Write-Host "  ENGINEERING task, not an open question, and listing it as blocked invents work." -ForegroundColor DarkGray
+    $issues += $staleDecisions
+} else {
+    Write-Host "  every manifest owner-decision ID is still open in the register" -ForegroundColor Green
 }
 
 Write-Host ""

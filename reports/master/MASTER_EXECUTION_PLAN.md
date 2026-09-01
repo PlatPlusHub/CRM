@@ -1104,8 +1104,18 @@ additive capability.*
    Kept struck through rather than deleted: the 13 *authentication* event types are still Supabase
    Auth events with no ORVION hook, which is **AUTH-1**'s territory, not a producer gap.
 7. **Table/column completeness sweep** across all **75** tables — never finished.
-8. **SEC-1 write-path model** — remains the open owner decision; three further forgeries of
-   authoritative history are recorded as its evidence.
+8. ~~**SEC-1 write-path model** — remains the open owner decision~~ — **DECIDED 2026-09-01 (OWNER-1).
+   No longer an owner blocker; struck through rather than deleted because the three forgeries of
+   authoritative history recorded as its evidence are what earned the decision.** The owner ratified
+   the refined architecture: **RLS carries row scope · capability enforcement sits on the actual
+   writable surfaces · business mutation rules stay in the owning RPC · integrity constraints are
+   path-independent.** RPC-only authenticated writes were **rejected** — all 76 public RPCs are
+   `SECURITY INVOKER`, and converting them would replace RLS with 76 hand-written tenant checks, the
+   second authorization system canon 35 forbids. What remains under SEC-1 is *engineering*, not a
+   question: **SEC-1b** closed the INSERT path, **SEC-1c** (`202607059100`) closed the UPDATE path on
+   the thirteen tables that had a capability trigger on one side only, and **SUP-1**
+   (`202607059200`) closed the read half of the supplier-credit case. Status and evidence:
+   `MASTER_GAP_REGISTER.md`.
 
 **Blocked on commercial decisions (none blocks the above):**
 ~~BLOCKED-1 trial plan tier + duration at provisioning~~ — **RESOLVED 2026-08-27**: owner set a
