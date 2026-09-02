@@ -41,6 +41,13 @@ function Get-Rest($jwt, $path) {
     Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Get -SkipHttpErrorCheck `
         -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" }
 }
+# SUP-2: the table door for WRITES. PostgREST serves PATCH on `suppliers` beside the RPC, so a rule
+# proven only through `create_supplier` would be proven on half the surface.
+function Invoke-Patch($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } -ContentType 'application/json' `
+        -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
 function Val($r) { if ($r.StatusCode -lt 300 -and $r.Content) { ($r.Content | ConvertFrom-Json) } else { $null } }
 function Ok($r) { $r.StatusCode -ge 200 -and $r.StatusCode -lt 300 }
 function Err($r) { try { ($r.Content | ConvertFrom-Json).message } catch { $r.Content } }
@@ -469,6 +476,43 @@ Check "the gated reader answers an unprivileged employee with permitted=false an
 $r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
 $v = Val $r
 Check "POSITIVE CONTROL: finance, holding VIEW_FINANCIAL_DOCUMENTS, receives the REAL ceiling -- a null here would pass a weaker assertion" ((Ok $r) -and $v[0].permitted -eq $true -and [decimal]$v[0].credit_limit_amount -eq 25000) "$($r.StatusCode) $($r.Content)"
+
+
+# =================================================================================================
+# PD-24 / SUP-2 -- the WRITE half of the same ceiling, over the same wire.
+#
+# The read half above is defeated if the actor can simply SET the value: they then know it because
+# they supplied it. `senior_employee` is the actor neither SEC-1c nor SUP-1 tested -- SEC-1c proved
+# a TRAINEE refused, and a trainee lacks ASSIGN_SUPPLIER, which this role holds. Everything here
+# runs as $senior over HTTP because PostgREST serves PATCH on `suppliers` beside the RPC.
+# =================================================================================================
+
+$r = Get-Rest $senior 'suppliers?select=id,credit_limit_amount&id=eq.0d110000-0000-0000-0000-0000000000c7'
+Check "CONTROL: the senior employee is refused the READ of the ceiling -- the premise of the refusals below" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ phone = '+20 122 000 0000' }
+Check "POSITIVE CONTROL: ...yet still EDITS an ordinary supplier field -- so the refusal below is the field's guard, not a frozen table" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$phone = (Psql "select phone from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and that PATCH actually landed -- a 204 alone would not prove the UPDATE ran" ($phone -eq '+20 122 000 0000') "phone=$phone"
+
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 999999 }
+Check "SUP-2: setting the ceiling over HTTP is REFUSED -- this returned 204 and moved 25000 to 999999 until 202607059600" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and the ceiling is untouched at 25000 -- the refusal rolled the write back rather than merely reporting an error" ([decimal]$ceiling -eq 25000) "credit_limit_amount=$ceiling"
+
+$r = Rpc $senior 'create_supplier' @{ p_name = 'Ceiling Setter Air'; p_supplier_type_code = 'airline'; p_credit_limit_amount = 500000 }
+Check "...nor through create_supplier, whose ASSIGN_SUPPLIER charge alone minted a half-million ceiling before this migration" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $senior 'create_supplier' @{ p_name = 'No Terms Travel'; p_supplier_type_code = 'hotel' }
+Check "POSITIVE CONTROL: a supplier with NO credit terms is still created on ASSIGN_SUPPLIER alone -- master data did not become a finance operation" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $owner 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 30000 }
+Check "POSITIVE CONTROL: the owner, holding both permissions, DOES set the ceiling -- a guard that stopped everyone would be a capability regression" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and it really moved to 30000 -- the positive control is proven by the value, not by the status code" ([decimal]$ceiling -eq 30000) "credit_limit_amount=$ceiling"
 
 
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })

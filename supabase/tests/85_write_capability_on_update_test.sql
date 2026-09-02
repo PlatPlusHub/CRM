@@ -111,11 +111,19 @@ select throws_ok(
   '42501', null,
   '...nor a passenger, whose name is what appears on a ticket');
 
+-- 202607059600 (SUP-2): this assertion and its mutation pair below name `phone`, not
+-- `credit_limit_amount`, and the change is deliberate. The credit column now carries a SECOND guard
+-- (`suppliers_guard_credit_authority`), so a mutation that drops `suppliers_guard_write_capability`
+-- alone can no longer make that write succeed -- the `lives_ok` half would fail and, worse, the
+-- `throws_ok` half would keep passing on the OTHER trigger's refusal, quietly measuring nothing.
+-- `phone` is an ordinary column reachable only through the capability guard, so these three
+-- assertions once again pin exactly the trigger they name. Who may set the CEILING is owned by
+-- `90_supplier_credit_write_authority_test.sql`, where its own defect injection lives.
 select throws_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
-  '...nor a supplier credit limit -- the finance-sensitive field whose VISIBILITY is still an open owner decision');
+  '...nor a supplier record, which carries the agency''s commercial relationships');
 
 -- =============================================================================================
 -- 9-12. POSITIVE CONTROLS. The union set exists so that these keep working.
@@ -192,9 +200,9 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select lives_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
-  'MUTATION: with the trigger dropped the trainee CAN rewrite the credit ceiling -- so the refusal above is this guard, not a coincidence');
+  'MUTATION: with the trigger dropped the trainee CAN rewrite a supplier -- so the refusal above is this guard, not a coincidence');
 
 reset role;
 select set_config('request.jwt.claims', null, true);
@@ -207,7 +215,7 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select throws_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
   '...and with the trigger restored it is refused again -- the pair is what makes assertion 7 load-bearing');

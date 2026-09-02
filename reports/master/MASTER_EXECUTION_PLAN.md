@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
+Last updated: 2026-09-02 (**supplier credit authority — SUP-2.** The table-by-table audit's next slice, chosen by measuring the writable surface rather than from a list; three candidate classes were discarded by that measurement before the fourth produced a defect. The entry is in Batch 6 below, and the NEXT SLICE pointer was replaced in the SAME edit rather than left to go stale as it did on 2026-09-01. Prior entry follows.)
+
+Previously: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
 
 Previously: 2026-08-29 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
 
@@ -1046,9 +1048,35 @@ additive capability.*
      **DEAD-4 recorded:** `campaign_daily_metrics`, `exchange_rate_adjustments` and
      `financial_accounts` have neither producer nor consumer — measured in both directions.
      Test 89 (21); suite 88/1211 → **89/1232**, HTTP 376 → **381**.
+     *(The "NEXT SLICE" pointer that stood here is replaced by the entry below rather than left to
+     go stale a second time — the failure this document's own header records.)*
+   * **SUPPLIER CREDIT AUTHORITY — SUP-2, DONE 2026-09-02 (`202607059600`), DEPLOYED.** The slice
+     was chosen by MEASURING the surface rather than from a list, and three candidate classes were
+     discarded by that measurement before a fourth produced a defect: `authenticated` holds **zero
+     DELETE** on all 75 tables, no granted command lacks an RLS policy, and every SECURITY DEFINER
+     function in `app`/`public` already pins `search_path` and is closed to `anon`. What remained was
+     a five-column class — every column `authenticated` cannot SELECT but CAN insert or update. Four
+     carry dedicated column-aware financial guards (SPEC-139/154-A/159-A). **The fifth,
+     `suppliers.credit_limit_amount`, carried only the table's ASSIGN_SUPPLIER charge**, and
+     ASSIGN_SUPPLIER and VIEW_FINANCIAL_DOCUMENTS are held by **different role sets** — so
+     branch_manager, department_manager and senior_employee could SET the ceiling SUP-1 refuses to
+     show them, which for those three defeats the withholding entirely: an actor who sets a value
+     knows it. Reproduced as `senior_employee` on BOTH doors with the refusal established FIRST in
+     the same session, and the writes verified by reading the values back WITH rights.
+     **It survived two packages that both read this exact column**, because each recorded the other
+     as owning the half it skipped — and SEC-1c's proof used a *trainee*, who lacks ASSIGN_SUPPLIER,
+     so it measured "the weakest actor is refused" and never "the authority is sufficient".
+     No permission minted: the floor is forced by SUP-1's own guarantee — the write must cost at
+     least the read. **SUP-3 recorded, NOT decided** — whether `finance_manager` should hold
+     ASSIGN_SUPPLIER is commercial, and SUP-2 is correct under either answer. One existing test
+     CORRECTED rather than re-run: test 85's PAR-4 mutation dropped `suppliers_guard_write_capability`
+     and asserted the write then succeeded, which a second guard on that column would have made
+     measure nothing. Test 90 (15) + 9 HTTP, each with defect injection at its own layer; suite
+     89/1232 → **90/1247**, HTTP 381 → **390**.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
-     order; the care/conversation family and the finance periphery are now closed on every door
-     they have.
+     order. The write-without-read class above is now closed on all five of its columns; the three
+     classes measured clean this pass are named above so the next slice does not re-measure them
+     without new evidence.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
