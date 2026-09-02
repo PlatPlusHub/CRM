@@ -16,7 +16,9 @@
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
-    Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity ·
+    Check 7 ai-map freshness vs manifest — all four live_state fields (phase; and
+      active_change_request / last_completed / next_capability compared BY VALUE) ·
+    Check 8 Supabase project-topology registry integrity ·
     Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
@@ -358,6 +360,39 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
         Write-Host "  AI-MAP STALE: ai-map.json live_state does not name manifest Current Phase $manifestCur — regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
         $issues++
     }
+    # EXTENDED 2026-09-02 (GOV-10). `Active Change Request` is the fourth live_state field the
+    # generator extracts, and it was the ONLY one nothing compared. Check 7's coverage had been
+    # decided field by field -- phase (2026-07-17), next_capability (2026-08-17), last_completed
+    # (2026-09-01) -- each added the day its own drift shipped, so the field nobody had yet been
+    # burned by stayed unguarded while the check's name ("ai-map freshness") promised the block.
+    #
+    # This is the load-bearing field of the cold-start handoff, not an incidental one: `AGENTS.md
+    # §4` step 4 branches the ENTIRE boot sequence on it (not `None` -> open that SPEC and let its
+    # Minimum Reading List take over; `None` -> fall through to the roadmap), and `AGENTS.md §6`
+    # plus `CR_LIFECYCLE.md §9` make it the only handoff channel between sessions. It is written by
+    # `Approve SPEC-NNN` and cleared by `Complete SPEC-NNN`, and that clear has been FORGOTTEN
+    # twice already (SPEC-024, SPEC-027 -- `reports/future-backlog.md` still carries the safeguard
+    # entry), so the forgetting history is demonstrated rather than hypothetical. A stale
+    # `changes/SPEC-NNN.md` in the map sends a cold-starting agent into a closed Change Request; a
+    # stale `None.` hides an open one and the agent silently starts different work.
+    #
+    # Extracted and normalised by EXACTLY the contract the `Last Completed` comparison below
+    # established -- generate-ai-map.ps1's Get-Field shape (single line, trimmed), whitespace
+    # collapsed so reflowing cannot cry wolf while a real change of value fails loudly. No new
+    # mechanism, no SPEC-id list, and no other ai-map key is brought under comparison by this.
+    # RESIDUAL, stated rather than hidden: like both comparisons below, this one is silent if the
+    # manifest loses the field entirely -- it measures DISAGREEMENT, never presence.
+    $mfAcr = [regex]::Match($mfRaw2, '(?m)^Active Change Request:\s*(?<v>.+?)\s*$')
+    if ($mfAcr.Success) {
+        $aiAcr = $null
+        try { $aiAcr = (ConvertFrom-Json $aiRaw).live_state.active_change_request } catch { $aiAcr = $null }
+        $aiAcrN = if ($null -eq $aiAcr) { '' } else { ($aiAcr -replace '\s+', ' ').Trim() }
+        $mfAcrN = ($mfAcr.Groups['v'].Value -replace '\s+', ' ').Trim()
+        if ($aiAcrN -ne $mfAcrN) {
+            Write-Host "  AI-MAP STALE: ai-map.json live_state.active_change_request is '$aiAcrN' but the manifest's 'Active Change Request:' is '$mfAcrN' — the cold-start handoff pointer disagrees with its own SSOT; regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
+            $issues++
+        }
+    }
     # REPAIRED 2026-09-01. This comparison used to key on `Last Completed:\s*SPEC-[0-9]+`, so it ran
     # ONLY while that field began with a literal SPEC id and did nothing whatsoever otherwise. The
     # field stopped naming a SPEC id at 45a9463 (2026-08-27, WP-04-A), leaving the comparison INERT
@@ -385,8 +420,9 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
             $issues++
         }
     }
-    # Verified failure class (2026-08-17): the two checks above key on the phase NUMBER and the
-    # Last-Completed SPEC id — tokens that survive most edits — so ai-map's live_state.next_capability
+    # Verified failure class (2026-08-17): AS THIS CHECK STOOD IN 2026-08-08, the comparisons above it
+    # keyed on the phase NUMBER and the Last-Completed SPEC id — tokens that survive most edits — so
+    # ai-map's live_state.next_capability
     # drifted a full day out of date while this check reported CLEAN. A fresh agent reading the
     # machine-readable cold-start map would have executed a superseded Phase-8 objective (creating an
     # OAuth client that already existed). The next step is the single most action-guiding field in the
