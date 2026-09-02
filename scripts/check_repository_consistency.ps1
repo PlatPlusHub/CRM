@@ -6,13 +6,14 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Seventeen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Eighteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
   11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
   13 no Master table row escaped out of its own table; 14 no manifest owner-decision id is already
   decided; 15 manifest suite/endpoint figures match the repository; 16–17 canon carries neither a
-  settled decision presented as a current blocker nor a generated count copied out of its owner):
+  settled decision presented as a current blocker nor a generated count copied out of its owner;
+  18 the Active Change Request pointer names a real, still-open CR):
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
@@ -27,7 +28,11 @@
     Check 15 the manifest's suite and endpoint figures match the test files and the generated contract (META-1) ·
     Check 16 no canonical document names a settled finding as a CURRENT owner decision, judged against
       the manifest's own open-decision line (the cold-start contradiction of 2026-09-01) ·
-    Check 17 no canonical document restates the RPC-endpoint count that MASTER_API_CONTRACT.md generates (REG-2).
+    Check 17 no canonical document restates the RPC-endpoint count that MASTER_API_CONTRACT.md generates (REG-2) ·
+    Check 18 the manifest's Active Change Request names a real, still-OPEN Change Request, judged
+      against that CR's own `## Status` section (COLD-3). Check 7 asks whether the manifest and
+      ai-map AGREE about this field; Check 18 asks whether what they agree on is TRUE. Independent
+      invariants, independently testable -- neither substitutes for the other.
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -979,6 +984,93 @@ foreach ($md in Get-ChildItem $canonDir -Filter *.md -File) {
 }
 if ($countRestated -eq 0) {
     Write-Host "  no canonical document restates the endpoint count the generated contract owns" -ForegroundColor Green
+}
+
+# =================================================================================================
+Write-Host "== Check 18: the manifest's Active Change Request is a real, still-open CR ==" -ForegroundColor Cyan
+# CLEAR-ON-COMPLETE (2026-09-02, COLD-3). Check 7 proves the manifest and `ai-map.json` AGREE about
+# this field. It has never asked whether what they agree on is TRUE. Those are different invariants
+# and this one had no owner: with the manifest pointing at `SPEC-125` -- whose own Status is
+# `[x] Complete` -- and ai-map regenerated to match, the guard printed CLEAN at exit 0. So did a
+# manifest pointing at `changes/SPEC-999-never-created.md`, a file that has never existed: Check 1
+# deliberately excludes the `SPEC-NNN.md` placeholder shape from reference linting, so nothing in the
+# repository had ever resolved this path. A cold-start agent takes `AGENTS.md §4` Stage A step 4 on
+# this field -- it reads that CR and hands over to its Minimum Reading List -- so a stale pointer
+# either hands it finished work as its assignment or sends it to a file that is not there.
+#
+# The failure is RECORDED, not hypothetical: the pointer-clear was omitted on Complete twice
+# (SPEC-024, SPEC-027), and `reports/future-backlog.md` has carried the process-safeguard row since.
+# That row proposed a Claude Stop/PostToolUse hook; a guard is the stronger answer because it runs in
+# CI, needs no per-workstation tool configuration, and is what `GOVERNANCE.md §18` calls for.
+#
+# AUTHORITY: the CR's OWN `## Status` section, which `changes/TEMPLATE.md` defines and
+# `CR_LIFECYCLE.md` §3/§4/§5/§8 governs -- §8 names `Status` as a workflow-state section of the
+# Change Request itself, and §9's `Approve`/`Complete` commands flip that box and move this pointer
+# in the same breath. Nothing else in the repository assigns a CR a status: `MASTER_EXECUTION_PLAN.md`
+# names SPEC ids 29 times and gives none of them a state. Verified across all 151 CR files -- every
+# one has exactly one `## Status` section with exactly one checked box. **Status is READ here, never
+# copied**: no CR status enters `manifest.md` or `ai-map.json`, so no second source of truth is
+# created and the manifest stays the sole current-state authority holding only the POINTER.
+#
+# No maintained list of SPEC ids exists or is possible here -- the subject is whatever path the
+# manifest names. The five legal status words are read from `changes/TEMPLATE.md` rather than
+# restated, so a vocabulary change is caught instead of silently accepted; the TERMINAL pair is
+# `CR_LIFECYCLE.md` §4's ("`Complete` and `Cancelled` are terminal"), cited rather than derived by
+# parsing prose. `Draft` is deliberately NOT flagged: it is non-terminal, and §9's `Execute` already
+# refuses a Draft, so failing on it would be stricter than "currently open" without new evidence.
+$acrLine = [regex]::Match($manifestRaw, '(?m)^Active Change Request:\s*(?<v>.+?)\s*$')
+if (-not $acrLine.Success) {
+    Write-Host "  MANIFEST has no 'Active Change Request:' line -- the boot sequence branches on it (AGENTS.md 4 step 4/5)" -ForegroundColor Red
+    $issues++
+} else {
+    $acr = $acrLine.Groups['v'].Value.Trim().Trim('`')
+    if ($acr -match '^None\.?$') {
+        Write-Host "  no active Change Request (manifest says '$acr') -- nothing to validate" -ForegroundColor Green
+    } else {
+        $crPath = Join-Path $RepoRoot $acr
+        if (-not (Test-Path $crPath)) {
+            Write-Host "  ACTIVE CR MISSING: manifest names '$acr' but no such file exists -- a fresh session following AGENTS.md 4 step 4 has nothing to read" -ForegroundColor Yellow
+            $issues++
+        } else {
+            # Legal vocabulary from the template that defines the field (One Authority), not restated here.
+            $tplPath = Join-Path $RepoRoot 'changes/TEMPLATE.md'
+            $legal = @()
+            if (Test-Path $tplPath) {
+                $tplSec = [regex]::Match([IO.File]::ReadAllText($tplPath), '(?ms)^##\s+Status\s*\r?\n(?<b>.*?)(?=^##\s|^---\s*$)')
+                if ($tplSec.Success) {
+                    # @() is load-bearing, not decoration: a single match makes the pipeline return a
+                    # SCALAR STRING, whose .Count is 1 and whose [0] is its first CHARACTER. That exact
+                    # slip made this check report a CR in state 'In Progress' as status 'I' -- an
+                    # over-firing false positive that the closed-CR and missing-file cases could never
+                    # have revealed, because both expect FAIL. Only the open-CR case caught it.
+                    $legal = @([regex]::Matches($tplSec.Groups['b'].Value, '(?m)^\s*\[\s*[xX ]\s*\]\s*(?<s>\S[^\r\n]*)') |
+                               ForEach-Object { $_.Groups['s'].Value.Trim() })
+                }
+            }
+            $terminal = @('Complete', 'Cancelled')   # CR_LIFECYCLE.md 4
+            $crSec = [regex]::Match([IO.File]::ReadAllText($crPath), '(?ms)^##\s+Status\s*\r?\n(?<b>.*?)(?=^##\s|^---\s*$)')
+            if (-not $crSec.Success) {
+                Write-Host "  ACTIVE CR UNREADABLE: '$acr' has no '## Status' section -- changes/TEMPLATE.md requires one, so its lifecycle state cannot be established" -ForegroundColor Yellow
+                $issues++
+            } else {
+                $checked = @([regex]::Matches($crSec.Groups['b'].Value, '(?m)^\s*\[\s*[xX]\s*\]\s*(?<s>\S[^\r\n]*)') |
+                             ForEach-Object { $_.Groups['s'].Value.Trim() })
+                if ($checked.Count -ne 1) {
+                    Write-Host "  ACTIVE CR AMBIGUOUS: '$acr' has $($checked.Count) checked status boxes -- exactly one is required (changes/TEMPLATE.md)" -ForegroundColor Yellow
+                    $issues++
+                } elseif ($legal.Count -gt 0 -and $legal -notcontains $checked[0]) {
+                    Write-Host "  ACTIVE CR STATUS UNKNOWN: '$acr' is '$($checked[0])', which is not one of the states changes/TEMPLATE.md allows ($($legal -join ', '))" -ForegroundColor Yellow
+                    $issues++
+                } elseif ($terminal -contains $checked[0]) {
+                    Write-Host "  ACTIVE CR IS CLOSED: manifest still points at '$acr', whose own Status is '$($checked[0])' -- a terminal state (CR_LIFECYCLE.md 4). The pointer was not cleared on Complete; a fresh session would be handed finished work as its assignment" -ForegroundColor Yellow
+                    Write-Host "  Remedy: set 'Active Change Request: None.' in the manifest (CR_LIFECYCLE.md 9, the Complete command), then regenerate ai-map.json." -ForegroundColor DarkGray
+                    $issues++
+                } else {
+                    Write-Host "  active CR '$acr' is '$($checked[0])' -- open, and its file exists" -ForegroundColor Green
+                }
+            }
+        }
+    }
 }
 
 Write-Host ""
