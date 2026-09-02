@@ -86,7 +86,7 @@ call it -- see section 6 for what that does and does not establish.
 | `create_passenger` | p_first_name text, p_family_name text, p_full_name text, p_passenger_type_code text, p_... | `uuid` | invoker | CREATE_BOOKING_ITEM | passengers | - | 7 | yes |
 | `create_quotation` | p_customer_id uuid, p_currency_code text, p_lead_id uuid, p_valid_until timestamp with ... | `uuid` | invoker | CREATE_QUOTATION | quotations | - | 5 | yes |
 | `create_service_request` | p_customer_id uuid, p_title text, p_service_request_type_code text, p_service_request_s... | `uuid` | invoker | CREATE_SERVICE_REQUEST | service_requests | - | 6 | yes |
-| `create_supplier` | p_name text, p_supplier_type_code text, p_phone text, p_email text, p_payment_term_code... | `uuid` | invoker | ASSIGN_SUPPLIER | suppliers | - | 4 | yes |
+| `create_supplier` | p_name text, p_supplier_type_code text, p_phone text, p_email text, p_payment_term_code... | `uuid` | invoker | ASSIGN_SUPPLIER | suppliers | - | 5 | yes |
 | `create_task` | p_title text, p_task_type_code text, p_owner_user_id uuid, p_owner_department_id uuid, ... | `uuid` | invoker | CREATE_TASK | tasks | - | 7 | yes |
 | `create_tenant_user` | p_full_name text, p_email text, p_phone text, p_auth_user_id uuid | `uuid` | invoker | MANAGE_USERS | users | - | 1 | yes |
 | `current_placement` |  | `TABLE(branch_id uuid, department_id uuid)` | invoker | - | - | - | 0 | yes |
@@ -119,7 +119,7 @@ call it -- see section 6 for what that does and does not establish.
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
-| `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, permitted boolean)` | invoker | inline has_permission check | - | - | 2 | yes |
+| `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, permitted boolean)` | invoker | inline has_permission check | - | - | 2 | yes |
 | `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | yes |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |
@@ -221,6 +221,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `trusted_devices` | `SIU-` | no | no | owner_only |
 | `usage_counters` | `S---` | no | no | tenant_isolation |
 | `user_branch_assignments` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `user_permission_grants` | `SIU-` | no | no | scope_insert, scope_read, scope_update |
 | `user_role_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `users` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 

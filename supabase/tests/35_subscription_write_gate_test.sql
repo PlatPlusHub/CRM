@@ -233,6 +233,12 @@ select is(
 -- =============================================================================================
 -- 19-20. COVERAGE -- what keeps the generated attachment honest in both directions.
 --
+-- `user_permission_grants` joined the exemption list with `202607059800` (RBAC-3), on the reasoning
+-- already established for `users`, `user_role_assignments` and `user_branch_assignments`, which are
+-- exempt for the same family reason: permission ADMINISTRATION is not the tenant's business data.
+-- Gating it would also be actively harmful in one direction that matters -- a lapsed tenant must
+-- still be able to REVOKE someone's access, and a gate would forbid exactly that write.
+--
 -- `scheduled_job_findings` joined the exemption list with `202607056900`, and the reason is the
 -- inverse of the usual one: a restricted tenant is precisely the case those rows exist to RECORD.
 -- Gating the table would make a deferral unrecordable for exactly the tenant being deferred, which
@@ -250,7 +256,7 @@ select is(
       and c.table_name <> all (array['subscriptions','subscription_payment_proofs','events','security_events',
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                     'users','user_role_assignments','user_branch_assignments','branches','departments',
+                                     'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
                                      'tenant_license_activations','document_storage_findings','scheduled_job_findings'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
@@ -266,7 +272,7 @@ select is(
       and pc.relname = any (array['subscriptions','subscription_payment_proofs','events','security_events',
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                  'users','user_role_assignments','user_branch_assignments','branches','departments',
+                                  'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
                                      'tenant_license_activations','document_storage_findings','scheduled_job_findings'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');

@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-02 (**supplier credit permission — SUP-3, owner decision.** The owner made SUP-3 explicit and authorised implementing it before the next slice: supplier credit management is now its own independently grantable permission. The enforcement half the owner also asked for is recorded as SUP-4 and deliberately not invented — ORVION has an authoritative supplier payable but no authoritative definition of what counts against the limit. Prior entry follows.)
+Last updated: 2026-09-02 (**authorization architecture — RBAC-3 / ADR-0027, owner-directed.** A full RBAC rebuild was authorised and rejected on measurement: the gap to the owner's capability-level end-state was one missing user->permission edge, while 197 enforcement sites already delegate to a single function. The grant model was refactored and the enforcement plane left untouched. SUP-4a fixed the ceiling's missing currency; SUP-4b stays open. Prior entry follows.)
+
+Previously: 2026-09-02 (**supplier credit permission — SUP-3, owner decision.** The owner made SUP-3 explicit and authorised implementing it before the next slice: supplier credit management is now its own independently grantable permission. The enforcement half the owner also asked for is recorded as SUP-4 and deliberately not invented — ORVION has an authoritative supplier payable but no authoritative definition of what counts against the limit. Prior entry follows.)
 
 Previously: 2026-09-02 (**supplier credit authority — SUP-2.** The table-by-table audit's next slice, chosen by measuring the writable surface rather than from a list; three candidate classes were discarded by that measurement before the fourth produced a defect. The entry is in Batch 6 below, and the NEXT SLICE pointer was replaced in the SAME edit rather than left to go stale as it did on 2026-09-01. Prior entry follows.)
 
@@ -1118,6 +1120,43 @@ additive capability.*
      `tenants.default_currency_code` read by nothing. Canon names no rule, no Batch-4 spec defines one,
      and AP `supplier_bills` (BF-7) is unbuilt. Three questions go to the owner (currency of the limit;
      which operation it refuses; whether it binds on all suppliers). Enforcement was NOT attempted.
+   * **AUTHORIZATION ARCHITECTURE — RBAC-3 (ADR-0027) + SUP-4a, OWNER-DIRECTED, DONE 2026-09-02
+     (`202607059800`, `202607059900`), DEPLOYED.** The owner relaxed the standing "do not redesign
+     RBAC" constraint and authorised a full rebuild if the evidence supported one. **It did not, and
+     the measurement is why:** `role_permissions` is the ONLY foreign key into `public.permissions`,
+     so the entire gap between ORVION and the owner's capability-level end-state was **one missing
+     user→permission edge**; meanwhile `app.has_permission` is resolved by **60 RLS policies, 61
+     triggers and 76 functions**, i.e. the enforcement plane was already unified and already correct.
+     Rebuilding would have rewritten 197 enforcement sites to reach identical behaviour, each one a
+     chance to drop a rule earned by a real defect. **PRESERVE was rejected too** — per-user override
+     and deny were not inconvenient but unrepresentable, so every "this user minus this capability"
+     would have become a new role (OWASP's role explosion). Chosen: **REFACTOR the grant model,
+     PRESERVE the enforcement plane** — not one RLS policy, guard trigger, RPC or grant was touched.
+     Delivered: `user_permission_grants` (per-user grant/deny, `user_role_assignments`' lifecycle
+     columns, SPEC-138 RLS, composite tenant FKs, no DELETE grant); `has_permission` resolving
+     **deny-override > user grant > role grant, then the plan gate** (deny-override ADOPTED from AWS
+     IAM / Azure RBAC, not invented; the plan gate stays last so a tenant admin cannot grant past a
+     commercial entitlement); `capability_group` + `action_kind` DERIVED from canon 28's own section
+     headings and naming convention; `app.effective_permissions` as the explainer, proven to agree
+     with the decision function for EVERY permission. **No privilege expanded** — with the table
+     empty `has_permission` returns exactly what it did before, pinned as an assertion. Permissions
+     were deliberately NOT moved to JWT claims: ORVION resolves the actor from `public.users`, so a
+     revocation binds on the next statement and claims would ADD a staleness window it does not have.
+     Gives `MANAGE_PERMISSIONS` (RBAC-2's dead permission) its first enforcement and
+     `permission_granted`/`permission_revoked` (EVT-2's class) their first producer.
+     **The owner's supplier decision** is expressed as a ROLE grant — `finance_manager` gains
+     ASSIGN_SUPPLIER, which measurably gates only `create_supplier`, `link_internal_supplier` and the
+     two supplier table doors. No VIEW_SUPPLIER was minted: `suppliers` is tenant-readable, so such a
+     permission would be a NEW restriction on every role rather than an expression of this decision.
+     **SUP-4a:** the ceiling was the ONLY money column in ORVION without a currency beside it — canon
+     30's own standard, unapplied to one column, and precisely what made it incomparable to
+     `supplier_balance`'s per-currency payable. Fixed. **SUP-4b remains OPEN**, narrowed from three
+     questions to two: ADR-0020's shipped `advance_booking` precedent settles the FORM (per-currency,
+     never converted, override permission, risk event), leaving only which operation the ceiling
+     refuses, what overrides it, and whether it binds on all suppliers — all commercial.
+     Tests 91 (26) + 92 (26) + 2 in test 90; four class guards (test 10 ceilings, test 14 composite
+     FK, test 35 gate exemptions, test 83 actor classification) each demanded and received explicit
+     justification before they were edited. Suite 91/1273 → **92/1301**; HTTP 395; 76 tables.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
      order. The write-without-read class is now closed on all five of its columns, and the five
      classes above are measured rather than assumed; a next slice needs a class none of them covers.

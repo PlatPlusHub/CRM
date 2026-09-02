@@ -49,8 +49,8 @@ insert into public.customers (id, tenant_id, customer_type_code, full_name) valu
   ('85000000-0000-0000-0000-0000000000d1','85000000-0000-0000-0000-000000000001','person','Real Customer');
 insert into public.passengers (id, tenant_id, first_name, family_name, full_name, passenger_type_code) values
   ('85000000-0000-0000-0000-0000000000d2','85000000-0000-0000-0000-000000000001','Real','Passenger','Real Passenger','adult');
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount) values
-  ('85000000-0000-0000-0000-0000000000d3','85000000-0000-0000-0000-000000000001','Airline','airline', 1000);
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code) values
+  ('85000000-0000-0000-0000-0000000000d3','85000000-0000-0000-0000-000000000001','Airline','airline', 1000, 'EGP');
 insert into public.bookings (id, tenant_id, branch_id, department_id, customer_id, booking_status_code, title, booking_reference, owner_user_id) values
   ('85000000-0000-0000-0000-0000000000b1','85000000-0000-0000-0000-000000000001','85000000-0000-0000-0000-00000000000a','85000000-0000-0000-0000-0000000000c1','85000000-0000-0000-0000-0000000000d1','confirmed','Trip','BR-SEC1C-1','85000000-0000-0000-0000-000000000011');
 

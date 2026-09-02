@@ -53,9 +53,9 @@ from (values ('86000000-0000-0000-0000-000000000011'::uuid,'owner'),
              ('86000000-0000-0000-0000-000000000013'::uuid,'finance_manager')) v(u,rc)
 join public.roles r on r.code = v.rc;
 
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount) values
-  ('86000000-0000-0000-0000-0000000000e1','86000000-0000-0000-0000-000000000001','Our Airline','airline', 25000),
-  ('86000000-0000-0000-0000-0000000000e2','86000000-0000-0000-0000-000000000002','Their Airline','airline', 99000);
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code) values
+  ('86000000-0000-0000-0000-0000000000e1','86000000-0000-0000-0000-000000000001','Our Airline','airline', 25000, 'EGP'),
+  ('86000000-0000-0000-0000-0000000000e2','86000000-0000-0000-0000-000000000002','Their Airline','airline', 99000, 'EGP');
 
 -- =============================================================================================
 -- 1-2. STRUCTURE: the column grant, and the precedent it copies.

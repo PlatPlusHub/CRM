@@ -17,7 +17,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(15);
+select plan(17);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('90000000-0000-0000-0000-0000000000a1','senior@sup90.test', now()),
@@ -49,8 +49,8 @@ join public.roles r on r.code = v.rc;
 -- Built as `postgres`, i.e. with no `auth.uid()`. Assertion 14 turns that into a claim rather than
 -- leaving it as a convenience: the session-less path must stay open or every migration and seed that
 -- ever writes a supplier breaks.
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount) values
-  ('90000000-0000-0000-0000-0000000000e1','90000000-0000-0000-0000-000000000001','Nile Air','airline', 1000);
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code) values
+  ('90000000-0000-0000-0000-0000000000e1','90000000-0000-0000-0000-000000000001','Nile Air','airline', 1000, 'EGP');
 
 -- =============================================================================================
 -- 1. STRUCTURE. The guard covers BOTH write operations -- an INSERT-only trigger would leave
@@ -125,7 +125,7 @@ select throws_ok(
   '...and CLEARING it is refused too -- `is not distinct from` is what makes erasure a change rather than a no-op');
 
 select throws_ok(
-  $$select app.create_supplier('Delta Air','airline', null, null, null, 500000)$$,
+  $$select app.create_supplier('Delta Air','airline', null, null, null, 500000, 'EGP')$$,
   '42501', null,
   '...nor through the RPC, which still accepts the parameter and now authorizes it');
 
@@ -200,9 +200,40 @@ reset role;
 select set_config('request.jwt.claims', null, true);
 
 select lives_ok(
-  $$insert into public.suppliers (tenant_id, name, supplier_type_code, credit_limit_amount)
-    values ('90000000-0000-0000-0000-000000000001','Seeded Air','airline', 7500)$$,
+  $$insert into public.suppliers (tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code)
+    values ('90000000-0000-0000-0000-000000000001','Seeded Air','airline', 7500, 'EGP')$$,
   'the session-less platform path still writes a ceiling -- canon 35 principle 6, as in every sibling guard');
+
+-- =============================================================================================
+-- 16-17. SUP-4a -- CANON 30's MONEY STANDARD, as a class rather than as one column.
+--        Canon 30: "Currency code should be stored separately", `currency_code text not null`,
+--        referencing `currencies.code`. Eleven public tables carry a money-amount column and
+--        `suppliers` was the ONLY one without a currency companion -- which is precisely why the
+--        ceiling could not be compared to `app.supplier_balance`'s per-currency payable. The
+--        assertion is written over `information_schema` with no exemption list, so the next
+--        money column added without a currency fails here rather than being discovered by a
+--        defect years later.
+-- =============================================================================================
+reset role;
+select is(
+  (select coalesce(string_agg(distinct t.table_name, ', ' order by t.table_name), '')
+     from information_schema.columns t
+    where t.table_schema = 'public'
+      and (t.column_name ~ '_amount$' or t.column_name = 'amount')
+      -- a per-currency companion column satisfies the standard however it is named on that table
+      and not exists (
+        select 1 from information_schema.columns c2
+         where c2.table_schema = 'public' and c2.table_name = t.table_name
+           and c2.column_name ~ 'currency_code$')),
+  '',
+  'CANON 30 (SUP-4a): every table with a money amount carries a currency code -- no exemption list, so a new one cannot slip in');
+
+select is(
+  (select count(*)::int from pg_constraint c
+     where c.conrelid = 'public.suppliers'::regclass
+       and c.conname = 'suppliers_credit_limit_currency_check'),
+  1,
+  '...and the ceiling''s two halves are bound together: an amount without its currency, or a currency without its amount, is refused');
 
 select * from finish();
 rollback;

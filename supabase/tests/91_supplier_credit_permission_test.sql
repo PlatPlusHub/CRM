@@ -48,8 +48,8 @@ from (values ('91000000-0000-0000-0000-000000000011'::uuid,'finance_manager'),
              ('91000000-0000-0000-0000-000000000013'::uuid,'owner')) v(u,rc)
 join public.roles r on r.code = v.rc;
 
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, phone) values
-  ('91000000-0000-0000-0000-0000000000e1','91000000-0000-0000-0000-000000000001','Nile Air','airline', 1000, '+20 100 000 0001');
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code, phone) values
+  ('91000000-0000-0000-0000-0000000000e1','91000000-0000-0000-0000-000000000001','Nile Air','airline', 1000, 'EGP', '+20 100 000 0001');
 
 -- =============================================================================================
 -- 1-3. THE PERMISSION ITSELF.
@@ -75,16 +75,23 @@ select is(
   '...granted to exactly ceo/finance_manager/owner -- the owner rule adds finance_manager and keeps owner+ceo, and does NOT restore the three roles SUP-2 removed');
 
 -- =============================================================================================
--- 4-9. FINANCE MANAGER: holds the new permission and NOT ASSIGN_SUPPLIER. This is owner rule 1,
---      and it is also the orthogonality proof in one direction.
+-- 4-9. FINANCE MANAGER. Owner rule 1, plus the owner's SECOND supplier decision (2026-09-02,
+--      `202607059800`): finance_manager is explicitly authorised for Supplier Management, so it now
+--      holds ASSIGN_SUPPLIER as well. These assertions were INVERTED by that decision rather than
+--      deleted -- what they used to prove (finance_manager cannot edit a supplier) is exactly what
+--      the owner overturned, so they now pin the new authority instead of the old restriction.
+--      The orthogonality proof that used to live here -- MANAGE_SUPPLIER_CREDIT granting nothing
+--      else -- moved to `92_capability_grant_model_test.sql`, where a per-user grant can produce an
+--      actor holding the credit capability WITHOUT ASSIGN_SUPPLIER. No seeded role has that shape
+--      any more, and proving it needs an actor that genuinely does.
 -- =============================================================================================
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"91000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
 
 select is(app.has_permission('MANAGE_SUPPLIER_CREDIT'), true,
   'CONTROL: finance_manager holds MANAGE_SUPPLIER_CREDIT');
-select is(app.has_permission('ASSIGN_SUPPLIER'), false,
-  'CONTROL: ...and does NOT hold ASSIGN_SUPPLIER -- so the write below cannot be riding on supplier administration');
+select is(app.has_permission('ASSIGN_SUPPLIER'), true,
+  'OWNER DECISION 2: ...and now ALSO holds ASSIGN_SUPPLIER -- finance_manager was explicitly authorised for Supplier Management');
 
 select lives_ok(
   $$update public.suppliers set credit_limit_amount = 5000
@@ -96,19 +103,17 @@ select is(
   5000::numeric,
   '...and the value actually CHANGED -- read back through the gated reader, not inferred from the absence of an error');
 
--- The counterexample that proves the credit-only relaxation is doing the work: same actor, same
--- table, same column -- only the presence of a SECOND changed column differs.
-select throws_ok(
+-- Holding BOTH, the bundled write now succeeds -- and that is the owner's decision working, not the
+-- credit rule weakening: the statement changes two things and the actor is authorised for both.
+select lives_ok(
   $$update public.suppliers set credit_limit_amount = 6000, phone = '+20 100 000 0002'
      where id = '91000000-0000-0000-0000-0000000000e1'$$,
-  '42501', null,
-  'ORTHOGONAL: the same write PLUS an ordinary column is refused -- credit authority is not supplier authority');
+  'OWNER DECISION 2: the ceiling AND an ordinary column in one statement now succeed -- the actor holds both authorities');
 
-select throws_ok(
+select lives_ok(
   $$update public.suppliers set phone = '+20 100 000 0003'
      where id = '91000000-0000-0000-0000-0000000000e1'$$,
-  '42501', null,
-  '...and an ordinary supplier edit alone is refused too -- MANAGE_SUPPLIER_CREDIT grants nothing beyond the ceiling');
+  '...and ordinary supplier administration works too -- Supplier Management, as authorised');
 
 -- =============================================================================================
 -- 10-13. SENIOR EMPLOYEE: holds ASSIGN_SUPPLIER and NOT the new permission. The other direction,
@@ -193,7 +198,7 @@ select throws_ok(
 -- 19-21. THE RPC DOOR. `create_supplier` still accepts the parameter and now authorizes it.
 -- =============================================================================================
 select throws_ok(
-  $$select app.create_supplier('Ceiling Co','hotel', null, null, null, 500000)$$,
+  $$select app.create_supplier('Ceiling Co','hotel', null, null, null, 500000, 'EGP')$$,
   '42501', null,
   'the RPC door is charged the same permission -- creating a supplier WITH credit terms needs it');
 

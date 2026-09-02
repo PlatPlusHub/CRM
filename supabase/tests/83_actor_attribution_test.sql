@@ -253,10 +253,16 @@ where c.table_schema = 'public'
 --     assignment. Again the actor half (`created_by`, `assigned_by`) is derived already.
 --   * `customers.last_interaction_user_id` -- DEAD-3: no writer anywhere in the database.
 --   * `invoices.voided_by`, `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22.
+--   * `user_permission_grants.user_id` (RBAC-3, `202607059800`) -- classified as a SUBJECT column,
+--     not an actor one: it names WHOSE capability is being granted, exactly as
+--     `user_role_assignments.user_id` names whose role is being assigned, and both are
+--     legitimately caller-supplied. The ACTOR on that table is `created_by`, which
+--     `app.derive_created_by` derives and which therefore never reaches this list. Classified in
+--     MASTER_GAP_REGISTER.md under RBAC-3 before this line was edited, per the rule below.
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(distinct ac.tbl || '.' || ac.col, ', ' order by ac.tbl || '.' || ac.col), ''))::text,
-  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_role_assignments.user_id, users.auth_user_id',
+  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_permission_grants.user_id, user_role_assignments.user_id, users.auth_user_id',
   'CLASS GUARD (ATTR-2, structural): every column that FOREIGN-KEYS to public.users on a table `authenticated` can write directly, and that no BEFORE trigger derives, is exactly this classified set. Unlike assertion 22 this asks no question about the column NAME, so an actor column called anything at all appears here. A new entry is not necessarily a defect -- it is an unclassified column, and it must be classified in MASTER_GAP_REGISTER.md before this line is edited.')
 from (
   select c.relname as tbl, a.attname as col

@@ -456,8 +456,8 @@ Check "and an ordinary employee cannot revoke a role over HTTP" (-not (Ok $r)) "
 # =================================================================================================
 
 Psql @"
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount)
-values ('0d110000-0000-0000-0000-0000000000c7','$T','Credit Ceiling Air','airline', 25000);
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code)
+values ('0d110000-0000-0000-0000-0000000000c7','$T','Credit Ceiling Air','airline', 25000, 'EGP');
 "@ | Out-Null
 
 $r = Get-Rest $emp 'suppliers?select=id,name&id=eq.0d110000-0000-0000-0000-0000000000c7'
@@ -502,7 +502,7 @@ Check "SUP-2: setting the ceiling over HTTP is REFUSED -- this returned 204 and 
 $ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
 Check "...and the ceiling is untouched at 25000 -- the refusal rolled the write back rather than merely reporting an error" ([decimal]$ceiling -eq 25000) "credit_limit_amount=$ceiling"
 
-$r = Rpc $senior 'create_supplier' @{ p_name = 'Ceiling Setter Air'; p_supplier_type_code = 'airline'; p_credit_limit_amount = 500000 }
+$r = Rpc $senior 'create_supplier' @{ p_name = 'Ceiling Setter Air'; p_supplier_type_code = 'airline'; p_credit_limit_amount = 500000; p_credit_limit_currency_code = 'EGP' }
 Check "...nor through create_supplier, whose ASSIGN_SUPPLIER charge alone minted a half-million ceiling before this migration" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
 $r = Rpc $senior 'create_supplier' @{ p_name = 'No Terms Travel'; p_supplier_type_code = 'hotel' }
@@ -530,11 +530,17 @@ Check "...and it really moved to 30000 -- the positive control is proven by the 
 $r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
 Check "CONTROL: finance_manager can READ the ceiling -- so a refusal below is write authority, not reach" ((Ok $r) -and (Val $r)[0].permitted -eq $true) "$($r.StatusCode) $(Err $r)"
 
+# INVERTED 2026-09-02 by the owner's SECOND supplier decision (`202607059800`): finance_manager is
+# explicitly authorised for Supplier Management and now holds ASSIGN_SUPPLIER, so what these two
+# assertions used to prove is exactly what the owner overturned. They now pin the new authority.
+# The orthogonality they used to carry -- MANAGE_SUPPLIER_CREDIT granting nothing else -- moved to
+# `92_capability_grant_model_test.sql`, where a per-user grant can build an actor holding the credit
+# capability WITHOUT supplier administration; no seeded role has that shape any more.
 $r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ phone = '+20 155 000 0000' }
-Check "ORTHOGONAL: finance_manager CANNOT edit an ordinary supplier field -- MANAGE_SUPPLIER_CREDIT grants nothing beyond the ceiling" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+Check "OWNER DECISION 2: finance_manager CAN edit an ordinary supplier field -- explicitly authorised for Supplier Management" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 $r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000; phone = '+20 155 000 0001' }
-Check "...nor the ceiling BUNDLED with an ordinary field -- the second column makes it supplier administration too" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+Check "...and the ceiling BUNDLED with an ordinary field, holding both authorities" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 $r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000 }
 Check "OWNER RULE 1: finance_manager CAN set the credit limit over HTTP, holding no ASSIGN_SUPPLIER at all" (Ok $r) "$($r.StatusCode) $(Err $r)"

@@ -125,14 +125,21 @@ select is(
 --      permission is not requiring the right one. FIN-3 (`202607055900`) then added real capability
 --      triggers to payments, payment_allocations, receipts, refunds, invoices and quotation_items,
 --      which is why this ceiling drops from 40 to 36 rather than rising.
+--
+--      RAISED 54 -> 55 by `202607059800` (RBAC-3), which added ONE administration table,
+--      `user_permission_grants`. The ceiling is a deliberate speed bump, not a law: it exists so a
+--      table cannot join the direct-write surface unnoticed. This one joined it on purpose, and its
+--      capability requirement lives in its per-command RLS policies (MANAGE_PERMISSIONS), which is
+--      the SPEC-138 shape `user_role_assignments` already uses -- which is also why it raises the
+--      SECOND number below rather than being caught by it.
 -- =============================================================================================
 select cmp_ok(
   (select count(*)::int
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')),
-  '<=', 54,
-  'SEC-1 ceiling: at most 54 tables accept a direct INSERT from authenticated');
+  '<=', 55,
+  'SEC-1 ceiling: at most 55 tables accept a direct INSERT from authenticated');
 
 select cmp_ok(
   (select count(*)::int
@@ -149,8 +156,8 @@ select cmp_ok(
          where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
-  '<=', 18,
-  '...and at most 18 of them have NO capability trigger that FIRES ON INSERT');
+  '<=', 19,
+  '...and at most 19 of them have NO capability trigger that FIRES ON INSERT -- 18 + user_permission_grants (RBAC-3), whose capability check is in its RLS policies like user_role_assignments, not a trigger');
 
 -- SEC-1b, 2026-08-29 -- READ THE NUMBERS CAREFULLY. The middle ceiling ROSE from 17 to 18 while the
 -- exposure FELL. Both are the same correction: the detectors now require the trigger to fire ON

@@ -1024,6 +1024,7 @@ Core fields:
 - email nullable
 - payment_term_code nullable
 - credit_limit_amount numeric nullable
+- credit_limit_currency_code nullable — required exactly when `credit_limit_amount` is present (SUP-4a, `202607059900`). Canon 30's money standard: an amount is stored beside its currency, referencing `currencies.code`. This was the only money column in the schema without one, which is what made the ceiling incomparable to `app.supplier_balance`'s per-currency payable.
 - is_internal
 - internal_branch_id nullable
 - internal_department_id nullable
