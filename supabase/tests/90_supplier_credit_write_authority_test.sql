@@ -7,6 +7,13 @@
 --
 -- The refusal is proven in the SAME session as the write, in that order, so the write is measured
 -- against a caller whose ignorance of the value is established rather than assumed.
+--
+-- SUPERSEDED IN PART 2026-09-02 by SUP-3 (`202607059700`), and kept because what it proves is still
+-- true. SUP-2 charged VIEW_FINANCIAL_DOCUMENTS on the write as the correct FLOOR available when
+-- canon named no credit permission; the owner has since ruled that supplier credit management is its
+-- own capability, so the charge is now MANAGE_SUPPLIER_CREDIT and the authority model is pinned by
+-- `91_supplier_credit_permission_test.sql`. Every refusal below still holds -- `senior_employee`
+-- holds neither permission -- so this file continues to guard SUP-2's hole specifically.
 create extension if not exists pgtap with schema extensions;
 
 begin;
@@ -143,8 +150,17 @@ drop trigger suppliers_guard_credit_authority on public.suppliers;
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"90000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
 
+-- 202607059700 (SUP-3): this mutation pair names `credit_limit_amount` AND `phone`, and the second
+-- column is load-bearing. SUP-3 gave `guard_write_capability` a credit-only branch that charges
+-- MANAGE_SUPPLIER_CREDIT, so on a credit-ONLY write there are now TWO guards demanding a permission
+-- this actor lacks -- dropping one leaves the other, the `lives_ok` fails, and the paired `throws_ok`
+-- would still pass on the survivor while measuring nothing. That is the same defect this file's own
+-- header describes in test 85, arriving here the moment a second enforcement point appeared.
+-- Adding an ordinary column makes the write NOT credit-only, so `guard_write_capability` charges
+-- ASSIGN_SUPPLIER (which this actor HOLDS) and `guard_supplier_credit_authority` is the sole refuser
+-- -- which is exactly what this pair must isolate.
 select lives_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set credit_limit_amount = 999999, phone = '+20 100 000 5555'
      where id = '90000000-0000-0000-0000-0000000000e1'$$,
   'MUTATION: with the guard dropped the senior employee CAN set the ceiling -- the refusal above is this trigger');
 
@@ -158,7 +174,7 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"90000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
 
 select throws_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set credit_limit_amount = 999999, phone = '+20 100 000 5555'
      where id = '90000000-0000-0000-0000-0000000000e1'$$,
   '42501', null,
   '...and with it restored the refusal returns -- the pair is what makes assertion 7 load-bearing');

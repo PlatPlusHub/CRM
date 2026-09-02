@@ -515,6 +515,34 @@ $ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d1
 Check "...and it really moved to 30000 -- the positive control is proven by the value, not by the status code" ([decimal]$ceiling -eq 30000) "credit_limit_amount=$ceiling"
 
 
+# =================================================================================================
+# PD-24 / SUP-3 -- supplier credit management is its own permission (owner decision 2026-09-02).
+#
+# The owner ruled that `finance_manager` must be able to set a supplier's credit limit, and that the
+# capability must be its OWN independently grantable permission rather than a side effect of
+# ASSIGN_SUPPLIER. `finance_manager` holds NO ASSIGN_SUPPLIER, so this is the assertion that would
+# have silently failed if only the permission had been minted: the table guard charges
+# ASSIGN_SUPPLIER for any write, and it had to learn that a credit-only write is a different act.
+# Over HTTP because PostgREST serves the PATCH, and the three cases below differ ONLY in which
+# columns the same actor sends -- which is exactly what the guard now discriminates on.
+# =================================================================================================
+
+$r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+Check "CONTROL: finance_manager can READ the ceiling -- so a refusal below is write authority, not reach" ((Ok $r) -and (Val $r)[0].permitted -eq $true) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ phone = '+20 155 000 0000' }
+Check "ORTHOGONAL: finance_manager CANNOT edit an ordinary supplier field -- MANAGE_SUPPLIER_CREDIT grants nothing beyond the ceiling" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000; phone = '+20 155 000 0001' }
+Check "...nor the ceiling BUNDLED with an ordinary field -- the second column makes it supplier administration too" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000 }
+Check "OWNER RULE 1: finance_manager CAN set the credit limit over HTTP, holding no ASSIGN_SUPPLIER at all" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and it really moved to 45000 -- the three PATCHes above differ only in their column list, which is what makes this a controlled comparison" ([decimal]$ceiling -eq 45000) "credit_limit_amount=$ceiling"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

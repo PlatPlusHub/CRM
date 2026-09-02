@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-02 (**supplier credit authority — SUP-2.** The table-by-table audit's next slice, chosen by measuring the writable surface rather than from a list; three candidate classes were discarded by that measurement before the fourth produced a defect. The entry is in Batch 6 below, and the NEXT SLICE pointer was replaced in the SAME edit rather than left to go stale as it did on 2026-09-01. Prior entry follows.)
+Last updated: 2026-09-02 (**supplier credit permission — SUP-3, owner decision.** The owner made SUP-3 explicit and authorised implementing it before the next slice: supplier credit management is now its own independently grantable permission. The enforcement half the owner also asked for is recorded as SUP-4 and deliberately not invented — ORVION has an authoritative supplier payable but no authoritative definition of what counts against the limit. Prior entry follows.)
+
+Previously: 2026-09-02 (**supplier credit authority — SUP-2.** The table-by-table audit's next slice, chosen by measuring the writable surface rather than from a list; three candidate classes were discarded by that measurement before the fourth produced a defect. The entry is in Batch 6 below, and the NEXT SLICE pointer was replaced in the SAME edit rather than left to go stale as it did on 2026-09-01. Prior entry follows.)
 
 Previously: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
 
@@ -1086,6 +1088,36 @@ additive capability.*
      against a REAL priced item owned by a COLLEAGUE (the first probe returned zero rows and was
      discarded as vacuous per `AGENTS.md 6`): with the employee's four controls established, the
      view returned `selling_amount 10000` and **`cost_amount`/`profit` NULL**.
+   * **SUPPLIER CREDIT PERMISSION — SUP-3, OWNER DECISION, DONE 2026-09-02 (`202607059700`), DEPLOYED.**
+     The owner made SUP-3 explicit and authorised implementation ahead of the next slice:
+     `finance_manager` MUST be able to set `suppliers.credit_limit_amount`, and the capability MUST
+     have its own independently grantable permission rather than riding on ASSIGN_SUPPLIER — the
+     stated principle being that every capability should be representable by its own permission so
+     the company owner can grant or revoke it per user from the future admin dashboard.
+     **`MANAGE_SUPPLIER_CREDIT`** was minted by the repository's own precedent (`202607051400` minted
+     VIEW_DEPARTMENT_RECORDS identically; canon 25 heads its list "Initial values"), granted to
+     owner/ceo/finance_manager — the set canon 28 already gives EDIT_LOCKED_COST — and plan-gated at
+     `finance_lite` to match the permission that governs READING the same figure. Recorded in canon 28's
+     ratified-amendments list, where VIEW_DEPARTMENT_RECORDS is recorded, rather than in a new document.
+     **Minting it alone would have silently failed the owner's first rule:** `finance_manager` holds no
+     ASSIGN_SUPPLIER and `guard_write_capability` charges that for ANY write to `suppliers`, so the
+     table guard had to learn that a write touching ONLY the ceiling is a different act. It compares
+     ROW IMAGES rather than a column list, so a column added to `suppliers` later cannot silently
+     widen the relaxation — it makes the write stop being credit-only, which is the safe direction.
+     Orthogonality proven in both directions on both doors, and grant→revoke→regrant proven
+     BEHAVIOURALLY against a role that does not hold the permission, with `has_permission` echoed
+     before each measurement. SUP-2 stays closed. **Test 90 was CORRECTED, not re-run** — its PAR-4
+     mutation targeted a credit-ONLY write, which SUP-3 gave a second charge, so dropping one guard
+     would have measured nothing: the test-85 lesson recurring the moment a second enforcement point
+     appeared. Test 91 (26) + 5 HTTP; suite 90/1247 → **91/1273**, HTTP 390 → **395**.
+     **SUP-4 RECORDED AND NOT INVENTED.** The owner also asked for the ceiling ENFORCEMENT defect to be
+     closed *if* an authoritative exposure definition already exists. It does not, and the measurement
+     is specific: `app.supplier_balance` is an authoritative supplier PAYABLE but returns **one row per
+     currency**, while `credit_limit_amount` is a **currency-less scalar** — reproduced live as
+     `EGP 8000` and `USD 600` against a limit of 10,000, with **zero** USD→EGP exchange rates and
+     `tenants.default_currency_code` read by nothing. Canon names no rule, no Batch-4 spec defines one,
+     and AP `supplier_bills` (BF-7) is unbuilt. Three questions go to the owner (currency of the limit;
+     which operation it refuses; whether it binds on all suppliers). Enforcement was NOT attempted.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
      order. The write-without-read class is now closed on all five of its columns, and the five
      classes above are measured rather than assumed; a next slice needs a class none of them covers.
