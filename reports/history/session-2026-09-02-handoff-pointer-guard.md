@@ -135,7 +135,9 @@ Nothing was removed to make a guard pass: Check 5 was **already CLEAN** at 6,967
 
 ## 5. Blocked
 
-Nothing. No external action is required by anything in this package.
+**Publication only — `git push` could not authenticate from this session** (`fatal: could not read Username for 'https://github.com': terminal prompts disabled`). The work is committed locally and the working tree is clean; `git rev-list @{u}..HEAD` shows **1 commit** awaiting publication. Per `CR_LIFECYCLE.md §9` this does not invalidate anything — git history is the source of truth and the commit publishes on the next successful push.
+
+**Precise external action required:** the owner runs `git push` (or `.\workstation.cmd` → the repository sync) in an interactive terminal where the GitHub credential is available. Nothing else in this package is blocked.
 
 ## 6. Verification — commands and real output
 
@@ -192,7 +194,7 @@ Windows 11, PowerShell 7.6.5. Repository-only session: Docker/Supabase local sta
 
 ## 9. Current state
 
-* **Working tree:** clean at commit time; one commit ahead of the previous HEAD `4b67d3f`.
+* **Working tree:** clean. `77075f2` on `main`, one commit ahead of the previous HEAD `4b67d3f` and **one commit ahead of `origin/main`** — see `§5`.
 * **Repository consistency:** `REPOSITORY CONSISTENCY: CLEAN` — 17 checks, scope repository files only.
 * **manifest ↔ ai-map:** all four `live_state` fields agree, and three of the four are now proven to *fail* when they do not.
 * **Database / Primary:** unchanged and **UNPROVEN this session by design** — 184 migrations, ledger `ed3828994cc61d703e60d02100eeae63`, last read live 2026-09-01. A repository-only package cannot and does not refresh that evidence.
