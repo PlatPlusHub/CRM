@@ -166,6 +166,24 @@ Local stack `supabase_db_ORVION` healthy. Primary target verified live via `get_
 
 ---
 
-## 11. NEXT STEP
+## 11. Post-fix discovery — five more classes measured, all clean
+
+Continued into the next slice's discovery after the commit. No further defect found, and the negative results are recorded in `MASTER_EXECUTION_PLAN.md` so they are not re-measured without new evidence (LOCAL RUNTIME, fresh `db reset`):
+
+| Class | Result |
+|---|---|
+| Direct `DELETE` authority | `authenticated` holds **zero** DELETE on all 75 tables |
+| A granted command with no RLS policy | zero |
+| `SECURITY DEFINER` hygiene | all 24 reachable by `authenticated` pin `search_path=""`; none executable by `anon` |
+| Archive authority | every table with `is_archived` carries `enforce_archive_authority` — no exceptions |
+| Reporting views as a read-door | all 8 are `security_invoker`; none exposes a withheld column |
+
+The view check is the one worth recording in detail, because **the first probe was vacuous and was discarded rather than believed.** It selected from `booking_item_profit` against an empty `booking_items` and returned zero rows without error — which looks identical to "no leak" in a transcript and proves nothing (`AGENTS.md §6`). Repeated with a real priced item owned by a **colleague** on all three ownership axes, and with four controls first (the employee holds no VIEW_FINANCIAL_DOCUMENTS; the row is visible to them; the table read is refused 42501; `item_financials` reports `permitted=false`), the view returned the row with `selling_amount 10000` and **`cost_amount` and `profit` NULL**. `app.booking_item_profit` masks money exactly as `item_financials` does. `supplier_outstanding` takes its money from the gated `app.supplier_balance` and never names `credit_limit_amount` at all.
+
+One fixture fault was met and classified as infrastructure rather than a finding: `service_type_code = 'flight'` is not an active catalog value (`flight_ticket` is).
+
+---
+
+## 12. NEXT STEP
 
 **One:** continue the Batch-6 table-by-table audit with the next slice, per `MASTER_EXECUTION_PLAN.md`, which owns the order. The write-without-read class is now closed on all five of its columns, and three further classes (DELETE grants, RLS command coverage, DEFINER hygiene) were measured clean this pass and are recorded there so the next slice does not re-measure them without new evidence.

@@ -1073,10 +1073,22 @@ additive capability.*
      and asserted the write then succeeded, which a second guard on that column would have made
      measure nothing. Test 90 (15) + 9 HTTP, each with defect injection at its own layer; suite
      89/1232 → **90/1247**, HTTP 381 → **390**.
+     **CLASSES MEASURED CLEAN in the same pass, recorded so the next slice does not re-measure them
+     without new evidence** (LOCAL RUNTIME on a fresh `db reset`, 2026-09-02): (i) `authenticated`
+     holds **zero DELETE** on all 75 tables — that surface is closed by B5, not merely unexercised;
+     (ii) **no granted command lacks an RLS policy** — zero SELECT/INSERT/UPDATE grants to
+     `authenticated` sit on a table with no matching policy; (iii) all **24** SECURITY DEFINER
+     functions reachable by `authenticated` pin `search_path=""` and **none** is executable by
+     `anon`; (iv) **archive authority is complete** — every table carrying `is_archived` has an
+     `enforce_archive_authority` trigger, with no exceptions; (v) all **8 reporting views are
+     `security_invoker`** and none is a read-door around a withheld column — `supplier_outstanding`
+     takes its money from the gated `app.supplier_balance`, and `booking_item_profit` was proven
+     against a REAL priced item owned by a COLLEAGUE (the first probe returned zero rows and was
+     discarded as vacuous per `AGENTS.md 6`): with the employee's four controls established, the
+     view returned `selling_amount 10000` and **`cost_amount`/`profit` NULL**.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
-     order. The write-without-read class above is now closed on all five of its columns; the three
-     classes measured clean this pass are named above so the next slice does not re-measure them
-     without new evidence.
+     order. The write-without-read class is now closed on all five of its columns, and the five
+     classes above are measured rather than assumed; a next slice needs a class none of them covers.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their
