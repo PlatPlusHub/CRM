@@ -16,7 +16,8 @@
     Check 1 broken references · Check 2 intra-register status contradiction ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
-    Check 7 ai-map freshness vs manifest · Check 8 Supabase project-topology registry integrity ·
+    Check 7 ai-map freshness vs manifest — every live_state field it extracts, compared by value ·
+    Check 8 Supabase project-topology registry integrity ·
     Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
@@ -347,9 +348,10 @@ Write-Host "== Check 7: ai-map freshness vs manifest ==" -ForegroundColor Cyan
 # Verified failure class (2026-07-17, INC-2): ai-map.json's live_state COPIES the manifest but
 # is regenerated only by repository-all.ps1, which is not in the doc-change DoD — so it drifted
 # (generated_at a day behind HEAD). Dependency-free freshness: the manifest's Current Phase number
-# must appear in ai-map's live_state, and its `Last Completed` and `Next capability` fields must
-# match ai-map's copies BY VALUE. Skips cleanly if ai-map has been retired (owner-gated
-# recommendation, 2026-07-17).
+# must appear in ai-map's live_state, and its `Last Completed`, `Active Change Request` and
+# `Next capability` fields must match ai-map's copies BY VALUE — every live_state field the
+# generator extracts from the manifest is now compared. Skips cleanly if ai-map has been retired
+# (owner-gated recommendation, 2026-07-17).
 $aiMapPath = Join-Path $RepoRoot 'ai-map.json'
 if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
     $mfRaw2 = Get-Content $mfPath -Raw
@@ -382,6 +384,40 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
         $mfLastN = ($mfLast.Groups['v'].Value -replace '\s+', ' ').Trim()
         if ($aiLastN -ne $mfLastN) {
             Write-Host "  AI-MAP STALE: ai-map.json live_state.last_completed does not match the manifest's current 'Last Completed:' — a fresh agent would be told the wrong work finished last; regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
+            $issues++
+        }
+    }
+    # ADDED 2026-09-02 (COLD-2). The three comparisons around this one covered phase, last_completed
+    # and next_capability — and left `Active Change Request` uncompared, which is the ONE live-state
+    # field the boot sequence BRANCHES on: `AGENTS.md §4` Stage A step 4 reads an active SPEC and lets
+    # its Minimum Reading List take over, step 5 goes to the roadmap instead, and `AGENTS.md §6` plus
+    # `CR_LIFECYCLE.md §9` make this field the entire agent-to-agent handoff ("never through chat").
+    # Proven blind in BOTH directions before this was written: with ai-map naming a SPEC that does not
+    # exist and the manifest saying None, and with the manifest naming a SPEC and ai-map saying None,
+    # the guard printed CLEAN. A cold-start agent reading the machine-readable map would then either
+    # chase a Change Request that was never approved or skip the one that is actually in flight.
+    #
+    # The field has a demonstrated forgetting history — clearing it on Complete was omitted twice
+    # (SPEC-024, SPEC-027; `reports/future-backlog.md` still carries that process-safeguard row) — which
+    # is the evidence that it is worth comparing at all. STATE THE LIMIT PRECISELY, because a guard
+    # whose description outruns its measurement is the class this repository keeps re-finding: this
+    # compares the manifest against ai-map and catches DIVERGENCE from either side. It does NOT detect
+    # a missed clear-on-Complete. A manifest still naming a finished SPEC, with ai-map regenerated to
+    # agree, is CLEAN here and always will be — that invariant is a different question (is the named
+    # CR still open?) and remains unguarded, tracked in `future-backlog.md` and `GOVERNANCE.md §11`.
+    #
+    # Same extraction/normalisation contract as last_completed above — extracted exactly as
+    # generate-ai-map.ps1's Get-Field extracts it (single line, trimmed), whitespace collapsed so
+    # reflowing cannot cry wolf. No new mechanism, no maintained list of SPEC ids: the comparison is
+    # by VALUE and is equally active for a real SPEC path and for `None.`
+    $mfAcr = [regex]::Match($mfRaw2, '(?m)^Active Change Request:\s*(?<v>.+?)\s*$')
+    if ($mfAcr.Success) {
+        $aiAcr = $null
+        try { $aiAcr = (ConvertFrom-Json $aiRaw).live_state.active_change_request } catch { $aiAcr = $null }
+        $aiAcrN = if ($null -eq $aiAcr) { '' } else { ($aiAcr -replace '\s+', ' ').Trim() }
+        $mfAcrN = ($mfAcr.Groups['v'].Value -replace '\s+', ' ').Trim()
+        if ($aiAcrN -ne $mfAcrN) {
+            Write-Host "  AI-MAP STALE: ai-map.json live_state.active_change_request does not match the manifest's current 'Active Change Request:' — a fresh agent would take the wrong branch of the boot sequence (chase a Change Request that is not active, or skip the one that is); regenerate (scripts/generate-ai-map.ps1)" -ForegroundColor Yellow
             $issues++
         }
     }
