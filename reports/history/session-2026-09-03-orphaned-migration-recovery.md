@@ -148,7 +148,9 @@ Docker Desktop was **not running** at session start; started mid-session. `supab
 - Functions `c83114a8697af5884411719a9dd1a874` (257); structure `7f3274058d23126297f1b94b33438925` (3,442 objects). **Parity PROVEN, Primary values read FROM Primary.**
 - **76 tables** · 71/601 catalog · 8 reporting views · **73 client RPCs** · **72 permissions**.
 - Suite **91 files / 1264 assertions**, Pass A = Pass B. HTTP **400 assertions**, 0 failed. Smoke passes.
-- Both guards CLEAN. Working tree committed. **`origin/main` is behind — see below.**
+- Both guards CLEAN. Working tree clean, everything committed at `a52b5c7`.
+- **NOT PUSHED, and this is the second session in a row it has happened.** `git push origin main` fails with `could not read Username for 'https://github.com': terminal prompts disabled` — this session is non-interactive and holds no GitHub credential, and per `AGENTS.md §6` no credential may pass through the agent. **`origin/main` is 3 commits behind `main`** (`4b67d3f` → `a52b5c7`), and those three now include the entire orphaned-migration recovery.
+- **The owner must run `git push origin main` from an interactive terminal.** Until then the recovery exists on this workstation only — which is a milder version of the very failure this session repaired: work that runs somewhere but is not in the shared repository. Primary is already at 189 and is NOT waiting on the push; it is the repository copy that is stranded.
 
 ---
 
