@@ -119,9 +119,37 @@ No new failure is hidden by another check: the new guard was proven standalone, 
 
 ---
 
-## F. GITHUB SYNCHRONIZATION
+## F. GITHUB SYNCHRONIZATION — **NOT DONE, and not claimed**
 
-Recorded in the closure commit; see the CURRENT STATE line below for the final proven equality or the exact remaining command.
+| | |
+|---|---|
+| local HEAD | `6a246ca` (closure commit) |
+| `origin/main` | `4b63f7…` |
+| Delta | **5 commits ahead**, 0 behind |
+
+**`git push origin main` FAILED**, attempted twice across two packages:
+
+```
+fatal: could not read Username for 'https://github.com': terminal prompts disabled
+```
+
+Diagnosed rather than assumed: `credential.helper` **is** configured (`manager`), the remote is `https://github.com/PlatPlusHub/CRM.git`, and Git Credential Manager holds no credential it can serve without an interactive prompt. This session is non-interactive. `gh` is **not installed**, so that path does not exist either. `AGENTS.md §6` forbids a credential passing through the agent, so there is no workaround I may take.
+
+**HEAD == origin/main is therefore NOT proven, and this report does not assert it.**
+
+**The exact command the owner must run, from an interactive terminal in the repository root:**
+
+```
+git push origin main
+```
+
+Then verify equality directly rather than trusting the push's exit message:
+
+```
+git rev-parse HEAD ; git rev-parse origin/main
+```
+
+The five unpushed commits are `77075f2`, `da799e3`, `a52b5c7`, `b2210f7`, `6a246ca` — the GOV-10 guard fix, the orphaned-migration recovery, and this closure. Primary is already at 189 and is **not** waiting on the push; it is the GitHub copy that is stranded.
 
 ---
 
