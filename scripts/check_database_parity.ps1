@@ -99,7 +99,7 @@ if ($LASTEXITCODE -ne 0) {
 # 3. Primary, only if its fingerprint was supplied by a caller that can reach it.
 #
 # RECOVER-1 (2026-09-03) added a DURABLE record of Primary's ledger at
-# `reports/evidence/primary-ledger-evidence.json`, enforced by Check 18 of
+# `reports/evidence/primary-ledger-evidence.json`, enforced by Check 19 of
 # check_repository_consistency.ps1. This guard now cross-checks the pasted value against that record.
 # The point is narrow and worth stating exactly: it does NOT make a pasted value authoritative, and
 # it does not turn recorded evidence into a live read. It catches the case where the two DISAGREE --
@@ -121,7 +121,7 @@ if (-not [string]::IsNullOrWhiteSpace($PrimaryFingerprint) -and $recordedPrint -
 if ([string]::IsNullOrWhiteSpace($PrimaryFingerprint)) {
     Write-Host "  NOT CHECKED: no -PrimaryFingerprint supplied. Primary parity is UNPROVEN by this run." -ForegroundColor Yellow
     if ($recordedPrint) {
-        Write-Host "  (a recorded Primary ledger reading DOES exist and is enforced by Check 18 of" -ForegroundColor DarkGray
+        Write-Host "  (a recorded Primary ledger reading DOES exist and is enforced by Check 19 of" -ForegroundColor DarkGray
         Write-Host "   check_repository_consistency.ps1 -- but recorded evidence is not a live read, so" -ForegroundColor DarkGray
         Write-Host "   this run still cannot report Primary parity.)" -ForegroundColor DarkGray
     }

@@ -222,18 +222,7 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
 - Related: ADR-0015 (binary permissions) · ADR-0024 · canon 08 §Document Permissions · canon 28 Finance/Document tables · SPEC-139 · SPEC-154-B.
 - Revisit trigger: the permission model stops being binary (a scope column on `role_permissions`), which would make ADR-0015 the decision to revisit first.
 
----
-
-## Programme lesson numbering (resolved 2026-08-31)
-
-Migrations `202607058200`, `202607058400` and `202607058600` cite **"LESSON 4"** and **"LESSON 6"** by ordinal, and no file in the repository defined the numbering — a citation a fresh reader could not resolve. The ordinals are retired in favour of the stable homes those rules already had:
-
-- **LESSON 4 — "a comment is a claim."** A shipped comment is evidence of intent, never of behaviour; verify it before relying on it. Home: `AGENTS.md §6` (Measurement is not evidence until the measurement itself has been attacked) and `§4` step 13. Instances: IDENT-1, CM-2, LIC-2, FIN-DOC-1.
-- **LESSON 6 — "authorization may exempt session-less paths; integrity must not."** Home: **ADR-0025** above.
-
-Cite the stable ID from here on. Those three migrations are immutable and keep their ordinals; this note is what resolves them.
-
-## ADR-0027 — Authorization: refactor the GRANT model, preserve the ENFORCEMENT plane (per-user grants and explicit deny; permissions stay out of the JWT)
+## ADR-0027 — Capability grants are per-user; the enforcement plane is not rebuilt to get them
 - Date: 2026-09-02 · Status: Accepted (owner-directed; the owner relaxed the standing "do not redesign RBAC" constraint and asked for an evidence-based choice between preserve / refactor / rebuild). Implemented by `202607059800`; completed by `202607060000`. **Reconstructed 2026-09-03** — the original ADR was written in the commit that was never committed (**RECOVER-1**), and this record is rebuilt from the migration's own reasoning, which survived inside Primary's ledger.
 - Source: owner directive of 2026-09-02 (every meaningful capability independently grantable and revocable per user, administered from a future dashboard). Register rows: **RBAC-5**, **RBAC-6**. Supersedes nothing; **supersedes RBAC-2's 2026-08-29 conclusion** that `MANAGE_PERMISSIONS` gates a capability ORVION does not offer.
 
@@ -274,4 +263,23 @@ Cite the stable ID from here on. Those three migrations are immutable and keep t
 
 - Consequences: the owner's model is reachable incrementally — new permissions are data, new groups are data, new role bundles are data, user overrides are data, and none requires editing a policy. `app.effective_permissions` makes an authorization decision explainable ("role ✓ / grant ✗ / deny ✓ / plan ✓ = DENY") and is proven to never disagree with `app.has_permission`. What is NOT built and is deliberately future work: the administration dashboard itself, record-level scope on a grant, and delegated administration (who may grant what to whom, beyond the single `MANAGE_PERMISSIONS` gate).
 - Rejected alternatives: rebuild the enforcement plane (evidence above); a separate `user_permission_denies` table (lets the pair disagree); permissions in JWT claims (stale revocation); an external policy engine (unearned, moves authorization out of the database); making `capability_group` an inheritance mechanism (would make the group the security boundary the owner explicitly forbade); modelling `(principal, action, resource, scope, effect)` as full ABAC tuples now (the scope half has no consumer yet — the table can gain a scope column without migration debt, so building it now would be speculative).
+- Learn-Before-Designing sources (verified 2026-09-03, current at that date): AWS IAM policy evaluation logic (explicit deny overrides explicit allow; default implicit deny); Supabase Custom Claims & RBAC guide (role in claim, permissions queried at request time); OWASP Authorization Cheat Sheet (deny-by-default, enforce server-side on every request, prefer ABAC/ReBAC where RBAC is insufficient, never rely on client-side checks); PostgreSQL Row Security (default-deny with no matching policy; PERMISSIVE combined with OR, RESTRICTIVE with AND).
+- Evidence basis: PROVEN — `92_capability_grant_model_test.sql` (26): grant adds exactly one capability measured as a set difference, deny removes exactly one, deny beats a co-existing grant, revoke and expiry both bind, the plan gate survives a per-user grant, `app.effective_permissions` agrees with `app.has_permission` for EVERY permission, the subject of a grant cannot write the grant table, and a PAR-4 injection removes the deny row and flips the behaviour back. External basis: OWASP Authorization Cheat Sheet (deny-by-default, least privilege, server-side enforcement, role explosion), Supabase RBAC guidance, PostgreSQL row-security and function-security documentation, and the settled deny-override precedent in AWS IAM and Azure RBAC.
+- Basis: owner-directed (2026-09-02); mechanism system-derived from the measured enforcement surface.
+- Related: ADR-0015 (binary permissions — still true: a permission carries no scope; ADR-0026's predicate pattern remains how scope is expressed) · SPEC-138 (per-command MANAGE_* policies on administered identity tables, copied for the new table) · SPEC-146 (plan gating) · RBAC-2 · SUP-3.
+- Revisit trigger: a requirement appears that a capability grant genuinely cannot express — a rule needing environmental attributes (time of day, device, network) or relationship depth beyond ORVION's existing branch/department/assigned scope. That, and only that, is when ABAC/ReBAC earns its cost.
+- RECONCILED 2026-09-03: two sessions diverged from `4b67d3f` without fetching and each wrote this decision up — one as `RBAC-3`, one as `RBAC-5`/`RBAC-6` after a reconstruction from Primary. They are ONE decision, so this is ONE record; the register carries both ids cross-referenced. Both write-ups are preserved in the merged history (`46a0cfc`/`1193643` and `a52b5c7`), and the migration bytes were proven identical by git blob hash.
+
+---
+
+
+## Programme lesson numbering (resolved 2026-08-31)
+
+Migrations `202607058200`, `202607058400` and `202607058600` cite **"LESSON 4"** and **"LESSON 6"** by ordinal, and no file in the repository defined the numbering — a citation a fresh reader could not resolve. The ordinals are retired in favour of the stable homes those rules already had:
+
+- **LESSON 4 — "a comment is a claim."** A shipped comment is evidence of intent, never of behaviour; verify it before relying on it. Home: `AGENTS.md §6` (Measurement is not evidence until the measurement itself has been attacked) and `§4` step 13. Instances: IDENT-1, CM-2, LIC-2, FIN-DOC-1.
+- **LESSON 6 — "authorization may exempt session-less paths; integrity must not."** Home: **ADR-0025** above.
+
+Cite the stable ID from here on. Those three migrations are immutable and keep their ordinals; this note is what resolves them.
+
 - Learn-Before-Designing sources (verified 2026-09-03, current at that date): AWS IAM policy evaluation logic (explicit deny overrides explicit allow; default implicit deny); Supabase Custom Claims & RBAC guide (role in claim, permissions queried at request time); OWASP Authorization Cheat Sheet (deny-by-default, enforce server-side on every request, prefer ABAC/ReBAC where RBAC is insufficient, never rely on client-side checks); PostgreSQL Row Security (default-deny with no matching policy; PERMISSIVE combined with OR, RESTRICTIVE with AND).

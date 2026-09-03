@@ -125,6 +125,13 @@ select is(
 --      permission is not requiring the right one. FIN-3 (`202607055900`) then added real capability
 --      triggers to payments, payment_allocations, receipts, refunds, invoices and quotation_items,
 --      which is why this ceiling drops from 40 to 36 rather than rising.
+--
+--      RAISED 54 -> 55 by `202607059800` (RBAC-3), which added ONE administration table,
+--      `user_permission_grants`. The ceiling is a deliberate speed bump, not a law: it exists so a
+--      table cannot join the direct-write surface unnoticed. This one joined it on purpose, and its
+--      capability requirement lives in its per-command RLS policies (MANAGE_PERMISSIONS), which is
+--      the SPEC-138 shape `user_role_assignments` already uses -- which is also why it raises the
+--      SECOND number below rather than being caught by it.
 -- =============================================================================================
 select cmp_ok(
   (select count(*)::int
@@ -150,7 +157,7 @@ select cmp_ok(
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
   '<=', 19,
-  '...and at most 19 of them have NO capability trigger that FIRES ON INSERT');
+  '...and at most 19 of them have NO capability trigger that FIRES ON INSERT -- 18 + user_permission_grants (RBAC-3), whose capability check is in its RLS policies like user_role_assignments, not a trigger');
 
 -- RBAC-3, 2026-09-03 (`202607059800`) -- BOTH ceilings above rose by exactly one, and the one table
 -- is `user_permission_grants`. Raising a ceiling is the move this repository distrusts most, so the

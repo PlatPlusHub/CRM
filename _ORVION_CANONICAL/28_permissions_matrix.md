@@ -403,7 +403,7 @@ Cross-Branch Awareness. Branch-scoping the master row would prevent a second bra
 returning customer and would produce the duplicate canon 05 forbids. The customer's *activity* is
 branch-scoped, which is that section's "detailed event content from another branch is not shown".
 
-## Amendments ratified with this model (owner directive 2026-08-24)
+## Amendments ratified with this model (owner directives 2026-08-24 and 2026-09-02)
 
 1. **Department visibility is granted to `employee` and `senior_employee` by default.** The CRM table
    above marks Employee "No" for `VIEW_DEPARTMENT_QUEUE`. The owner requires that a colleague in the
@@ -422,6 +422,23 @@ branch-scoped, which is that section's "detailed event content from another bran
 4. **`user_role_assignments.scope_type` is constrained** to `tenant` / `branch` / `department` /
    `platform`, and a branch- or department-scoped assignment must carry its qualifying id. `assigned`
    is excluded: it describes a permission's reach over records, not a scope a role can be granted at.
+5. **`MANAGE_SUPPLIER_CREDIT` is added (owner directive 2026-09-02, SUP-3).** Setting a supplier's
+   credit limit was an incidental consequence of `ASSIGN_SUPPLIER`, which canon scopes
+   "branch/department" for ordinary supplier work. The owner ruled that supplier credit-limit
+   management is a Finance authority in its own right, that **`finance_manager` must hold it**, and
+   that it must be **independently grantable and revocable** — the general principle being that every
+   capability should ultimately be representable by its own permission, so it can be granted per user
+   from the administrative dashboard. Granted to **owner, ceo, finance_manager** — the same set this
+   matrix already gives `EDIT_LOCKED_COST`, the nearest restricted financial authority. Plan-gated at
+   `finance_lite`, matching `VIEW_FINANCIAL_DOCUMENTS`, because a plan that entitled the write without
+   the read would reproduce SUP-2 at the plan tier.
+   **The three permissions are orthogonal and none implies another:** `ASSIGN_SUPPLIER` administers
+   the supplier record and not its ceiling; `MANAGE_SUPPLIER_CREDIT` sets the ceiling and nothing
+   else; `VIEW_FINANCIAL_DOCUMENTS` reads the figure and confers no write authority. A statement
+   changing the ceiling **and** another column therefore requires both of the first two. Implemented
+   by `202607059700`; pinned by `supabase/tests/91_supplier_credit_permission_test.sql`.
+   `MANAGE_SUPPLIER_CREDIT` governs **who may set** the limit; whether an operation is refused for
+   **exceeding** it is a separate invariant that does not yet exist (register: **SUP-4**).
 
 Write authority over identity, organization and configuration tables is enforced by SPEC-138 — see
 `changes/SPEC-138-rbac-write-authority.md`.

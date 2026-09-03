@@ -257,6 +257,12 @@ where c.table_schema = 'public'
 --     actor, and its own `created_by` carries `app.derive_created_by()` exactly as its siblings do.
 --   * `customers.last_interaction_user_id` -- DEAD-3: no writer anywhere in the database.
 --   * `invoices.voided_by`, `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22.
+--   * `user_permission_grants.user_id` (RBAC-3, `202607059800`) -- classified as a SUBJECT column,
+--     not an actor one: it names WHOSE capability is being granted, exactly as
+--     `user_role_assignments.user_id` names whose role is being assigned, and both are
+--     legitimately caller-supplied. The ACTOR on that table is `created_by`, which
+--     `app.derive_created_by` derives and which therefore never reaches this list. Classified in
+--     MASTER_GAP_REGISTER.md under RBAC-3 before this line was edited, per the rule below.
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(distinct ac.tbl || '.' || ac.col, ', ' order by ac.tbl || '.' || ac.col), ''))::text,

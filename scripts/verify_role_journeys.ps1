@@ -41,16 +41,23 @@ function Get-Rest($jwt, $path) {
     Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Get -SkipHttpErrorCheck `
         -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" }
 }
-# Added 2026-09-03 with the SUP-3 / RBAC-3 blocks below. `suppliers` and `user_permission_grants` are
-# both tables PostgREST serves, so proving their authority needs the TABLE verbs, not only rpc/GET --
-# ADR-0024's rule that a rule an RPC enforces must also hold on the table door.
-function Post-Rest($jwt, $path, $body) {
-    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
-        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
-        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
-}
-function Patch-Rest($jwt, $path, $body) {
+# SUP-2: the table door for WRITES. PostgREST serves PATCH on `suppliers` beside the RPC, so a rule
+# proven only through `create_supplier` would be proven on half the surface.
+#
+# RECONCILED 2026-09-03. Two sessions wrote this helper independently -- this one, and a
+# byte-equivalent `Patch-Rest` in the RBAC-3 block below -- and the merge kept exactly one. Two
+# spellings of one request is the PAR-1a failure class (hand-copied variants that drift apart), so
+# the RBAC-3 call sites were retargeted onto this one rather than both being carried.
+function Invoke-Patch($jwt, $path, $body) {
     Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } -ContentType 'application/json' `
+        -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+# Added 2026-09-03 with the RBAC-3 block below. `user_permission_grants` is a table PostgREST serves,
+# so proving its authority needs the TABLE verbs, not only rpc/GET -- ADR-0024's rule that a rule an
+# RPC enforces must also hold on the table door.
+function Invoke-Post($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
         -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
         -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
 }
@@ -508,13 +515,13 @@ Check "SUP-4a: ...WITH its denomination -- an amount whose currency the API drop
 # load-bearing actor: it HOLDS ASSIGN_SUPPLIER, so a refusal here cannot be explained away as "that
 # role cannot write suppliers at all" -- which is why the positive control comes first.
 # =================================================================================================
-$r = Patch-Rest $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ name = 'Renamed By Senior' }
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ name = 'Renamed By Senior' }
 Check "POSITIVE CONTROL: senior_employee CAN rename a supplier over HTTP -- ordinary master-data work still costs only ASSIGN_SUPPLIER" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
-$r = Patch-Rest $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 999999 }
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 999999 }
 Check "SUP-3 over HTTP: ...but CANNOT move the credit ceiling -- ASSIGN_SUPPLIER does not imply MANAGE_SUPPLIER_CREDIT, and the table door enforces it too" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
 
-$r = Patch-Rest $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 30000; credit_limit_currency_code = 'EGP' }
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 30000; credit_limit_currency_code = 'EGP' }
 Check "SUP-3 over HTTP: finance_manager CAN set it -- the owner's rule 1, and a fix that refused everyone would be a capability regression" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 $r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
@@ -543,19 +550,19 @@ $permId    = (Val (Get-Rest $owner 'permissions?select=id&key=eq.MANAGE_SUPPLIER
 
 Check "FIXTURE CONTROL: the employee's membership id and the MANAGE_SUPPLIER_CREDIT permission id both resolved -- a null here would make every assertion below meaningless" ($null -ne $empUserId -and $null -ne $permId) "user=$empUserId perm=$permId"
 
-$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
+$r = Invoke-Patch $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
 Check "BEFORE CONTROL: the employee cannot move the ceiling yet -- the baseline the grant below must change" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
 
-$r = Post-Rest $emp 'user_permission_grants' @{
+$r = Invoke-Post $emp 'user_permission_grants' @{
     tenant_id = $T; user_id = $empUserId; permission_id = $permId; effect = 'grant' }
 Check "RBAC-3 over HTTP: an employee CANNOT grant themselves a capability -- scope_insert charges MANAGE_PERMISSIONS, and this is the most sensitive table in the system" ($r.StatusCode -eq 403 -or $r.StatusCode -eq 401) "$($r.StatusCode) $(Err $r)"
 
-$r = Post-Rest $owner 'user_permission_grants' @{
+$r = Invoke-Post $owner 'user_permission_grants' @{
     tenant_id = $T; user_id = $empUserId; permission_id = $permId
     effect = 'grant'; reason = 'covering finance over HTTP' }
 Check "RBAC-3 over HTTP: POSITIVE CONTROL -- the owner, holding MANAGE_PERMISSIONS, CAN write the grant" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
-$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
+$r = Invoke-Patch $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
 Check "RBAC-3 over HTTP: ...and the SAME request the employee was refused above now SUCCEEDS -- one capability opened to one person, no role invented, no role edited, and in effect on the very next request with no re-login" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
 $r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
@@ -566,10 +573,10 @@ Check "...and the write PERSISTED -- the grant changed behaviour, not just a sta
 # resolved from `public.users` on every statement, so a grant applies immediately -- and, more
 # importantly, so does a REVOKE. A claims-based model would leave a revoked capability live until the
 # token expired, which is the wrong direction to be wrong in for an access-control system.
-$r = Patch-Rest $owner "user_permission_grants?user_id=eq.$empUserId&permission_id=eq.$permId" @{ is_active = $false }
+$r = Invoke-Patch $owner "user_permission_grants?user_id=eq.$empUserId&permission_id=eq.$permId" @{ is_active = $false }
 Check "RBAC-3 over HTTP: the owner deactivates the grant" (Ok $r) "$($r.StatusCode) $(Err $r)"
 
-$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 42000 }
+$r = Invoke-Patch $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 42000 }
 Check "REVOCATION IS IMMEDIATE: the employee is refused again on the NEXT request, with the same unexpired token -- authority is read from the database per statement, never from a claim that would stay stale until expiry" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
 
 # =================================================================================================
@@ -595,6 +602,88 @@ Check "RBAC-4 SELF-GATING: the employee itemising a COLLEAGUE gets nothing -- re
 
 $r = Rpc $owner 'effective_permissions' @{ p_user_id = $finUserId }
 Check "POSITIVE CONTROL: the owner, holding MANAGE_PERMISSIONS, CAN itemise that same colleague -- so the empty result above is authorization, not an empty function" ((Ok $r) -and (Val $r).Count -gt 0) "$($r.StatusCode) $(Err $r)"
+
+
+# =================================================================================================
+# PD-24 / SUP-2 -- the WRITE half of the same ceiling, over the same wire.
+#
+# The read half above is defeated if the actor can simply SET the value: they then know it because
+# they supplied it. `senior_employee` is the actor neither SEC-1c nor SUP-1 tested -- SEC-1c proved
+# a TRAINEE refused, and a trainee lacks ASSIGN_SUPPLIER, which this role holds. Everything here
+# runs as $senior over HTTP because PostgREST serves PATCH on `suppliers` beside the RPC.
+# =================================================================================================
+
+$r = Get-Rest $senior 'suppliers?select=id,credit_limit_amount&id=eq.0d110000-0000-0000-0000-0000000000c7'
+Check "CONTROL: the senior employee is refused the READ of the ceiling -- the premise of the refusals below" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ phone = '+20 122 000 0000' }
+Check "POSITIVE CONTROL: ...yet still EDITS an ordinary supplier field -- so the refusal below is the field's guard, not a frozen table" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$phone = (Psql "select phone from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and that PATCH actually landed -- a 204 alone would not prove the UPDATE ran" ($phone -eq '+20 122 000 0000') "phone=$phone"
+
+# RECONCILED 2026-09-03. This pair used to assert the literal 25000, the value the FIXTURE inserts.
+# That held while this block was the only writer of this column. The merge put the RBAC-3 block
+# above it in the same script and on the same supplier, so by the time control reaches here the
+# ceiling legitimately reads 41000 -- and the assertion failed while the behaviour it measures was
+# perfectly correct. The literal was never the thing under test: what this pair proves is that a
+# REFUSED write leaves the value UNCHANGED. So it now reads the value immediately before the write
+# and compares against that. The assertion is strictly stronger (it cannot pass by coincidence when
+# some other actor happens to have set 25000) and it no longer depends on ambient state -- the class
+# of defect this repository keeps finding, arriving here as soon as a second writer existed.
+$before = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+
+$r = Invoke-Patch $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 999999 }
+Check "SUP-2: setting the ceiling over HTTP is REFUSED -- this returned 204 and moved the ceiling to 999999 until 202607059600" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and the ceiling is untouched at $before -- the refusal rolled the write back rather than merely reporting an error" ([decimal]$ceiling -eq [decimal]$before) "credit_limit_amount=$ceiling expected=$before"
+
+$r = Rpc $senior 'create_supplier' @{ p_name = 'Ceiling Setter Air'; p_supplier_type_code = 'airline'; p_credit_limit_amount = 500000; p_credit_limit_currency_code = 'EGP' }
+Check "...nor through create_supplier, whose ASSIGN_SUPPLIER charge alone minted a half-million ceiling before this migration" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $senior 'create_supplier' @{ p_name = 'No Terms Travel'; p_supplier_type_code = 'hotel' }
+Check "POSITIVE CONTROL: a supplier with NO credit terms is still created on ASSIGN_SUPPLIER alone -- master data did not become a finance operation" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $owner 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 30000 }
+Check "POSITIVE CONTROL: the owner, holding both permissions, DOES set the ceiling -- a guard that stopped everyone would be a capability regression" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and it really moved to 30000 -- the positive control is proven by the value, not by the status code" ([decimal]$ceiling -eq 30000) "credit_limit_amount=$ceiling"
+
+
+# =================================================================================================
+# PD-24 / SUP-3 -- supplier credit management is its own permission (owner decision 2026-09-02).
+#
+# The owner ruled that `finance_manager` must be able to set a supplier's credit limit, and that the
+# capability must be its OWN independently grantable permission rather than a side effect of
+# ASSIGN_SUPPLIER. `finance_manager` holds NO ASSIGN_SUPPLIER, so this is the assertion that would
+# have silently failed if only the permission had been minted: the table guard charges
+# ASSIGN_SUPPLIER for any write, and it had to learn that a credit-only write is a different act.
+# Over HTTP because PostgREST serves the PATCH, and the three cases below differ ONLY in which
+# columns the same actor sends -- which is exactly what the guard now discriminates on.
+# =================================================================================================
+
+$r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+Check "CONTROL: finance_manager can READ the ceiling -- so a refusal below is write authority, not reach" ((Ok $r) -and (Val $r)[0].permitted -eq $true) "$($r.StatusCode) $(Err $r)"
+
+# INVERTED 2026-09-02 by the owner's SECOND supplier decision (`202607059800`): finance_manager is
+# explicitly authorised for Supplier Management and now holds ASSIGN_SUPPLIER, so what these two
+# assertions used to prove is exactly what the owner overturned. They now pin the new authority.
+# The orthogonality they used to carry -- MANAGE_SUPPLIER_CREDIT granting nothing else -- moved to
+# `92_capability_grant_model_test.sql`, where a per-user grant can build an actor holding the credit
+# capability WITHOUT supplier administration; no seeded role has that shape any more.
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ phone = '+20 155 000 0000' }
+Check "OWNER DECISION 2: finance_manager CAN edit an ordinary supplier field -- explicitly authorised for Supplier Management" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000; phone = '+20 155 000 0001' }
+Check "...and the ceiling BUNDLED with an ordinary field, holding both authorities" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 45000 }
+Check "OWNER RULE 1: finance_manager CAN set the credit limit over HTTP, holding no ASSIGN_SUPPLIER at all" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d110000-0000-0000-0000-0000000000c7';").Trim()
+Check "...and it really moved to 45000 -- the three PATCHes above differ only in their column list, which is what makes this a controlled comparison" ([decimal]$ceiling -eq 45000) "credit_limit_amount=$ceiling"
 
 
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })

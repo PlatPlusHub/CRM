@@ -113,19 +113,22 @@ select throws_ok(
   '42501', null,
   '...nor a passenger, whose name is what appears on a ticket');
 
--- RETARGETED from `credit_limit_amount` to `name` (202607059700, SUP-3). The credit ceiling is now
--- governed by its OWN trigger, `suppliers_guard_credit_authority`, which fires FIRST (PostgreSQL
--- orders BEFORE row triggers by name and 'c' < 'w'). A refusal on the ceiling would therefore be
--- attributed to this guard while actually coming from that one -- and, worse, would keep the
--- mutation pair at 15-16 green after `suppliers_guard_write_capability` was dropped, because the
--- credit guard would still refuse. `name` is a column only THIS guard governs, so the assertion and
--- its mutation both measure what they claim. The ceiling's own authority is proven in
--- `90_supplier_credit_authority_test.sql`.
+-- 202607059600 (SUP-2): this assertion and its mutation pair below name `phone`, not
+-- `credit_limit_amount`, and the change is deliberate. The credit column now carries a SECOND guard
+-- (`suppliers_guard_credit_authority`), so a mutation that drops `suppliers_guard_write_capability`
+-- alone can no longer make that write succeed -- the `lives_ok` half would fail and, worse, the
+-- `throws_ok` half would keep passing on the OTHER trigger's refusal, quietly measuring nothing.
+-- The ordering is not incidental: PostgreSQL fires BEFORE row triggers in NAME order, and
+-- 'c' < 'w', so `suppliers_guard_credit_authority` always speaks FIRST -- a refusal on the ceiling
+-- would be attributed to the capability guard while actually coming from the credit one.
+-- `phone` is an ordinary column reachable only through the capability guard, so these three
+-- assertions once again pin exactly the trigger they name. Who may set the CEILING is owned by
+-- `90_supplier_credit_write_authority_test.sql`, where its own defect injection lives.
 select throws_ok(
-  $$update public.suppliers set name = 'Renamed By Trainee'
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
-  '...nor a supplier record -- ASSIGN_SUPPLIER, which a trainee does not hold');
+  '...nor a supplier record, which carries the agency''s commercial relationships');
 
 -- =============================================================================================
 -- 9-12. POSITIVE CONTROLS. The union set exists so that these keep working.
@@ -202,9 +205,9 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select lives_ok(
-  $$update public.suppliers set name = 'Renamed By Trainee'
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
-  'MUTATION: with the trigger dropped the trainee CAN rewrite the supplier -- so the refusal above is this guard, not a coincidence');
+  'MUTATION: with the trigger dropped the trainee CAN rewrite a supplier -- so the refusal above is this guard, not a coincidence');
 
 reset role;
 select set_config('request.jwt.claims', null, true);
@@ -217,7 +220,7 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select throws_ok(
-  $$update public.suppliers set name = 'Renamed By Trainee'
+  $$update public.suppliers set phone = '+20 111 111 1111'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
   '...and with the trigger restored it is refused again -- the pair is what makes assertion 7 load-bearing');

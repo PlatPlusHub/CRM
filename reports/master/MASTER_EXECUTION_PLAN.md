@@ -2,7 +2,13 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
+Last updated: 2026-09-02 (**authorization architecture — RBAC-3 / ADR-0027, owner-directed.** A full RBAC rebuild was authorised and rejected on measurement: the gap to the owner's capability-level end-state was one missing user->permission edge, while 197 enforcement sites already delegate to a single function. The grant model was refactored and the enforcement plane left untouched. SUP-4a fixed the ceiling's missing currency; SUP-4b stays open. Prior entry follows.)
+
+Previously: 2026-09-02 (**supplier credit permission — SUP-3, owner decision.** The owner made SUP-3 explicit and authorised implementing it before the next slice: supplier credit management is now its own independently grantable permission. The enforcement half the owner also asked for is recorded as SUP-4 and deliberately not invented — ORVION has an authoritative supplier payable but no authoritative definition of what counts against the limit. Prior entry follows.)
+
+Previously: 2026-09-02 (**supplier credit authority — SUP-2.** The table-by-table audit's next slice, chosen by measuring the writable surface rather than from a list; three candidate classes were discarded by that measurement before the fourth produced a defect. The entry is in Batch 6 below, and the NEXT SLICE pointer was replaced in the SAME edit rather than left to go stale as it did on 2026-09-01. Prior entry follows.)
+
+Previously: 2026-09-01 (**care/conversation re-audit — PARENT-1.** The slice was re-entered from live state and produced a class fix (`202607059400`); the entry is in Batch 6 below. **One staleness corrected while there, and it is the kind this header already warns about:** Batch 6 still carried "NEXT SLICE: ATTR-2" after `202607059300` closed ATTR-2 on 2026-09-01 — the same day this document recorded SEC-1c and SUP-1 and left the pointer alone. A plan that names a finished slice as the next one is worse than a plan that names none. Prior entry follows.)
 
 Previously: 2026-08-29 (**pre-Phase-10 program reconciliation.** Batch 6's open list corrected against live evidence — two items were already closed by later packages and had stayed open (**GOV-6**), and the table-count scopes were refreshed. The header itself had read "2026-07-15" while Batch 6 below runs to 2026-08-29; a plan whose own date is six weeks stale invites a reader to distrust the statuses too. Seven findings this document *defined* rather than referenced — LIC-1, DEAD-1, DEAD-2, BLOCKED-4, BLOCKED-5, CANON-26-1 and A3 — now have rows in `MASTER_GAP_REGISTER.md` per `GOVERNANCE.md §2` (**GOV-3**), and Check 11 enforces it.)
 
@@ -1046,9 +1052,114 @@ additive capability.*
      **DEAD-4 recorded:** `campaign_daily_metrics`, `exchange_rate_adjustments` and
      `financial_accounts` have neither producer nor consumer — measured in both directions.
      Test 89 (21); suite 88/1211 → **89/1232**, HTTP 376 → **381**.
+     *(The "NEXT SLICE" pointer that stood here is replaced by the entry below rather than left to
+     go stale a second time — the failure this document's own header records.)*
+   * **SUPPLIER CREDIT AUTHORITY — SUP-2, DONE 2026-09-02 (`202607059600`), DEPLOYED.** The slice
+     was chosen by MEASURING the surface rather than from a list, and three candidate classes were
+     discarded by that measurement before a fourth produced a defect: `authenticated` holds **zero
+     DELETE** on all 75 tables, no granted command lacks an RLS policy, and every SECURITY DEFINER
+     function in `app`/`public` already pins `search_path` and is closed to `anon`. What remained was
+     a five-column class — every column `authenticated` cannot SELECT but CAN insert or update. Four
+     carry dedicated column-aware financial guards (SPEC-139/154-A/159-A). **The fifth,
+     `suppliers.credit_limit_amount`, carried only the table's ASSIGN_SUPPLIER charge**, and
+     ASSIGN_SUPPLIER and VIEW_FINANCIAL_DOCUMENTS are held by **different role sets** — so
+     branch_manager, department_manager and senior_employee could SET the ceiling SUP-1 refuses to
+     show them, which for those three defeats the withholding entirely: an actor who sets a value
+     knows it. Reproduced as `senior_employee` on BOTH doors with the refusal established FIRST in
+     the same session, and the writes verified by reading the values back WITH rights.
+     **It survived two packages that both read this exact column**, because each recorded the other
+     as owning the half it skipped — and SEC-1c's proof used a *trainee*, who lacks ASSIGN_SUPPLIER,
+     so it measured "the weakest actor is refused" and never "the authority is sufficient".
+     No permission minted: the floor is forced by SUP-1's own guarantee — the write must cost at
+     least the read. **SUP-3 recorded, NOT decided** — whether `finance_manager` should hold
+     ASSIGN_SUPPLIER is commercial, and SUP-2 is correct under either answer. One existing test
+     CORRECTED rather than re-run: test 85's PAR-4 mutation dropped `suppliers_guard_write_capability`
+     and asserted the write then succeeded, which a second guard on that column would have made
+     measure nothing. Test 90 (15) + 9 HTTP, each with defect injection at its own layer; suite
+     89/1232 → **90/1247**, HTTP 381 → **390**.
+     **CLASSES MEASURED CLEAN in the same pass, recorded so the next slice does not re-measure them
+     without new evidence** (LOCAL RUNTIME on a fresh `db reset`, 2026-09-02): (i) `authenticated`
+     holds **zero DELETE** on all 75 tables — that surface is closed by B5, not merely unexercised;
+     (ii) **no granted command lacks an RLS policy** — zero SELECT/INSERT/UPDATE grants to
+     `authenticated` sit on a table with no matching policy; (iii) all **24** SECURITY DEFINER
+     functions reachable by `authenticated` pin `search_path=""` and **none** is executable by
+     `anon`; (iv) **archive authority is complete** — every table carrying `is_archived` has an
+     `enforce_archive_authority` trigger, with no exceptions; (v) all **8 reporting views are
+     `security_invoker`** and none is a read-door around a withheld column — `supplier_outstanding`
+     takes its money from the gated `app.supplier_balance`, and `booking_item_profit` was proven
+     against a REAL priced item owned by a COLLEAGUE (the first probe returned zero rows and was
+     discarded as vacuous per `AGENTS.md 6`): with the employee's four controls established, the
+     view returned `selling_amount 10000` and **`cost_amount`/`profit` NULL**.
+   * **SUPPLIER CREDIT PERMISSION — SUP-3, OWNER DECISION, DONE 2026-09-02 (`202607059700`), DEPLOYED.**
+     The owner made SUP-3 explicit and authorised implementation ahead of the next slice:
+     `finance_manager` MUST be able to set `suppliers.credit_limit_amount`, and the capability MUST
+     have its own independently grantable permission rather than riding on ASSIGN_SUPPLIER — the
+     stated principle being that every capability should be representable by its own permission so
+     the company owner can grant or revoke it per user from the future admin dashboard.
+     **`MANAGE_SUPPLIER_CREDIT`** was minted by the repository's own precedent (`202607051400` minted
+     VIEW_DEPARTMENT_RECORDS identically; canon 25 heads its list "Initial values"), granted to
+     owner/ceo/finance_manager — the set canon 28 already gives EDIT_LOCKED_COST — and plan-gated at
+     `finance_lite` to match the permission that governs READING the same figure. Recorded in canon 28's
+     ratified-amendments list, where VIEW_DEPARTMENT_RECORDS is recorded, rather than in a new document.
+     **Minting it alone would have silently failed the owner's first rule:** `finance_manager` holds no
+     ASSIGN_SUPPLIER and `guard_write_capability` charges that for ANY write to `suppliers`, so the
+     table guard had to learn that a write touching ONLY the ceiling is a different act. It compares
+     ROW IMAGES rather than a column list, so a column added to `suppliers` later cannot silently
+     widen the relaxation — it makes the write stop being credit-only, which is the safe direction.
+     Orthogonality proven in both directions on both doors, and grant→revoke→regrant proven
+     BEHAVIOURALLY against a role that does not hold the permission, with `has_permission` echoed
+     before each measurement. SUP-2 stays closed. **Test 90 was CORRECTED, not re-run** — its PAR-4
+     mutation targeted a credit-ONLY write, which SUP-3 gave a second charge, so dropping one guard
+     would have measured nothing: the test-85 lesson recurring the moment a second enforcement point
+     appeared. Test 91 (26) + 5 HTTP; suite 90/1247 → **91/1273**, HTTP 390 → **395**.
+     **SUP-4 RECORDED AND NOT INVENTED.** The owner also asked for the ceiling ENFORCEMENT defect to be
+     closed *if* an authoritative exposure definition already exists. It does not, and the measurement
+     is specific: `app.supplier_balance` is an authoritative supplier PAYABLE but returns **one row per
+     currency**, while `credit_limit_amount` is a **currency-less scalar** — reproduced live as
+     `EGP 8000` and `USD 600` against a limit of 10,000, with **zero** USD→EGP exchange rates and
+     `tenants.default_currency_code` read by nothing. Canon names no rule, no Batch-4 spec defines one,
+     and AP `supplier_bills` (BF-7) is unbuilt. Three questions go to the owner (currency of the limit;
+     which operation it refuses; whether it binds on all suppliers). Enforcement was NOT attempted.
+   * **AUTHORIZATION ARCHITECTURE — RBAC-3 (ADR-0027) + SUP-4a, OWNER-DIRECTED, DONE 2026-09-02
+     (`202607059800`, `202607059900`), DEPLOYED.** The owner relaxed the standing "do not redesign
+     RBAC" constraint and authorised a full rebuild if the evidence supported one. **It did not, and
+     the measurement is why:** `role_permissions` is the ONLY foreign key into `public.permissions`,
+     so the entire gap between ORVION and the owner's capability-level end-state was **one missing
+     user→permission edge**; meanwhile `app.has_permission` is resolved by **60 RLS policies, 61
+     triggers and 76 functions**, i.e. the enforcement plane was already unified and already correct.
+     Rebuilding would have rewritten 197 enforcement sites to reach identical behaviour, each one a
+     chance to drop a rule earned by a real defect. **PRESERVE was rejected too** — per-user override
+     and deny were not inconvenient but unrepresentable, so every "this user minus this capability"
+     would have become a new role (OWASP's role explosion). Chosen: **REFACTOR the grant model,
+     PRESERVE the enforcement plane** — not one RLS policy, guard trigger, RPC or grant was touched.
+     Delivered: `user_permission_grants` (per-user grant/deny, `user_role_assignments`' lifecycle
+     columns, SPEC-138 RLS, composite tenant FKs, no DELETE grant); `has_permission` resolving
+     **deny-override > user grant > role grant, then the plan gate** (deny-override ADOPTED from AWS
+     IAM / Azure RBAC, not invented; the plan gate stays last so a tenant admin cannot grant past a
+     commercial entitlement); `capability_group` + `action_kind` DERIVED from canon 28's own section
+     headings and naming convention; `app.effective_permissions` as the explainer, proven to agree
+     with the decision function for EVERY permission. **No privilege expanded** — with the table
+     empty `has_permission` returns exactly what it did before, pinned as an assertion. Permissions
+     were deliberately NOT moved to JWT claims: ORVION resolves the actor from `public.users`, so a
+     revocation binds on the next statement and claims would ADD a staleness window it does not have.
+     Gives `MANAGE_PERMISSIONS` (RBAC-2's dead permission) its first enforcement and
+     `permission_granted`/`permission_revoked` (EVT-2's class) their first producer.
+     **The owner's supplier decision** is expressed as a ROLE grant — `finance_manager` gains
+     ASSIGN_SUPPLIER, which measurably gates only `create_supplier`, `link_internal_supplier` and the
+     two supplier table doors. No VIEW_SUPPLIER was minted: `suppliers` is tenant-readable, so such a
+     permission would be a NEW restriction on every role rather than an expression of this decision.
+     **SUP-4a:** the ceiling was the ONLY money column in ORVION without a currency beside it — canon
+     30's own standard, unapplied to one column, and precisely what made it incomparable to
+     `supplier_balance`'s per-currency payable. Fixed. **SUP-4b remains OPEN**, narrowed from three
+     questions to two: ADR-0020's shipped `advance_booking` precedent settles the FORM (per-currency,
+     never converted, override permission, risk event), leaving only which operation the ceiling
+     refuses, what overrides it, and whether it binds on all suppliers — all commercial.
+     Tests 91 (26) + 92 (26) + 2 in test 90; four class guards (test 10 ceilings, test 14 composite
+     FK, test 35 gate exemptions, test 83 actor classification) each demanded and received explicit
+     justification before they were edited. Suite 91/1273 → **92/1301**; HTTP 395; 76 tables.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
-     order; the care/conversation family and the finance periphery are now closed on every door
-     they have.
+     order. The write-without-read class is now closed on all five of its columns, and the five
+     classes above are measured rather than assumed; a next slice needs a class none of them covers.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their

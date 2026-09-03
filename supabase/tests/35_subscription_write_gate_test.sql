@@ -233,14 +233,15 @@ select is(
 -- =============================================================================================
 -- 19-20. COVERAGE -- what keeps the generated attachment honest in both directions.
 --
--- `user_permission_grants` joined the exemption list with `202607059800` (RBAC-3), and the reason is
--- its siblings: `users`, `user_role_assignments` and `user_branch_assignments` are ALL exempt, and
--- the new table is the per-user half of exactly what `user_role_assignments` does per-role. Gating
--- one path to a capability while exempting the other would be incoherent. The sharper argument is
--- operational: a tenant in `grace_period` or `read_only` must still be able to REVOKE a compromised
--- user's access. Making emergency revocation depend on billing state would be a security defect
--- introduced to satisfy a billing rule -- and revocation here is an UPDATE (`is_active = false`),
--- which the gate would refuse.
+-- `user_permission_grants` joined the exemption list with `202607059800` (RBAC-3), on the reasoning
+-- already established for `users`, `user_role_assignments` and `user_branch_assignments`, which are
+-- exempt for the same family reason: permission ADMINISTRATION is not the tenant's business data.
+-- The new table is the per-user half of exactly what `user_role_assignments` does per-role, so
+-- gating one path to a capability while exempting the other would be incoherent. The sharper
+-- argument is operational: a tenant in `grace_period` or `read_only` must still be able to REVOKE a
+-- compromised user's access. Making emergency revocation depend on billing state would be a
+-- security defect introduced to satisfy a billing rule -- and revocation here is an UPDATE
+-- (`is_active = false`), which the gate would refuse.
 --
 -- `scheduled_job_findings` joined the exemption list with `202607056900`, and the reason is the
 -- inverse of the usual one: a restricted tenant is precisely the case those rows exist to RECORD.
@@ -259,7 +260,7 @@ select is(
       and c.table_name <> all (array['subscriptions','subscription_payment_proofs','events','security_events',
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                     'users','user_role_assignments','user_permission_grants','user_branch_assignments','branches','departments',
+                                     'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
                                      'tenant_license_activations','document_storage_findings','scheduled_job_findings'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
@@ -275,7 +276,7 @@ select is(
       and pc.relname = any (array['subscriptions','subscription_payment_proofs','events','security_events',
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
-                                  'users','user_role_assignments','user_branch_assignments','branches','departments',
+                                  'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
                                      'tenant_license_activations','document_storage_findings','scheduled_job_findings'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');

@@ -4,6 +4,14 @@
 -- pins the READ half, and the two halves are different questions: one is authorization to change a
 -- value, the other is authorization to KNOW it.
 --
+-- CORRECTED 2026-09-02 (SUP-2): "SEC-1c closed the WRITE half" was true only of the actor it tested.
+-- SEC-1c charges ASSIGN_SUPPLIER, which a trainee lacks and `senior_employee`, `branch_manager` and
+-- `department_manager` hold -- so those three could still SET the ceiling this file proves they may
+-- not READ, defeating the guarantee below for exactly the middle of the role ladder. Closed by
+-- `202607059600`; the write authority is now pinned by
+-- `90_supplier_credit_write_authority_test.sql`. The sentence is kept rather than rewritten because
+-- the belief it records is what let the gap survive two packages that both examined this column.
+--
 -- The permission was derived, not chosen: `app.supplier_balance` already refuses to report a
 -- supplier's financial position without VIEW_FINANCIAL_DOCUMENTS, and the credit limit is the
 -- ceiling on exactly that position. The mechanism was derived too: `booking_items` already withholds
