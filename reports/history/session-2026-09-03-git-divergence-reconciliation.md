@@ -3,7 +3,7 @@
 Class: History (point-in-time record; superseded by later reports, never edited retroactively)
 Date: 2026-09-03
 Author: Claude Opus 5
-Status: Complete — merged and verified locally. **NOT PUSHED** (owner instruction: stop after local verification).
+Status: Complete — merged, verified locally, and **PUSHED**. See the closing note at the foot of this report.
 
 **Scope:** reconcile a real divergence between local `main` and `origin/main` without losing either line of work. Read-only analysis first, then the merge the analysis recommended. **No Batch-6 work, no new product work, no rebase, no force-push — and none was attempted.**
 
@@ -161,7 +161,7 @@ Run in full on the merged tree, because passing on either parent proves nothing 
 
 ## G. WHAT IS STILL OPEN
 
-- **Not pushed.** By instruction, this package stops at local verification.
+- **Not pushed** at the time this section was written; by instruction the package stopped at local verification. **Superseded by the closing note below.**
 - **SUP-4b** remains the owner's decision: whether the ceiling REFUSES or WARNS, at which operation, and with what override. Currency, exposure and supplier scope are all derived and shipped. **`CREDIT LIMIT ENFORCED = NO`.**
 - The process defect underneath all of this — **two sessions diverging without fetching** — is now recorded in the register. No guard in this repository compares local `main` against `origin/main`, and nothing here changes that.
 
@@ -169,4 +169,30 @@ Run in full on the merged tree, because passing on either parent proves nothing 
 
 ## H. NEXT STEP
 
-Push, then **the remaining Batch-6 tables** per `MASTER_EXECUTION_PLAN.md`, which owns the order. Not started here, by instruction.
+**The remaining Batch-6 tables** per `MASTER_EXECUTION_PLAN.md`, which owns the order. Not started here, by instruction.
+
+---
+
+## CLOSING NOTE — 2026-09-03, PUSHED AND VERIFIED
+
+The owner ran `git push origin main` interactively. The merge is on GitHub:
+
+```
+1193643..d02b702  main -> main
+```
+
+Verified from the repository rather than from the push's own output, after `git fetch origin`:
+
+| Proof | Result |
+|---|---|
+| `HEAD` | `d02b702483ca40a7ec964be4b1425cce5f3d1635` |
+| `origin/main` | `d02b702483ca40a7ec964be4b1425cce5f3d1635` |
+| Equal | **True** |
+| Ahead / behind `origin/main` | **0 / 0** |
+| Working tree | **CLEAN** |
+| Merge commit's parents on the remote | `87be107` **and** `1193643` |
+| All 13 divergent commits reachable from `origin/main` | **13 / 13** |
+
+`87be107` (the local-only tip), `1193643` (the previous origin tip) and `b2210f7` (the commit the ledger evidence binds to) are all ancestors of `origin/main`. **Both lines of work are on GitHub, and Check 19's ancestry requirement survives the push** — which is what the decision to merge rather than rebase was protecting.
+
+**The divergence is closed. `MASTER_GAP_REGISTER.md` now carries `SYNC-1`** for the process defect that produced it, because a finding recorded only in a session report is the drift this repository keeps re-finding — the COLD-2 row says exactly that about `4b67d3f`.
