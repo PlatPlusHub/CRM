@@ -123,9 +123,10 @@ No new failure is hidden by another check: the new guard was proven standalone, 
 
 | | |
 |---|---|
-| local HEAD | `6a246ca` (closure commit) |
-| `origin/main` | `4b63f7…` |
-| Delta | **5 commits ahead**, 0 behind |
+| `origin/main` | **`4b67d3f`** — the last commit GitHub has |
+| Unpushed | **every commit after `4b67d3f`**, 0 behind |
+
+*(The delta is stated as a BASE COMMIT, not a count. A count is exactly the kind of fact that goes stale the moment another commit lands — including the commit that records the count, which is how the previous report came to say "3" when the answer was 4. `git rev-list --count 4b67d3f..main` answers it exactly, whenever it is asked.)*
 
 **`git push origin main` FAILED**, attempted twice across two packages:
 
@@ -149,7 +150,7 @@ Then verify equality directly rather than trusting the push's exit message:
 git rev-parse HEAD ; git rev-parse origin/main
 ```
 
-The five unpushed commits are `77075f2`, `da799e3`, `a52b5c7`, `b2210f7`, `6a246ca` — the GOV-10 guard fix, the orphaned-migration recovery, and this closure. Primary is already at 189 and is **not** waiting on the push; it is the GitHub copy that is stranded.
+The unpushed work is the GOV-10 guard fix (`77075f2`), the orphaned-migration recovery (`a52b5c7`) and this closure (`6a246ca`), plus their session-report follow-ups. Primary is already at 189 and is **not** waiting on the push; it is the GitHub copy that is stranded.
 
 ---
 
