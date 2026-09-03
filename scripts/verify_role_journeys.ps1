@@ -41,6 +41,19 @@ function Get-Rest($jwt, $path) {
     Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Get -SkipHttpErrorCheck `
         -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" }
 }
+# Added 2026-09-03 with the SUP-3 / RBAC-3 blocks below. `suppliers` and `user_permission_grants` are
+# both tables PostgREST serves, so proving their authority needs the TABLE verbs, not only rpc/GET --
+# ADR-0024's rule that a rule an RPC enforces must also hold on the table door.
+function Post-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+function Patch-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
 function Val($r) { if ($r.StatusCode -lt 300 -and $r.Content) { ($r.Content | ConvertFrom-Json) } else { $null } }
 function Ok($r) { $r.StatusCode -ge 200 -and $r.StatusCode -lt 300 }
 function Err($r) { try { ($r.Content | ConvertFrom-Json).message } catch { $r.Content } }
@@ -448,10 +461,24 @@ Check "and an ordinary employee cannot revoke a role over HTTP" (-not (Ok $r)) "
 # not a way around the column grant.
 # =================================================================================================
 
+# SUP-4a (`202607059900`): the ceiling is the PAIR (amount, currency) and
+# `suppliers_credit_limit_currency_check` refuses one without the other, so this fixture states the
+# denomination. It is worth recording HOW this was found, because the failure mode is a class:
+# `Psql ... | Out-Null` DISCARDS the error, so when this INSERT began violating the new constraint
+# the supplier simply never existed, and the three assertions below went on to "fail" with
+# `supplier is not in your tenant` -- a message about the wrong thing entirely. Here that was merely
+# confusing, because these are positive assertions. Had the missing fixture sat under a NEGATIVE
+# assertion, "the employee cannot read the ceiling" would have passed for the sole reason that there
+# was no supplier to read -- the vacuous-pass class `AGENTS.md §6` exists to forbid.
 Psql @"
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount)
-values ('0d110000-0000-0000-0000-0000000000c7','$T','Credit Ceiling Air','airline', 25000);
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code)
+values ('0d110000-0000-0000-0000-0000000000c7','$T','Credit Ceiling Air','airline', 25000, 'EGP');
 "@ | Out-Null
+
+# Prove the fixture EXISTS before asserting anything about it. Without this line the suite can only
+# tell you that something went wrong, never that the row it depends on was never created.
+$r = Get-Rest $emp 'suppliers?select=id&id=eq.0d110000-0000-0000-0000-0000000000c7'
+Check "FIXTURE CONTROL: the credit-ceiling supplier was actually created -- a swallowed INSERT error would otherwise make every assertion below measure a row that does not exist" ((Ok $r) -and $r.Content -match '0d110000') "$($r.StatusCode) $(Err $r)"
 
 $r = Get-Rest $emp 'suppliers?select=id,name&id=eq.0d110000-0000-0000-0000-0000000000c7'
 Check "POSITIVE CONTROL: an employee still LISTS suppliers by explicit columns -- the column grant withheld a field, not the table" ((Ok $r) -and $r.Content -match 'Credit Ceiling Air') "$($r.StatusCode) $(Err $r)"
@@ -469,6 +496,105 @@ Check "the gated reader answers an unprivileged employee with permitted=false an
 $r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
 $v = Val $r
 Check "POSITIVE CONTROL: finance, holding VIEW_FINANCIAL_DOCUMENTS, receives the REAL ceiling -- a null here would pass a weaker assertion" ((Ok $r) -and $v[0].permitted -eq $true -and [decimal]$v[0].credit_limit_amount -eq 25000) "$($r.StatusCode) $($r.Content)"
+
+Check "SUP-4a: ...WITH its denomination -- an amount whose currency the API drops is the ill-formed value the constraint exists to end" ((Ok $r) -and $v[0].credit_limit_currency_code -eq 'EGP') "$($r.StatusCode) $($r.Content)"
+
+# =================================================================================================
+# SUP-3 -- the ceiling's WRITE authority over the wire (`202607059700`, recovered 2026-09-03).
+#
+# pgTAP proves this in `90_supplier_credit_authority_test.sql`. It is repeated here because
+# `suppliers` is a table PostgREST serves, so PATCH is a real door a browser can reach, and ADR-0024
+# is explicit that a rule an RPC enforces must also hold on the table door. `senior_employee` is the
+# load-bearing actor: it HOLDS ASSIGN_SUPPLIER, so a refusal here cannot be explained away as "that
+# role cannot write suppliers at all" -- which is why the positive control comes first.
+# =================================================================================================
+$r = Patch-Rest $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ name = 'Renamed By Senior' }
+Check "POSITIVE CONTROL: senior_employee CAN rename a supplier over HTTP -- ordinary master-data work still costs only ASSIGN_SUPPLIER" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $senior 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 999999 }
+Check "SUP-3 over HTTP: ...but CANNOT move the credit ceiling -- ASSIGN_SUPPLIER does not imply MANAGE_SUPPLIER_CREDIT, and the table door enforces it too" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $fin 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 30000; credit_limit_currency_code = 'EGP' }
+Check "SUP-3 over HTTP: finance_manager CAN set it -- the owner's rule 1, and a fix that refused everyone would be a capability regression" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+$v = Val $r
+Check "...and it PERSISTED, read back through the gated reader -- 'did not throw' is not evidence that a write occurred" ((Ok $r) -and [decimal]$v[0].credit_limit_amount -eq 30000) "$($r.StatusCode) $($r.Content)"
+
+# =================================================================================================
+# RBAC-3 -- per-user capability grants over the wire (`202607059800`, recovered 2026-09-03).
+#
+# `user_permission_grants` is `authenticated`-insertable, so PostgREST serves it. That is the whole
+# reason its authority lives in an RLS policy rather than only in a future admin RPC: the dashboard
+# is not the only door, and an employee who could POST here could grant themselves anything.
+# =================================================================================================
+# `user_permission_grants.user_id` is a composite FK to `public.users (tenant_id, id)` -- the TENANT-1
+# shape -- so it takes the ORVION membership id, not the `auth.users` id the JWT carries. The first
+# draft passed the auth id and the FK refused it with 409; resolving it here is what the future admin
+# dashboard must do too, and the composite FK is exactly what made the mistake impossible to miss.
+# The capability under test is MANAGE_SUPPLIER_CREDIT rather than something with a richer row shape.
+# That is deliberate: its enforcement is a SINGLE gate on a path already exercised twelve lines above,
+# so "the employee can now do it" isolates the grant. A capability like CREATE_JOURNAL_ENTRY would
+# also need branch scope and a valid entry shape, and a failure there could not be attributed to the
+# grant -- the first draft used it and was refused by `journal_entries` RLS for reasons that had
+# nothing to do with RBAC-3.
+$empUserId = (Val (Get-Rest $owner "users?select=id&auth_user_id=eq.0d110000-0000-0000-0000-0000000000e1"))[0].id
+$permId    = (Val (Get-Rest $owner 'permissions?select=id&key=eq.MANAGE_SUPPLIER_CREDIT'))[0].id
+
+Check "FIXTURE CONTROL: the employee's membership id and the MANAGE_SUPPLIER_CREDIT permission id both resolved -- a null here would make every assertion below meaningless" ($null -ne $empUserId -and $null -ne $permId) "user=$empUserId perm=$permId"
+
+$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
+Check "BEFORE CONTROL: the employee cannot move the ceiling yet -- the baseline the grant below must change" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $emp 'user_permission_grants' @{
+    tenant_id = $T; user_id = $empUserId; permission_id = $permId; effect = 'grant' }
+Check "RBAC-3 over HTTP: an employee CANNOT grant themselves a capability -- scope_insert charges MANAGE_PERMISSIONS, and this is the most sensitive table in the system" ($r.StatusCode -eq 403 -or $r.StatusCode -eq 401) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $owner 'user_permission_grants' @{
+    tenant_id = $T; user_id = $empUserId; permission_id = $permId
+    effect = 'grant'; reason = 'covering finance over HTTP' }
+Check "RBAC-3 over HTTP: POSITIVE CONTROL -- the owner, holding MANAGE_PERMISSIONS, CAN write the grant" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 41000 }
+Check "RBAC-3 over HTTP: ...and the SAME request the employee was refused above now SUCCEEDS -- one capability opened to one person, no role invented, no role edited, and in effect on the very next request with no re-login" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'supplier_credit' @{ p_supplier_id = '0d110000-0000-0000-0000-0000000000c7' }
+Check "...and the write PERSISTED -- the grant changed behaviour, not just a status code" (((Val $r))[0].credit_limit_amount -eq 41000) "$($r.StatusCode) $($r.Content)"
+
+# The freshness property that decided AGAINST putting permissions in JWT claims. The employee's token
+# was minted BEFORE the grant existed and is not re-issued anywhere in this suite: authority is
+# resolved from `public.users` on every statement, so a grant applies immediately -- and, more
+# importantly, so does a REVOKE. A claims-based model would leave a revoked capability live until the
+# token expired, which is the wrong direction to be wrong in for an access-control system.
+$r = Patch-Rest $owner "user_permission_grants?user_id=eq.$empUserId&permission_id=eq.$permId" @{ is_active = $false }
+Check "RBAC-3 over HTTP: the owner deactivates the grant" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp 'suppliers?id=eq.0d110000-0000-0000-0000-0000000000c7' @{ credit_limit_amount = 42000 }
+Check "REVOCATION IS IMMEDIATE: the employee is refused again on the NEXT request, with the same unexpired token -- authority is read from the database per statement, never from a claim that would stay stale until expiry" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+# =================================================================================================
+# RBAC-4 (`202607060000`) -- the explainer needs a door.
+#
+# `app.effective_permissions` was created by RBAC-3 for the administration dashboard and had no
+# `public` wrapper, so PostgREST could not serve it and the capability was unreachable from any
+# browser. These assertions exist at the HTTP layer specifically because that is the layer the defect
+# lived at -- a pgTAP test would have called the `app` function directly and never noticed.
+# =================================================================================================
+$r = Rpc $emp 'effective_permissions' @{}
+$v = Val $r
+Check "RBAC-4: an employee can itemise their OWN capabilities over HTTP -- the dashboard's 'why do I hold this?' surface is reachable at all" ((Ok $r) -and $v.Count -gt 0) "$($r.StatusCode) $(Err $r)"
+
+Check "...and every row carries the four decision inputs, not just a verdict -- from_role / user_grant / user_deny / plan_allows are what make it an explanation" ((Ok $r) -and ($v[0].PSObject.Properties.Name -contains 'from_role') -and ($v[0].PSObject.Properties.Name -contains 'user_deny') -and ($v[0].PSObject.Properties.Name -contains 'plan_allows')) "$($v[0].PSObject.Properties.Name -join ',')"
+
+$r = Rpc $emp 'effective_permissions' @{ p_user_id = $empUserId }
+Check "...and asking about THEMSELVES by id works too -- the self case is the id case, not a special path" ((Ok $r) -and (Val $r).Count -gt 0) "$($r.StatusCode) $(Err $r)"
+
+$finUserId = (Val (Get-Rest $owner "users?select=id&auth_user_id=eq.0d110000-0000-0000-0000-0000000000e5"))[0].id
+$r = Rpc $emp 'effective_permissions' @{ p_user_id = $finUserId }
+Check "RBAC-4 SELF-GATING: the employee itemising a COLLEAGUE gets nothing -- reading the tenant's access matrix costs MANAGE_PERMISSIONS, and the wrapper added reachability, not authority" ((Ok $r) -and (Val $r).Count -eq 0) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $owner 'effective_permissions' @{ p_user_id = $finUserId }
+Check "POSITIVE CONTROL: the owner, holding MANAGE_PERMISSIONS, CAN itemise that same colleague -- so the empty result above is authorization, not an empty function" ((Ok $r) -and (Val $r).Count -gt 0) "$($r.StatusCode) $(Err $r)"
 
 
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })

@@ -249,14 +249,18 @@ where c.table_schema = 'public'
 --     fact. Their actor half (`assigned_by`, `created_by`) is already derived.
 --   * `*auth_user_id` -- IDENTITY BINDING, governed by `app.enforce_membership_identity_binding`
 --     (IDENT-1/ADMIN-1) and by the authentication flows, not by attribution.
---   * `user_branch_assignments.user_id` / `user_role_assignments.user_id` -- the SUBJECT of the
---     assignment. Again the actor half (`created_by`, `assigned_by`) is derived already.
+--   * `user_branch_assignments.user_id` / `user_role_assignments.user_id` /
+--     `user_permission_grants.user_id` -- the SUBJECT of the assignment or grant. Again the actor
+--     half (`created_by`, `assigned_by`) is derived already. `user_permission_grants` joined this
+--     family with `202607059800` (RBAC-3) and is classified, not outstanding: the row names the
+--     person the capability is granted to or denied from, which is precisely a target rather than an
+--     actor, and its own `created_by` carries `app.derive_created_by()` exactly as its siblings do.
 --   * `customers.last_interaction_user_id` -- DEAD-3: no writer anywhere in the database.
 --   * `invoices.voided_by`, `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22.
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(distinct ac.tbl || '.' || ac.col, ', ' order by ac.tbl || '.' || ac.col), ''))::text,
-  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_role_assignments.user_id, users.auth_user_id',
+  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_permission_grants.user_id, user_role_assignments.user_id, users.auth_user_id',
   'CLASS GUARD (ATTR-2, structural): every column that FOREIGN-KEYS to public.users on a table `authenticated` can write directly, and that no BEFORE trigger derives, is exactly this classified set. Unlike assertion 22 this asks no question about the column NAME, so an actor column called anything at all appears here. A new entry is not necessarily a defect -- it is an unclassified column, and it must be classified in MASTER_GAP_REGISTER.md before this line is edited.')
 from (
   select c.relname as tbl, a.attname as col

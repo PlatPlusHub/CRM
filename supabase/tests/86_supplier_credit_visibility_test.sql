@@ -13,7 +13,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('86000000-0000-0000-0000-0000000000a1','owner@sup86.test',   now()),
@@ -45,9 +45,13 @@ from (values ('86000000-0000-0000-0000-000000000011'::uuid,'owner'),
              ('86000000-0000-0000-0000-000000000013'::uuid,'finance_manager')) v(u,rc)
 join public.roles r on r.code = v.rc;
 
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount) values
-  ('86000000-0000-0000-0000-0000000000e1','86000000-0000-0000-0000-000000000001','Our Airline','airline', 25000),
-  ('86000000-0000-0000-0000-0000000000e2','86000000-0000-0000-0000-000000000002','Their Airline','airline', 99000);
+-- SUP-4a (202607059900): the ceiling is the PAIR (amount, currency) and
+-- `suppliers_credit_limit_currency_check` refuses one without the other. A fixture that sets only the
+-- amount now fails at INSERT, which is the constraint doing its job -- so the fixture states the
+-- denomination, as any real credit ceiling must.
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code) values
+  ('86000000-0000-0000-0000-0000000000e1','86000000-0000-0000-0000-000000000001','Our Airline','airline', 25000, 'EGP'),
+  ('86000000-0000-0000-0000-0000000000e2','86000000-0000-0000-0000-000000000002','Their Airline','airline', 99000, 'EGP');
 
 -- =============================================================================================
 -- 1-2. STRUCTURE: the column grant, and the precedent it copies.
@@ -127,6 +131,14 @@ select is(
   (select credit_limit_amount from public.supplier_credit('86000000-0000-0000-0000-0000000000e1')),
   25000::numeric,
   '...and receives the REAL amount -- not a null that would pass a weaker assertion');
+
+-- SUP-4a: the amount alone is the ill-formed value the constraint exists to end, so the reader that
+-- serves it must carry the denomination too. Without this assertion the widened reader could return
+-- a NULL currency beside a real amount and every other assertion here would still pass.
+select is(
+  (select credit_limit_currency_code from public.supplier_credit('86000000-0000-0000-0000-0000000000e1')),
+  'EGP',
+  '...WITH its denomination -- an amount whose currency the API drops is the SUP-4a defect at the door');
 
 -- =============================================================================================
 -- 11. CROSS-TENANT. The reader is SECURITY DEFINER, which is exactly how a leak gets built.

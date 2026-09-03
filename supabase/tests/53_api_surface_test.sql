@@ -63,6 +63,12 @@ insert into _expected_endpoints (name) values
     ('create_tenant_user'),
     ('current_placement'),
     ('customer_timeline'),
+    -- RBAC-4 (`202607060000`): the administration dashboard's "why does this user hold this?"
+    -- surface. Tenant-facing on purpose and SELF-GATING -- a caller itemises THEMSELVES freely, and
+    -- itemising another user costs MANAGE_PERMISSIONS, returning an empty set rather than raising.
+    -- Deliberately NOT the same decision as `app.has_permission`, which stays unreachable so that no
+    -- client can probe the authorization model with an arbitrary key (`verify_api_end_to_end.ps1`).
+    ('effective_permissions'),
     ('expiring_documents'),
     ('financial_documents'),
     ('find_customer_duplicates'),
@@ -127,8 +133,11 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  76,
-  'POSITIVE CONTROL: 75 endpoints are pinned, so the two zeros above are not drawn from an empty set');
+  77,
+  -- The prose said "75" while the assertion compared 76 -- a guard's description drifting from its
+  -- own measurement, the MEAS-1 class in miniature. Corrected to 77 alongside RBAC-4's
+  -- `effective_permissions`, and the number is now written once so the two cannot disagree again.
+  'POSITIVE CONTROL: 77 endpoints are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================
 -- 4-6. THE EXCLUSIONS. Named explicitly, because an absence proves nothing on its own.

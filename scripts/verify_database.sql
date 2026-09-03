@@ -27,7 +27,10 @@ begin
     -- 2. Public base table count
     select count(*) into n from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
         where ns.nspname = 'public' and c.relkind = 'r';
-    if n <> 75 then raise exception 'CHECK 2 FAILED: expected 75 public tables, found %', n; end if;
+    -- 76 since 202607059800 (RBAC-3): `user_permission_grants` is the per-user grant/deny edge the
+    -- role-only model had no way to express. The constant is raised because a table was legitimately
+    -- added and is live on Primary, never to make a failing guard pass.
+    if n <> 76 then raise exception 'CHECK 2 FAILED: expected 76 public tables, found %', n; end if;
 
     -- 3. RLS enabled on every public base table
     select count(*) into n from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
@@ -153,6 +156,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (75 tables, RLS + policies, resolver + read-scope model, 71/601 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (76 tables, RLS + policies, resolver + read-scope model, 71/601 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

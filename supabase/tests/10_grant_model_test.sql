@@ -131,8 +131,8 @@ select cmp_ok(
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')),
-  '<=', 54,
-  'SEC-1 ceiling: at most 54 tables accept a direct INSERT from authenticated');
+  '<=', 55,
+  'SEC-1 ceiling: at most 55 tables accept a direct INSERT from authenticated');
 
 select cmp_ok(
   (select count(*)::int
@@ -149,8 +149,19 @@ select cmp_ok(
          where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
-  '<=', 18,
-  '...and at most 18 of them have NO capability trigger that FIRES ON INSERT');
+  '<=', 19,
+  '...and at most 19 of them have NO capability trigger that FIRES ON INSERT');
+
+-- RBAC-3, 2026-09-03 (`202607059800`) -- BOTH ceilings above rose by exactly one, and the one table
+-- is `user_permission_grants`. Raising a ceiling is the move this repository distrusts most, so the
+-- justification is behavioural, not structural: an `employee` was proven NOT to hold
+-- MANAGE_PERMISSIONS and was then REFUSED (`new row violates row-level security policy`) when
+-- inserting a grant for themselves, while an `owner` holding it succeeded and the grant took effect
+-- in `app.has_permission` on the next statement. The table is INSERT-able and carries no INSERT
+-- TRIGGER because its authority lives in the per-command RLS policy `scope_insert`
+-- (`has_permission('MANAGE_PERMISSIONS')`) -- the shape `user_role_assignments` already uses
+-- (SPEC-138), which is why assertion 8's stricter residue ceiling did NOT move: that one counts
+-- tables with NO capability enforcement of ANY kind, and this table has it, in a policy.
 
 -- SEC-1b, 2026-08-29 -- READ THE NUMBERS CAREFULLY. The middle ceiling ROSE from 17 to 18 while the
 -- exposure FELL. Both are the same correction: the detectors now require the trigger to fire ON

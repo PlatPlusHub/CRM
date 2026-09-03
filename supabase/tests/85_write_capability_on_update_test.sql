@@ -49,8 +49,10 @@ insert into public.customers (id, tenant_id, customer_type_code, full_name) valu
   ('85000000-0000-0000-0000-0000000000d1','85000000-0000-0000-0000-000000000001','person','Real Customer');
 insert into public.passengers (id, tenant_id, first_name, family_name, full_name, passenger_type_code) values
   ('85000000-0000-0000-0000-0000000000d2','85000000-0000-0000-0000-000000000001','Real','Passenger','Real Passenger','adult');
-insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount) values
-  ('85000000-0000-0000-0000-0000000000d3','85000000-0000-0000-0000-000000000001','Airline','airline', 1000);
+-- SUP-4a (202607059900): `suppliers_credit_limit_currency_check` makes the ceiling a PAIR, so an
+-- amount without its denomination no longer inserts. The fixture states the currency.
+insert into public.suppliers (id, tenant_id, name, supplier_type_code, credit_limit_amount, credit_limit_currency_code) values
+  ('85000000-0000-0000-0000-0000000000d3','85000000-0000-0000-0000-000000000001','Airline','airline', 1000, 'EGP');
 insert into public.bookings (id, tenant_id, branch_id, department_id, customer_id, booking_status_code, title, booking_reference, owner_user_id) values
   ('85000000-0000-0000-0000-0000000000b1','85000000-0000-0000-0000-000000000001','85000000-0000-0000-0000-00000000000a','85000000-0000-0000-0000-0000000000c1','85000000-0000-0000-0000-0000000000d1','confirmed','Trip','BR-SEC1C-1','85000000-0000-0000-0000-000000000011');
 
@@ -111,11 +113,19 @@ select throws_ok(
   '42501', null,
   '...nor a passenger, whose name is what appears on a ticket');
 
+-- RETARGETED from `credit_limit_amount` to `name` (202607059700, SUP-3). The credit ceiling is now
+-- governed by its OWN trigger, `suppliers_guard_credit_authority`, which fires FIRST (PostgreSQL
+-- orders BEFORE row triggers by name and 'c' < 'w'). A refusal on the ceiling would therefore be
+-- attributed to this guard while actually coming from that one -- and, worse, would keep the
+-- mutation pair at 15-16 green after `suppliers_guard_write_capability` was dropped, because the
+-- credit guard would still refuse. `name` is a column only THIS guard governs, so the assertion and
+-- its mutation both measure what they claim. The ceiling's own authority is proven in
+-- `90_supplier_credit_authority_test.sql`.
 select throws_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set name = 'Renamed By Trainee'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
-  '...nor a supplier credit limit -- the finance-sensitive field whose VISIBILITY is still an open owner decision');
+  '...nor a supplier record -- ASSIGN_SUPPLIER, which a trainee does not hold');
 
 -- =============================================================================================
 -- 9-12. POSITIVE CONTROLS. The union set exists so that these keep working.
@@ -192,9 +202,9 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select lives_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set name = 'Renamed By Trainee'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
-  'MUTATION: with the trigger dropped the trainee CAN rewrite the credit ceiling -- so the refusal above is this guard, not a coincidence');
+  'MUTATION: with the trigger dropped the trainee CAN rewrite the supplier -- so the refusal above is this guard, not a coincidence');
 
 reset role;
 select set_config('request.jwt.claims', null, true);
@@ -207,7 +217,7 @@ set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"85000000-0000-0000-0000-0000000000a2"}', true);
 
 select throws_ok(
-  $$update public.suppliers set credit_limit_amount = 999999
+  $$update public.suppliers set name = 'Renamed By Trainee'
      where id = '85000000-0000-0000-0000-0000000000d3'$$,
   '42501', null,
   '...and with the trigger restored it is refused again -- the pair is what makes assertion 7 load-bearing');
