@@ -981,6 +981,45 @@ if ($countRestated -eq 0) {
     Write-Host "  no canonical document restates the endpoint count the generated contract owns" -ForegroundColor Green
 }
 
+# =====================================================================================================
+# Check 18: RECOVER-1 -- the repository must CARRY attributable evidence that Primary's migration
+#           ledger is this repository's migration ledger.
+#
+# WHY THIS CHECK IS HERE, in the file-only guard, and not only in check_database_parity.ps1.
+# RECOVER-1 (2026-09-03): Primary ran four migrations the repository did not have, for a day, while
+# every guard reported CLEAN. The parity guard was NOT the liar -- run without Primary values it
+# already exits 2 and prints "This is NOT a pass". The hole was that **nothing in the repository
+# recorded whether Primary had ever been read at this HEAD**, so the question was unanswerable from
+# the repository, and an unanswerable question is indistinguishable from a satisfied one when nobody
+# asks it. The parity guard also requires Docker and a live local stack, so it cannot run in the
+# doc-only CI job or on a machine with the stack down -- and those are exactly the sessions that
+# skipped it.
+#
+# So the evidence check belongs in the guard that IS run on every commit, in CI, and in Stage B of
+# the boot sequence. It reads a repository FILE, so it stays inside this script's declared evidence
+# class -- it does not open a database and does not claim to (MEAS-1: a guard must not describe
+# itself more strongly than it measures).
+#
+# The check itself lives in scripts/check_primary_ledger.ps1 (single responsibility, independently
+# runnable, independently mutation-tested by scripts/test_primary_ledger_guard.ps1). It is INVOKED
+# here rather than reimplemented, so the two can never disagree about what "matches" means -- the
+# PAR-1a mistake of two hand-copied variants of one query.
+# =====================================================================================================
+Write-Host "== Check 18: Primary ledger evidence (RECOVER-1) ==" -ForegroundColor Cyan
+$ledgerGuard = Join-Path $PSScriptRoot 'check_primary_ledger.ps1'
+if (-not (Test-Path $ledgerGuard)) {
+    Write-Host "  MISSING: scripts/check_primary_ledger.ps1 -- RECOVER-1's guard is gone." -ForegroundColor Red
+    $issues++
+} else {
+    & pwsh -NoProfile -File $ledgerGuard
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  Primary ledger evidence is ABSENT, STALE or DISAGREES -- see above." -ForegroundColor Red
+        Write-Host "  UNKNOWN IS NOT CLEAN. Refresh it by reading Primary's ledger via the" -ForegroundColor DarkGray
+        Write-Host "  supabase-primary MCP; the exact query is recorded in the evidence file." -ForegroundColor DarkGray
+        $issues++
+    }
+}
+
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green
@@ -989,7 +1028,8 @@ if ($issues -eq 0) {
     # opens a database. Stating that here is what stops a CLEAN result from being quoted as evidence
     # of live parity -- which is exactly how the drift survived.
     Write-Host "  (scope: repository files only -- no database was queried." -ForegroundColor DarkGray
-    Write-Host "   For live parity run scripts/check_database_parity.ps1)" -ForegroundColor DarkGray
+    Write-Host "   Check 18 verifies the RECORDED Primary ledger reading, not a live one." -ForegroundColor DarkGray
+    Write-Host "   For live local-vs-Primary surface parity run scripts/check_database_parity.ps1)" -ForegroundColor DarkGray
     exit 0
 } else {
     Write-Host "REPOSITORY CONSISTENCY: $issues issue(s) found" -ForegroundColor Red
