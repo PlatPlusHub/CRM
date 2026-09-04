@@ -9,11 +9,19 @@ on:
     paths:
       - "**/*.md"
       - "scripts/check_repository_consistency.ps1"
+      # Check 19 DELEGATES to this script and reads this evidence file. Both were missing here,
+      # and it showed twice: `6a246ca` introduced Check 19 and its script with no CI run at all,
+      # and a commit that only refreshes the ledger evidence never re-ran the guard that consumes
+      # it. Every file the guard reads or executes belongs in these lists.
+      - "scripts/check_primary_ledger.ps1"
+      - "reports/evidence/primary-ledger-evidence.json"
       - ".github/workflows/repository-consistency.yml"
   pull_request:
     paths:
       - "**/*.md"
       - "scripts/check_repository_consistency.ps1"
+      - "scripts/check_primary_ledger.ps1"
+      - "reports/evidence/primary-ledger-evidence.json"
 
 jobs:
   consistency:
@@ -22,6 +30,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # FULL HISTORY IS REQUIRED — do not "optimize" this back to a shallow clone.
+          #
+          # Check 19 (RECOVER-1) delegates to `scripts/check_primary_ledger.ps1`, which attributes
+          # the recorded Primary-ledger reading to THIS history: `git cat-file -e <repository_head>`
+          # and `git merge-base --is-ancestor <repository_head> HEAD`. Both need real commits.
+          #
+          # `actions/checkout@v4` defaults to `fetch-depth: 1`, so the runner held exactly ONE
+          # commit. The evidence file always names an EARLIER commit — structurally so: Primary's
+          # ledger is read, then the evidence is committed, so the recorded head is the parent of
+          # the commit CI checks out. The attribution therefore could never succeed on the runner.
+          #
+          # The result was 13 consecutive red runs from 2026-09-03 (`d02b702` .. `c01cbf5`) that
+          # were green locally every time, each reporting exactly one issue: `UNATTRIBUTABLE`. On
+          # every one of them the substantive comparison — "Primary's recorded ledger and the
+          # repository agree exactly" — PASSED, and Checks 1-18 passed, so this was never a
+          # consistency defect. Only a missing precondition.
+          #
+          # `0` rather than a bounded depth: any ceiling works until evidence references a commit
+          # older than it, and then this breaks again silently.
+          fetch-depth: 0
 
       - name: Run repository consistency guard
         shell: pwsh
