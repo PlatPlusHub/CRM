@@ -90,6 +90,7 @@ call it -- see section 6 for what that does and does not establish.
 | `create_task` | p_title text, p_task_type_code text, p_owner_user_id uuid, p_owner_department_id uuid, ... | `uuid` | invoker | CREATE_TASK | tasks | - | 7 | yes |
 | `create_tenant_user` | p_full_name text, p_email text, p_phone text, p_auth_user_id uuid | `uuid` | invoker | MANAGE_USERS | users | - | 1 | yes |
 | `current_placement` |  | `TABLE(branch_id uuid, department_id uuid)` | invoker | - | - | - | 0 | yes |
+| `customer_credit` | p_customer_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, may_view boolean, exposure numeric, over_limit boolean, unconvertible_currencies text[])` | invoker | inline has_permission check | - | - | 2 | yes |
 | `customer_timeline` | p_customer_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
 | `effective_permissions` | p_user_id uuid | `TABLE(permission_key text, capability_group text, action_kind text, from_role boolean, user_grant boolean, user_deny boolean, plan_allows boolean, effective boolean)` | invoker | inline has_permission check | - | - | 0 | yes |
 | `expiring_documents` | p_within_days integer | `TABLE(document_id uuid, document_type_code text, title text, expires_at timestamp with time zone, days_until_expiry integer, is_confidential boolean)` | invoker | - | - | - | 2 | yes |
@@ -125,7 +126,7 @@ call it -- see section 6 for what that does and does not establish.
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |
 
-**73 RPC endpoints executable by `authenticated`; 73 exercised over HTTP by a suite.**
+**74 RPC endpoints executable by `authenticated`; 74 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

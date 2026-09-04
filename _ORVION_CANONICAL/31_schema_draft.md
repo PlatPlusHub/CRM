@@ -553,6 +553,8 @@ Core fields:
 - last_interaction_branch_id nullable
 - last_interaction_user_id nullable
 - last_interaction_at nullable
+- credit_limit_amount numeric nullable — CUST-3 (owner decision 2026-09-04, `202607060300`): the customer's receivable ceiling. NULL means NO ceiling and the customer is skipped entirely; ORVION invents no default and the value is tenant-supplied through MANAGE_CUSTOMER_CREDIT. WARNING-ONLY — exceeding it never blocks a write.
+- credit_limit_currency_code nullable — required exactly when `credit_limit_amount` is present (canon 30's money standard, as on `suppliers`). Exposure in other currencies is converted INTO this one at the tenant's latest rate; a currency with no rate is reported, never silently dropped.
 - created_by
 - created_at
 - updated_at

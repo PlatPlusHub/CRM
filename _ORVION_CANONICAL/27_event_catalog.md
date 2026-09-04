@@ -458,6 +458,24 @@ Severity: info
 
 # Finance Events
 
+## customer_credit_threshold_exceeded
+
+Created when a customer's outstanding receivable rises above the credit ceiling configured on that customer. Exposure held in other currencies is CONVERTED into the ceiling's currency at the tenant's latest manual rate at or before the evaluation instant; any currency with no usable rate is REPORTED in the payload as `unconvertible_currencies` rather than dropped. The ceiling WARNS; it never refuses (owner decision 2026-09-04, CUST-3). Emitted once per breach, not once per write: it is suppressed while the most recent threshold event for the customer is already this one.
+
+Severity: warning
+
+Triggers:
+
+- an invoice for the customer being created, changed or removed
+- a customer payment being recorded, changed or removed
+- a completed customer refund being recorded, changed or removed
+
+## customer_credit_threshold_cleared
+
+Created when a customer previously over its ceiling falls back to or below it. Exists so a later breach alerts again; without it the first breach would silence the customer forever.
+
+Severity: info
+
 ## finance_approval_requested
 
 Severity: info

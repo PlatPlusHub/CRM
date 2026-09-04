@@ -109,6 +109,11 @@ insert into _expected_endpoints (name) values
     -- `permitted=false` rather than the amount when the caller lacks VIEW_FINANCIAL_DOCUMENTS,
     -- mirroring `app.item_financials`, so a UI can render the field as withheld.
     ('supplier_credit'),
+    -- CUST-3 (2026-09-04): the customer receivable ceiling, its currency, converted exposure, the
+    -- over-limit flag and any currencies that could not be converted. Same shape and same gate as
+    -- `supplier_credit` -- `may_view=false` rather than the amount when the caller lacks
+    -- VIEW_FINANCIAL_DOCUMENTS, so a UI renders the field as withheld rather than absent.
+    ('customer_credit'),
     ('tenant_capabilities'),
     ('upload_document'),
     ('upload_subscription_payment_proof');
@@ -133,7 +138,7 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  77,
+  78,
   -- The prose said "75" while the assertion compared 76 -- a guard's description drifting from its
   -- own measurement, the MEAS-1 class in miniature. Corrected to 77 alongside RBAC-4's
   -- `effective_permissions`, and the number is now written once so the two cannot disagree again.

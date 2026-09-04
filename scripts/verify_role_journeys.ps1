@@ -690,6 +690,46 @@ $ceiling = (Psql "select credit_limit_amount from public.suppliers where id='0d1
 Check "...and it really moved to 45000 -- the three PATCHes above differ only in their column list, which is what makes this a controlled comparison" ([decimal]$ceiling -eq 45000) "credit_limit_amount=$ceiling"
 
 
+# =================================================================================================
+# CUST-3 -- the CUSTOMER receivable ceiling over the wire (`202607060300`, owner decision 2026-09-04).
+#
+# pgTAP proves the behaviour in `95_customer_credit_threshold_test.sql`. It is repeated here because
+# `customers` is a table PostgREST serves, so PATCH is a real door a browser can reach, and ADR-0024
+# is explicit that a rule an RPC enforces must also hold on the table door (BOOK-1, ADMIN-1).
+#
+# The load-bearing actor is `$emp`: it HOLDS CREATE_CUSTOMER, so a refusal here cannot be explained
+# away as "that role cannot write customers at all" -- which is exactly why the positive control
+# comes first. This is the asymmetry with suppliers: finance_manager holds no customer-admin
+# permission at all, so both directions have to be proven separately.
+# =================================================================================================
+$r = Invoke-Patch $emp "customers?id=eq.$cusA" @{ full_name = 'Cairo Customer Renamed' }
+Check "POSITIVE CONTROL: an employee CAN rename a customer over HTTP -- ordinary master-data work still costs only CREATE_CUSTOMER" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $emp "customers?id=eq.$cusA" @{ credit_limit_amount = 999999; credit_limit_currency_code = 'EGP' }
+Check "CUST-3 over HTTP: ...but CANNOT set the credit ceiling -- CREATE_CUSTOMER does not imply MANAGE_CUSTOMER_CREDIT, and the table door enforces it" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $fin "customers?id=eq.$cusA" @{ credit_limit_amount = 10000; credit_limit_currency_code = 'EGP' }
+Check "CUST-3 over HTTP: finance_manager CAN set it, holding MANAGE_CUSTOMER_CREDIT and NO customer-administration permission at all" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $fin 'customer_credit' @{ p_customer_id = $cusA }
+$v = Val $r
+Check "...and it PERSISTED, read back through the gated reader -- 'did not throw' is not evidence that a write occurred" ((Ok $r) -and [decimal]$v[0].credit_limit_amount -eq 10000) "$($r.StatusCode) $($r.Content)"
+
+Check "CUST-3: the reader returns the ceiling WITH its denomination -- an amount whose currency the API drops is the ill-formed value the constraint exists to end" ((Ok $r) -and $v[0].credit_limit_currency_code -eq 'EGP') "$($r.StatusCode) $($r.Content)"
+
+Check "CUST-3: ...and the customer is OVER the ceiling on real exposure -- invoice 13000 EGP against a 10000 EGP ceiling, computed rather than asserted" ((Ok $r) -and $v[0].over_limit -eq $true) "$($r.StatusCode) $($r.Content)"
+
+$r = Rpc $emp 'customer_credit' @{ p_customer_id = $cusA }
+$v = Val $r
+Check "CUST-3: the gated reader answers an unprivileged employee with may_view=false and NO amount -- the RPC is not a way around VIEW_FINANCIAL_DOCUMENTS" ((Ok $r) -and $v[0].may_view -eq $false -and $null -eq $v[0].credit_limit_amount) "$($r.StatusCode) $($r.Content)"
+
+$evt = (Psql "select count(*) from public.events where event_type_code='customer_credit_threshold_exceeded' and entity_id='$cusA';").Trim()
+Check "CUST-3: crossing the ceiling emitted the threshold event -- the warning is proven by its EFFECT, not by the absence of an error" ([int]$evt -ge 1) "events=$evt"
+
+$blocked = (Psql "select count(*) from public.invoices where customer_id='$cusA';").Trim()
+Check "CUST-3 (THE OWNER REQUIREMENT): the invoice that breached the ceiling is STILL THERE -- warning-only means nothing was blocked or rolled back" ([int]$blocked -ge 1) "invoices=$blocked"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

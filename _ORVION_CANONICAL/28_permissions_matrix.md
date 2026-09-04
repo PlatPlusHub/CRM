@@ -440,6 +440,26 @@ branch-scoped, which is that section's "detailed event content from another bran
    `MANAGE_SUPPLIER_CREDIT` governs **who may set** the limit; whether an operation is refused for
    **exceeding** it is a separate invariant that does not yet exist (register: **SUP-4**).
 
+6. **`MANAGE_CUSTOMER_CREDIT` is added (owner decision 2026-09-04, CUST-3).** The mirror of item 5 on
+   the receivable side: the owner ruled that ORVION offers a customer credit ceiling, that it is
+   **nullable and tenant-supplied** with no default invented, and that it is **WARNING-ONLY** — no
+   operation is ever refused for exceeding it, and no collection or dunning behaviour exists.
+   Granted to **owner, ceo, finance_manager**, the same set as `MANAGE_SUPPLIER_CREDIT`, and
+   plan-gated at `finance_lite` for the same reason: a plan entitling the write without the read
+   would reproduce SUP-2 at the plan tier.
+   **It is orthogonal to `CREATE_CUSTOMER` in both directions**, and the asymmetry with suppliers is
+   deliberate rather than accidental: `finance_manager` holds neither `CREATE_CUSTOMER` nor any
+   customer-administration permission, so the table-door guard treats a write that TOUCHES the
+   ceiling as satisfiable by `MANAGE_CUSTOMER_CREDIT` **or** `CREATE_CUSTOMER`, while a dedicated
+   guard requires `MANAGE_CUSTOMER_CREDIT` for the credit change itself. A `CREATE_CUSTOMER` holder
+   therefore administers the customer and cannot set its ceiling; a `MANAGE_CUSTOMER_CREDIT` holder
+   sets the ceiling and cannot rename the customer. `VIEW_FINANCIAL_DOCUMENTS` still reads the figure
+   and confers no write authority.
+   Unlike SUP-4b, **exposure held in a currency other than the ceiling's is CONVERTED** into the
+   ceiling's currency at the tenant's latest manual rate, and any currency with no usable rate is
+   REPORTED rather than dropped (register: **SUP-4c**, whose rule this implements). Implemented in
+   `202607060300`.
+
 Write authority over identity, organization and configuration tables is enforced by SPEC-138 — see
 `changes/SPEC-138-rbac-write-authority.md`.
 

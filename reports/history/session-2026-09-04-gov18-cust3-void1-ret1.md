@@ -3,7 +3,7 @@
 Class: History (point-in-time record; superseded by later reports, never edited retroactively)
 Date: 2026-09-04
 Author: Claude Opus 5
-Status: **IN PROGRESS — GOV-18 COMPLETE and mutation-proven (25/25).** CUST-3, VOID-1 and RET-1 follow in that order, per the owner's execution order. This report is written as the work happens, not after it.
+Status: **IN PROGRESS — GOV-18 COMPLETE and mutation-proven (25/25); CUST-3 COMPLETE and deployed to Primary.** VOID-1 and RET-1 follow, in the owner's order. This report is written as the work happens, not after it — every figure below was read from a run, not predicted.
 
 ---
 
@@ -88,4 +88,61 @@ Both superseded rows now state their resolution with that evidence, retaining th
 
 ---
 
-*(CUST-3, VOID-1 and RET-1 sections follow as each is implemented.)*
+## 3. CUST-3 — ✅ COMPLETE (`202607060300`, deployed to Primary)
+
+### 3.1 Built to the approval, and to the one instruction that broke the template
+
+The owner approved a **nullable, tenant-supplied, warning-only** customer receivable ceiling with **no default invented** and **no dunning**. All of that is the shipped supplier pattern (SUP-4b), reused: a ceiling pair on the row, a `MANAGE_CUSTOMER_CREDIT` permission (owner/ceo/finance_manager, plan-gated `finance_lite`), an evaluator that inserts rows and raises nothing, `customer_credit_threshold_exceeded`/`_cleared` events with idempotence carried by the event ledger, an in-system notification and a `pending` email-delivery row.
+
+**One instruction did not fit the template, and it is the interesting half:** *"implement conversion/comparison correctly rather than silently dropping foreign-currency exposure."* SUP-4b filters exposure to the ceiling's own currency (`and bi.currency_code = p_currency_code`), so a supplier owed EGP 8,000 **and** USD 600 against an EGP ceiling is measured on the EGP alone. Repeating that here was forbidden.
+
+So CUST-3 implements **SUP-4c's already-decided rule** — convert into the limit's currency at the spot rate — through a new **generic** primitive, `app.exchange_rate_as_of`, deliberately not customer-specific so SUP-4c can bring suppliers onto it without a second authority appearing. **This is the first reader `public.exchange_rates` has ever had**: the table was created with `SET_EXCHANGE_RATE`-gated policies, a `set_by`-deriving trigger, the subscription gate and DUP-1's unique pair-instant index, and then never wired to anything.
+
+**The fail-safe is stated rather than silent.** A currency carrying real exposure with no usable rate is neither dropped nor guessed: it is reported as `unconvertible_currencies` in the event payload, in the notification text, and through the read contract, and the convertible part is still compared.
+
+### 3.2 The suite found five real defects before it shipped
+
+| # | Defect | Caught by |
+|---|---|---|
+| 1 | `text[] \|\| 'literal'` → 22P02: PostgreSQL parsed the untyped literal *as an array* | new pgTAP test |
+| 2 | **A record field named in a SHARED condition** — `new.credit_limit_amount` beside `tg_table_name = 'customers'` in one expression resolves for *every* table the guard serves. **Eight test files broke at once.** The LIC-3 / PP-4 class, and the guard's own comment states the rule three lines above | Pass A |
+| 3 | **A row-image comparison broken by a sibling trigger** — see below | new pgTAP test |
+| 4 | `numeric(14,2)` — two decimals truncate a 3-dp currency, DC-1/R7's own rule | `03_money_currency_precision_test` |
+| 5 | Missing `revoke … from public` — `anon` inherited both new readers (GRANT-1) | `10_grant_model_test` **and** `53_api_surface_test`, independently |
+
+**Defect 3 is worth stating in full, because copying a working pattern is what caused it.** The supplier form asks *"the credit pair changed AND nothing else did"*. On `customers` that is never true: `customers_derive_first_registration_actor` fires **before** the guard (`derive_` sorts before `guard_`) and sets `new.first_registered_user_id` whenever the old value is null — true for every customer created by a system path with no session. **The guard was comparing a row image a sibling trigger had already mutated**, so the branch never fired and a finance manager was refused.
+
+The fix removes the row image entirely: `v_perms` is an **OR-list**, so a write that *touches* the ceiling simply makes `MANAGE_CUSTOMER_CREDIT` sufficient, while `customers_guard_credit_authority` — which fires first — still *requires* it for the credit change itself. Two doors, each answering its own question, and nothing that can be broken by a trigger running earlier.
+
+`suppliers` escapes the same bug only because it happens to carry no mutating BEFORE trigger — an accident, not a design, recorded as **CUST-5**.
+
+### 3.3 And an HTTP probe found a sixth that the supplier side still has — SUP-4d
+
+The pgTAP suite was green and the reader correctly said `over_limit = true`, but the HTTP probe asserted the **event ledger** and found nothing. Cause: SUP-4b hooks only the two **exposure** tables, reasoning that *"exposure is a function of exactly two tables, so those are the only two that can move it"*. True of exposure — but **the comparison also moves when the ceiling moves**. An invoice was raised while the customer had no ceiling, the ceiling was then set *below* that exposure, and nothing alerted.
+
+**Lowering a ceiling is exactly when a credit control should speak.** Closed for customers by `customers_probe_credit_ceiling` (AFTER INSERT OR UPDATE, with a `when` clause so ordinary customer edits cost nothing). The supplier side still has the gap and is recorded as **SUP-4d** rather than fixed inside a customer migration.
+
+### 3.4 CUST-3 verification (the full `§5a` protocol)
+
+| Step | Result |
+|---|---|
+| `npx supabase db reset` | **192 migrations**, exit 0 |
+| **Pass A** — `npx supabase test db` | **95 files / 1374 assertions — PASS** |
+| **HTTP × 6** | **423 passed / 0 failed** (29 · 107 · 74 · 113 · 40 · 60) |
+| **Pass B** (no reset) | 95 / 1374 — **Pass A = Pass B** |
+| Smoke | `ALL CHECKS PASSED (76 tables, 71/605 catalog)` |
+| Primary deployment | `202607060300` applied; ledger row normalised from the CLI's `20260904194539` stamp to the repository version, per the recorded GUARD-1 precedent |
+| **Primary parity** | **CLEAN — ledger, functions AND structure proven**, all three read **from** Primary |
+| Repository consistency | **CLEAN, Checks 1–19, exit 0** |
+
+**Primary, read live:** ledger **192 / `ac42c9ade1a8efc256106de6c5d3cfeb`** — the exact fingerprint Check 9 independently computes from the repository's migration files; functions **`9f5868004b0bd94bd859fc29cf491291` / 270**; structure **`dc049c3a1a03bf3b2df1cda403bcb29d` / 3,474**. The ledger evidence file was rebuilt from the repository's own filenames and **proven to reproduce Primary's live fingerprint before being written**.
+
+**The caller trap, hit again and recorded again:** `-PrimaryFingerprint` wants the **bare md5**, not `count|hash`. Passing `192|ac42c9…` produced a false `PRIMARY DRIFT`.
+
+### 3.5 Canon and SSOT synchronised
+
+`27_event_catalog.md` (the two new event types, with their triggers and the conversion/reporting rule), `28_permissions_matrix.md` (item 6 — `MANAGE_CUSTOMER_CREDIT`, its grants, its orthogonality to `CREATE_CUSTOMER` in both directions, and the deliberate asymmetry with suppliers), `31_schema_draft.md` (the ceiling pair on `customers`), `MASTER_GAP_REGISTER.md` (CUST-3 implemented; **CUST-4**, **CUST-5**, **SUP-4d** recorded), `53_api_surface_test.sql` (the endpoint classification, 77 → 78), `scripts/verify_database.sql` (catalog pin 603 → 605), and the generated `MASTER_API_CONTRACT.md` (74 endpoints, all 74 with HTTP evidence).
+
+---
+
+*(VOID-1 and RET-1 sections follow as each is implemented.)*
