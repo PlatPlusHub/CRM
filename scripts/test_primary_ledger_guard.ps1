@@ -81,13 +81,21 @@ Remove-Item $d -Recurse -Force
 #        this guard compares the whole ledger.
 $d = New-Sandbox
 $ev = Get-Content (Join-Path $d 'evidence.json') -Raw | ConvertFrom-Json
+# Captured BEFORE the mutation rather than hard-coded. The literal here used to be `189`, which was
+# true when this suite was written and became false the moment `1799587` added the 190th migration
+# -- so the companion assertion has been failing ever since, on a repository that was otherwise
+# entirely healthy. Nothing runs this self-test in CI, so nobody saw it.
+# The assertion's INTENT is "the count did not change, therefore the detection came from the ledger
+# and not from the count". That is a statement about this sandbox, not about a number frozen in
+# 2026-08. Expressed relatively, it stays true at any migration count.
+$countBefore = [int]$ev.migration_count
 $list = @($ev.ledger); $list[10] = '202607069997_same_count_different_identity'
 $ev.ledger = $list
 $ev = Set-SelfConsistent $ev
 $ev | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $d 'evidence.json') -Encoding utf8
 $code = Invoke-Guard $d
 Check "MUTATION 3: identical COUNT but a different migration identity is DETECTED -- count-only comparison would pass this" ($code -ne 0)
-Check "         ...and the count genuinely did not change, so the detection came from the ledger and not from the count" ($ev.migration_count -eq 189)
+Check "         ...and the count genuinely did not change ($countBefore before and after), so the detection came from the ledger and not from the count" ($ev.migration_count -eq $countBefore)
 Remove-Item $d -Recurse -Force
 
 # --- 4. Evidence bound to a commit that is NOT an ancestor of HEAD. A real, well-formed commit
