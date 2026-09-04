@@ -42,6 +42,32 @@ foreach ($v in @(
 }
 
 Write-Host ""
+Write-Host "[GitHub identity]  (ORVION pushes as PlatPlusHub; never Shehabhub)"
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    # Git Credential Manager keys credentials by URL. An unqualified https://github.com/... origin
+    # resolves to `git:https://github.com` -- on the owner's machine the pre-migration Shehabhub
+    # account -- which pushes as the wrong identity (historically 403, later a non-interactive hang).
+    # This regressed silently once already: fixed in .git/config on 2026-08-26, destroyed by the
+    # 2026-08-30 re-clone because git does not track .git/config. bootstrap.ps1 now clones with the
+    # qualifier; this check catches any clone or set-url that reintroduces the unqualified form.
+    $originUrl = git remote get-url origin 2>$null
+    if (-not $originUrl) { Write-Host "[WARN] no 'origin' remote configured" }
+    elseif ($originUrl -match '^https://PlatPlusHub@github\.com/PlatPlusHub/CRM(\.git)?$') {
+        Write-Host "[ OK ] origin is username-qualified as PlatPlusHub"
+    }
+    elseif ($originUrl -match 'github\.com/PlatPlusHub/CRM') {
+        Write-Host "[FAIL] origin is '$originUrl' - NOT username-qualified"
+        Write-Host "       Git Credential Manager will fall back to the stored Shehabhub credential."
+        Write-Host "       Remedy: git remote set-url origin https://PlatPlusHub@github.com/PlatPlusHub/CRM.git"
+    }
+    else { Write-Host "[WARN] origin is '$originUrl' - not the expected PlatPlusHub/CRM remote" }
+
+    $author = git config user.name 2>$null
+    if ($author -eq "PlatPlusHub") { Write-Host "[ OK ] commit author is PlatPlusHub" }
+    else { Write-Host "[FAIL] commit author is '$author' - expected PlatPlusHub (git config --global user.name PlatPlusHub)" }
+}
+
+Write-Host ""
 Write-Host "[GitHub sync]  (local is disposable - GitHub is the source of truth)"
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $branch = git rev-parse --abbrev-ref HEAD 2>$null

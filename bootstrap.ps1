@@ -9,7 +9,19 @@
 #
 # (Docker Desktop is still installed by prepare.ps1; start it once when prompted.)
 $ErrorActionPreference = "Stop"
-$RepoUrl = "https://github.com/PlatPlusHub/CRM.git"
+# The username qualifier is LOAD-BEARING, not decoration - do not "simplify" it away.
+# Git Credential Manager keys stored credentials by URL. An UNQUALIFIED https://github.com/... URL
+# looks up `git:https://github.com`, which on the owner's machine is the pre-migration `Shehabhub`
+# account (this repository was migrated Shehabhub/ORVION -> PlatPlusHub/CRM). git then pushes as the
+# wrong account: historically a hard `403 Permission to PlatPlusHub/CRM.git denied to Shehabhub`,
+# and later - once that credential went stale - a non-interactive HANG waiting for a username.
+# Qualifying the URL makes GCM look up `git:https://PlatPlusHub@github.com` instead, which is the
+# correct account, and costs nothing when only one account is present.
+# This was first fixed on 2026-08-26 in .git/config alone. git does NOT track .git/config, so the
+# re-clone on 2026-08-30 (reflog: "clone: from https://github.com/PlatPlusHub/CRM.git") silently
+# discarded it and the defect returned. The fix therefore belongs HERE, in a tracked file that
+# recreates the remote, so it survives every future rebuild.
+$RepoUrl = "https://PlatPlusHub@github.com/PlatPlusHub/CRM.git"
 $Target  = Join-Path $HOME "CRM"
 
 Write-Host "== ORVION bootstrap ==  target: $Target"
