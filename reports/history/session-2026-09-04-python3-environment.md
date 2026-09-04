@@ -3,7 +3,9 @@
 Class: History (point-in-time record; superseded by later reports, never edited retroactively)
 Date: 2026-09-04
 Author: Claude Opus 5
-Status: **CLOSED — NO FIX APPLIED, AND NONE IS WARRANTED.** Python 3.12.10 is installed and healthy. `python3` fails because the name is occupied by a non-functional Microsoft Store App Execution Alias stub. ORVION never references `python3` — zero occurrences, repository-wide — so there is nothing to repair. No repository file was changed except this report and its index pointer.
+Status: **CLOSED — NO PYTHON FIX APPLIED, AND NONE IS WARRANTED.** Python 3.12.10 is installed and healthy. `python3` fails because the name is occupied by a non-functional Microsoft Store App Execution Alias stub. ORVION never references `python3` — zero occurrences, repository-wide — so there is nothing to repair. Nothing was changed but this report and the three synchronization artifacts governance binds to it (`reports/README.md` pointer, the manifest's `Narrative:` field, `ai-map.json`). No migration, no test, no script, no database contact.
+
+**A second environment defect was found by hitting it, and is NOT fixed because the fix is an owner choice:** `git push origin main` hangs non-interactively because the remote URL carries no username, so Git Credential Manager resolves to the stored **`Shehabhub`** credential instead of the **`PlatPlusHub`** one this repository needs. Pushed successfully via the username-qualified URL without altering any configuration. **§8 states the exact choice left to the owner.**
 
 ---
 
@@ -261,11 +263,53 @@ Two version drifts from the 2026-08-21 baseline were observed and are recorded a
 - **`PATH` carries duplicate Python entries** (11/16 and 10/17 are the same directories). Harmless — first match wins, and the first match is correct. Not touched.
 - **`.workstation/manifest.md` version rows are 14 days stale** for Docker and VS Code, as above. Out of scope for this task.
 
-## 8. BLOCKED
+## 8. BLOCKED — and a SECOND environment defect, found by hitting it
 
-Nothing.
+**`git push origin main` hangs and cannot complete non-interactively. This is a real, recurring blocker, and it has a precise cause that the earlier record did not have.**
 
-*(Unrelated to this task, noted because the session surfaced it: the **n8n MCP server requires OAuth authorization** and cannot be authorized non-interactively. It is unavailable until the owner authorizes it via `/mcp` in an interactive session or the claude.ai connector settings. This matters only to the DELIV-1 / PH8-2 workstream, which is an open owner decision and was not touched.)*
+It was found the only way it could be: by pushing this report. The first attempt **hung for two minutes and was killed**. Re-run with prompting disabled, it failed instantly and said what it actually wanted:
+
+```
+$ GIT_TERMINAL_PROMPT=0 GCM_INTERACTIVE=never git push origin main
+fatal: Cannot prompt because user interactivity has been disabled.
+fatal: could not read Username for 'https://github.com': terminal prompts disabled
+```
+
+`git ls-remote origin main` works fine throughout — **reads succeed, only the write blocks** — so this is credential *selection*, not connectivity.
+
+The cause is a mismatch between the remote URL and the stored credential keys:
+
+| | |
+|---|---|
+| Remote URL | `https://github.com/PlatPlusHub/CRM.git` — **no username in the URL** |
+| Credential GCM therefore looks up | `git:https://github.com` → stored user **`Shehabhub`** — *the wrong account for this repository* |
+| Credential that actually works | `git:https://PlatPlusHub@github.com` → stored user **`PlatPlusHub`** — reachable **only** if the URL carries the username |
+
+Windows Credential Manager holds both. Because the URL is unqualified, GCM resolves to the `Shehabhub` entry, fails to authenticate as the right identity, and falls through to an interactive prompt — which in this session is `GIT_ASKPASS` pointing at a GUI helper nobody can answer. That is the hang.
+
+**Resolved for this commit without changing any configuration**, by pushing once to the username-qualified URL:
+
+```
+$ git push https://PlatPlusHub@github.com/PlatPlusHub/CRM.git main
+To https://github.com/PlatPlusHub/CRM.git
+   1799587..45ba216  main -> main
+```
+
+Fast-forward. No force. `.git/config` untouched; `origin` still points where it did.
+
+**This refines the earlier record rather than repeating it.** Commit `8c063ee` logged the symptom as *"GCM has no non-interactive credential"* — which reads as *no usable credential exists*. A usable credential **does** exist; it is simply unreachable through an unqualified URL. That distinction is the difference between "wait for the owner" and "qualify the URL and push."
+
+**The permanent fix is an OWNER CHOICE and is deliberately NOT made here.** Making `origin` push as `PlatPlusHub` —
+
+```
+git remote set-url origin https://PlatPlusHub@github.com/PlatPlusHub/CRM.git
+```
+
+— is one line, local to `.git/config`, untracked and trivially reversible. But it decides **which of two GitHub identities this repository pushes as**, on a machine that has credentials for both, and this task's own instruction is explicit: *"If the fix requires an owner/environment choice, DO NOT make it. Report the exact choice instead."* Choosing between `Shehabhub` and `PlatPlusHub` is exactly that choice. It is stated here and left to the owner.
+
+**Until the owner decides, the next agent should push with the qualified URL shown above** rather than concluding that pushing is impossible — and should never interpret the hang as a reason to force, reset, or abandon local work.
+
+*(Also surfaced, unrelated and untouched: the **n8n MCP server requires OAuth authorization** and cannot be authorized non-interactively — the owner must authorize it via `/mcp` in an interactive session or in the claude.ai connector settings. This matters only to the DELIV-1 / PH8-2 workstream, which is an open owner decision.)*
 
 ## 9. GOVERNANCE
 
@@ -293,7 +337,19 @@ Re-established from the repository at the start of this session and unchanged by
 | Tests | **NOT RE-RUN.** Last executed state stands: 93 files / 1326 assertions, Pass A = Pass B; HTTP 414/0. No schema, script or test was modified, so no re-run was warranted. |
 | Open owner decisions | Unchanged: QUO-4 · SUP-4c · CUST-3 · RET-1 · FIN-7 · VOID-1 · VERIFY-1 · TRANS-1 · DELIV-1 · PH8-2 · PLAN-1 · DOC-LC-2 · DOC-LC-3 · CANON-26-1 · LIC-1 |
 
-Git state before this session: HEAD = `origin/main` = `ls-remote` = `179958757d4ecb3b2a2480f60adb812659fbe040`, 0 ahead / 0 behind, clean tree — matching the expected state exactly.
+**Git.** Before this session: HEAD = `origin/main` = `ls-remote` = `179958757d4ecb3b2a2480f60adb812659fbe040`, 0 ahead / 0 behind, clean tree — matching the expected state exactly. After: **`45ba2160e2497535b3815e91c9af3f80ec7e03a2`**, pushed fast-forward `1799587..45ba216` (no force), local = `origin/main` = `ls-remote`, 0/0, clean tree, 190 migration files on `origin/main`.
+
+**Guards, run after the changes:**
+
+| Guard | Result |
+|---|---|
+| `check_repository_consistency.ps1` | **CLEAN — Checks 1–19, exit 0** |
+| `check_primary_ledger.ps1` (Check 19) | **CLEAN** — recorded ledger and repository agree exactly (190, `1eaa2ec7…`); evidence at `8b3a08f` remains an **ancestor** of HEAD, which is what the guard requires |
+| `check_database_parity.ps1` | **local matches the repository** (L5 hashes agree, L3 API contract matches). **Primary: NOT CHECKED — exit 2, `UNPROVEN`.** Reported as such and **never as a pass**, per the guard's own instruction; this session was forbidden to contact Primary. |
+
+Three guards caught the incompleteness of this change before it was committed, which is the loop working: **Check 10** flagged the README pointer moving without the manifest's `Narrative:` field, **Check 7** flagged `ai-map.json` still carrying the old `last_completed` by value (the COLD-2 comparison), and **Check 5**'s 1200-character line budget was satisfied by trimming the field to 1144 — **no budget was raised** (`AGENTS.md §6`).
+
+A note on `Last Completed`, since this session shipped no capability: it still names **SUP-4b**, because nothing has superseded it and the field's own rule is that it names the most recent *capability*. The `Narrative:` pointer moves to this report because Check 10 binds it to the README pointer, and the field says plainly that the session since then shipped nothing. A cold-start agent reading it is told both facts and misled by neither.
 
 **Is Batch 6 safe to start, environment-wise?** **Yes.** Every tool the `§5a` protocol needs is present and executing: Docker Engine up, Node/npx for the Supabase CLI, PowerShell 7 for the guards, git in sync. Python is irrelevant to all of it. Environment readiness is not, however, authorization — see §12.
 
