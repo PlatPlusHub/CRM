@@ -1182,7 +1182,7 @@ Owner directive: *"Do NOT leave any discovered Owner Decision / Open Decision un
 - **Why implementation is scheduled rather than done here:** attaching a fail-closed trigger to a live financial table must carry positive controls for every RPC path (`AGENTS.md §6`, no vacuous security tests) and a full `§5a` run. That is a package, not a line in a decision pass. **No owner input is required for it.**
 
 ### VOID-1 — NARROWED AGAIN 2026-09-04: the register's own dichotomy is false; Egyptian e-invoicing uses BOTH, on a clock
-- **Status:** **✅ RESOLVED 2026-09-04 — DECIDED BY THE OWNER: build the real architecture now** · **Owner:** engineering (was: owner). The owner **rejected draft-only as a final answer** and ratified the architectural principle: the **internal ORVION invoice lifecycle** is modelled **separately** from the **external Egyptian ETA fiscal lifecycle**, with the boundary represented now so a future ETA integration maps onto it without redesigning the internal model. No ETA window (3/7/60 days) is to be encoded as a universal ORVION rule.
+- **Status:** **✅ RESOLVED 2026-09-04 — DECIDED BY THE OWNER AND IMPLEMENTED (`202607060400`)** · **Owner:** engineering (was: owner). The owner **rejected draft-only as a final answer** and ratified the architectural principle: the **internal ORVION invoice lifecycle** is modelled **separately** from the **external Egyptian ETA fiscal lifecycle**, with the boundary represented now so a future ETA integration maps onto it without redesigning the internal model. No ETA window (3/7/60 days) is to be encoded as a universal ORVION rule.
 - **The framing "void OR credit note" is not how the jurisdiction works.** Egypt's ETA e-invoicing permits **cancellation within 7 days** (with buyer approval, never after 60 days, and never once a credit note exists), and requires **credit notes / debit notes referencing the original UUID** for corrections after that window. Validated invoices cannot be edited. Both mechanisms exist and are separated by **time and issuance**, not by preference.
 - **Mapped onto ORVION's own columns:** `voided` on a **never-issued draft** has no tax consequence and is uncontroversial. `voided` on an **issued** invoice is the ETA cancellation window. Corrections after it need a **credit note**, an entity ORVION does not model at all — new canon, which is precisely why this stays with the owner.
 - **`journal_entries` is NOT the same question and must not inherit the answer.** It carries `voided_at`/`voided_by`/`void_reason` with **no catalog state behind them**. Standard double-entry practice reverses a posted entry with a compensating entry; it never voids one. Engineering recommendation: those three columns are wrong for `journal_entries` regardless of how the invoice question resolves.
@@ -1576,3 +1576,58 @@ Every one of the eight decisions the reconciliation left on the manifest was re-
 - **Category:** governance / latent fragility (MEAS-1) · **Severity:** Low · **Status:** 📋 **OPEN — engineering** · **Owner:** engineering
 - `guard_write_capability`'s supplier branch compares full row images to decide "credit-only". That works today **only because `suppliers` happens to carry no BEFORE trigger that mutates `new`** — measured: its BEFORE set is `enforce_archive_authority`, `enforce_catalog_codes`, `enforce_subscription_write_gate`, `guard_credit_authority`, `guard_write_capability` and `moddatetime`, none of which writes a column the comparison reads, and `moddatetime` sorts *after* it.
 - **The day anyone adds a `derive_*` trigger to `suppliers`, SUP-3's authority silently stops applying** — exactly what defect 3 above did to customers — and it would fail in the *permissive* direction for the wrong actor: a credit-only write would demand `ASSIGN_SUPPLIER` instead of `MANAGE_SUPPLIER_CREDIT`. The customer branch is already on the robust OR-list form; bringing suppliers onto it is one edit, deferred with the supplier package rather than done here.
+
+---
+
+## VOID-1 implementation, 2026-09-04 — an internal void that does not speak for the tax authority
+
+### VOID-1 — ✅ IMPLEMENTED (`202607060400`)
+
+- **Status:** **✅ RESOLVED — IMPLEMENTED** · **Owner:** engineering (was: owner)
+- **The owner rejected draft-only as a final answer and ratified the architectural principle**: the internal ORVION invoice lifecycle is modelled **separately** from the external Egyptian ETA fiscal lifecycle, with the boundary represented now so a future ETA integration maps onto it without redesigning the internal model.
+- **NOT ONE DAY-COUNT IS ENCODED.** The migration contains no 3, no 7 and no 60. Every internal rule is derived from ORVION's own schema, RPCs or canon, and each derivation is stated in the migration itself.
+
+### What was already there, and what the earlier framing of VOID-1 missed
+
+**The external lifecycle was already modelled.** `invoices` carries `external_submission_id` (the authority's own document identifier), `external_submission_status_code` (governed by the `tax_submission_status_code` catalog), `external_submitted_at` and `external_response_at` — four columns and a governed catalog, structurally complete, with no writer. The earlier framing treated the ETA boundary as unbuilt; it was **unwired**, which is a different and much smaller problem.
+
+**The consumer side of voiding was already complete too** — `invoices.voided_at` has four readers (`customer_balance`, `guard_parent_state_allows_write`, `issue_invoice`, `record_payment`) and had zero writers. This migration supplies the writer, the authority and the machine.
+
+### The internal machine, and where each rule comes from
+
+Canon 26 defined **no invoice state machine at all**. It has one now, and `voided` is reachable from `draft`, `issued` and `overdue` — and is **terminal**.
+
+| Rule | Derived from |
+|---|---|
+| `partially_paid` / `paid` may **not** be voided | **`app.customer_balance`'s own arithmetic.** It sums invoices minus payments plus completed refunds and *excludes* voided invoices — void one holding allocated money and the payment stays in the sum with no document behind it. Canon 07 says the same: corrections after approval go through a new event, adjustment or reversal |
+| the precondition is the **allocation**, not the status word | `status_code` is *derived* by `record_payment` from the amount, so the guard asks `payment_allocations` — the table that actually holds the link. A direct table write cannot slip past a status it also controls |
+| `voided` is terminal | no `status_transitions` row leaves it, so `enforce_status_transition` refuses every exit for free; the guard also refuses un-voiding explicitly, so the caller gets the real reason |
+| status and timestamp move together | **DOC-LC-3's lesson, applied before it could happen.** `voided_at` may change only in the statement that sets the status — the split state that made `documents` unre-versionable is unreachable here |
+| `voided_by` is derived | ATTR-3 / FIN-4 / ATTR-2's class: a row must not be able to name anyone as its actor |
+| a reason is required | canon 26 already demands one for archiving; a void is the stronger act |
+
+### The one place the two lifecycles touch — and it is a refusal
+
+**An invoice the authority has `accepted` cannot be voided internally.** Not because of any window — none is encoded — but because ORVION would then hold a document its own books call void while the authority holds it as live, and ORVION has no integration with which to reconcile that. `submitted`, `pending`, `failed` and `rejected` do **not** block: none is an accepted fiscal document. Voiding also may not touch the external columns at all: a bookkeeping act must not rewrite what the authority said.
+
+**And the mapping that does not exist is pinned so nothing invents it.** `cancelled` was added to `tax_submission_status_code` so a future integration can **record** an externally-cancelled document — a fact ORVION receives, never an act it performs. Recording it does **not** void the ORVION invoice, and `96_invoice_void_and_eta_boundary_test.sql` asserts exactly that: after an external `cancelled`, the internal status is unchanged, `voided_at` is null, and no `invoice_voided` event exists.
+
+### The credit/debit-note boundary — an anchor, and nothing more
+
+`invoices.corrects_invoice_id` (nullable, composite FK per TENANT-1, may not reference itself) is the single internal reference a future correction workflow needs. **Nothing produces it, it affects no balance, and a credit note is not a void.** It qualifies under `AGENTS.md §3`'s Fundamental Domain Structure test — a correcting-document linkage is inevitable in a mature travel ERP regardless of feature order — and adding it now avoids a structural migration on the finance spine later. No ETA submission engine was built.
+
+### `journal_entries` — CLOSED BY DESIGN, not dropped
+
+- **Status:** **✅ RESOLVED — CLOSED BY DESIGN** · **Owner:** engineering
+- Its `voided_at` / `voided_by` / `void_reason` have **zero readers anywhere** and no catalog state behind them. They are **kept, not dropped**: dropping is a destructive migration, DEAD-1's precedent keeps inevitable structure, and VERIFY-1's precedent is to record such columns as closed-by-design so no future implementer reads them as an unbuilt feature.
+- **They must never be given a writer.** Canon 07 requires corrections after approval to go through a new event, adjustment or reversal; for a POSTED double-entry record that means a compensating **reversal** entry, never mutation. Voiding a posted entry would destroy the audit trail the entry exists to be. A column comment now says so on the column itself.
+
+### The guard that demanded its own update
+
+**Assertion 22 of `83_actor_attribution_test.sql` is a PINNED INVENTORY that fails in EITHER direction**, and it failed the moment `invoices.voided_by` became derived — because the set shrank. Its own text says *"each fix must delete its own line"*. That is the discovery-to-guard loop paying for itself: the guard did not merely permit the improvement, it **required** the inventory to be corrected in the same change. Four of the original eight were closed by `202607059300`; `invoices.voided_by` is the fifth. Three remain, and one of them (`journal_entries.voided_by`) is now closed-by-design rather than open work.
+
+### Verification
+
+`96_invoice_void_and_eta_boundary_test.sql` — **32 assertions**, including PAR-4 defect injection proving the *guard*, not the transition table, enforces the money rule. Seven HTTP assertions in `verify_role_journeys.ps1` prove both doors over the wire. `54_transition_permission_parity_test` now names `app.void_invoice` as the owner of all three moves; `94_invoice_state_machine_test` moved from six transitions to nine and narrowed its "deliberately unregistered" claim to `-> overdue` alone.
+
+**A test-harness subtlety worth recording:** `rollback to savepoint` discards pgTAP's *recorded* result row for an assertion made after the savepoint, while pgTAP's own counter is not rolled back. A PAR-4 injection therefore consumes a plan slot whose row does not survive. The plan counts the counter, and the file says so — a bare number would look like an off-by-one.

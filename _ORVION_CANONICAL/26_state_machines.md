@@ -334,6 +334,74 @@ When rejected:
 
 ---
 
+# Invoice State Machine
+
+Added 2026-09-04 (FIN-7 `202607060200` + VOID-1 `202607060400`). Canon defined no invoice machine
+until then; the six payment/issuance moves were read off `app.issue_invoice` and `app.record_payment`
+rather than invented, and the three void moves come from the owner's VOID-1 decision.
+
+## States
+
+- draft
+- issued
+- partially_paid
+- paid
+- overdue
+- voided
+
+## Allowed Transitions
+
+| From | To | Rule | Permission |
+| --- | --- | --- | --- |
+| draft | issued | Invoice issued to the customer | CREATE_INVOICE |
+| issued | partially_paid | Payment recorded, less than the total | RECORD_PAYMENT |
+| issued | paid | Payment recorded, settling the total | RECORD_PAYMENT |
+| partially_paid | paid | Remaining balance settled | RECORD_PAYMENT |
+| overdue | partially_paid | Payment recorded after the due date, less than the total | RECORD_PAYMENT |
+| overdue | paid | Payment recorded after the due date, settling the total | RECORD_PAYMENT |
+| draft | voided | Draft abandoned | VOID_INVOICE |
+| issued | voided | Issued in error, before any payment is allocated | VOID_INVOICE |
+| overdue | voided | Overdue and abandoned, before any payment is allocated | VOID_INVOICE |
+
+## Rules
+
+- `voided` is TERMINAL. No transition leaves it; a voided invoice is corrected by issuing a new
+  document, never by being restored.
+- `partially_paid` and `paid` may NOT be voided. An invoice carrying allocated payment is corrected
+  by a refund or a credit note, because `app.customer_balance` computes the receivable as invoices
+  minus payments plus completed refunds and excludes voided invoices — voiding one that holds money
+  would leave the payment in the sum with no document behind it. Canon 07 states the same posture:
+  any correction after approval goes through a new event, adjustment, reversal or authorized
+  finance action.
+- The precondition is the ALLOCATION, not the status word: `status_code` is derived from the amount,
+  so the guard asks `payment_allocations` directly.
+- Voiding REQUIRES a reason, as archiving does.
+- `voided_at` and `voided_by` are DERIVED from the session, never accepted from the caller, and may
+  change only in the statement that sets the status.
+- `-> overdue` has no producer anywhere and is deliberately unregistered.
+
+## The internal machine is NOT the external tax lifecycle
+
+`invoices.status_code` is ORVION's INTERNAL lifecycle. `invoices.external_submission_status_code`
+(catalog `tax_submission_status_code`) is the EXTERNAL tax-authority document lifecycle, with its own
+identifier and timestamps. They are deliberately separate:
+
+- an internal void asserts NOTHING about any tax authority, and performs no external cancellation;
+- an externally recorded `cancelled` does NOT void the ORVION invoice — no mapping is defined, and
+  defining one is a tax-policy decision ORVION has not been given;
+- the ONE place they touch is a refusal: an invoice the authority has ACCEPTED cannot be voided
+  internally, because ORVION cannot reconcile a document its own books call void while the authority
+  holds it as live. No time window of any kind is encoded.
+
+`invoices.corrects_invoice_id` is the anchor a future credit/debit-note workflow will use to
+reference the original document. Nothing produces it today, and a credit note is not a void.
+
+## Required Events
+
+- invoice_voided
+
+---
+
 # Document Lifecycle State Machine
 
 ## States

@@ -460,6 +460,21 @@ branch-scoped, which is that section's "detailed event content from another bran
    REPORTED rather than dropped (register: **SUP-4c**, whose rule this implements). Implemented in
    `202607060300`.
 
+7. **`VOID_INVOICE` is added (owner decision 2026-09-04, VOID-1).** The owner rejected "draft-only"
+   as a final answer and required a real internal void architecture, cleanly separated from the
+   external Egyptian ETA fiscal lifecycle. Voiding is the counterpart of issuing, so it is granted to
+   the same three roles that hold `CREATE_INVOICE` — **owner, ceo, finance_manager** — and plan-gated
+   at `finance_lite` for the same reason.
+   **It is a bookkeeping act and nothing more.** An internal void asserts nothing about any tax
+   authority and performs no external cancellation; conversely an externally recorded `cancelled`
+   does not void the ORVION invoice, because no mapping between the two is defined and defining one
+   would be inventing tax policy. The single point of contact is a refusal: an invoice the authority
+   has **accepted** cannot be voided internally. **No cancellation window of any length is encoded
+   anywhere in ORVION.**
+   It is refused once payment is ALLOCATED — corrections there go through a refund or a credit note,
+   per canon 07 — and it requires a reason, as archiving does. `voided` is terminal. Implemented in
+   `202607060400`; the machine is canon 26's new Invoice State Machine.
+
 Write authority over identity, organization and configuration tables is enforced by SPEC-138 — see
 `changes/SPEC-138-rbac-write-authority.md`.
 

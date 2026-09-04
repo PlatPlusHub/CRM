@@ -14,7 +14,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(21);
+select plan(22);
 
 insert into auth.users (id, email) values
   ('94000000-0000-0000-0000-0000000000a1','fin@fin7.test');
@@ -38,18 +38,20 @@ insert into public.customers (id, tenant_id, customer_type_code, full_name, prim
   ('94000000-0000-0000-0000-0000000000d1','94000000-0000-0000-0000-000000000001','person','FIN7 Customer','+201009994444');
 
 -- =============================================================================================
--- 0. THE REGISTRATION ITSELF. Six rows, read off the two RPCs -- not five, not seven.
+-- 0. THE REGISTRATION ITSELF. Nine rows: the six FIN-7 read off `issue_invoice`/`record_payment`,
+--    plus the three VOID-1 (202607060400) read off `app.void_invoice`. Not eight, not ten.
 -- =============================================================================================
 select is(
   (select count(*)::int from app.status_transitions where table_name='invoices'),
-  6,
-  'FIN-7: exactly six invoice transitions are registered');
+  9,
+  'FIN-7 + VOID-1: exactly nine invoice transitions are registered');
 
 select set_eq(
   $$select from_status || '->' || to_status from app.status_transitions where table_name='invoices'$$,
   $$values ('draft->issued'),('issued->partially_paid'),('issued->paid'),
-           ('partially_paid->paid'),('overdue->partially_paid'),('overdue->paid')$$,
-  '...and they are exactly the moves app.issue_invoice and app.record_payment perform');
+           ('partially_paid->paid'),('overdue->partially_paid'),('overdue->paid'),
+           ('draft->voided'),('issued->voided'),('overdue->voided')$$,
+  '...and they are exactly the moves app.issue_invoice, app.record_payment and app.void_invoice perform');
 
 select is(
   (select permission_key from app.status_transitions
@@ -69,12 +71,22 @@ select is(
   'RECORD_PAYMENT',
   '...and it is what app.record_payment charges');
 
--- Two states must NOT be registered: one has no producer, one is an open owner decision.
+-- `-> overdue` still has NO PRODUCER anywhere and stays unregistered -- EVT-2's class, unchanged.
+-- `-> voided` WAS unregistered here for the same reason FIN-7 gave: VOID-1 was an open owner
+-- decision, and registering a transition for an unimplemented capability would have dressed a
+-- missing feature as a solved one. The owner decided it on 2026-09-04 and `202607060400` implements
+-- it, so the three void moves are now registered and this assertion narrows to `overdue` alone.
 select is(
   (select count(*)::int from app.status_transitions
-    where table_name='invoices' and to_status in ('overdue','voided')),
+    where table_name='invoices' and to_status = 'overdue'),
   0,
-  'FIN-7: `-> overdue` (no producer) and `-> voided` (VOID-1, open) are deliberately unregistered');
+  'FIN-7: `-> overdue` still has no producer anywhere and remains deliberately unregistered');
+
+select is(
+  (select count(*)::int from app.status_transitions
+    where table_name='invoices' and from_status = 'voided'),
+  0,
+  'VOID-1: and nothing LEAVES voided -- it is terminal, so this machine has an exit only through issuance and payment');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid=t.tgrelid

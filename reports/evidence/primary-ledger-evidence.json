@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-04T19:50:00Z",
+  "read_at": "2026-09-04T20:40:00Z",
   "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations)",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "6252d6e99b764fa8f8dc1b8ffc1e8e125f9aa5cf",
-  "migration_count": 192,
-  "ledger_fingerprint": "ac42c9ade1a8efc256106de6c5d3cfeb",
+  "repository_head": "cc90070dab54e945ffdab06a14de0794cf021fbf",
+  "migration_count": 193,
+  "ledger_fingerprint": "6e46c83ce978322be0d911618e9a0c1f",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -199,6 +199,7 @@
     "202607060000_the_explainer_needs_a_door",
     "202607060100_a_ceiling_that_warns_is_a_ceiling_that_speaks",
     "202607060200_an_invoice_state_machine_that_was_already_written",
-    "202607060300_a_customer_ceiling_that_warns_and_converts"
+    "202607060300_a_customer_ceiling_that_warns_and_converts",
+    "202607060400_an_internal_void_that_does_not_speak_for_the_tax_authority"
   ]
 }

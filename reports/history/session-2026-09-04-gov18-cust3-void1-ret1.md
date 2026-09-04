@@ -145,4 +145,64 @@ The pgTAP suite was green and the reader correctly said `over_limit = true`, but
 
 ---
 
-*(VOID-1 and RET-1 sections follow as each is implemented.)*
+## 4. VOID-1 — ✅ COMPLETE (`202607060400`, deployed to Primary)
+
+### 4.1 What was already there, and what the earlier framing missed
+
+**The external ETA lifecycle was already modelled.** `invoices` carries `external_submission_id` (the authority's own document identifier), `external_submission_status_code` (governed by the `tax_submission_status_code` catalog), `external_submitted_at` and `external_response_at` — four columns and a governed catalog, structurally complete, with no writer. VOID-1's earlier framing treated the ETA boundary as unbuilt; it was **unwired**, which is a different and much smaller problem.
+
+**The consumer side of voiding was complete too**: `invoices.voided_at` had four readers and zero writers. This migration supplies the writer, the authority and the machine — it did not have to invent the concept.
+
+### 4.2 Canon 26 gained the Invoice State Machine it never had
+
+Nine transitions: FIN-7's six, plus `draft`/`issued`/`overdue → voided` at `VOID_INVOICE`. **`voided` is terminal** — nothing leaves it.
+
+**No day-count of any kind is encoded.** The migration contains no 3, no 7 and no 60. Each internal rule is derived, and the derivation is stated in the migration:
+
+| Rule | Derived from |
+|---|---|
+| `partially_paid` / `paid` may **not** be voided | **ORVION's own arithmetic.** `app.customer_balance` sums invoices minus payments plus completed refunds and *excludes* voided invoices — void one holding allocated money and the payment stays in the sum with no document behind it. Canon 07 agrees: corrections after approval go through a new event, adjustment or reversal |
+| the precondition is the **allocation**, not the status word | `status_code` is *derived* by `record_payment` from the amount, so the guard asks `payment_allocations` — the table that actually holds the link |
+| terminal | no transition row leaves `voided`, so `enforce_status_transition` refuses every exit for free |
+| status and timestamp move together | **DOC-LC-3's lesson applied before it could happen** — the split state that made `documents` unre-versionable is unreachable |
+| `voided_by` derived | ATTR-3 / FIN-4 / ATTR-2's class |
+| reason required | canon 26 demands one for archiving; a void is the stronger act |
+
+### 4.3 The one place the two lifecycles touch is a refusal
+
+**An invoice the authority has `accepted` cannot be voided internally** — not because of a window, but because ORVION would hold a document its own books call void while the authority holds it live, with no integration to reconcile it. `submitted`/`pending`/`failed`/`rejected` do not block. Voiding may not touch the external columns at all.
+
+**And the mapping that does not exist is pinned so nothing invents it.** `cancelled` was added to `tax_submission_status_code` so a future integration can **record** an externally-cancelled document — a fact ORVION receives, never an act it performs. The test asserts that after an external `cancelled` the internal status is unchanged, `voided_at` is null, and no `invoice_voided` event exists.
+
+`invoices.corrects_invoice_id` is the credit/debit-note **anchor and nothing more**: nothing produces it, it affects no balance, and a credit note is not a void. No ETA submission engine was built.
+
+**`journal_entries`' void columns are recorded CLOSED BY DESIGN and deliberately not dropped** (DEAD-1 / VERIFY-1 precedent). They must never get a writer: a posted double-entry record is corrected by a compensating **reversal**, never by mutation. A column comment now says so on the column itself.
+
+### 4.4 A guard demanded its own update, which is the loop working
+
+**Assertion 22 of `83_actor_attribution_test.sql` is a pinned inventory that fails in EITHER direction.** It failed the moment `invoices.voided_by` became derived — because the set *shrank*. Its own text says *"each fix must delete its own line."* The guard did not merely permit the improvement; it **required** the inventory to be corrected in the same change. Four of the original eight were closed by `202607059300`; this is the fifth.
+
+### 4.5 VOID-1 verification (the full `§5a` protocol)
+
+| Step | Result |
+|---|---|
+| `npx supabase db reset` | **193 migrations**, exit 0 |
+| **Pass A** | **96 files / 1407 assertions — PASS** |
+| **HTTP × 6** | **430 passed / 0 failed** (29 · 107 · 74 · 120 · 40 · 60) |
+| **Pass B** (no reset) | 96 / 1407 — **Pass A = Pass B** |
+| Smoke | `ALL CHECKS PASSED (76 tables, 71/607 catalog)` |
+| Primary deployment | `202607060400` applied; ledger row normalised to the repository version |
+| **Primary parity** | **CLEAN — ledger, functions AND structure proven**, all read **from** Primary |
+| Repository consistency | **CLEAN, Checks 1–19, exit 0** |
+
+**Primary, read live:** ledger **193 / `6e46c83ce978322be0d911618e9a0c1f`**; functions **`712148c491e987422ec6331b1d9af3e6` / 273**; structure **`ee2ab94e7571a7b48e88a86b6c6aadc5` / 3,484**.
+
+**A pgTAP subtlety worth recording:** `rollback to savepoint` discards the *recorded* result row for an assertion made after the savepoint, while pgTAP's counter is not rolled back. A PAR-4 injection therefore consumes a plan slot whose row does not survive; the plan counts the counter, and the file says so, because a bare number would look like an off-by-one.
+
+### 4.6 Canon and SSOT synchronised
+
+`26_state_machines.md` (**the new Invoice State Machine**, its rules, and an explicit section on why the internal machine is not the external tax lifecycle), `27_event_catalog.md` (`invoice_voided`, with `external_effect: none` stated), `28_permissions_matrix.md` (item 7 — `VOID_INVOICE`, its grants, and the statement that no cancellation window of any length is encoded anywhere in ORVION), `31_schema_draft.md` (the void columns' derivation rules, `corrects_invoice_id`, and the internal/external separation on the columns themselves), plus tests 54/83/94 and the endpoint classification 78 → 79.
+
+---
+
+*(RET-1 follows.)*

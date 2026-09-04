@@ -730,6 +730,39 @@ $blocked = (Psql "select count(*) from public.invoices where customer_id='$cusA'
 Check "CUST-3 (THE OWNER REQUIREMENT): the invoice that breached the ceiling is STILL THERE -- warning-only means nothing was blocked or rolled back" ([int]$blocked -ge 1) "invoices=$blocked"
 
 
+# =================================================================================================
+# VOID-1 -- the internal invoice void over the wire (`202607060400`, owner decision 2026-09-04).
+#
+# pgTAP proves the rules in `96_invoice_void_and_eta_boundary_test.sql`. They are repeated here
+# because `invoices` is a table PostgREST serves: `authenticated` holds UPDATE on it, so a browser
+# can attempt the void by column PATCH without ever calling the RPC (BOOK-1, ADMIN-1, FIN-8).
+#
+# $invA is the invoice raised earlier in this journey (13000 EGP, customer $cusA) and it carries NO
+# allocated payment, which is what makes it voidable. The employee is the load-bearing negative: it
+# can SEE the invoice through its booking, so a refusal here is about authority and not visibility.
+# =================================================================================================
+$r = Invoke-Patch $emp "invoices?id=eq.$invA" @{ status_code = 'voided'; void_reason = 'employee tries the table door' }
+Check "VOID-1 over HTTP: an employee is REFUSED at the TABLE DOOR -- voiding costs VOID_INVOICE, and PostgREST serves the table beside the RPC" ($r.StatusCode -eq 403) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'void_invoice' @{ p_invoice_id = $invA; p_reason = 'employee tries the RPC' }
+Check "VOID-1 over HTTP: ...and REFUSED at the RPC too -- both doors, not one" ($r.StatusCode -ge 400) "$($r.StatusCode) $(Err $r)"
+
+$state = (Psql "select status_code from public.invoices where id='$invA';").Trim()
+Check "...and neither attempt moved it -- 'it returned 403' is only evidence if the row also stood still" ($state -ne 'voided') "status_code=$state"
+
+$r = Rpc $fin 'void_invoice' @{ p_invoice_id = $invA; p_reason = 'issued in error, corrected over HTTP' }
+Check "VOID-1 (THE OWNER REQUIREMENT): finance_manager CAN void an ISSUED invoice over HTTP -- draft-only was rejected as the final answer" (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$row = (Psql "select status_code || '|' || (voided_by is not null)::text || '|' || coalesce(external_submission_status_code,'~') from public.invoices where id='$invA';").Trim()
+Check "...and it MOVED to voided with a DERIVED actor, while the EXTERNAL submission state stayed untouched -- the internal act asserts nothing about the tax authority" ($row -eq 'voided|true|~') "row=$row"
+
+$r = Invoke-Patch $fin "invoices?id=eq.$invA" @{ status_code = 'issued' }
+Check "VOID-1: a voided invoice cannot be UN-voided over HTTP either -- terminal on every door" ($r.StatusCode -ge 400) "$($r.StatusCode) $(Err $r)"
+
+$evt = (Psql "select count(*) from public.events where event_type_code='invoice_voided' and entity_id='$invA';").Trim()
+Check "VOID-1: the void is AUDITED as one intention -- proven by the event row, not by the absence of an error" ([int]$evt -eq 1) "events=$evt"
+
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($findings.Count -gt 0) { Write-Host "`nFindings:"; $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 if ($fail -gt 0) { exit 1 }

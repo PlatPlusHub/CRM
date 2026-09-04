@@ -125,8 +125,9 @@ call it -- see section 6 for what that does and does not establish.
 | `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | yes |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |
+| `void_invoice` | p_invoice_id uuid, p_reason text | `uuid` | invoker | VOID_INVOICE | - | invoices | 4 | yes |
 
-**74 RPC endpoints executable by `authenticated`; 74 exercised over HTTP by a suite.**
+**75 RPC endpoints executable by `authenticated`; 75 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

@@ -1188,12 +1188,13 @@ Core fields:
 - due_date nullable
 - currency_code
 - total_amount numeric (>= 0, non-negative CHECK — migration 048800)
-- status_code
-- voided_at nullable
-- voided_by nullable
-- void_reason nullable
-- external_submission_id nullable
-- external_submission_status_code nullable
+- status_code — ORVION's INTERNAL invoice lifecycle (canon 26's Invoice State Machine). Not the tax-authority lifecycle.
+- voided_at nullable — VOID-1 (`202607060400`): DERIVED from the session by `app.guard_invoice_void`, never accepted from the caller, and may change only in the statement that sets `status_code` to `voided`.
+- voided_by nullable — likewise derived.
+- void_reason nullable — REQUIRED when voiding, as canon 26 requires a reason for archiving.
+- corrects_invoice_id nullable — VOID-1: the invoice this one corrects. The anchor a FUTURE credit/debit-note workflow will use to reference the original deterministically (ETA requires a correcting document to cite the original's identifier). Nothing produces it today and it affects no balance; a credit note is NOT a void. Composite FK `(tenant_id, corrects_invoice_id)` per TENANT-1, and it may not reference itself.
+- external_submission_id nullable — the EXTERNAL authority's own document identifier.
+- external_submission_status_code nullable — the EXTERNAL tax-document lifecycle (catalog `tax_submission_status_code`), deliberately SEPARATE from `status_code`. An internal void asserts nothing here; a `cancelled` recorded here does not void the ORVION invoice. The only link is a refusal: an `accepted` document cannot be voided internally.
 - external_submitted_at nullable
 - external_response_at nullable
 - created_by

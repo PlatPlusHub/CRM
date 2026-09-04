@@ -458,6 +458,16 @@ Severity: info
 
 # Finance Events
 
+## invoice_voided
+
+Created when an ORVION invoice is voided internally, through `app.void_invoice` or the equivalent table write. Carries NO external or tax meaning: ORVION performs no cancellation with any tax authority, and the payload states `external_effect: none` explicitly. Refused, and therefore never emitted, once payment is allocated to the invoice or once the document has been accepted externally.
+
+Severity: warning
+
+Triggers:
+
+- an invoice moving to `voided` from `draft`, `issued` or `overdue`
+
 ## customer_credit_threshold_exceeded
 
 Created when a customer's outstanding receivable rises above the credit ceiling configured on that customer. Exposure held in other currencies is CONVERTED into the ceiling's currency at the tenant's latest manual rate at or before the evaluation instant; any currency with no usable rate is REPORTED in the payload as `unconvertible_currencies` rather than dropped. The ceiling WARNS; it never refuses (owner decision 2026-09-04, CUST-3). Emitted once per breach, not once per write: it is suppressed while the most recent threshold event for the customer is already this one.

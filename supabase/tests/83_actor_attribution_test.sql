@@ -207,8 +207,8 @@ rollback to savepoint m2;
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(c.table_name || '.' || c.column_name, ', ' order by c.table_name, c.column_name), ''))::text,
-  'invoices.voided_by, journal_entries.voided_by, payments.verified_by, tenant_license_activations.consumed_by',
-  'CLASS GUARD (ATTR-2): the columns ending `_by` still ACCEPTED from the caller are exactly these four, and no others. This is a PINNED INVENTORY, not an exemption list: it fails when the set changes in EITHER direction, so a new unattributed column fails it and each fix must delete its own line. Four of the original eight were closed by `202607059300`. The four that remain are NOT open work of the same kind, and the distinction matters: `invoices.voided_by` and `journal_entries.voided_by` are VOID-1, an OPEN OWNER DECISION -- voiding is unimplemented, so deriving an attribution for it would dress a missing capability as a solved one; `payments.verified_by` is VERIFY-1, the same shape with no VERIFY_PAYMENT permission in existence; and `tenant_license_activations` is granted to `postgres` and `service_role` ONLY, so no tenant caller can reach it by any door.')
+  'journal_entries.voided_by, payments.verified_by, tenant_license_activations.consumed_by',
+  'CLASS GUARD (ATTR-2): the columns ending `_by` still ACCEPTED from the caller are exactly these THREE, and no others. This is a PINNED INVENTORY, not an exemption list: it fails when the set changes in EITHER direction, so a new unattributed column fails it and each fix must delete its own line. Four of the original eight were closed by `202607059300`, and `invoices.voided_by` was closed by VOID-1 (`202607060400`) -- THIS ASSERTION IS WHAT DEMANDED THAT DELETION, which is the discovery-to-guard loop paying for itself. The three that remain are NOT open work of the same kind: `journal_entries.voided_by` is CLOSED BY DESIGN and must never be given a writer, because a POSTED double-entry record is corrected by a compensating REVERSAL and never by mutation (canon 07, VOID-1); `payments.verified_by` is VERIFY-1, the same shape with no VERIFY_PAYMENT permission in existence; and `tenant_license_activations` is granted to `postgres` and `service_role` ONLY, so no tenant caller can reach it by any door.')
 from information_schema.columns c
 join information_schema.tables tb
   on tb.table_schema = c.table_schema and tb.table_name = c.table_name and tb.table_type = 'BASE TABLE'
@@ -256,7 +256,9 @@ where c.table_schema = 'public'
 --     person the capability is granted to or denied from, which is precisely a target rather than an
 --     actor, and its own `created_by` carries `app.derive_created_by()` exactly as its siblings do.
 --   * `customers.last_interaction_user_id` -- DEAD-3: no writer anywhere in the database.
---   * `invoices.voided_by`, `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22.
+--   * `journal_entries.voided_by`, `payments.verified_by` -- see assertion 22. `invoices.voided_by`
+--     LEFT this set on 2026-09-04: VOID-1 gave it a deriving guard, which is what assertion 22 exists
+--     to demand.
 --   * `user_permission_grants.user_id` (RBAC-3, `202607059800`) -- classified as a SUBJECT column,
 --     not an actor one: it names WHOSE capability is being granted, exactly as
 --     `user_role_assignments.user_id` names whose role is being assigned, and both are
@@ -266,7 +268,7 @@ where c.table_schema = 'public'
 -- ================================================================================================
 select is(
   (select coalesce(string_agg(distinct ac.tbl || '.' || ac.col, ', ' order by ac.tbl || '.' || ac.col), ''))::text,
-  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, invoices.voided_by, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_permission_grants.user_id, user_role_assignments.user_id, users.auth_user_id',
+  'booking_items.operational_owner_user_id, booking_items.owner_user_id, booking_items.sales_owner_user_id, bookings.owner_user_id, complaints.owner_user_id, conversations.owner_user_id, customers.last_interaction_user_id, journal_entries.voided_by, lead_assignments.assigned_user_id, leads.assigned_user_id, leads.owner_user_id, otp_challenges.auth_user_id, payments.verified_by, quotations.owner_user_id, service_requests.owner_user_id, tasks.owner_user_id, totp_enrollments.auth_user_id, trusted_devices.auth_user_id, user_branch_assignments.user_id, user_permission_grants.user_id, user_role_assignments.user_id, users.auth_user_id',
   'CLASS GUARD (ATTR-2, structural): every column that FOREIGN-KEYS to public.users on a table `authenticated` can write directly, and that no BEFORE trigger derives, is exactly this classified set. Unlike assertion 22 this asks no question about the column NAME, so an actor column called anything at all appears here. A new entry is not necessarily a defect -- it is an unclassified column, and it must be classified in MASTER_GAP_REGISTER.md before this line is edited.')
 from (
   select c.relname as tbl, a.attname as col

@@ -114,6 +114,10 @@ insert into _expected_endpoints (name) values
     -- `supplier_credit` -- `may_view=false` rather than the amount when the caller lacks
     -- VIEW_FINANCIAL_DOCUMENTS, so a UI renders the field as withheld rather than absent.
     ('customer_credit'),
+    -- VOID-1 (2026-09-04): void an ORVION invoice INTERNALLY, with a required reason. Refused once
+    -- payment is allocated and once the document has been externally accepted. Performs no
+    -- external cancellation and asserts nothing about any tax authority.
+    ('void_invoice'),
     ('tenant_capabilities'),
     ('upload_document'),
     ('upload_subscription_payment_proof');
@@ -138,7 +142,7 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  78,
+  79,
   -- The prose said "75" while the assertion compared 76 -- a guard's description drifting from its
   -- own measurement, the MEAS-1 class in miniature. Corrected to 77 alongside RBAC-4's
   -- `effective_permissions`, and the number is now written once so the two cannot disagree again.

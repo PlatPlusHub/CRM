@@ -94,7 +94,12 @@ insert into _rpc_owned values
   ('invoices','issued',        'paid',          'app.record_payment'),
   ('invoices','partially_paid','paid',          'app.record_payment'),
   ('invoices','overdue',       'partially_paid','app.record_payment'),
-  ('invoices','overdue',       'paid',          'app.record_payment');
+  ('invoices','overdue',       'paid',          'app.record_payment'),
+  -- VOID-1 (202607060400). The same shape one act over: `app.void_invoice` is the named finance
+  -- RPC that owns every move into `voided`, and there is deliberately no move OUT of it.
+  ('invoices','draft',         'voided',        'app.void_invoice'),
+  ('invoices','issued',        'voided',        'app.void_invoice'),
+  ('invoices','overdue',       'voided',        'app.void_invoice');
 
 -- =============================================================================================
 -- 1. COVERAGE. Every one of the ten functions must be parsed. This is the assertion the previous
