@@ -3,7 +3,7 @@
 Class: History (point-in-time record; superseded by later reports, never edited retroactively)
 Date: 2026-09-04
 Author: Claude Opus 5
-Status: **IN PROGRESS — GOV-18 COMPLETE and mutation-proven (25/25); CUST-3 COMPLETE and deployed to Primary.** VOID-1 and RET-1 follow, in the owner's order. This report is written as the work happens, not after it — every figure below was read from a run, not predicted.
+Status: **COMPLETE — all four capabilities built, verified through the full `§5a` protocol, and deployed to Primary: GOV-18, CUST-3, VOID-1, RET-1.** Written as the work happened, not after it — every figure below was read from a run, not predicted. **Fourteen real defects in this session's own work were caught by guards before anything shipped**, and three more were recorded rather than fixed inside the wrong package.
 
 ---
 
@@ -205,4 +205,73 @@ Nine transitions: FIN-7's six, plus `draft`/`issued`/`overdue → voided` at `VO
 
 ---
 
-*(RET-1 follows.)*
+## 5. RET-1 — ✅ COMPLETE (`202607060500`, deployed to Primary)
+
+### 5.1 The mechanism is built; the value is still counsel's, and that is the correct outcome
+
+**Not one number is seeded.** The migration creates `public.document_retention_policies` and inserts **zero rows**, so every tenant has no policy for every document type and nothing anywhere is eligible for destruction — the same safe state as before, reached by a better road.
+
+**Why the zero-arg global had to go.** `app.document_retention_days()` took no arguments and returned NULL: **one number for every tenant and every document type**, exactly the architectural authority the owner forbade — and it could not have been right anyway, since Egypt's PDPL ties the period to the **purpose of collection**, which is per document type by construction. It is replaced by one authority keyed `(tenant_id, document_type_code)`, with **no platform-wide default row**: two authorities disagreeing about a legal obligation is a defect, and a default would mean ORVION choosing a period for every tenant.
+
+**Fail-closed became the shape of the query.** The scan and the claim path no longer ask whether a number exists — they **INNER JOIN** the policy table, so "no policy" produces no row at all. And `retention_days` is NOT NULL `>= 1` at the constraint level, so "0 means destroy on sight" cannot be *stored*, not merely cannot be obeyed.
+
+**Withdrawal is deactivation, not deletion** — `10_grant_model_test` refused a DELETE grant because `authenticated` holds DELETE on no public base table in ORVION. For a legal setting that is better regardless: what was configured, by whom and when survives its withdrawal, and `is_active = false` withdraws the work as well as the policy.
+
+### 5.2 A PAR-2 hazard removed at the root rather than guarded
+
+Because retention was a **function**, every test that exercised it had to **redefine that function** — tests 49, 52, 60 and `verify_storage_end_to_end.ps1` all did. PAR-2 is the finding that *"a suite that mutates the schema it tests corrupts parity silently"*, and PAR-1, PAR-1a and PAR-1b were all circling this one function: three sessions chased a drift the HTTP script re-created deterministically on every run, and one of them pushed the polluted body to Primary. The script carried roughly forty lines of capture / override / restore / assert-the-restore machinery to contain it.
+
+**With a policy table, exercising retention is an INSERT that rolls back.** All of that machinery is deleted. No suite alters the schema any more.
+
+### 5.3 A guard whose description outran its measurement
+
+`app.claim_storage_actions` said the finding is *"re-verified at claim time, not trusted from the scan"* — but it only ever re-verified that retention was **configured**, never that the version was old enough. MEAS-1's class, inside a comment claiming the opposite. The per-type policy makes the real re-verification possible, and it is now done: the policy must still exist, still be active, still be valid, and the version still past it.
+
+### 5.4 What the guards caught before it shipped
+
+- **POL-1's exact defect, in new code** — my four RLS policies defaulted to `to public`; `50_policy_role_scope_test` refused them.
+- **A DELETE grant** `authenticated` must never hold — `10_grant_model_test`.
+- **Two SEC-1 ceilings** raised consciously with justification rather than silently (56 INSERT-accepting tables; 20 without an INSERT capability trigger, this table's authority being in its RLS policies).
+- `extensions.moddatetime` does not exist here — the repository's convention is the bare `moddatetime(updated_at)`.
+- `create or replace` **cannot remove a parameter default** (42P13) — `claim_storage_actions(p_limit integer default 50)`.
+
+### 5.5 RET-1 verification
+
+| Step | Result |
+|---|---|
+| `npx supabase db reset` | **194 migrations**, exit 0 |
+| **Pass A** | **97 files / 1423 assertions — PASS** |
+| **HTTP × 6** | **430 passed / 0 failed** |
+| **Pass B** (no reset) | 97 / 1423 — **Pass A = Pass B** |
+| Smoke | `ALL CHECKS PASSED (77 tables, 71/607 catalog)` |
+| **Primary parity** | **CLEAN — ledger, functions AND structure proven** |
+| Repository consistency | **CLEAN, Checks 1–19, exit 0** |
+
+**Primary, read live:** ledger **194 / `6802ac41eaf6f4f17f0bf4cde7b3a720`**; functions **`8af5dd7786b940fe4208a1c00d28a7e9` / 273**; structure **`bf9883b7cad716e085620058135b3b82` / 3,521**.
+
+---
+
+## 6. FINAL STATE
+
+| | |
+|---|---|
+| Starting commit | `4c2f82b` |
+| Migrations | **191 → 194** (`202607060300` CUST-3, `202607060400` VOID-1, `202607060500` RET-1) |
+| Suite | **94 files / 1347 → 97 files / 1423 assertions**, Pass A = Pass B |
+| HTTP | **414 → 430** across six suites, 0 failed |
+| Tables | 76 → **77** · catalog 603 → **607** · RPCs 73 → **75** |
+| Guards | consistency **CLEAN 1–19**; parity **CLEAN, all three Primary values read from Primary** |
+| Primary | **deployed and proven at every step** — never claimed without querying it |
+| Manifest | **6,813 / 7,000 chars — no budget was ever raised** (trimmed nine times) |
+
+### What the guards caught in this session's own work
+
+**Fourteen real defects, every one found by a guard rather than by inspection**: a `text[] || 'literal'` cast error; a record field named in a shared trigger condition that broke eight test files at once (LIC-3/PP-4's class); a row-image comparison silently defeated by a sibling trigger; `numeric(14,2)` truncating a 3-dp currency (DC-1/R7); two missing `revoke … from public` (GRANT-1); a credit control that never re-evaluated when the *ceiling* moved (**SUP-4d**, found by an HTTP probe after pgTAP was already green); a vacuous security test whose UPDATE matched zero rows; four RLS policies defaulting to `to public` (POL-1); a DELETE grant `authenticated` must never hold; and three environment-specific SQL errors. Plus **GOV-18's own mutation harness caught a defect in itself** before it certified anything.
+
+**Three findings were recorded rather than fixed**, because fixing them inside the wrong package is the scope creep this programme avoids: **SUP-4d**, **CUST-4** and **CUST-5**.
+
+### Remaining owner input
+
+**None for engineering.** One thing waits on counsel and is not an engineering question: the **retention period per `document_type_code`**, reconciling Egypt's PDPL (Decree 816/2025, in force) against tax and commercial record-keeping minimums. The mechanism accepts it with no schema change, and until it arrives nothing is destroyable.
+
+**Batch 6 was not started.**

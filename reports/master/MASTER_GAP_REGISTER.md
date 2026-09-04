@@ -1223,7 +1223,7 @@ Owner directive: *"Do NOT leave any discovered Owner Decision / Open Decision un
 - **Residual owner veto:** if the owner wants strict "assigned only", it is one predicate and one assertion. Recorded as reversible rather than left open.
 
 ### RET-1 — RECLASSIFIED 2026-09-04: the safe answer is already in force; only a *finite* period needs counsel
-- **Status:** **✅ RESOLVED 2026-09-04 — DECIDED BY THE OWNER: build the retention MECHANISM now** · **Owner:** engineering for the mechanism; owner + counsel for the values. Retention is to be represented **per `document_type_code`**; `NULL` keeps its meaning of *no deletion policy currently defined*; fail-closed is preserved; **no legal period is invented or guessed**. The mechanism must accept legally approved values later without schema redesign.
+- **Status:** **✅ RESOLVED 2026-09-04 — MECHANISM IMPLEMENTED (`202607060500`); the VALUES remain counsel's** · **Owner:** engineering for the mechanism; owner + counsel for the values. Retention is to be represented **per `document_type_code`**; `NULL` keeps its meaning of *no deletion policy currently defined*; fail-closed is preserved; **no legal period is invented or guessed**. The mechanism must accept legally approved values later without schema redesign.
 - **Nothing is blocked and nothing is at risk.** `app.document_retention_days()` returns NULL, NULL means *retain forever*, the retention scan's `WHERE` is unsatisfiable, and **no document is ever selected for destruction**. The conservative outcome is the **default**, not a validation someone must remember to run — asserted by `49_document_retention_test.sql` sections 1–2, where a mistaken `0` fails the suite.
 - **Therefore this must not be carried as a blocking owner decision.** The only thing a decision buys is *storage-cost reduction*; the only thing a wrong answer risks is destroying a record Egyptian law requires. **Recommendation: leave NULL.** Re-open when either (a) counsel states a retention period, or (b) superseded-version storage becomes a measurable cost. One line of one migration when it happens.
 
@@ -1631,3 +1631,61 @@ Canon 26 defined **no invoice state machine at all**. It has one now, and `voide
 `96_invoice_void_and_eta_boundary_test.sql` — **32 assertions**, including PAR-4 defect injection proving the *guard*, not the transition table, enforces the money rule. Seven HTTP assertions in `verify_role_journeys.ps1` prove both doors over the wire. `54_transition_permission_parity_test` now names `app.void_invoice` as the owner of all three moves; `94_invoice_state_machine_test` moved from six transitions to nine and narrowed its "deliberately unregistered" claim to `-> overdue` alone.
 
 **A test-harness subtlety worth recording:** `rollback to savepoint` discards pgTAP's *recorded* result row for an assertion made after the savepoint, while pgTAP's own counter is not rolled back. A PAR-4 injection therefore consumes a plan slot whose row does not survive. The plan counts the counter, and the file says so — a bare number would look like an off-by-one.
+
+---
+
+## RET-1 implementation, 2026-09-04 — retention becomes a policy, and a PAR-2 hazard disappears
+
+### RET-1 — ✅ IMPLEMENTED (`202607060500`)
+
+- **Status:** **✅ RESOLVED — IMPLEMENTED (the MECHANISM; the VALUES remain counsel's)** · **Owner:** engineering for the mechanism; owner + counsel for any period
+- **NOT ONE NUMBER IS SEEDED.** The migration creates `public.document_retention_policies` and inserts **zero rows**. Every tenant therefore has no policy for every document type, so nothing anywhere is eligible for destruction — exactly the state that was in force before, reached by a better road.
+
+### Why the zero-arg global had to go
+
+`app.document_retention_days()` took no arguments and returned NULL. It was **one number for every tenant and every document type** — precisely the architectural authority the owner forbade — and it could not have been right in any case: a passport scan, a signed contract and a payment proof do not share a retention obligation, and Egypt's PDPL ties the period to the **purpose of collection**, which is per document type by construction.
+
+It is replaced by one authority: `public.document_retention_policies`, keyed `(tenant_id, document_type_code)`, unique on that pair. **There is deliberately no platform-wide default row and no nullable-tenant "global" row** — two authorities disagreeing about a legal obligation is the duplicate-authority defect this register keeps recording, and a default would mean ORVION choosing a legal period on every tenant's behalf.
+
+### Fail-closed became the shape of the query
+
+`NULL` keeps its meaning — `app.document_retention_days(tenant, document_type_code)` returns NULL when no policy exists — but the scan and the claim path no longer *ask* whether a number exists. They **INNER JOIN** the policy table, so "no policy" produces **no row at all**. Retain-by-default stopped being a `WHERE` clause someone could edit and became the structure of the statement.
+
+`retention_days` is NOT NULL and `>= 1` **at the constraint level**, so the "0 means destroy on sight" hazard cannot be *stored*, not merely cannot be obeyed. `reconcile_document_storage` keeps its defensive `>= 1` guard anyway — two independent guards, neither relying on the other.
+
+**Withdrawal is DEACTIVATION, not deletion**, and the guard suite is why: `10_grant_model_test` refused a `DELETE` grant, because `authenticated` holds DELETE on **no** public base table in ORVION. For a legal setting that is the better model regardless — what was configured, by whom and when must remain answerable after the policy is withdrawn. `is_active = false` withdraws the policy *and* the work: `app.claim_storage_actions` re-reads it live.
+
+### A PAR-2 hazard removed at the root, not guarded
+
+Because retention was a **function**, every test that wanted to exercise it had to **redefine that function** — `49`, `52`, `60` and `verify_storage_end_to_end.ps1` all did. PAR-2 is the finding that *"a suite that mutates the schema it tests corrupts parity silently"*, and PAR-1, PAR-1a and PAR-1b were all circling this one function: three sessions chased a drift the HTTP script re-created deterministically on every run, and one of them pushed the polluted body to Primary. The script carried ~40 lines of capture / override / restore / assert-the-restore machinery to contain it.
+
+**With a policy table, exercising retention is an INSERT that rolls back.** All of that machinery is gone. No suite alters the schema any more.
+
+### The claim path's own description was outrunning its measurement
+
+`app.claim_storage_actions` said the finding is *"re-verified at claim time, not trusted from the scan"* — but it only ever re-verified that retention was **configured**, never that the version was actually old enough. MEAS-1's class, inside a comment claiming otherwise. With a per-type policy the real re-verification is available and is now done: the policy must still exist, still be active, still be valid, and the version must still be past it.
+
+### What the guards caught before it shipped
+
+- **POL-1's exact defect, in new code.** My four RLS policies defaulted to `to public` instead of `to authenticated`; `50_policy_role_scope_test` refused them.
+- **The DELETE grant**, above — `10_grant_model_test`.
+- **Two SEC-1 ceilings** raised consciously with justification rather than silently: at most **56** tables accept a direct INSERT from `authenticated` (55 + this table: a tenant configures its own retention), and at most **20** have no capability trigger firing on INSERT (18 + `user_permission_grants` + this table, whose authority is in its RLS policies).
+- **`extensions.moddatetime`** does not exist here; the repository's own convention is the bare `moddatetime(updated_at)`.
+- **`create or replace` cannot remove a parameter default** — `claim_storage_actions(p_limit integer default 50)`, 42P13.
+
+### Where the legally approved values will live, and who supplies them
+
+| | |
+|---|---|
+| **Table** | `public.document_retention_policies` |
+| **Key** | `(tenant_id, document_type_code)` |
+| **Value** | `retention_days` integer, `>= 1`, measured from `document_versions.uploaded_at` |
+| **Who** | the tenant's own owner/ceo, through `MANAGE_TENANT_SETTINGS` — the authority that already governs tenant configuration. **ORVION supplies no value and no default** |
+| **Source** | **counsel.** Egypt's PDPL executive regulations (Decree 816/2025, in force) require a controller to *define and document* a retention period tied to the purpose of collection and to erase once fulfilled; Egyptian tax and commercial record-keeping set competing minimums. Reconciling those is a legal question, and this migration answers none of it |
+| **Effect** | inserting a row is the **only** thing that makes any version eligible, and even then only a SUPERSEDED one |
+
+**The compliance decision itself is therefore still open and still the owner's** — but it is no longer blocked on engineering, and the mechanism will accept an approved value without any schema change.
+
+### Verification
+
+`97_retention_policy_per_document_type_test.sql` — **16 assertions**, covering the shipped no-policy default, per-**type** resolution (configuring `passport` leaves the same tenant's `visa` retained), per-**tenant** isolation, current-version protection, the threshold being re-read live at the claim path, deactivation withdrawing the work, and a `retention_days = 0` insert refused by the constraint.

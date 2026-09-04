@@ -215,37 +215,30 @@ Check "tenant B got no findings for tenant A's object" ($orphanCross -eq '0') "c
 # ---------------------------------------------------------------------------------------------
 Write-Host "`n-- retention and the executor --"
 
-# PAR-2 (2026-08-29): CAPTURE THE SHIPPED DEFINITION BEFORE OVERRIDING IT.
-# This script overrides `app.document_retention_days` to exercise retention, and section 8 used to
-# "restore" it by RETYPING an equivalent one-liner (`as 'select null::integer'`) instead of putting
-# back the migration's `$fn$ ... $fn$` body. Behaviour was identical; the TEXT was not -- and the
-# parity guard compares `pg_get_functiondef`. So every run of this suite left the local database
-# permanently unequal to the repository, in exactly one function.
+# PAR-2 IS GONE AT ITS ROOT (RET-1, `202607060500`), AND THAT IS WHY THIS SECTION IS SHORT NOW.
 #
-# That is the root cause PAR-1, PAR-1a and PAR-1b were all circling: three sessions chased this one
-# function, and PAR-1b concluded local "had been hand-modified mid-session" -- close, but wrong in
-# the way that mattered. It was not a hand edit. It was this script, doing it deterministically on
-# every run, which is why the drift kept coming back. One of those sessions then read the polluted
-# local body and pushed it to Primary.
+# This script used to CAPTURE `app.document_retention_days`'s shipped definition, OVERRIDE it to
+# exercise retention, RESTORE it verbatim and then assert the restore -- roughly forty lines of
+# machinery whose only purpose was to undo a schema change the suite itself made. PAR-2 is the
+# finding that "a suite that mutates the schema it tests corrupts parity silently", and PAR-1,
+# PAR-1a and PAR-1b were all circling this one function: three sessions chased a drift that this
+# script re-created deterministically on every run, and one of them pushed the polluted body to
+# Primary.
 #
-# The fix reads the definition FROM THE DATABASE rather than restating it, so it cannot drift from
-# the migration no matter how the migration later changes.
-$RetentionFnDef = ((Psql "select pg_get_functiondef('app.document_retention_days()'::regprocedure);") -join "`n").Trim()
-if ([string]::IsNullOrWhiteSpace($RetentionFnDef) -or $RetentionFnDef -notmatch 'document_retention_days') {
-    throw "PAR-2: could not capture the shipped app.document_retention_days definition -- refusing to run, because this suite would otherwise leave the database drifted with no way back."
-}
-# Capture the FINGERPRINT in SQL, using the parity guard's own expression. The first version of this
-# check recomputed that normalization in PowerShell and failed against a restore that was actually
-# correct -- which is PAR-1a's lesson repeating one layer over: do not reimplement the comparison,
-# reuse it. Both sides are now computed by the same engine with the same expression.
-$RetentionFnMd5 = (Psql "select md5(regexp_replace(regexp_replace(pg_get_functiondef('app.document_retention_days()'::regprocedure), '--[^' || chr(10) || ']*', '', 'g'), '\s+', ' ', 'g'));").Trim()
+# RET-1 replaced that zero-arg global with `public.document_retention_policies`, so exercising
+# retention is now an INSERT that rolls back with ordinary cleanup. The schema is never touched, so
+# there is nothing to capture, nothing to restore, and nothing to assert about the restore. The
+# hazard was removed rather than guarded.
 
 # Rebuild v1 metadata so there is a genuine superseded version to age out.
 Psql @"
 delete from public.document_storage_findings where tenant_id='$TA';
 insert into public.document_versions (tenant_id, document_id, version_number, file_name, file_type_code, is_current, uploaded_at)
 values ('$TA','$DOC',1,'v1.pdf','pdf',false, now() - interval '400 days');
-create or replace function app.document_retention_days() returns integer language sql immutable set search_path='' as 'select 30::integer';
+insert into public.document_retention_policies (tenant_id, document_type_code, retention_days, reason)
+select d.tenant_id, d.document_type_code, 30, 'HTTP suite fixture'
+  from public.documents d where d.id='$DOC'
+on conflict (tenant_id, document_type_code) do update set retention_days = 30, is_active = true;
 select app.reconcile_document_storage()::text;
 "@ | Out-Null
 
@@ -387,12 +380,11 @@ $verCount = (Psql "select count(*) from public.document_versions where document_
 Check "NON-MUTATION: no version was added by either refusal" ($verCount -eq '1') "versions=$verCount"
 
 # ---------------------------------------------------------------------------------------------
-# 8. Restore the shipped retention policy and clean up.
+# 8. Withdraw the retention fixture and clean up.
 # ---------------------------------------------------------------------------------------------
-# PAR-2: restore the definition captured above, VERBATIM. Not a retyped equivalent -- see the note
-# in section 6. `create or replace function` preserves the existing ACL, so the migration's
-# `revoke execute ... from public` survives; that is asserted below rather than assumed.
-Psql $RetentionFnDef | Out-Null
+# RET-1: an ordinary DELETE of a fixture ROW, not a schema restore. Nothing about the shipped
+# definition of anything was changed by this suite, so there is nothing to put back.
+Psql "delete from public.document_retention_policies where reason = 'HTTP suite fixture';" | Out-Null
 
 # =================================================================================================
 # SPEC-154-B -- a financial document follows the work, not the department (`202607058700`).
@@ -466,10 +458,10 @@ Check "SPEC-154-B: the tenant owner still reads it -- finance/management visibil
 # PAR-2 positive control: the point of this suite is that it must leave the database EQUAL to the
 # repository. Proving the restore actually happened is what turns that from an intention into a
 # guarantee -- and it is the assertion whose absence let three sessions chase the same drift.
-$restored = (Psql "select md5(regexp_replace(regexp_replace(pg_get_functiondef('app.document_retention_days()'::regprocedure), '--[^' || chr(10) || ']*', '', 'g'), '\s+', ' ', 'g'));").Trim()
-Check "PAR-2: the shipped retention policy is restored VERBATIM, so local still equals the repository" ($restored -eq $RetentionFnMd5) "restored=$restored captured=$RetentionFnMd5"
-$pubExec = (Psql "select has_function_privilege('public','app.document_retention_days()','execute')::text;").Trim()
-Check "PAR-2: and the revoke from PUBLIC survived the replace" ($pubExec -eq 'false') "public_execute=$pubExec"
+$leftover = (Psql "select count(*) from public.document_retention_policies;").Trim()
+Check "RET-1: the retention fixture is withdrawn -- this suite leaves no policy behind, and it never altered the SCHEMA to begin with (PAR-2's hazard removed at the root)" ($leftover -eq '0') "policies=$leftover"
+$pubExec = (Psql "select has_function_privilege('public','app.document_retention_days(uuid,text)','execute')::text;").Trim()
+Check "RET-1: and the resolver is still revoked from PUBLIC" ($pubExec -eq 'false') "public_execute=$pubExec"
 $hdrCleanup = $hdrS
 foreach ($p in @($V2, "$TA/0000dead-0000-0000-0000-00000000000f/1")) { Req DELETE "$API/storage/v1/object/documents/$p" $hdrCleanup $null $null | Out-Null }
 # Remove what CAN be removed. `events`, `tenants` and `users` are deliberately left: the spine is

@@ -58,9 +58,14 @@ insert into storage.objects (bucket_id, name) values
 -- =============================================================================================
 -- 1-2. THE DEFAULT IS "RETAIN FOREVER", and it holds against a genuinely ancient version.
 -- =============================================================================================
+-- RET-1: the guarantee is now STRUCTURAL rather than a value check. No policy row exists at all
+-- (this migration seeds none), so every document type in every tenant resolves to NULL = RETAIN;
+-- and a zero or negative period cannot be STORED, not merely cannot be obeyed.
 select ok(
-  app.document_retention_days() is null or app.document_retention_days() >= 1,
-  'the retention period is either UNDECIDED (null) or at least one day -- never zero or negative');
+  (select count(*) from public.document_retention_policies) = 0
+  and exists (select 1 from pg_constraint
+               where conname = 'document_retention_policies_days_check'),
+  'RET-1: retention is UNDECIDED by default -- zero policy rows ship -- and a period below one day is unstorable');
 
 create temp table run1 as select app.reconcile_document_storage() as j;
 
@@ -163,8 +168,12 @@ select is(
 -- 14-15. THE DAY THE BUSINESS DECIDES. One line of one function changes and the retention path
 --        comes alive -- proved by changing exactly that line and nothing else.
 -- =============================================================================================
-create or replace function app.document_retention_days()
-returns integer language sql immutable set search_path = '' as $fn$ select 30::integer; $fn$;
+-- RET-1 (`202607060500`): retention is now a POLICY ROW, not a redefined function. This inserts a
+-- 30-day policy for every (tenant, document_type) present in this test and rolls back with the
+-- transaction -- so the suite no longer MUTATES THE SCHEMA IT TESTS, which was PAR-2's hazard.
+insert into public.document_retention_policies (tenant_id, document_type_code, retention_days)
+select distinct d.tenant_id, d.document_type_code, 30 from public.documents d
+on conflict (tenant_id, document_type_code) do update set retention_days = 30;
 
 select app.reconcile_document_storage();
 

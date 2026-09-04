@@ -104,8 +104,12 @@ select is(
   0,
   'with retention UNDECIDED there is no work at all, however old the version');
 
-create or replace function app.document_retention_days()
-returns integer language sql immutable set search_path = '' as $fn$ select 30::integer; $fn$;
+-- RET-1 (`202607060500`): retention is now a POLICY ROW, not a redefined function. This inserts a
+-- 30-day policy for every (tenant, document_type) present in this test and rolls back with the
+-- transaction -- so the suite no longer MUTATES THE SCHEMA IT TESTS, which was PAR-2's hazard.
+insert into public.document_retention_policies (tenant_id, document_type_code, retention_days)
+select distinct d.tenant_id, d.document_type_code, 30 from public.documents d
+on conflict (tenant_id, document_type_code) do update set retention_days = 30;
 select app.reconcile_document_storage();
 
 select is(

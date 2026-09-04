@@ -1405,6 +1405,37 @@ Core fields:
 
 # 6. Document Tables
 
+## document_retention_policies
+
+Purpose:
+
+The retention period for SUPERSEDED document versions, one row per (tenant, document_type_code). RET-1 (owner decision 2026-09-04, `202607060500`).
+
+Core fields:
+
+- id
+- tenant_id
+- document_type_code — validated against the `document_type` catalog
+- retention_days integer — NOT NULL and `>= 1`. Days from `document_versions.uploaded_at` after which a SUPERSEDED version becomes a destruction CANDIDATE. A zero or negative period cannot be STORED, not merely cannot be obeyed
+- reason nullable
+- is_active boolean — withdrawal is DEACTIVATION, not deletion: `authenticated` holds DELETE on no public base table in ORVION, and for a legal setting the record of what was configured must survive its withdrawal
+- created_by nullable — derived by `app.derive_created_by`, never accepted from the caller
+- created_at
+- updated_at
+
+Unique:
+
+- tenant_id + document_type_code — ONE authority per (tenant, type); a second row would be a second answer to a legal question
+- tenant_id + id (composite, TENANT-1)
+
+Rules:
+
+- **NO ROW MEANS NO POLICY, and no policy means nothing is ever destroyed.** The migration seeds ZERO rows, so that is the shipped state. `app.reconcile_document_storage` and `app.claim_storage_actions` INNER JOIN this table, so "retain by default" is the SHAPE of the query rather than a condition that could be edited away.
+- **There is deliberately no platform-wide default row and no nullable-tenant global row.** Two authorities disagreeing about a legal obligation is a defect, and a default would mean ORVION choosing a retention period on every tenant's behalf.
+- Only SUPERSEDED versions are ever candidates. The current version of a live document is never eligible at any age, guarded by both `is_current` and the document's own `current_version_id`.
+- Setting a policy costs MANAGE_TENANT_SETTINGS, enforced in the RLS policies rather than a trigger (as for `user_role_assignments` and `user_permission_grants`).
+- **ORVION invents no value.** Approved periods are supplied by the tenant on counsel's advice; Egypt's PDPL executive regulations require a controller to define and document a period tied to the purpose of collection, and Egyptian tax and commercial record-keeping set competing minimums. Reconciling those is a legal question.
+
 ## documents
 
 Purpose:

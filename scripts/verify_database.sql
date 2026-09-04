@@ -5,11 +5,14 @@
 -- freshly reset database: raises an exception on the first broken invariant, otherwise prints
 -- "ALL CHECKS PASSED". CI-able: a non-zero exit signals a regression.
 --   docker exec -i <db> psql -U postgres -d postgres -f - < scripts/verify_database.sql
--- Expected values track the frozen baseline: 76 public base tables, 71 catalog types, 607 catalog
+-- Expected values track the frozen baseline: 77 public base tables, 71 catalog types, 607 catalog
 -- values (565 + 4 refund lifecycle events registered by 202607049800, audit 2026-08-10; + 14
 -- related_entity_type values seeded by 202607050700 / SPEC-130, which also added the 68th type).
 -- NOTE (2026-08-29, GOV-5): this comment said "74 public base tables" while CHECK 2 eighteen lines
 -- below asserted 75 -- the prose in a guard drifted from the guard's own code. The ASSERTIONS are
+-- 76 -> 77 on 2026-09-04: `document_retention_policies` (RET-1, `202607060500`), the per-(tenant,
+-- document-type) retention authority that replaced a zero-arg global function. It ships with ZERO
+-- rows, so retention remains undecided and nothing is destroyable.
 -- 75 -> 76 on 2026-09-02: `user_permission_grants` (RBAC-3, `202607059800`), the per-user capability
 -- override table. Raised deliberately, with the table's purpose recorded, which is the only way this
 -- baseline is ever allowed to move.
@@ -33,7 +36,7 @@ begin
     -- 76 since 202607059800 (RBAC-3): `user_permission_grants` is the per-user grant/deny edge the
     -- role-only model had no way to express. The constant is raised because a table was legitimately
     -- added and is live on Primary, never to make a failing guard pass.
-    if n <> 76 then raise exception 'CHECK 2 FAILED: expected 76 public tables, found %', n; end if;
+    if n <> 77 then raise exception 'CHECK 2 FAILED: expected 77 public tables, found %', n; end if;
 
     -- 3. RLS enabled on every public base table
     select count(*) into n from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
@@ -165,6 +168,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (76 tables, RLS + policies, resolver + read-scope model, 71/607 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (77 tables, RLS + policies, resolver + read-scope model, 71/607 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

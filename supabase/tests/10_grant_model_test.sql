@@ -138,8 +138,8 @@ select cmp_ok(
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')),
-  '<=', 55,
-  'SEC-1 ceiling: at most 55 tables accept a direct INSERT from authenticated');
+  '<=', 56,
+  'SEC-1 ceiling: at most 56 tables accept a direct INSERT from authenticated -- 55 + document_retention_policies (RET-1, 2026-09-04): a tenant configures its own retention, so the row must be insertable, and its authority is MANAGE_TENANT_SETTINGS in the RLS policy');
 
 select cmp_ok(
   (select count(*)::int
@@ -156,8 +156,8 @@ select cmp_ok(
          where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
            and pg_get_functiondef(p.oid) ~
                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')),
-  '<=', 19,
-  '...and at most 19 of them have NO capability trigger that FIRES ON INSERT -- 18 + user_permission_grants (RBAC-3), whose capability check is in its RLS policies like user_role_assignments, not a trigger');
+  '<=', 20,
+  '...and at most 20 of them have NO capability trigger that FIRES ON INSERT -- 18 + user_permission_grants (RBAC-3) + document_retention_policies (RET-1), whose capability checks live in their RLS POLICIES like user_role_assignments, not in a trigger');
 
 -- RBAC-3, 2026-09-03 (`202607059800`) -- BOTH ceilings above rose by exactly one, and the one table
 -- is `user_permission_grants`. Raising a ceiling is the move this repository distrusts most, so the
