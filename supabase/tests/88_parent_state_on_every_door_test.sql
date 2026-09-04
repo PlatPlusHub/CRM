@@ -339,7 +339,16 @@ select is(
                      order by pr.proname || ' -> ' || pr.child || ' (' || pr.parent || ')'), '')
    from pairs pr left join guarded g on g.child = pr.child and g.parent = pr.parent
    where g.child is null)::text,
-  'process_lead_sla -> notifications (leads), record_lead_interaction -> lead_interactions (leads), upload_document -> document_links (documents), upload_subscription_payment_proof -> document_links (documents), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
+  -- SIXTH VERIFIED NON-DEFECT, added 2026-09-04 when FIN-7 registered `invoices` in
+  -- app.status_transitions and so made it a parent this detector examines.
+  -- `record_payment -> payments (invoices)` is NOT an unguarded path, and could not be one:
+  -- `public.payments` has NO `invoice_id` column, so a table-door guard there would have no invoice
+  -- to read. The invoice link is made through `payment_allocations`, which ALREADY carries
+  -- `payment_allocations_guard_parent_state` (PAY-1, migration 202607059500) enforcing exactly this
+  -- rule at exactly the door that can see it. Verified by reading the schema and the triggers, not
+  -- by matching the shape -- this detector's own header says static analysis is a lead, not a
+  -- verdict, and this is that lead being run down.
+  'process_lead_sla -> notifications (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payments (invoices), upload_document -> document_links (documents), upload_subscription_payment_proof -> document_links (documents), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
   'CLASS GUARD (PARENT-1): the only app functions that read a registered parent status and write another table WITHOUT a matching table-door guard are the five verified non-defects. Fails in BOTH directions -- a new unguarded pair fails it, and so does removing one of the four guards this migration added.');
 
 select * from finish();

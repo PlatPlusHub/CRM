@@ -84,7 +84,17 @@ insert into _rpc_owned values
   -- driven by a named operation, not a generic advancer. `app.archive_document` refuses only when
   -- the document is ALREADY archived, so it performs both registered moves.
   ('documents','active',    'archived','app.archive_document'),
-  ('documents','superseded','archived','app.archive_document');
+  ('documents','superseded','archived','app.archive_document'),
+  -- FIN-7. `invoices` has no `advance_invoice` either: the machine is driven by two named finance
+  -- operations whose own guards have always enforced it. `app.issue_invoice` performs the only move
+  -- into `issued`; `app.record_payment` performs every move into `partially_paid`/`paid` and DERIVES
+  -- which one from the amount rather than choosing it.
+  ('invoices','draft',         'issued',        'app.issue_invoice'),
+  ('invoices','issued',        'partially_paid','app.record_payment'),
+  ('invoices','issued',        'paid',          'app.record_payment'),
+  ('invoices','partially_paid','paid',          'app.record_payment'),
+  ('invoices','overdue',       'partially_paid','app.record_payment'),
+  ('invoices','overdue',       'paid',          'app.record_payment');
 
 -- =============================================================================================
 -- 1. COVERAGE. Every one of the ten functions must be parsed. This is the assertion the previous
