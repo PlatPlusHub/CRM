@@ -15,7 +15,12 @@
   settled decision presented as a current blocker nor a generated count copied out of its owner;
   18 the Active Change Request pointer names a real, still-open CR; 19 recorded Primary-ledger
   evidence, fail-closed):
-    Check 1 broken references · Check 2 intra-register status contradiction ·
+    Check 1 broken references — document tokens in Living docs, AND (GOV-13, 2026-09-04) pgTAP
+      `NN_*_test.sql` filenames cited in Living docs or in scripts/*.ps1, which nothing resolved
+      until three references survived the deletion of the files they named ·
+    Check 2 intra-register status contradiction — table rows, `###` headings, AND (GOV-11,
+      2026-09-04) detail-block `**Status:**` fields, whose pattern had matched 0 of 96 blocks
+      since it was written; both the same-file and the cross-Master pass now read them ·
     Check 3 boot-chain router integrity + AI-pointer thinness · Check 4 report class-header presence ·
     Check 5 manifest leanness (cold-boot cost) · Check 6 roadmap↔manifest phase agreement ·
     Check 7 ai-map freshness vs manifest — every live_state field the generator extracts (phase; and
@@ -105,6 +110,39 @@ foreach ($md in $livingDocs) {
     }
 }
 
+# GOV-13 (2026-09-04): the token set above is DOCUMENTS ONLY -- `NN_name.md`, `MASTER_*.md`,
+# `ADR-NNNN.md`. A pgTAP file named as the proof of a finding was never resolved by anything, and
+# the `d02b702` merge deleted two of them (the RECOVER-1 reconstructions, superseded by the
+# committed originals) while THREE live references kept naming them: two in MASTER_GAP_REGISTER.md
+# -- including the row that cited a deleted file as SUP-3's proof -- and one in
+# verify_role_journeys.ps1. The register pointing at a test that does not exist is a finding whose
+# evidence cannot be re-run, which is the same failure class as a stale document reference and was
+# simply outside the measured token set. Widened rather than given its own check number: it is the
+# same invariant (a reference that does not resolve), not a new one.
+#
+# SCOPE INCLUDES scripts/*.ps1, because the HTTP suites cite pgTAP files as their pgTAP counterpart
+# and one of the three stale references lived there. `history/` and `changes/` stay excluded exactly
+# as above -- an immutable dated report naming a file that existed on that date is HISTORY, and
+# correcting it would be rewriting the record (`GOVERNANCE.md §4`).
+$testRef = '(?<name>[0-9]{2}[a-z0-9_]*_test\.sql)'
+$refScanned = @($livingDocs) + @(
+    Get-ChildItem -Path (Join-Path $RepoRoot 'scripts') -Filter *.ps1 -File -ErrorAction SilentlyContinue
+)
+foreach ($src in $refScanned) {
+    $lineNo = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($src.FullName)) {
+        $lineNo++
+        foreach ($m in [regex]::Matches($line, $testRef)) {
+            $name = $m.Groups['name'].Value.ToLower()
+            if (-not $fileNames.ContainsKey($name)) {
+                $rel = $src.FullName.Substring($RepoRoot.Length + 1)
+                Write-Host "  BROKEN TEST REF: $rel : $lineNo -> $($m.Groups['name'].Value) (no such file in supabase/tests)" -ForegroundColor Yellow
+                $issues++
+            }
+        }
+    }
+}
+
 Write-Host "== Check 2: intra-file status contradiction in reports/master ==" -ForegroundColor Cyan
 
 $masterDir = Join-Path $RepoRoot 'reports/master'
@@ -143,8 +181,44 @@ if (Test-Path $masterDir) {
             # Proven by a cross-line probe on 2026-08-29 that the heading-only version did not catch.
             $blockHead = [regex]::Match($line, '^###\s+(?<id>' + $idPat.Trim('\b') + ')')
             if ($line -match '^#{1,3}\s') { $blockId = $(if ($blockHead.Success) { $blockHead.Groups['id'].Value } else { $null }) }
-            if ($blockId -and $line -match '^\s*-\s*\*\*Status:?\*\*.*\b(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b') {
+            # GOV-11 (2026-09-04): the pattern above this line USED to be
+            #   '^\s*-\s*\*\*Status:?\*\*.*\b(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b'
+            # which requires the bullet to BEGIN with `- **Status:**`. The register has never once
+            # written that form: it states a block's verdict INLINE on a combined field line,
+            #   `- **Category:** ... · **Severity:** ... · **Status:** **CLOSED 2026-09-03** · **Owner:** ...`
+            # so the detail-block half of this check matched **0 of 96** blocks from the day it was
+            # written (2026-08-29) until this repair -- while its own comment above asserts it was
+            # added precisely because the register "states a block's verdict on its own field far
+            # more often than in the heading". A guard whose description outruns its measurement is
+            # the MEAS-1 class, and this is that class inside the guard that reports it. Measured,
+            # not assumed: 46 blocks state a resolved verdict this way, including RECOVER-1
+            # (Critical, CLOSED), SUP-2, SUP-3, SUP-4a, RBAC-5 and RBAC-6 -- every one of whose
+            # statuses was invisible to a cross-Master contradiction search.
+            #
+            # The repair anchors the verdict to the marker IMMEDIATELY AFTER `**Status:**` rather
+            # than anywhere on the line, which is what keeps it precise: a block whose status is
+            # BLOCKED/OPEN/INTENTIONAL must not be read as resolved merely because a later clause
+            # on the same line contains the word "fixed". Attacked in both directions before it was
+            # trusted -- 46 resolved lines match, and all 40 non-resolved ones (BLOCKED, OPEN,
+            # INTENTIONAL, IN PROGRESS, OBSOLETE, MITIGATED, NARROWED, DEFER, SUPERSEDED,
+            # DELIVERED) do not.
+            #
+            # STATE THE LIMIT: the resolved VOCABULARY is deliberately unchanged
+            # (RESOLVED|FIXED|IMPLEMENTED|CLOSED). `DELIVERED` and `SUPERSEDED` read as terminal to
+            # a human and are still not counted here; widening the vocabulary is a separate
+            # decision about what those words mean, not part of repairing an anchor.
+            # SECOND HALF OF GOV-11, found by ATTACKING the first half rather than by reading it.
+            # Repairing the anchor above fixed the SAME-FILE contradiction pass only. A detail-block
+            # status line is neither a table row nor a `###` heading, so it never reaches the
+            # `foreach ($id in $ids)` loop below -- which is the ONLY place that populated
+            # $xResolved. AUD-04's cross-Master pass was therefore still blind to all 46 blocks even
+            # with the anchor fixed, and the mutation that should have flagged RECOVER-1 as OPEN in
+            # a second Master while CLOSED here came back CLEAN. Wiring the cross-file table here is
+            # what makes the published "conflicting finding status across Masters = 0" indicator
+            # true for findings whose only verdict lives in a detail block.
+            if ($blockId -and $line -match '^\s*-\s.*\*\*Status:?\*\*\s*\*{0,2}\s*(?:✅\s*)?(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b') {
                 $resolvedAt[$blockId] = $lineNo
+                if (-not $xResolved.ContainsKey($blockId)) { $xResolved[$blockId] = "$($md.Name):$lineNo" }
             }
             # OPEN only when it is a padded table cell: | OPEN | (kills prose false-positives)
             $rowOpen = $line -match '\|\s*OPEN\s*\|'

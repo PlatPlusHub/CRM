@@ -509,7 +509,11 @@ Check "SUP-4a: ...WITH its denomination -- an amount whose currency the API drop
 # =================================================================================================
 # SUP-3 -- the ceiling's WRITE authority over the wire (`202607059700`, recovered 2026-09-03).
 #
-# pgTAP proves this in `90_supplier_credit_authority_test.sql`. It is repeated here because
+# pgTAP proves this in `91_supplier_credit_permission_test.sql`. It is repeated here because
+# (Pointer corrected 2026-09-04, GOV-13: this named `90_supplier_credit_authority_test` (`.sql`
+# omitted deliberately -- a dead artifact, not a live reference), the RECOVER-1 reconstruction that
+# the `d02b702` merge superseded with the committed originals. It has not existed since the merge,
+# and nothing measured the reference until Check 1 was widened in the same commit.)
 # `suppliers` is a table PostgREST serves, so PATCH is a real door a browser can reach, and ADR-0024
 # is explicit that a rule an RPC enforces must also hold on the table door. `senior_employee` is the
 # load-bearing actor: it HOLDS ASSIGN_SUPPLIER, so a refusal here cannot be explained away as "that

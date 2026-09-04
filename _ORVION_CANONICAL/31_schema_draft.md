@@ -293,6 +293,9 @@ Core fields:
 - description
 - is_system
 - is_active
+- required_feature_code nullable — the plan feature that must be entitled for this permission to resolve true. The commercial upper boundary; see `app.plan_allows`.
+- capability_group nullable — dashboard grouping, DERIVED from canon 28's own section headings (CRM, Booking, Finance, Documents, Marketing, Organization, Subscription, API). Metadata for presentation, never a security boundary: nothing in the authorization decision reads it. NULL means canon 28 places the permission in no section, and an ungrouped capability is surfaced as ungrouped rather than filed somewhere plausible (RBAC-5, `202607059800`).
+- action_kind — `view` | `manage`, derived from canon 28's naming convention (`VIEW_*` is a read gate). Lets View and Manage be offered independently for a capability that has both; likewise metadata, not a boundary.
 
 ## role_permissions
 
@@ -327,6 +330,35 @@ Core fields:
 - is_active
 - assigned_by
 - created_at
+
+## user_permission_grants
+
+Purpose:
+
+Grants or denies ONE permission to ONE user, independently of their roles (RBAC-5, `202607059800`, ADR-0027). Before this table `role_permissions` was the only edge into `permissions`, so there was no path from a user to a permission except through a role — which made per-user grant, per-user revoke, explicit deny, and "a role is an overridable bundle" unrepresentable. Modelled on `user_role_assignments`, which is this repository's template for an administered identity table (SPEC-138): same lifecycle columns, same per-command RLS shape, same grant set.
+
+Core fields:
+
+- id
+- tenant_id
+- user_id — the SUBJECT of the grant (whose capability it is), not the actor. The actor is `created_by`.
+- permission_id
+- effect — `grant` | `deny`. Both live in one table because precedence is a property of the pair.
+- reason nullable
+- starts_at
+- ends_at nullable — with `starts_at`, the time bounds match `user_role_assignments` rather than inventing a second lifecycle.
+- is_active — revocation is `is_active = false`, never a DELETE, so the zero-DELETE invariant and the audit trail both survive.
+- created_by — derived by trigger (`app.derive_created_by`), never supplied by the caller.
+- created_at
+- updated_at
+
+Rules:
+
+- Unique on (tenant_id, user_id, permission_id, effect); `ends_at` must be later than `starts_at` when present.
+- Tenant-qualified composite foreign keys to `users` per TENANT-1 — a grant cannot record a subject or an actor from another tenant.
+- Written only by a holder of `MANAGE_PERMISSIONS`, enforced in per-command RLS policies (insert/update) rather than a trigger; read is tenant-scoped, as for `user_role_assignments`. There is deliberately **no DELETE policy**.
+- Resolution order in `app.has_permission`, which stays the single authorization decision point: **active DENY, then user GRANT, then role GRANT, then the plan gate — the plan gate always last**, so a tenant administrator can never grant past a commercial entitlement. Deny-override is adopted from established practice (AWS IAM explicit deny, Azure RBAC deny assignments), not invented here.
+- `app.effective_permissions` itemises the same decision in the same order for explainability; it is not a second opinion. As-built truth for all of the above is `supabase/migrations/202607059800_*.sql` (canon states intent; migrations are ground truth — `GOVERNANCE.md §2`).
 
 ---
 
