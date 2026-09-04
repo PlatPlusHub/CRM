@@ -157,6 +157,57 @@ $masterDir = Join-Path $RepoRoot 'reports/master'
 # only ever treats an id as a row's SUBJECT when it leads a table row or a `###` heading.
 $idPat = '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|R[0-9]+|A[0-9]+|B[0-9]+|N[0-9]+)\b'
 
+# GOV-18 (2026-09-04): open-detection used to be `$line -match '\|\s*OPEN\s*\|'` -- a padded cell
+# containing EXACTLY the word OPEN. Deliberate when written, to kill prose false-positives, but its
+# cost was never measured. Measured now, over every reports/master table: the bare form covers
+# **20 of 84** open rows. The other 64 say `DESIGN-READY`, `PENDING (OPTIONAL / NEEDS MORE
+# EVIDENCE)`, `BLOCKED - ...`, `OPEN - ...`, `TRIGGER-DEFERRED`, `VALIDATED-REQUIRED`,
+# `MOVED->PENDING` or `PARTIALLY RESOLVED`. Check 2's contradiction pass -- and, through $xOpen,
+# AUD-04's cross-Master pass -- was therefore blind to 76% of the open population, which is exactly
+# how GOV-17's five contradictions printed CLEAN.
+#
+# TWO CHANGES, and the first is what makes the second safe:
+#
+# 1. THE ROW'S STATUS CELL IS FOUND FROM ITS TABLE HEADER, not guessed. Every markdown table that
+#    declares a `Status` column sets $statusIdx for the rows beneath it, so the check reads the cell
+#    that actually holds the status -- index 9 in MASTER_GAP_REGISTER, but 2 in
+#    MASTER_CERTIFICATION_STATUS and 5/6 in MASTER_INTEGRATION_CATALOG. Positional-but-declared,
+#    the discipline that made the 2026-09-04 census correct after keyword matching failed twice.
+#    Without this, widening the vocabulary would read OTHER cells: the register's `Cert` column
+#    holds a bare ✅, and its `Owner Decision` column holds the bare word `pending`, so a widened
+#    whole-line match would have called almost every row both open and resolved at once.
+#    Measured before trusting: across all 15 Masters, ZERO rows have a non-status cell leading with
+#    a resolved marker while their status cell does not -- so narrowing resolved-detection to the
+#    status cell changes no existing verdict, and only removes that latent trap.
+#
+# 2. THE VOCABULARY IS DERIVED FROM THE FILES, not invented. Every distinct leading token of every
+#    status cell in reports/master was enumerated; the open set below is the register's own legend
+#    (`Status: OPEN . DESIGN-READY . RESOLVED . VERIFIED`) plus the deferral forms actually in use.
+#    Terminal verdicts stay OUT, deliberately: `INTENTIONAL`, `PROVEN NOT A DEFECT`, `UNPROVEN`,
+#    `ACCEPTED RISK`, `RECORDED, DELIBERATELY NOT FIXED`, `NOT REPRODUCIBLE`, `EVIDENCE ONLY`,
+#    `MEASURED`, `DECIDED`, `CONFIRMED`, `BUILT`, `CORRECTED`, `GUARDED`, `WIDENED`, `RECONCILED`,
+#    `REFACTORED`, `CONTROL APPLIED`, `RATIFIED`. Each of those is a finished verdict; reading one
+#    as "open" would manufacture contradictions, which is the mirror of the defect being fixed.
+#
+# DETAIL BLOCKS ARE DELIBERATELY NOT SCANNED FOR "OPEN", and this asymmetry is the design, not an
+# omission. A `###` block is an APPEND-ONLY NARRATIVE: the register records a finding's discovery
+# state and its later resolution as separate blocks, so `BLOCKED` in an early block followed by
+# `RESOLVED` in a later one is CORRECT history, not a contradiction -- TASK-3, ORPH-1, PERM-1,
+# RBAC-2, LEAD-2, LEAD-3 and LEAD-4 all have exactly that shape. The TABLE ROW is the current-state
+# record (one row per id), so "open" is read only from it, while "resolved" is read from either
+# substrate (GOV-11) -- a resolution recorded anywhere means a row still saying open is STALE,
+# which is precisely the GOV-17 case this exists to catch.
+#
+# PROVEN, NOT ASSERTED: scripts/test_status_contradiction_guard.ps1 -- 25 assertions over isolated
+# sandbox copies of reports/master, in BOTH directions. Ten open forms must be flagged (and the
+# suite also proves the pre-GOV-18 detector saw only one of them); eleven terminal verdicts must
+# NOT be, including the `**✅ RESOLVED ... Superseded text:** **BLOCKED ...**` shape that seventeen
+# real rows carry, plus a row planted with Cert=✅ and Owner=`pending` beside an open status to
+# prove the row is judged on its declared Status cell alone. Two controls bracket the suite.
+# It found and killed a real defect in its own harness before it certified anything here.
+$statusOpenLead = '^[\s*`]*(?:📋[\s*`]*)?(OPEN|BLOCKED|DESIGN-READY|PENDING|IN PROGRESS|PARTIALLY RESOLVED|TRIGGER-DEFERRED|VALIDATED-REQUIRED|MOVED\s*(?:→|->)\s*PENDING)\b'
+$statusResolvedLead = '^(\*\*)?\s*(✅|RESOLVED\b|IMPLEMENTED\b)'
+
 # AUD-04 (2026-08-29): `MASTER_REPOSITORY_HEALTH.md §3` published the indicator "Conflicting finding
 # status across MASTERS = 0", but this check has only ever compared a file against ITSELF -- the
 # hashtables below are rebuilt per file. The 0 was asserted, never measured, which is the exact
@@ -168,9 +219,10 @@ $xResolved = @{}  # id -> "file:line" where some Master marks it resolved
 
 if (Test-Path $masterDir) {
     foreach ($md in Get-ChildItem $masterDir -Filter *.md -File) {
-        $openAt = @{}      # id -> "line" where a table-row status cell is exactly OPEN
+        $openAt = @{}      # id -> "line" where a table-row status cell reads as OPEN (GOV-18)
         $resolvedAt = @{}  # id -> "line" where the id is marked resolved
         $blockId = $null   # id of the `### <ID> — ...` detail block currently being read
+        $statusIdx = -1    # GOV-18: index of the `Status` column of the table currently being read
         $lineNo = 0
         foreach ($line in [System.IO.File]::ReadAllLines($md.FullName)) {
             $lineNo++
@@ -220,6 +272,17 @@ if (Test-Path $masterDir) {
                 $resolvedAt[$blockId] = $lineNo
                 if (-not $xResolved.ContainsKey($blockId)) { $xResolved[$blockId] = "$($md.Name):$lineNo" }
             }
+            # GOV-18: learn this table's Status column from its header row, then judge each data row
+            # on THAT cell. A header row carries no status of its own, so it is consumed here.
+            $rowCells = @()
+            if ($line -match '^\s*\|') {
+                $rowCells = @(($line -split '(?<!\\)\|') | ForEach-Object { $_.Trim() })
+                $hdrAt = -1
+                for ($ci = 0; $ci -lt $rowCells.Count; $ci++) {
+                    if ($rowCells[$ci] -eq 'Status') { $hdrAt = $ci; break }
+                }
+                if ($hdrAt -ge 0) { $statusIdx = $hdrAt; continue }
+            }
             # OPEN only when it is a padded table cell: | OPEN | (kills prose false-positives)
             $rowOpen = $line -match '\|\s*OPEN\s*\|'
             # The resolved marker must LEAD a table cell, not merely appear somewhere on the line.
@@ -232,6 +295,13 @@ if (Test-Path $masterDir) {
             # `###` detail-block headings keep the loose match: they are prose, not cells.
             if ($line -match '^###\s') {
                 $rowResolved = $line -match '✅|\bRESOLVED\b|\bIMPLEMENTED\b'
+            } elseif ($statusIdx -ge 0 -and $statusIdx -lt $rowCells.Count) {
+                # GOV-18: the declared status cell is the row's status. Both verdicts are read from
+                # the SAME cell, so a row can never be open and resolved at once -- a contradiction
+                # is now only ever a row disagreeing with a detail block, which is the real defect.
+                $statusCell = $rowCells[$statusIdx]
+                $rowOpen     = $statusCell -match $statusOpenLead
+                $rowResolved = $statusCell -match $statusResolvedLead
             } else {
                 $rowResolved = $false
                 foreach ($cell in ($line -split '\|')) {
