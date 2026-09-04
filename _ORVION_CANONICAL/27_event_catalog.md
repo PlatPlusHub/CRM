@@ -437,6 +437,23 @@ Severity: info
 
 Severity: info
 
+## supplier_credit_threshold_exceeded
+
+Created when a supplier's outstanding payable, in the currency its credit ceiling is denominated in, rises above that ceiling. The ceiling WARNS; it never refuses (owner decision 2026-09-04, SUP-4b). Emitted once per breach, not once per write: it is suppressed while the most recent threshold event for the supplier is already this one.
+
+Severity: warning
+
+Triggers:
+
+- a booking-item cost becoming or remaining locked against the supplier
+- a supplier payment being recorded, changed or removed
+
+## supplier_credit_threshold_cleared
+
+Created when a supplier previously over its ceiling falls back to or below it. Exists so a later breach alerts again; without it the first breach would silence the supplier forever.
+
+Severity: info
+
 ---
 
 # Finance Events

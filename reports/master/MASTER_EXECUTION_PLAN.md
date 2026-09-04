@@ -1157,9 +1157,39 @@ additive capability.*
      Tests 91 (26) + 92 (26) + 2 in test 90; four class guards (test 10 ceilings, test 14 composite
      FK, test 35 gate exemptions, test 83 actor classification) each demanded and received explicit
      justification before they were edited. Suite 91/1273 → **92/1301**; HTTP 395; 76 tables.
+   * **SUP-4b — THE CEILING'S BEHAVIOUR, OWNER-DECIDED 2026-09-04 (`202607060100`), DEPLOYED.** The
+     owner answered the three questions this batch had deliberately left open, and the answer to the
+     first **dissolved** the other two: the ceiling **WARNS and never refuses** (**ADR-0028**), so
+     there is no refusal for an override permission to bypass and nothing for two concurrent writers
+     to race over. The FIN-10 deferred-constraint pattern and ADR-0020's override shape — both
+     recorded here as the likely form — were therefore **considered and deliberately not copied**,
+     which is worth more to a future reader than the code that was written. Delivered: AFTER-row
+     probes on `booking_items` and `payments` (the only two tables `app.supplier_balance` says can
+     move exposure), comparison **in the ceiling's own currency**, two canon-27 event types, and one
+     notification each to the **Company Owner and Finance Manager** resolved by ROLE — who is TOLD,
+     not who is ALLOWED. **No permission was minted, granted or widened, and `app.has_permission` was
+     not touched.** Idempotency is the **event ledger**, not a new column or status vocabulary.
+     `supplier_credit` gained `exposure_amount` + `threshold_exceeded`, one boolean a UI can render
+     red. **Two residues isolated rather than guessed: SUP-4c** (cross-currency "or equivalent" —
+     `exchange_rates` has **zero readers**, so a base currency, a rate source and an as-of rule are
+     all missing) and **CUST-3** (`customers` has zero credit columns, so a customer threshold is new
+     canon). **No email is sent** — the obligation is `pending` on the existing delivery ledger and
+     canon 10 records the boundary. Test 93 (23); suite 92/1303 → **93/1326**; HTTP 414; 76 tables.
+     **The four sibling targets in the same package — TRANS-1, DELIV-1/PH8-2, PLAN-1, QUO-4 — were
+     investigated and left OPEN**, because each is an owner decision the owner did not make; their
+     exact boundaries are in `session-2026-09-04-owner-policy-package.md`.
      **NEXT SLICE: the remaining Batch-6 tables** — the table-by-table audit below still owns the
      order. The write-without-read class is now closed on all five of its columns, and the five
      classes above are measured rather than assumed; a next slice needs a class none of them covers.
+     **Two further classes were measured CLEAN on 2026-09-04 and should not be re-swept:**
+     tenant-composite FK completeness (**195 of 195** intra-tenant FKs carry `tenant_id`; zero
+     exceptions) and RLS forced-vs-enabled (RLS on 76 of 76 public tables, `FORCE` on zero — uniform,
+     i.e. the platform default, already hashed by `parity_surface.sql`, and **not** to be changed:
+     ORVION's SECURITY DEFINER paths depend on owner-bypass semantics).
+     **The standing candidate is the RBAC-6 class** — `app.*` functions granted to `authenticated`
+     with no `public` wrapper (102 executable, 29 unwrapped, 25 intentionally internal, **4 genuine
+     candidates**: `item_financials`, `customer_balance`, `supplier_balance`, `booking_item_profit`).
+     They are **UNPROVEN as defects**; the correct first act is an **HTTP probe, not a migration**.
    * **PHASE C CONTINUED — the table-by-table audit.** WHY IT EXISTS: every package so far has
      found defects beside the one it was chartered for, and the remaining surface has never been
      swept as a whole. DISCOVERY SOURCE: the standing owner directive. SCOPE: all 75 tables and their

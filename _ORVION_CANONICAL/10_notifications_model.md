@@ -21,6 +21,8 @@ Future channels may include:
 - Email business alerts
 - External automation through n8n
 
+**Email business alerts — owner-directed 2026-09-04 (SUP-4b), and the boundary stated exactly.** The owner requires an email alert to the Company Owner and the Finance Manager when a supplier's exposure exceeds its credit ceiling. ORVION therefore now WRITES that obligation: the in-system notification is created and a matching `notification_deliveries` row is recorded on the `email` channel with status `pending`. **No email is sent.** ORVION has no email provider — no SMTP, and no third-party mail service is configured or referenced anywhere in the repository — so `pending` is the truthful terminal state today, and a dispatcher (n8n or a worker) reading that ledger is the remaining work. Nothing in the repository may report this alert as *delivered* until such a dispatcher exists and has been proven end to end.
+
 ---
 
 # Mandatory Notifications

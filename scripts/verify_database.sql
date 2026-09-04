@@ -5,7 +5,7 @@
 -- freshly reset database: raises an exception on the first broken invariant, otherwise prints
 -- "ALL CHECKS PASSED". CI-able: a non-zero exit signals a regression.
 --   docker exec -i <db> psql -U postgres -d postgres -f - < scripts/verify_database.sql
--- Expected values track the frozen baseline: 76 public base tables, 71 catalog types, 601 catalog
+-- Expected values track the frozen baseline: 76 public base tables, 71 catalog types, 603 catalog
 -- values (565 + 4 refund lifecycle events registered by 202607049800, audit 2026-08-10; + 14
 -- related_entity_type values seeded by 202607050700 / SPEC-130, which also added the 68th type).
 -- NOTE (2026-08-29, GOV-5): this comment said "74 public base tables" while CHECK 2 eighteen lines
@@ -111,7 +111,7 @@ begin
     select count(*) into n from catalog_types;
     if n <> 71 then raise exception 'CHECK 6a FAILED: expected 71 catalog_types, found %', n; end if;
     select count(*) into n from catalog_values;
-    if n <> 601 then raise exception 'CHECK 6b FAILED: expected 601 catalog_values, found %', n; end if;
+    if n <> 603 then raise exception 'CHECK 6b FAILED: expected 603 catalog_values, found %', n; end if;
 
     -- 7. Referential Action Standard: every public FK is restrict/no-action, except the documented
     --    exceptions (users.auth_user_id set null; 3 auth-support cascades to auth.users).
@@ -159,6 +159,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (76 tables, RLS + policies, resolver + read-scope model, 71/601 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (76 tables, RLS + policies, resolver + read-scope model, 71/603 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

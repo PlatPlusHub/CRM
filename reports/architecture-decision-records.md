@@ -272,6 +272,28 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
 
 ---
 
+## ADR-0028 — A supplier credit ceiling is an OBSERVATION, not a gate
+
+- Date: 2026-09-04 · Status: Accepted (owner-directed). Implemented by `202607060100`, deployed to Primary. Register row: **SUP-4b**. Residues: **SUP-4c**, **CUST-3**.
+- Source: owner directive of 2026-09-04, quoted rather than paraphrased — *"EXCEEDING the limit MUST NOT block operations"*, *"No new entry/addition/action should be prevented merely because the ceiling has been exceeded"*, *"The intended behavior is WARNING/ALERT, NOT REFUSAL/BLOCKING"*.
+
+- **The decision.** The supplier credit ceiling **warns and never refuses**. It is a measured observation published to the people accountable for it, not an authorization boundary. `CREDIT LIMIT ENFORCED = NO` remains literally true and is now the *chosen* state rather than an unimplemented one.
+
+- **Why this is an ADR and not merely a register row.** It settles the *shape* of every future ceiling in ORVION. The repository already had a blocking-ceiling precedent — `payment_allocations_within_invoice_total` (FIN-10), a DEFERRABLE INITIALLY DEFERRED constraint trigger — and SUP-4b's own row had recorded ADR-0020's override-permission pattern as the likely form. **Both were rejected by the owner's decision**, and a future reader finding those precedents needs to know they were considered and deliberately not copied.
+
+- **What the decision removes, which is the point.** A blocking ceiling would have required: an override permission (canon 28 names none for supplier credit, so one would have been minted); a `risk` event type; and a serialisation story, because `exposure + new <= limit` must lock the rows it sums. A warning requires **none of them**. The concurrency question SUP-4b had carefully deferred is not answered here — it is **dissolved**: a warning cannot wrongly refuse a transaction, so there is nothing for two concurrent writers to race over. Choosing the non-blocking policy removed an entire class of engineering rather than deferring it.
+
+- **Consequences, stated as constraints on future work:**
+  - **No caller may treat `threshold_exceeded` as an authorization result.** It is a display flag behind the existing `VIEW_FINANCIAL_DOCUMENTS` gate. A future UI renders it; nothing refuses on it.
+  - **The alert is bound to a state TRANSITION, not to a state.** Idempotency lives in the event ledger (`supplier_credit_threshold_exceeded` / `_cleared`), deliberately not in a new column or status vocabulary — the owner explicitly declined a colour/status system. Any future consumer must read the latest of that pair, not recompute "is over".
+  - **Recipients are resolved by ROLE (`owner`, `finance_manager`), and that is not an authorization decision.** It answers who is *told*, never who is *allowed*. The `deny > user grant > role grant > plan gate` order is untouched by this ADR, and no permission was minted, granted or widened.
+  - **Exposure is compared per currency and never converted** — ADR-0020/ADR-0021's shipped rule. Cross-currency "equivalence" is **SUP-4c** and is deliberately unanswered: `public.exchange_rates` has **zero readers**, and inventing an FX mechanism to satisfy a threshold is the redesign `AGENTS.md §3` forbids.
+  - **The email obligation is written, not sent.** Canon 10 records the boundary: a `notification_deliveries` row on the `email` channel at status `pending`, because ORVION has no mail provider. Nothing may report this alert as delivered until a dispatcher exists and is proven end to end.
+
+- Revisit trigger: the owner asks for a supplier operation to be *refused* on exposure. That is a different decision, not an extension of this one, and it re-opens the override-permission and concurrency questions this ADR removed.
+
+---
+
 
 ## Programme lesson numbering (resolved 2026-08-31)
 

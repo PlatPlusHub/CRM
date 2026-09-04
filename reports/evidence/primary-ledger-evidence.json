@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-03T10:42:00Z",
+  "read_at": "2026-09-04T08:58:20Z",
   "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations)",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "b2210f7d1b768274a2fc75d6fc81df04d7bbab9d",
-  "migration_count": 189,
-  "ledger_fingerprint": "4029ecefa4bf40639b3bb61d63f986ef",
+  "repository_head": "8b3a08f521e5a2e0ae8567d5b4757a8a2509781c",
+  "migration_count": 190,
+  "ledger_fingerprint": "1eaa2ec7d64f0403c8587c01aab6975f",
   "provenance": "count and ledger_fingerprint were produced BY PRIMARY over Primary rows. The ledger array was then proven to hash to that fingerprint, which is verification against an independent authority -- NOT derivation of a Primary value from the repository (GUARD-1).",
   "ledger": [
     "202607041200_enable_extensions",
@@ -197,6 +197,7 @@
     "202607059700_supplier_credit_is_its_own_authority",
     "202607059800_capability_grants_are_per_user_not_only_per_role",
     "202607059900_a_ceiling_with_no_currency_is_not_an_amount",
-    "202607060000_the_explainer_needs_a_door"
+    "202607060000_the_explainer_needs_a_door",
+    "202607060100_a_ceiling_that_warns_is_a_ceiling_that_speaks"
   ]
 }
