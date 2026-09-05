@@ -183,7 +183,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `document_versions` | `SIU-` | yes | conditional | scope_isolation |
 | `documents` | `SIU-` | yes | conditional | scope_isolation |
 | `events` | `S---` | no | no | audit_insert, audit_read |
-| `exchange_rate_adjustments` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `exchange_rate_adjustments` | `SI--` | no | no | scope_insert, scope_read |
 | `exchange_rates` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `feature_entitlements` | `S---` | no | no | read_all_authenticated |
 | `financial_accounts` | `SIU-` | yes | conditional | tenant_isolation |

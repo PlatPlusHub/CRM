@@ -1311,7 +1311,7 @@ if (-not (Test-Path $ciWorkflow)) {
     $ciText = Get-Content $ciWorkflow -Raw
     # path -> the check(s) that read it, so a failure says WHY the path matters.
     $requiredTriggers = [ordered]@{
-        '**/*.md'                                     = 'Checks 1-6, 10-18 and 21 (every Living/Master document)'
+        '**/*.md'                                     = 'Checks 1-6, 10-18, 21, 22 and 23 (every Living/Master document, the disposition record, and every history report)'
         'scripts/check_repository_consistency.ps1'    = 'this script itself'
         'scripts/check_primary_ledger.ps1'            = 'Check 19 executes it'
         'reports/evidence/primary-ledger-evidence.json' = 'Check 19 reads it'
@@ -1424,6 +1424,169 @@ if ($staleHeaders -gt 0) {
     $issues += $staleHeaders
 } else {
     Write-Host "  all $freshChecked document(s) carrying freshness metadata agree with their own newest dated content" -ForegroundColor Green
+}
+
+Write-Host ""
+# =====================================================================================================
+# Check 22: DISP-1 -- the surface disposition record must cover exactly the surfaces that exist, and
+# every pointer in it must resolve.
+#
+# WHY IT EXISTS. Batch 6's exit criterion EC-1 is a per-surface audit disposition record, and the
+# reason it is the FIRST criterion is that without one the coverage question has no honest answer.
+# Two proxies were measured and both were worthless: all 77 tables are named somewhere in
+# `reports/**` (so "mentioned" is saturated), and 75 of 77 are named in some pgTAP file (a floor -- a
+# table named once in an unrelated fixture is not a swept surface). A hand-maintained record would
+# rot the moment a migration adds a table, which is the STALE-1 class one file over. So the surface
+# SET is derived, and only the dispositions are written.
+#
+# FOUR THINGS, because a coverage record can lie in four different ways:
+#   (a) it names a surface that does not exist          -> the record has drifted from the schema
+#   (b) it omits a surface that does exist              -> the coverage denominator is understated
+#   (c) a Disposition/Assurance value is off-vocabulary -> the count means nothing
+#   (d) a Session or Findings pointer does not resolve  -> the evidence is not there
+#
+# CEILING, stated in the file too (MEAS-1). The surface set is derived by parsing `create table` /
+# `drop table` out of `supabase/migrations/**`. A table created by dynamic SQL, or renamed by
+# `ALTER TABLE ... RENAME`, would fool it. That is bounded rather than open: `verify_database.sql`
+# and `check_database_parity.ps1` both read the live catalog and would catch the divergence from the
+# other side. This check cannot open a database -- none of them here can -- so a text derivation with
+# a stated ceiling is the honest instrument, not a weaker one pretending to be strong.
+#
+# It does NOT judge whether a disposition is TRUE. Nothing mechanical can read "AUDITED" and know
+# whether the audit happened; that is what the named immutable session report is for.
+# =====================================================================================================
+Write-Host "== Check 22: surface disposition record covers what exists (DISP-1) ==" -ForegroundColor Cyan
+$dispPath = Join-Path $RepoRoot 'reports/master/MASTER_SURFACE_DISPOSITION.md'
+if (-not (Test-Path $dispPath)) {
+    Write-Host "  MISSING: reports/master/MASTER_SURFACE_DISPOSITION.md -- Batch 6 exit criterion EC-1 has no record." -ForegroundColor Red
+    $issues++
+} else {
+    $migDir = Join-Path $RepoRoot 'supabase/migrations'
+    $migText = ((Get-ChildItem $migDir -Filter *.sql -File | Sort-Object Name | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }) -join "`n")
+    # `(?!\s*\.)` keeps `create table app.x` out: without it the optional `public.` prefix lets the
+    # schema name itself be captured as a table.
+    $mkRx = '(?im)^\s*create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)(?!\s*\.)\s*\('
+    $rmRx = '(?im)^\s*drop\s+table\s+(?:if\s+exists\s+)?(?:public\.)?([a-z_][a-z0-9_]*)(?!\s*\.)'
+    $made = @([regex]::Matches($migText, $mkRx) | ForEach-Object { $_.Groups[1].Value })
+    $gone = @([regex]::Matches($migText, $rmRx) | ForEach-Object { $_.Groups[1].Value })
+    $expected = @($made | Where-Object { $gone -notcontains $_ } | Sort-Object -Unique)
+
+    $registerPath = Join-Path $RepoRoot 'reports/master/MASTER_GAP_REGISTER.md'
+    $registerText = if (Test-Path $registerPath) { [System.IO.File]::ReadAllText($registerPath) } else { '' }
+    $okDisposition = @('NOT-RECORDED', 'AUDITED', 'AUDITED-OPEN', 'PARTIAL', 'EXEMPT')
+    $okAssurance   = @('—', '-', 'TESTED', 'ADVERSARIAL')
+    $listed = @()
+    $dispIssues = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($dispPath)) {
+        # `-cnotmatch`, not `-notmatch`: PowerShell's default comparison is CASE-INSENSITIVE, so the
+        # lowercase pattern also matched the two uppercase VOCABULARY tables in this file's header
+        # (`| AUDITED | ... |`) and reported five phantom surfaces on the first run. Table names are
+        # lower_snake_case by convention (`CODING_STANDARDS.md`), so case is the discriminator.
+        if ($line -cnotmatch '^\|\s*`([a-z_][a-z0-9_]*)`\s*\|') { continue }
+        $surface = $Matches[1]
+        $listed += $surface
+        $cells = @($line.Trim('|') -split '\|' | ForEach-Object { $_.Trim() })
+        if ($cells.Count -lt 6) {
+            Write-Host "  MALFORMED ROW: $surface has $($cells.Count) cells, expected 6 (Surface, Disposition, Assurance, Session, Findings, Next)" -ForegroundColor Yellow
+            $dispIssues++
+            continue
+        }
+        $disp = ($cells[1] -replace '\*', '').Trim()
+        $assr = ($cells[2] -replace '\*', '').Trim()
+        if ($okDisposition -notcontains $disp) {
+            Write-Host "  OFF-VOCABULARY DISPOSITION: $surface -> '$disp' (allowed: $($okDisposition -join ', '))" -ForegroundColor Yellow
+            $dispIssues++
+        }
+        if ($okAssurance -notcontains $assr) {
+            Write-Host "  OFF-VOCABULARY ASSURANCE: $surface -> '$assr' (allowed: $($okAssurance -join ', ')). EXHAUSTIVE is deliberately not a per-surface value." -ForegroundColor Yellow
+            $dispIssues++
+        }
+        $sess = ($cells[3] -replace '`', '').Trim()
+        if ($sess -notin @('—', '-') -and -not $fileNames.ContainsKey(($sess + '.md').ToLower())) {
+            Write-Host "  UNRESOLVED SESSION POINTER: $surface cites '$sess', which is not a file in this repository" -ForegroundColor Yellow
+            $dispIssues++
+        }
+        $find = ($cells[4] -replace '\*', '').Trim()
+        if ($find -notin @('—', '-')) {
+            foreach ($id in ($find -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })) {
+                if ($registerText -notmatch [regex]::Escape($id)) {
+                    Write-Host "  UNREGISTERED FINDING: $surface cites '$id', which has no row in MASTER_GAP_REGISTER.md" -ForegroundColor Yellow
+                    $dispIssues++
+                }
+            }
+        }
+    }
+    $listed = @($listed | Sort-Object -Unique)
+    foreach ($ghost in ($listed | Where-Object { $expected -notcontains $_ })) {
+        Write-Host "  PHANTOM SURFACE: '$ghost' has a disposition row but no migration creates it" -ForegroundColor Yellow
+        $dispIssues++
+    }
+    foreach ($missing in ($expected | Where-Object { $listed -notcontains $_ })) {
+        Write-Host "  UNCOVERED SURFACE: '$missing' exists in supabase/migrations but has no disposition row -- add it as NOT-RECORDED" -ForegroundColor Yellow
+        $dispIssues++
+    }
+    if ($dispIssues -gt 0) {
+        $issues += $dispIssues
+    } else {
+        Write-Host "  all $($expected.Count) migration-derived surfaces have a disposition row; every vocabulary value, session and finding pointer resolves" -ForegroundColor Green
+    }
+}
+
+Write-Host ""
+# =====================================================================================================
+# Check 23: HANDOFF-1 -- a session report written under the HANDOFF rule must actually carry one.
+#
+# `AGENTS.md §6` requires every session report to open with a HANDOFF block answering seven questions
+# -- INHERITED, PROVEN, UNPROVEN, CHANGED, REMAINING, DO NOT TOUCH, NEXT -- because that block is the
+# whole LLM-agnostic continuity mechanism: a fresh session with no conversational memory reads
+# `reports/README.md`'s pointer, opens the named report, and inherits from those seven lines. The rule
+# was written on 2026-09-05 and nothing measured it, which is the documentation-stronger-than-the-
+# measurement class (MEAS-1) applied to the one document a cold start depends on most.
+#
+# FORWARD-ONLY, and that is not a loophole. `GOVERNANCE.md §6` rule 3 makes historical reports
+# immutable; 123 of the 128 reports predate the rule and MUST NOT be retrofitted, because editing an
+# immutable record to satisfy a later convention is a worse defect than the one being fixed. The
+# check therefore reads each report's own `Date:` field and applies the rule only from the date the
+# rule exists. A report with no parseable Date is skipped rather than guessed at -- Check 4 already
+# owns whether a report declares itself at all.
+# =====================================================================================================
+Write-Host "== Check 23: session reports carry their HANDOFF block (HANDOFF-1) ==" -ForegroundColor Cyan
+$handoffRuleDate = [datetime]'2026-09-05'
+$handoffFields = @('INHERITED', 'PROVEN', 'UNPROVEN', 'CHANGED', 'REMAINING', 'DO NOT TOUCH', 'NEXT')
+$historyDir = Join-Path $RepoRoot 'reports/history'
+$handoffIssues = 0
+$handoffChecked = 0
+if (Test-Path $historyDir) {
+    foreach ($rep in (Get-ChildItem $historyDir -Filter *.md -File)) {
+        $text = [System.IO.File]::ReadAllText($rep.FullName)
+        $head = ($text -split "`n" | Select-Object -First 12) -join "`n"
+        if ($head -notmatch '(?im)^\s*Date:\s*(20[0-9]{2}-[01][0-9]-[0-3][0-9])') { continue }
+        $repDate = [datetime]::MinValue
+        if (-not [datetime]::TryParseExact($Matches[1], 'yyyy-MM-dd', $null, 'None', [ref]$repDate)) { continue }
+        if ($repDate -lt $handoffRuleDate) { continue }
+        $handoffChecked++
+        if ($text -notmatch '(?i)HANDOFF') {
+            Write-Host "  NO HANDOFF BLOCK: reports/history/$($rep.Name) is dated $($repDate.ToString('yyyy-MM-dd')) -- on or after the rule -- and has none. A fresh session inherits nothing from it." -ForegroundColor Yellow
+            $handoffIssues++
+            continue
+        }
+        # `\b` rather than a fixed punctuation set: the field labels are written as `**PROVEN
+        # (behavioural evidence, this session):**` as often as `**CHANGED:**`, and requiring a
+        # colon-or-comma immediately after the word reported PROVEN missing from all five reports
+        # that carry it. The `\*\*` prefix is what keeps `**UNPROVEN` from satisfying `PROVEN`.
+        $absent = @($handoffFields | Where-Object { $text -notmatch ('(?i)\*\*' + [regex]::Escape($_) + '\b') })
+        if ($absent.Count -gt 0) {
+            Write-Host "  INCOMPLETE HANDOFF: reports/history/$($rep.Name) is missing $($absent -join ', ')" -ForegroundColor Yellow
+            $handoffIssues++
+        }
+    }
+}
+if ($handoffIssues -gt 0) {
+    Write-Host "  The seven fields are AGENTS.md §6's, and DO NOT TOUCH is the one this repository lacked:" -ForegroundColor DarkGray
+    Write-Host "  a boundary stated by the session that found it, so the next agent does not reopen a settled question." -ForegroundColor DarkGray
+    $issues += $handoffIssues
+} else {
+    Write-Host "  all $handoffChecked report(s) written under the HANDOFF rule carry a complete seven-field block" -ForegroundColor Green
 }
 
 Write-Host ""
