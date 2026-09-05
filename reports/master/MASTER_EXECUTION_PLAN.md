@@ -2,7 +2,21 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-05 (**Batch 6's evidence foundation exists, and its first slice is done — EC-1
+Last updated: 2026-09-06 (**slices 2 and 3 recorded — EC-1 stands at 4 of 77, and slice 3 found a
+class defect by attacking its own repair.** Slice 2 (`financial_accounts`, `202607061200`) closed
+**FA-1** and **SECDEF-1** and left **FA-2** as an owner question; slice 3 (`company_assets`,
+`202607061300`) closed **CA-1**, **CA-2** and **MONEY-1**. MONEY-1 is the one that generalises:
+PostgreSQL defines `numeric` NaN as greater than every non-NaN value, so **every `>= 0` money CHECK
+in this repository admitted it** — reproduced through the real PostgREST door (HTTP 201) and shown to
+turn `reporting.customer_outstanding.outstanding_balance` into NaN. All 32 numeric columns on public
+base tables now carry a companion no-NaN constraint. **A fourth self-enforcing rule was earned and is
+recorded in the loop below.** Slice 3 also found that slice 1 left `campaign_daily_metrics` able to
+record spend denominated in nothing (**CDM-3**), on a row that already read `AUDITED`.
+**Batch 6 remains NOT COMPLETE**: 73 surfaces at `NOT-RECORDED`. *This header's own previous entry
+was left at "2 of 77" while slice 2 moved it to 3 — same-day, which is exactly the staleness Check 21
+cannot see, and is noted here rather than quietly corrected.* Prior entry follows.)
+
+Previously: 2026-09-05 (**Batch 6's evidence foundation exists, and its first slice is done — EC-1
 is now measurable and the answer is 2 of 77.** `MASTER_SURFACE_DISPOSITION.md` gives every surface a
 recorded disposition with the SET **derived** from `supabase/migrations/**` (Check 22), so the
 coverage denominator cannot drift from the schema. Slice 1 was chosen by measurement — the only two
@@ -1377,11 +1391,18 @@ slices stay comparable:
 | **PRIVILEGE** | SECURITY DEFINER reachability, `search_path`, owner privileges, RLS bypass, and what a caller-supplied id means inside a definer function |
 | **OBSERVABILITY** | can an invalid operation happen without leaving the evidence it should |
 
-**Three rules the loop enforces on itself**, each earned by a defect in this repository's own
+**Four rules the loop enforces on itself**, each earned by a defect in this repository's own
 measuring layer: a repair is not done until a **defect injection** proves the test detects its
 absence (**PAR-4**); an injection assertion must be **re-asserted after the rollback** or it is never
-counted (**TEST-3**); and a control found **strong** is recorded and pinned, because proving an
-existing control works is a cheaper and better outcome than adding another one.
+counted (**TEST-3**); a control found **strong** is recorded and pinned, because proving an
+existing control works is a cheaper and better outcome than adding another one; and — added
+2026-09-06, earned by **MONEY-1** — **attack the repair you are about to write, before you write it,
+against the engine's own documented semantics.** Slice 3's draft fix was `check (amount >= 0)`,
+copied from fifteen columns that already carried it and correct-looking in every review; probing the
+*constraint* rather than the code found that PostgreSQL ranks `numeric` NaN above every non-NaN
+value, so that shape had never excluded NaN anywhere in the repository. A repair inherited from a
+precedent inherits the precedent's blind spots, and the cheapest moment to find that is before the
+migration exists.
 
 **Slice selection is a measurement, not a preference.** `scripts/batch6_select_target.ps1` ranks
 every surface still at `NOT-RECORDED` by exposure minus coverage — money, PII, unguarded write
@@ -1410,7 +1431,7 @@ policy (MAIL-1, RET-1).
 
 | # | Criterion | How it is measured today |
 |---|---|---|
-| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **2 of 77 recorded**. The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
+| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **4 of 77 recorded** (2026-09-06). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
 | **EC-2** | **Authorization.** Every writable surface has a documented authorization rationale; exceptions explicit | Already partly earned and already pinned: `57_write_capability_map_test.sql` and `58_write_grants_and_config_capability_test.sql` carry the 54/17/3 ceilings, and the residual three are the canon-34 Human Identity tables with a stated rationale. Exit = the ceilings hold and every remaining exception names its reason |
 | **EC-3** | **Tenant isolation.** No unresolved tenant-crossing path in scope | Positive+negative HTTP proof exists (`verify_api_end_to_end.ps1` against a fully privileged owner of another agency). Exit = every table in EC-1's record has a stated isolation basis (RLS predicate, structural path prefix, or platform-only) |
 | **EC-4** | **Lifecycle integrity.** No unresolved invalid transition or parent/child contradiction | `54_transition_permission_parity_test` (both directions, all ten functions) and the PARENT-1 class guard in `88_parent_state_on_every_door_test` (seven verified non-defects, each run down against the catalog). Exit = both green with no unexplained entry |

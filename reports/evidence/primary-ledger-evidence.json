@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-05T21:40:00Z",
+  "read_at": "2026-09-05T23:10:00Z",
   "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations)",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "22f302e66695bca0bd5b1b54f31a296d5c01180c",
-  "migration_count": 201,
-  "ledger_fingerprint": "9f574e3bb3080400047533e6c33b97b3",
+  "repository_head": "17b03964c988c4f37f1676a532208a84b9c412ed",
+  "migration_count": 202,
+  "ledger_fingerprint": "c6398307872fcfb9e2a9752cec6edc9d",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -208,6 +208,7 @@
     "202607060900_a_delivery_obligation_that_is_attempted_retried_and_abandoned",
     "202607061000_the_sla_records_its_delivery_obligation_like_every_other_alert",
     "202607061100_a_daily_metric_is_one_row_a_day_and_a_rate_correction_is_written_once",
-    "202607061200_an_account_keeps_the_currency_its_money_arrived_in"
+    "202607061200_an_account_keeps_the_currency_its_money_arrived_in",
+    "202607061300_a_number_that_is_not_a_number_is_not_an_amount"
   ]
 }

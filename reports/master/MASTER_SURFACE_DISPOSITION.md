@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative assurance record — the SSOT for one fact and one only: what audit disposition each database surface has been given, by which session, and what remains.** Never recreate; evolve. One row per `public` table. It owns no findings (those are `MASTER_GAP_REGISTER.md`), no narrative (that is the named session report), no schema (that is the catalog and `MASTER_DOMAIN_CATALOG.md`), and no test inventory (that is `supabase/tests/**`). Every cell that is not the disposition itself is a **pointer**, deliberately, so nothing here can drift from a fact it restates. Cross-reference: `MASTER_EXECUTION_PLAN.md` Batch 6 exit criteria **EC-1**, which this file exists to satisfy.
 
-Last updated: 2026-09-05 (**created — EC-1.** Batch 6's exit criteria named a per-surface disposition record as the first thing that had to exist, because without one "how much has been audited?" is unanswerable: all 77 tables are named somewhere in `reports/**`, so *mention* is saturated and proves nothing, and 75 of 77 are named in some pgTAP file, which is a floor and not coverage. Seeded with all **77** surfaces and the first slice's **2**.)
+Last updated: 2026-09-06 (**slice 3 — `company_assets`, and a residue found in a row that already read AUDITED.** Coverage **3 → 4 of 77**. The slice was chosen by `scripts/batch6_select_target.ps1` and closed **CA-1**, **CA-2** and — by attacking its own draft repair — **MONEY-1**, a class defect in every money CHECK in the repository. It also found that slice 1 left `campaign_daily_metrics` able to record spend denominated in nothing (**CDM-3**); that row keeps its `AUDITED` disposition and gains the finding, because a disposition records what was assessed and the currency question was not asked. `MASTER_GAP_REGISTER.md` owns all five.)
+
+Previously: 2026-09-05 (**created — EC-1.** Batch 6's exit criteria named a per-surface disposition record as the first thing that had to exist, because without one "how much has been audited?" is unanswerable: all 77 tables are named somewhere in `reports/**`, so *mention* is saturated and proves nothing, and 75 of 77 are named in some pgTAP file, which is a floor and not coverage. Seeded with all **77** surfaces and the first slice's **2**.)
 
 ---
 
@@ -36,9 +38,9 @@ There is deliberately **no `EXHAUSTIVE` value.** Exhaustive adversarial audit is
 
 ## Coverage
 
-**3 of 77 recorded · 2 `AUDITED` · 1 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 74 `NOT-RECORDED`.**
+**4 of 77 recorded · 3 `AUDITED` · 1 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 73 `NOT-RECORDED`.**
 
-**All 3 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
+**All 4 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
 
 This count is the honest one and it is meant to be uncomfortable. It replaces two numbers that read better and mean less: "all 77 tables appear in the reports" (true, and worthless — mention is not audit) and "75 of 77 tables appear in a pgTAP file" (true, and a floor — a table named once in an unrelated fixture is not a swept surface).
 
@@ -51,11 +53,11 @@ This count is the honest one and it is meant to be uncomfortable. It replaces tw
 | `bookings` | NOT-RECORDED | — | — | — | — |
 | `branch_business_hours` | NOT-RECORDED | — | — | — | — |
 | `branches` | NOT-RECORDED | — | — | — | — |
-| `campaign_daily_metrics` | **AUDITED** | ADVERSARIAL | `session-2026-09-05-batch6-evidence-foundation` | CDM-1, CDM-2 | — |
+| `campaign_daily_metrics` | **AUDITED** | ADVERSARIAL | `session-2026-09-05-batch6-evidence-foundation` | CDM-1, CDM-2, CDM-3 | — |
 | `catalog_types` | NOT-RECORDED | — | — | — | — |
 | `catalog_values` | NOT-RECORDED | — | — | — | — |
 | `chart_of_accounts` | NOT-RECORDED | — | — | — | — |
-| `company_assets` | NOT-RECORDED | — | — | — | — |
+| `company_assets` | **AUDITED** | ADVERSARIAL | `session-2026-09-06-batch6-slice3-company-assets` | CA-1, CA-2, MONEY-1 | — |
 | `complaints` | NOT-RECORDED | — | — | — | — |
 | `conversation_messages` | NOT-RECORDED | — | — | — | — |
 | `conversations` | NOT-RECORDED | — | — | — | — |
