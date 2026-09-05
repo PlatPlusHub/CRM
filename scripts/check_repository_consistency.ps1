@@ -43,13 +43,18 @@
     Check 19 the repository CARRIES attributable evidence that Primary's migration ledger is this
       repository's migration ledger (RECOVER-1) -- a RECORDED reading, fail-closed, never a live one ·
     Check 20 this guard's OWN CI workflow is triggered by every input this guard reads (CI-1) -- a
-      fixed list, because inferring the input set from this script would be a guess.
+      fixed list, because inferring the input set from this script would be a guess ·
+    Check 21 no document's freshness metadata (`Last updated:` / `Last measured:`) is OLDER than the
+      newest date its own body carries (STALE-1) -- semantic, never wall-clock: a document nobody has
+      touched passes forever; only added-dated-content-without-a-header-update fails.
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
   told to look up actually EXIST in the register that claims to define it (11). Check 12 asks the
   fourth: is the evidence even dated plausibly (a record dated tomorrow claims evidence that could
-  not yet have been gathered, and sorts ahead of records that are genuinely newer).
+  not yet have been gathered, and sorts ahead of records that are genuinely newer). Checks 12 and 21
+  bracket the same field from opposite sides -- 12 forbids a header dated ahead of the evidence, 21
+  forbids one dated behind the document's own content.
 
   Check 2 compares status BOTH within a file and ACROSS every reports/master/*.md (AUD-04) -- the
   cross-file half exists because MASTER_REPOSITORY_HEALTH published "conflicting status across
@@ -1306,7 +1311,7 @@ if (-not (Test-Path $ciWorkflow)) {
     $ciText = Get-Content $ciWorkflow -Raw
     # path -> the check(s) that read it, so a failure says WHY the path matters.
     $requiredTriggers = [ordered]@{
-        '**/*.md'                                     = 'Checks 1-6, 10-18 (every Living/Master document)'
+        '**/*.md'                                     = 'Checks 1-6, 10-18 and 21 (every Living/Master document)'
         'scripts/check_repository_consistency.ps1'    = 'this script itself'
         'scripts/check_primary_ledger.ps1'            = 'Check 19 executes it'
         'reports/evidence/primary-ledger-evidence.json' = 'Check 19 reads it'
@@ -1321,6 +1326,104 @@ if (-not (Test-Path $ciWorkflow)) {
             $issues++
         }
     }
+}
+
+Write-Host ""
+# =====================================================================================================
+# Check 21: STALE-1 -- a current-state document's FRESHNESS METADATA must not contradict its own body.
+#
+# Verified failure class, and this is at least its FOURTH occurrence:
+#   2026-07-14  `session-discovery-checkpoint` F2 -- MASTER_ARCHITECTURE_DECISIONS.md:5 "stale vs
+#               content", recorded and hand-fixed.
+#   2026-07-15  MASTER_GAP_REGISTER.md header "2026-07-11" over rows the Recovery had just moved.
+#   2026-08-29  MASTER_GAP_REGISTER.md again -- rows dated 08-24..08-29 under "Last updated:
+#               2026-08-21"; and MASTER_EXECUTION_PLAN.md's own header read "2026-07-15" while its
+#               Batch 6 ran to 2026-08-29. Both fixed by hand, both recorded, neither guarded.
+#   2026-09-05  MASTER_EXECUTION_PLAN.md header "2026-09-02" over a P3 entry dated 2026-09-05.
+# Four hand-fixes of one class is the definition of a missing fitness function. This is that function.
+#
+# THE INVARIANT IS SEMANTIC, NOT AGE-BASED, and deliberately so:
+#     a document's freshness date must not be OLDER than the newest date its own body carries.
+# It says nothing about today. A document nobody has touched since July passes forever, because its
+# header still describes its content truthfully -- which is what "fresh" has to mean for a document
+# that is legitimately finished. "Last updated must equal today" would fail every stable document in
+# the repository every single day, and a guard that is always red teaches people to ignore it.
+# It fires on exactly one event: SOMEONE ADDED DATED CONTENT AND LEFT THE HEADER BEHIND. That is the
+# whole failure class above, and Check 12 (no future dates) already bounds the other direction, so
+# the pair brackets the header from both sides.
+#
+# WHY VALIDATION AND NOT GENERATION. Deriving the field from `git log -1 --format=%ad` was considered
+# and rejected on what the field actually holds. Every one of these headers is a date PLUS a written
+# account of what changed and why -- `MASTER_GAP_REGISTER.md`'s runs to a paragraph. Git can supply
+# the date and nothing else, so a generator would either destroy the annotation or write a date beside
+# a paragraph that no longer matches it -- a NEW contradiction in the same field. Worse, git's date is
+# the date of ANY touch: a typo fix would advertise itself as a substantive update, and the field would
+# stop meaning what its readers use it for. The annotation is human authorship; only its CONSISTENCY
+# is mechanisable. So: humans keep writing the field, and the machine refuses to let it contradict.
+#
+# WHAT THIS CHECK DOES NOT DO (MEAS-1 -- a guard must not be described more strongly than it measures):
+#   * It does not require any document to CARRY freshness metadata. Scope is self-selecting -- a file
+#     with the field is guarded, a file without it makes no freshness claim to contradict. Requiring
+#     the field would mean maintaining a list of which documents must have it, i.e. one more registry
+#     to go stale, to guard the staleness of registries.
+#   * It cannot see a substantive change that carries no date. Rewriting a paragraph and dating
+#     nothing passes here. Undetectable without judging meaning; stated rather than papered over.
+#   * It says nothing about whether the ANNOTATION beside the date is true. Check 2, 14, 16 and 18
+#     each judge a different claim's truth; this one judges only internal date consistency.
+# =====================================================================================================
+Write-Host "== Check 21: freshness metadata vs the document's own content (STALE-1) ==" -ForegroundColor Cyan
+# Every shape the repository actually uses to date a document's own head, and no invented ones:
+#   `Last updated:`   -- 16 Master/evidence documents
+#   `Last measured:`  -- MASTER_REPOSITORY_HEALTH.md, which measures rather than updates
+#   `Version N · d`   -- GOVERNANCE.md alone, whose §15 requires the version line and the top
+#                        changelog entry to move together. Included because it is the same claim in
+#                        the same class, in the one document that DECLARES the rule (§6 rule 8);
+#                        leaving the rule's own home unguarded is how a rule becomes decorative.
+# Matched at line start within the head of the file, so the field is the document's own metadata and
+# not a sentence in a change record quoting one -- `changes/SPEC-125` contains "Last updated"
+# mid-prose and must not be read as a freshness claim.
+$freshHeaderRx = '^\s*\**(?:Last (?:updated|measured)\**:|Version\**\s*[0-9]+(?:\.[0-9]+)*\s*[^0-9\s]{1,3})\s*\**(20[0-9]{2}-[01][0-9]-[0-3][0-9])'
+$bodyDateRx    = '\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b'
+$staleHeaders  = 0
+$freshChecked  = 0
+foreach ($f in ($allFiles | Where-Object { $_.Extension -eq '.md' })) {
+    $lines = [System.IO.File]::ReadAllLines($f.FullName)
+    $hdrDate = $null
+    for ($i = 0; $i -lt [Math]::Min(12, $lines.Count); $i++) {
+        if ($lines[$i] -match $freshHeaderRx) {
+            $parsed = [datetime]::MinValue
+            if ([datetime]::TryParseExact($Matches[1], 'yyyy-MM-dd', $null, 'None', [ref]$parsed)) { $hdrDate = $parsed }
+            break
+        }
+    }
+    if ($null -eq $hdrDate) { continue }
+    $freshChecked++
+    $newest = $hdrDate
+    $newestLine = 0
+    $ln = 0
+    foreach ($line in $lines) {
+        $ln++
+        foreach ($m in [regex]::Matches($line, $bodyDateRx)) {
+            $d = [datetime]::MinValue
+            if ([datetime]::TryParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null, 'None', [ref]$d) -and $d -gt $newest) {
+                $newest = $d
+                $newestLine = $ln
+            }
+        }
+    }
+    if ($newestLine -gt 0) {
+        $rel = $f.FullName.Substring($RepoRoot.Length + 1)
+        Write-Host "  STALE FRESHNESS METADATA: $rel declares $($hdrDate.ToString('yyyy-MM-dd')) but line $newestLine carries $($newest.ToString('yyyy-MM-dd'))" -ForegroundColor Yellow
+        $staleHeaders++
+    }
+}
+if ($staleHeaders -gt 0) {
+    Write-Host "  Remedy: record the newer state in the header the way these documents already do -- write a NEW dated line" -ForegroundColor DarkGray
+    Write-Host "  saying what changed and demote the old one to 'Previously:'. Do not simply overwrite the date: the annotation" -ForegroundColor DarkGray
+    Write-Host "  beside it is the cumulative history, and this repository keeps history rather than replacing it." -ForegroundColor DarkGray
+    $issues += $staleHeaders
+} else {
+    Write-Host "  all $freshChecked document(s) carrying freshness metadata agree with their own newest dated content" -ForegroundColor Green
 }
 
 Write-Host ""

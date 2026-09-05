@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative decision ledger.** Never recreate; evolve. This is the ARB's decision-tracking overlay; the **authoritative ADR log remains `architecture-decision-records.md`**. This file tracks: (a) accepted ADRs and any ARB-proposed amendments, and (b) decisions the ARB proposes but the **owner has not yet ratified** (proposed ADRs must be recorded per the owner policy — design is not withheld). No canonical/ADR file is modified until the owner approves.
 
-Last updated: 2026-08-10 (Decision-reconciliation pass — corrected item 11 (A3)'s stale ADR-0022 reference to sequential-at-ratification numbering; superseded item 15 (DC-15) with the verified per-class least-privilege model. No ADR ratified, no grant/role/RPC/RLS changed; both remain tracked proposals awaiting owner ratification. Prior 2026-07-15 annotation of item 11 preserved above, not deleted).
+Last updated: 2026-09-05 (**overlay caught up with the ratified log — found by Check 21, STALE-1.** This line read `2026-08-10` while the table below already carried ADR-0024/0025/0026 marked **New (2026-08-31)**, so the header's "No ADR ratified … both remain tracked proposals awaiting owner ratification" — true of the 2026-08-10 pass it describes — was being read as a statement about the file's current content. Chasing it found the larger half: **ADR-0027 and ADR-0028 were ratified on 2026-09-02 and 2026-09-04 and had never been entered here at all**, while §3 of this file promises to track "(a) accepted ADRs". Both added below with their ARB verdict; the authoritative text stays where it belongs, in `architecture-decision-records.md`. Prior entry follows.)
+
+Previously: 2026-08-10 (Decision-reconciliation pass — corrected item 11 (A3)'s stale ADR-0022 reference to sequential-at-ratification numbering; superseded item 15 (DC-15) with the verified per-class least-privilege model. No ADR ratified, no grant/role/RPC/RLS changed; both remain tracked proposals awaiting owner ratification. Prior 2026-07-15 annotation of item 11 preserved above, not deleted).
 
 ## A. Accepted ADRs (authoritative in `architecture-decision-records.md`) — ARB status
 | ADR | Title | ARB verdict |
@@ -31,6 +33,8 @@ Last updated: 2026-08-10 (Decision-reconciliation pass — corrected item 11 (A3
 | 0024 | Every RPC rule must also hold on the table door | **New (2026-08-31)** — ratifies the Foundation programme's enforcement rule; superseded if SEC-1 revokes direct table DML |
 | 0025 | Enforcement layer chosen from the measured surface; session-less exemption for authorization only | **New (2026-08-31)** — resolves the "LESSON 6" citation that had no defined home |
 | 0026 | Scoped access is a predicate, never a coarser grant | **New (2026-08-31)** — owner decision SPEC-154-B; mechanism derived from SPEC-139 `app.item_financials` |
+| 0027 | Capability grants are per-user; the enforcement plane is not rebuilt to get them | **New (2026-09-02)** — a full RBAC rebuild was authorised and **rejected on measurement**: the gap was one missing user→permission edge against 197 sites already delegating to `app.has_permission`. Precedence `deny > user grant > role grant > plan gate` |
+| 0028 | A supplier credit ceiling is an OBSERVATION, not a gate | **New (2026-09-04)** — owner decision SUP-4b. The ceiling WARNS and never refuses, so no override permission and no serialisation exist to get wrong; idempotency is the event ledger, not a status column |
 
 ## B. Proposed ADRs — awaiting owner ratification (design recorded, not withheld)
 Consolidated set (from Baseline/Physical/Synthesis §9, confirmed by ARB):

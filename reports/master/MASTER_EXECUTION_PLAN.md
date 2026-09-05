@@ -2,7 +2,18 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-02 (**authorization architecture — RBAC-3 / ADR-0027, owner-directed.** A full RBAC rebuild was authorised and rejected on measurement: the gap to the owner's capability-level end-state was one missing user->permission edge, while 197 enforcement sites already delegate to a single function. The grant model was refactored and the enforcement plane left untouched. SUP-4a fixed the ceiling's missing currency; SUP-4b stays open. Prior entry follows.)
+Last updated: 2026-09-05 (**P3 recorded, Batch 6 given measurable exit criteria, and the header's own
+staleness fixed by a guard rather than by hand — STALE-1.** Item 4 was re-narrowed on 2026-09-05 when
+the notification delivery lifecycle shipped, and *this line was left at 2026-09-02* — the fourth time
+in this repository that a document's freshness metadata has been found older than its own content, and
+the second time in this very file. **Check 21 now fails the build on it**, on an invariant that is
+semantic rather than age-based: a header may never be OLDER than the newest date its own body carries,
+so a document nobody has touched passes forever and only added-dated-content-without-a-header-update
+fails. Also corrected here: item 7's sweep scope read **75 tables against a live 77**, and Batch 6 —
+still **NOT complete** — now carries the exit criteria that decide when it may be called complete.
+Prior entry follows.)
+
+Previously: 2026-09-02 (**authorization architecture — RBAC-3 / ADR-0027, owner-directed.** A full RBAC rebuild was authorised and rejected on measurement: the gap to the owner's capability-level end-state was one missing user->permission edge, while 197 enforcement sites already delegate to a single function. The grant model was refactored and the enforcement plane left untouched. SUP-4a fixed the ceiling's missing currency; SUP-4b stays open. Prior entry follows.)
 
 Previously: 2026-09-02 (**supplier credit permission — SUP-3, owner decision.** The owner made SUP-3 explicit and authorised implementing it before the next slice: supplier credit management is now its own independently grantable permission. The enforcement half the owner also asked for is recorded as SUP-4 and deliberately not invented — ORVION has an authoritative supplier payable but no authoritative definition of what counts against the limit. Prior entry follows.)
 
@@ -1299,7 +1310,14 @@ additive capability.*
    modern finding IDs (**GOV-4**) and nothing at all checks prose open-items against the database.
    Kept struck through rather than deleted: the 13 *authentication* event types are still Supabase
    Auth events with no ORVION hook, which is **AUTH-1**'s territory, not a producer gap.
-7. **Table/column completeness sweep** across all **75** tables — never finished.
+7. **Table/column completeness sweep — NEVER FINISHED, and its scope was understated.** It read
+   "all **75** tables" from 2026-08-27 until 2026-09-05; the live count has been **77** since
+   `document_retention_policies` and `document_storage_findings` were created, so the item was
+   describing a smaller job than it names. Corrected against the catalog, not against another
+   document. The three *historical* "75 tables" figures in the package entries above are left
+   untouched: each records what was measured on its own date and was true then. **Method and exit
+   criteria are below** — the sweep is Batch 6's completeness layer, and until it has a per-table
+   disposition record its coverage is not measurable at all (see EC-1).
 8. ~~**SEC-1 write-path model** — remains the open owner decision~~ — **DECIDED 2026-09-01 (OWNER-1).
    No longer an owner blocker; struck through rather than deleted because the three forgeries of
    authoritative history recorded as its evidence are what earned the decision.** The owner ratified
@@ -1312,6 +1330,65 @@ additive capability.*
    the thirteen tables that had a capability trigger on one side only, and **SUP-1**
    (`202607059200`) closed the read half of the supplier-credit case. Status and evidence:
    `MASTER_GAP_REGISTER.md`.
+
+### Batch 6 — method and exit criteria (added 2026-09-05)
+
+**Batch 6 is NOT complete, and passing a large test suite is not the same claim.** The programme has
+always been the *completeness and assurance* layer over Batches 0–5, and it has no finish line until
+one is written down. This is that finish line. Nothing here reopens a closed package.
+
+**Standing method per slice** — the shape every closed entry above already followed, stated once so it
+stops being re-derived: **DISCOVER** the surface from the catalog (schema, columns, constraints,
+indexes, FKs, RLS, policies, direct grants, triggers, RPC interactions, lifecycle, catalogs, events,
+auditability, tenant isolation, authorization, integration surface, dependents, canonical references)
+→ **CLASSIFY** every finding as defect / security / authorization gap / data-integrity /
+lifecycle / governance-documentation / **intentional asymmetry** / future enhancement / owner decision
+/ counsel dependency / non-issue → **ADVERSARIALLY TEST** where the surface is security-,
+authorization-, lifecycle- or integrity-sensitive → **REPAIR** verified defects only → **RETEST** with
+evidence the repair works → **RECONCILE** repository = local = Primary → **DOCUMENT** in the canonical
+current-state document that actually changed → **GUARD** the failure mode so the class cannot return.
+Two rules the programme learned the hard way and that stay binding: an **intentional asymmetry is not a
+defect** (`CUST-6` exists precisely so supplier/customer symmetry is not chased for its own sake), and
+"best practice" never substitutes for an owner decision that is genuinely business or compliance
+policy (MAIL-1, RET-1).
+
+**Exit criteria — Batch 6 may be declared complete only when all eleven hold, each by evidence:**
+
+| # | Criterion | How it is measured today |
+|---|---|---|
+| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOT MEASURABLE TODAY, and that is the finding.** No per-table disposition record exists. The obvious proxy is saturated and therefore worthless: all 77 tables are named somewhere in `reports/**`, which proves only that mention is not audit. EC-1's first deliverable is the disposition record itself; everything below is measurable, this one is not |
+| **EC-2** | **Authorization.** Every writable surface has a documented authorization rationale; exceptions explicit | Already partly earned and already pinned: `57_write_capability_map_test.sql` and `58_write_grants_and_config_capability_test.sql` carry the 54/17/3 ceilings, and the residual three are the canon-34 Human Identity tables with a stated rationale. Exit = the ceilings hold and every remaining exception names its reason |
+| **EC-3** | **Tenant isolation.** No unresolved tenant-crossing path in scope | Positive+negative HTTP proof exists (`verify_api_end_to_end.ps1` against a fully privileged owner of another agency). Exit = every table in EC-1's record has a stated isolation basis (RLS predicate, structural path prefix, or platform-only) |
+| **EC-4** | **Lifecycle integrity.** No unresolved invalid transition or parent/child contradiction | `54_transition_permission_parity_test` (both directions, all ten functions) and the PARENT-1 class guard in `88_parent_state_on_every_door_test` (seven verified non-defects, each run down against the catalog). Exit = both green with no unexplained entry |
+| **EC-5** | **Data integrity.** Constraints, triggers, RPCs and tests agree with the intended invariant | `verify_database.sql` smoke (`ALL CHECKS PASSED`) plus the per-domain pgTAP files. Exit = no invariant is asserted in only one of the three places |
+| **EC-6** | **Adversarial resilience.** Security- and integrity-sensitive surfaces have targeted NEGATIVE tests | Substantial and uneven. Strong where a defect was found (forgery, tenant crossing, replay under two live sessions for LIC-2, lease/retry races in test 100, defect injection in PAR-4); absent where none was. Exit = every EC-1 surface classified security- or integrity-sensitive has at least one negative test, not merely a positive one |
+| **EC-7** | **Regression protection.** Every material Batch 6 finding has permanent coverage, and every ceiling can only shrink | The programme's strongest area — each closed package above names its guard file. Exit = no finding closed without one, and no ceiling assertion that can silently grow |
+| **EC-8** | **Documentation coherence.** No canonical document contradicts repository or runtime evidence | Checks 1–21, CI-gated. **Check 21 (STALE-1) was the missing one** and is why this section exists |
+| **EC-9** | **Deployment parity.** Repository = local = Primary demonstrated, not asserted | `check_database_parity.ps1` on all three surfaces with Primary values READ FROM Primary (GUARD-1), plus Check 19's carried evidence (RECOVER-1) |
+| **EC-10** | **CI protection.** No important change class can silently bypass its guard | Check 20 (CI-1), a fixed list that states its own ceiling |
+| **EC-11** | **Cleanliness.** No abandoned, duplicate, superseded or orphaned mechanism without a stated reason | Partly earned by deletion-over-refreshment (GOV-5, REG-2). Exit = the sweep in EC-1 also records, per table, whether anything it touches is superseded |
+
+**Two refinements to the criteria as first proposed, made on evidence rather than adopted blind.**
+EC-1 was proposed as "100% of the table inventory audited"; a *count* of audited tables is not
+measurable without a disposition record, so the criterion is the record, and the count is what the
+record then yields. And a criterion was **added**: EC-6's exit is stated as *negative* tests
+specifically, because the suite's 1,476 assertions are overwhelmingly positive controls and a
+positive-only surface is exactly where LIC-2, SPP-2 and FIN-3 were hiding.
+
+**Measured today, and the closest thing to a coverage number that is honest:** 75 of the 77 tables are
+named in at least one pgTAP file; **`campaign_daily_metrics` and `exchange_rate_adjustments` are named
+in none.** Being named in a test is not coverage either — it is a floor, not a ceiling — but a table
+no test mentions at all is definitively unswept, and those two are the only ones that can be asserted
+today without the EC-1 record.
+
+**The assurance classification this batch is allowed to claim, and the two it is not.** The
+repository is **TESTED** and **SUBSTANTIALLY ADVERSARIALLY TESTED** — specific attempts were made to
+violate specific assumptions and the system resisted them (the concurrent double-redemption of a
+single-use licence token, forged audit events, cross-tenant reads by a privileged foreigner of another
+agency, direct-DML capability bypass on 59 tables, trigger bypass, lease expiry and retry races). It
+is **NOT exhaustively adversarially audited**, and no document may say otherwise until EC-1 and EC-6
+both hold: the surfaces that were challenged were the ones a defect led us to, which is a different
+and weaker claim than every surface having been challenged systematically.
 
 **Blocked on commercial decisions (none blocks the above):**
 ~~BLOCKED-1 trial plan tier + duration at provisioning~~ — **RESOLVED 2026-08-27**: owner set a

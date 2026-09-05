@@ -2,7 +2,11 @@
 
 Status: **Permanent cumulative risk register.** Never recreate; evolve. Risk = the production/compliance/architectural consequence if a finding is NOT addressed before its trigger. Cross-reference: `MASTER_GAP_REGISTER.md`.
 
-Last updated: 2026-07-11. Likelihood × Impact → Risk. Trigger = the event after which the risk becomes materially harder/impossible to mitigate.
+Last updated: 2026-09-05 (**this header was corrected, no risk row changed — STALE-1.** It had read `2026-07-11` while RK-01 below carried a mitigation dated 2026-07-13; Check 21 now fails the build on that. Prior entry follows.)
+
+Previously: 2026-07-15 (**the header outlived two edits to its own body.** RK-01 was marked **✅RESOLVED (SPEC-118)** on the strength of the 2026-07-13 money-precision widening, and the Repository Recovery of 2026-07-15 — a commit whose message says it "reconciled every lagging status column" — changed exactly that one line here and left the header at 2026-07-11. No risk row has moved since.)
+
+Likelihood × Impact → Risk. Trigger = the event after which the risk becomes materially harder/impossible to mitigate.
 
 | Risk ID | Description | Finding | Likelihood | Impact | Risk | Trigger (mitigate before) | Mitigation |
 |---|---|---|---|---|---|---|---|
