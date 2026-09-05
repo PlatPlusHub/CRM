@@ -29,7 +29,9 @@
     Check 9 manifest migration count/latest/fingerprint vs supabase/migrations ·
     Check 10 reports/README "Latest session report" pointer is CURRENT (GOV-1) ·
     Check 11 every open-decision ID the manifest raises resolves in MASTER_GAP_REGISTER.md (GOV-3) ·
-    Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) ·
+    Check 12 no current-state evidence is dated in the future, and the clock is sane (AUD-01) --
+      "the future" measured against the newest civil date anywhere on Earth (UTC+14), never the
+      runner's own timezone, so the verdict is the same in CI as on the author's machine (AUD-01a) ·
     Check 13 no reports/master table row is escaped out of its own table, and out of Check 2 (REG-1) ·
     Check 14 no id on the manifest's open-decision line is already marked decided in the register (OWNER-1) ·
     Check 15 the manifest's suite and endpoint figures match the test files and the generated contract (META-1) ·
@@ -863,7 +865,24 @@ if (-not $decLine) {
 #     Two questions, because either alone can be fooled: (a) does any file carry a date later than
 #     today, and (b) is the clock itself plausible, cross-checked against the newest commit.
 Write-Host "== Check 12: no future-dated evidence ==" -ForegroundColor Cyan
-$today = (Get-Date).Date
+# AUD-01a (2026-09-06). The ceiling is the newest civil date that EXISTS ANYWHERE ON EARTH, not the
+# runner's local date. It used to be `(Get-Date).Date`, which made this check's verdict depend on
+# WHERE it ran: ORVION is written from Africa/Cairo (UTC+2/+3) and CI runs in UTC, so for the ~3
+# hours each night between Cairo's midnight and UTC's, a correctly-stamped document was "future
+# dated" to GitHub Actions and to nobody else. That is exactly what happened to slice 3, pushed
+# 2026-09-05T23:11Z: 22 FUTURE-DATED hits in CI, CLEAN on the machine that wrote them.
+#
+# UTC+14 (Pacific/Kiritimati) is the maximum civil offset in the IANA database, so this is the
+# tightest bound that is true independently of the runner's clock. The invariant is UNCHANGED and
+# still gates CI -- "a record dated tomorrow claims evidence that could not yet have been gathered"
+# -- because a date that has not begun in UTC+14 has not begun for any author anywhere.
+#
+# ITS CEILING, stated because a guard that oversells itself is the class this repository keeps
+# finding (MEAS-1): the accepted window is now up to 14 hours wider than the author's own civil day,
+# so a date stamped a few hours into the author's tomorrow passes. That is the price of a verdict
+# that does not change when the runner moves, and it is the right trade: the failure this replaces
+# was a false one, fired nightly, at the moment work is most likely to be pushed.
+$today = [datetimeoffset]::UtcNow.AddHours(14).Date
 $dateRx = '\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b'
 $futureHits = 0
 $scan = $allFiles | Where-Object { $_.Extension -in '.md', '.json', '.ps1', '.sql' }
@@ -875,7 +894,7 @@ foreach ($f in $scan) {
             $d = [datetime]::MinValue
             if ([datetime]::TryParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null, 'None', [ref]$d) -and $d -gt $today) {
                 $rel = $f.FullName.Substring($RepoRoot.Length + 1)
-                Write-Host "  FUTURE-DATED: $rel : $lineNo -> $($m.Groups[1].Value) (today is $($today.ToString('yyyy-MM-dd')))" -ForegroundColor Red
+                Write-Host "  FUTURE-DATED: $rel : $lineNo -> $($m.Groups[1].Value) (that date has not begun anywhere on Earth; the newest civil date in existence is $($today.ToString('yyyy-MM-dd')))" -ForegroundColor Red
                 $futureHits++
             }
         }

@@ -31,6 +31,11 @@ on:
       - "supabase/tests/**"
       - "ai-map.json"
       - ".github/workflows/repository-consistency.yml"
+      # The guard-of-the-guard suites this workflow now runs. A change to a detector's calibration
+      # is a change to what the gate means, so it re-runs the gate.
+      - "scripts/test_future_date_guard.ps1"
+      - "scripts/test_status_contradiction_guard.ps1"
+      - "scripts/test_primary_ledger_guard.ps1"
   pull_request:
     paths:
       - "**/*.md"
@@ -73,3 +78,26 @@ jobs:
       - name: Run repository consistency guard
         shell: pwsh
         run: pwsh -File scripts/check_repository_consistency.ps1
+
+      # AUD-01a (2026-09-06). The guard-of-the-guard suites existed but nothing ran them, so a
+      # regression inside a DETECTOR was invisible until it produced a false verdict in front of
+      # someone. That is what Check 12 did: its ceiling was the runner's LOCAL date, ORVION is
+      # written from UTC+2/+3 and this runner is UTC, so slice 3 -- pushed 2026-09-05T23:11Z with
+      # documents correctly stamped 2026-09-06 -- was CLEAN locally and 22 issues here.
+      #
+      # Runs AFTER the guard, deliberately: the guard is the gate, these are its calibration. They
+      # need no database and add seconds. `test_future_date_guard` copies the repository into a
+      # sandbox, so it also proves the guard survives being pointed somewhere other than the
+      # checkout -- the assumption every one of these suites rests on.
+      - name: Attack the guards themselves
+        shell: pwsh
+        #
+        # $LASTEXITCODE is checked after EVERY suite, deliberately. With `shell: pwsh` GitHub gates
+        # the step on the exit code of the LAST command only, so three bare invocations would let a
+        # failing first suite pass silently -- a CI step that cannot fail, which is the same vacuous
+        # -guard class this whole entry exists to close.
+        run: |
+          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard') {
+            pwsh -File "scripts/$suite.ps1"
+            if ($LASTEXITCODE -ne 0) { throw "$suite FAILED (exit $LASTEXITCODE)" }
+          }
