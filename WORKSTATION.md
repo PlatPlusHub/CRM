@@ -71,6 +71,7 @@ is permanent).
 | Verify the environment (real logic) | `.workstation/doctor.ps1` |
 | Decommission (remove ORVION from a retired machine) | `.workstation/decommission.ps1` |
 | MCP server configuration | `.mcp.json` (repo root; secrets via env vars, never committed) |
+| Claude engineering-awareness wiring (expected shape) | `.claude/awareness.json` (tracked) — applied by `.workstation/claude-awareness.ps1 -Apply`, verified by `-Verify`; `.claude/settings.json` itself stays machine-local |
 | Known blockers | `.workstation/reports/INCIDENT_*.md` |
 | Current install status | `.workstation/reports/INSTALLATION_STATUS.md` |
 

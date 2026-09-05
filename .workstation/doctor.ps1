@@ -42,6 +42,14 @@ foreach ($v in @(
 }
 
 Write-Host ""
+Write-Host "[Claude engineering awareness]  (tracked expectation: .claude/awareness.json)"
+# The hook script and the expected wiring are tracked; the settings file that ACTIVATES them is
+# machine-local and gitignored. Without this check a fresh clone would carry the capability with
+# no activation and report nothing missing - the failure mode WORKSTATION.md's "local machine is
+# disposable" assumption exists to prevent.
+& (Join-Path $PSScriptRoot "claude-awareness.ps1") -Verify
+
+Write-Host ""
 Write-Host "[GitHub identity]  (ORVION pushes as PlatPlusHub; never Shehabhub)"
 if (Get-Command git -ErrorAction SilentlyContinue) {
     # Git Credential Manager keys credentials by URL. An unqualified https://github.com/... origin

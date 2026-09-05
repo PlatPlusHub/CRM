@@ -7,6 +7,18 @@ Status: **COMPLETE — one new capability (`scripts/impact.ps1`), one new sessio
 
 ---
 
+## 0. HANDOFF (read this first — `AGENTS.md §6`)
+
+- **INHERITED:** Phase 8, Active CR `None.`, 194 migrations, consistency CLEAN 1–19, zero open owner decisions. The manifest's next capability is unchanged: **GOV-20**, then GOV-19, SUP-4d, CUST-5.
+- **PROVEN:** `scripts/impact.ps1` answers §5b question 2 against table / function / view / policy-name / trigger-name / trigger-ARGUMENT targets; staleness detection and `-RequireFresh` fail closed; the input filter refuses injection before psql; the run mutates nothing (tuple counters unchanged across a full run); the awareness wiring installs on a simulated fresh clone and is idempotent; repository consistency CLEAN and smoke `ALL CHECKS PASSED (77 tables)`.
+- **UNPROVEN:** pgTAP Pass A/B, the six HTTP suites, and **Primary** — none were run, because nothing database-changing shipped. Do not quote this session as parity evidence.
+- **CHANGED:** commit `e4c7ae8` (impact capability, SessionStart hook, permission guardrails) plus this session's second commit (awareness wiring reproducibility, handoff rule, two impact defects fixed). No migration, no schema, no RPC, no business logic.
+- **REMAINING:** use `impact.ps1` as the first move of GOV-20 — it has no track record inside a real package yet.
+- **DO NOT TOUCH:** do not wire `impact.ps1` into CI — it has no verdict and a lead-generator used as a gate is the overclaiming class `§6` forbids. Do not rewrite `reports/README.md` pointer rows written before 2026-09-05 (history). Do not "fix" the multiple objects one name can resolve to (`app.` function + `public.` PostgREST wrapper + `reporting.` read-model view): checked and **by design** — `202607055500_api_surface.sql` and `202607048900_reporting_read_model.sql` create them deliberately. **No ORVION defect was discovered this session**; nothing is queued for another agent.
+- **NEXT:** GOV-20 — bind a ratification record to the rows it ratifies.
+
+---
+
 ## 1. DISCOVERED
 
 **The §5b gap was real and unfilled.** `AGENTS.md §5b` question 2 — *"which code CONSUMES, PARSES or DERIVES FROM the structure this package changed?"* — was owner-directed on 2026-08-29 out of CUST-1, and until this session nothing in the repository helped answer it. The answer was produced by ad-hoc grep, so its recall varied with the engineer's diligence. That is the exact shape of the defect that minted the rule: TENANT-1 was structurally correct and silently broke `app.merge_customer_identity` for eight days.
@@ -41,6 +53,23 @@ Status: **COMPLETE — one new capability (`scripts/impact.ps1`), one new sessio
 
 Two defects in this session's own work were caught by running it rather than by reading it: `text || "char"` ambiguity on `polcmd`/`contype` (two sections silently returned an error instead of rows), and psql's multi-line error shape leaking continuation lines into result buckets. Both fixed and re-run.
 
+**Second validation pass — the wiring, the object-kind matrix, and safety (same day):**
+
+| # | Check | Result |
+|---|---|---|
+| 13 | Object-kind matrix — table · function · view · **policy name** · **trigger name** · trigger ARGUMENT · false-positive | table/function/view/args/false-positive already proven; **policy name and trigger name returned NOTHING** — a real defect in the capability, found by testing the matrix rather than the happy path. Fixed (`pol.polname` and `tgname` arms added to classification and to the policy query) and re-run: both now resolve, and a policy that IS the target is labelled `(IS the target)` rather than `(references target)`. |
+| 14 | **No mutation** — `sum(n_tup_ins+n_tup_upd+n_tup_del)` across `pg_stat_all_tables` before/after two full runs | **36645 → 36645, delta 0.** Static confirmation too: zero DML/DDL verbs in the script. |
+| 15 | Injection — `-Target "customers;drop table customers"` | refused, **exit 2**, `customers` still present (1 row in `pg_class`) |
+| 16 | Repository-state matrix — dirty · ahead · no-upstream · behind | `ahead 1 / behind 0 … DIRTY` · `no upstream tracked` on a temp branch (created and deleted) · behind parses `ahead=0 behind=1`; clean/in-sync observed earlier the same day |
+| 17 | Awareness wiring on a **simulated fresh clone** (settings.json removed) | `-Verify` → **exit 1** listing all three gaps; `-Apply` → creates it; `-Verify` → **exit 0**; the produced `hooks`/`ask`/`deny` are **byte-identical to the tracked `.claude/awareness.json`** |
+| 18 | Wiring **merge** onto a personal settings file (allowlist present, wiring absent) | 120 allow entries preserved including a synthetic personal entry; hooks/ask/deny added; no other key disturbed |
+| 19 | Wiring **idempotence** | second `-Apply` reports "already present" and leaves the file **byte-identical** (md5 match) |
+| 20 | `doctor.ps1` integration | prints `[ OK ] Claude engineering-awareness wiring present` in its own section |
+| 21 | Freshness quartet re-run after the code changes | fresh + `-RequireFresh` → 0 · injected mismatch → STALE banner, `-RequireFresh` → **2** · file removed → **0** · `-NoDatabase` → `database: NOT READ`, exit 0 |
+| 22 | Guard + smoke after every edit above | **REPOSITORY CONSISTENCY: CLEAN** (1–19); `ALL CHECKS PASSED (77 tables)` |
+
+A third defect was caught by the fresh-clone test and would have shipped silently: PowerShell's `| Where-Object` returns a **scalar** for a single match, so `ConvertTo-Json` wrote `"SessionStart": {…}` instead of `[…]` — wiring that Claude Code ignores. Inspection would not have found it; running `-Apply` on a machine with no settings file did.
+
 ---
 
 ## 3. FIXED / BUILT
@@ -50,6 +79,9 @@ Two defects in this session's own work were caught by running it rather than by 
 - **`AGENTS.md §5`** — one bullet registering the command. It restates none of §5a or §5b; it points.
 - **`.claude/hooks/session-state.ps1` + a `SessionStart` hook** — prints `branch | ahead N / behind N vs upstream | working tree clean|DIRTY` and says `FETCH FIRST` when behind. Closes the §4-step-8 hole mechanically. Never fails a session (exits 0 on any error). Parsing proven in both directions (0/0 and a synthetic behind=3).
 - **`.claude/settings.json` permissions** — `deny` on the 11 mutating tools of the account-level Supabase connector (wrong-project protection); `ask` on the five protected-resource paths; a small generalized allowlist for the read-only guards, the verify suites and read-only git/gh.
+- **`.claude/awareness.json` (tracked) + `.workstation/claude-awareness.ps1` (`-Apply` / `-Verify`)** — the activation mechanism, resolving the blocker below. `prepare.ps1` applies it, `doctor.ps1` verifies it. Only the governance-bearing keys are shared (hook, `ask`, `deny`); the `allow` list stays personal, because shipping a broad allowlist to every machine is a security decision no script should make for an engineer.
+- **`AGENTS.md §6`** — the session report now opens with a seven-line **HANDOFF block** (INHERITED · PROVEN · UNPROVEN · CHANGED · REMAINING · DO NOT TOUCH · NEXT), and the `reports/README.md` pointer is **one line**. `DO NOT TOUCH` is the field this repository lacked. The pointer rule *removes* text: restating a report in the index types the same facts into a second file (`GOVERNANCE.md §6` rule 1) and doubles what every boot reads, since Stage A step 7 reads the report itself. This session's own pointer row was written to the new rule; earlier rows are history and were left alone.
+- **Two defects in `impact.ps1` found by testing it**, not by reading it: policy names and trigger names resolved to nothing (fixed), and a mislabelled policy row (fixed).
 
 ---
 
@@ -64,7 +96,11 @@ Two defects in this session's own work were caught by running it rather than by 
 
 ## 5. BLOCKED
 
-Nothing is blocked. One item needs an owner decision only if it is wanted: **`.claude/settings.json` is gitignored as machine-local**, so the `SessionStart` hook is wired per machine even though `.claude/hooks/session-state.ps1` is committed. A re-clone gets the script and not the wiring — the same shape as the 2026-08-30 re-clone that discarded `.git/config` and was fixed by moving the fix into a tracked file (`bootstrap.ps1`). Making the hook survive a clone means either tracking a shared `.claude/settings.json` or teaching `bootstrap.ps1` to write the hook block. Both change how machine-local configuration is governed, so neither was done unilaterally.
+Nothing is blocked.
+
+**The wiring blocker recorded earlier the same day is RESOLVED, and the repository's own architecture chose the answer.** The options were (A) track a shared `.claude/settings.json` or (B) provision it. `WORKSTATION.md` already states the governing assumption — *"the local machine is disposable; GitHub is the permanent source of truth"* — and already owns the mechanism: `prepare.ps1` provisions, `doctor.ps1` verifies, both fed by tracked sources. **Option A was rejected**: `settings.json` is genuinely personal (it carries each engineer's permission allowlist), and tracking it would either overwrite that or turn every engineer's local convenience into a committed diff. **Option B was implemented** in the existing shape, with the shared half extracted to a tracked file so nothing is hidden in a script: `.claude/awareness.json` states the expectation, `.workstation/claude-awareness.ps1 -Apply` merges it additively, `-Verify` reports it missing with the remedy. This is exactly the lesson `bootstrap.ps1` already carries in its own comments — the 2026-08-30 re-clone destroyed a fix that lived only in an untracked file, so the fix moved into a tracked one. A hook script in git whose wiring is not in git repeats that mistake.
+
+`.gitignore`'s Claude block and `WORKSTATION.md`'s "What lives where" table now state the split, so the next engineer meets the rule where they would look for it.
 
 ---
 

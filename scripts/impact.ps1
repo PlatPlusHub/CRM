@@ -168,6 +168,20 @@ union all
 select 'column    ' || table_schema || '.' || table_name || '.' || column_name || '  ' || data_type
   from information_schema.columns
  where column_name = :'tok' and table_schema in ('app','public')
+union all
+-- RLS policies and triggers are named enforcement objects in their own right here, and an engineer
+-- asks about them BY NAME. Without these two arms a policy name resolved to nothing at all.
+select 'policy    ' || n.nspname || '.' || c.relname || '  ::  ' || pol.polname
+  from pg_policy pol
+  join pg_class c on c.oid = pol.polrelid
+  join pg_namespace n on n.oid = c.relnamespace
+ where pol.polname = :'tok'
+union all
+select 'trigger   ' || n.nspname || '.' || c.relname || '  ::  ' || t.tgname
+  from pg_trigger t
+  join pg_class c on c.oid = t.tgrelid
+  join pg_namespace n on n.oid = c.relnamespace
+ where t.tgname = :'tok' and not t.tgisinternal
 order by 1;
 
 \echo @@FUNCTIONS
@@ -180,11 +194,14 @@ order by 1;
 
 \echo @@POLICIES
 select n.nspname || '.' || c.relname || '  ::  ' || pol.polname || '  [' || pol.polcmd::text || ']'
-       || case when c.relname = :'tok' then '  (on target)' else '  (references target)' end
+       || case when pol.polname = :'tok' then '  (IS the target)'
+               when c.relname = :'tok' then '  (on target)'
+               else '  (references target)' end
   from pg_policy pol
   join pg_class c on c.oid = pol.polrelid
   join pg_namespace n on n.oid = c.relnamespace
  where c.relname = :'tok'
+    or pol.polname = :'tok'
     or coalesce(pg_get_expr(pol.polqual, pol.polrelid), '') ~* ('\m' || :'tok' || '\M')
     or coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), '') ~* ('\m' || :'tok' || '\M')
 order by 1;

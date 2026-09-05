@@ -1,0 +1,43 @@
+{
+  "_comment": "SHARED, TRACKED expectation for Claude Code's engineering-awareness wiring. This file is NOT read by Claude Code. `.claude/settings.json` is gitignored (machine-local, personal — it also carries each engineer's own permission allowlist), so this file is what makes the wiring REPRODUCIBLE: .workstation/claude-awareness.ps1 -Apply merges these keys into the local settings.json, and -Verify reports what is missing. prepare.ps1 applies; doctor.ps1 verifies. Only governance-bearing keys live here — hooks, deny, ask. The `allow` list is deliberately absent: it is personal convenience, and shipping a broad allowlist to every machine is a security decision no script should make for an engineer.",
+  "_authority": "AGENTS.md §4 step 8 (nothing compares local main against origin/main — RECOVER-1), §4 step 11 + §6 (protected resources; never let a schema-changing call reach the wrong Supabase project).",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -File .claude/hooks/session-state.ps1"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "ask": [
+      "Edit(AGENTS.md)",
+      "Write(AGENTS.md)",
+      "Edit(GOVERNANCE.md)",
+      "Write(GOVERNANCE.md)",
+      "Edit(README.md)",
+      "Write(README.md)",
+      "Edit(CR_LIFECYCLE.md)",
+      "Write(CR_LIFECYCLE.md)",
+      "Edit(_ORVION_CANONICAL/**)",
+      "Write(_ORVION_CANONICAL/**)"
+    ],
+    "deny": [
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "mcp__claude_ai_Supabase__deploy_edge_function",
+      "mcp__claude_ai_Supabase__create_branch",
+      "mcp__claude_ai_Supabase__delete_branch",
+      "mcp__claude_ai_Supabase__merge_branch",
+      "mcp__claude_ai_Supabase__rebase_branch",
+      "mcp__claude_ai_Supabase__reset_branch",
+      "mcp__claude_ai_Supabase__create_project",
+      "mcp__claude_ai_Supabase__pause_project",
+      "mcp__claude_ai_Supabase__restore_project"
+    ]
+  }
+}

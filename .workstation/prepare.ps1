@@ -72,6 +72,16 @@ Write-Host "Configured in .mcp.json (context7, postgres-local, supabase-primary)
 Write-Host "supabase-primary uses the official Supabase Remote MCP over OAuth (no token/env var needed) - run /mcp in Claude Code and authenticate on first use. See .workstation/manifest.md section 4."
 
 Write-Host ""
+Write-Host "== Claude engineering-awareness wiring =="
+# .claude/settings.json is gitignored (machine-local, personal), but three of its keys are not
+# personal: the SessionStart repository-state hook and the ask/deny governance rules. They are
+# tracked in .claude/awareness.json and merged in here, so a capability never exists in the
+# repository without its activation mechanism. Additive and idempotent - a personal allowlist
+# is preserved untouched.
+& (Join-Path $PSScriptRoot "claude-awareness.ps1") -Apply
+if ($LASTEXITCODE -eq 0) { Note "claude awareness wiring" "ok" } else { Note "claude awareness wiring" "FAILED" }
+
+Write-Host ""
 Write-Host "== Verify =="
 & (Join-Path $PSScriptRoot "doctor.ps1")
 

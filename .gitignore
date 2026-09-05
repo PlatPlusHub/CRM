@@ -27,7 +27,11 @@ backup/
 .env
 .env.local
 
-# Machine-local Claude settings + their timestamped backups (personal, not shared)
+# Machine-local Claude settings + their timestamped backups (personal, not shared).
+# The governance-bearing half of settings.json is NOT personal and IS tracked, in
+# .claude/awareness.json: .workstation/claude-awareness.ps1 -Apply merges it in (prepare.ps1) and
+# -Verify reports it missing (doctor.ps1), so a fresh clone cannot end up holding the awareness
+# hook and the protected-file rules without the wiring that activates them.
 .claude/settings.local.json
 .claude/settings.local.backup-*.json
 .claude/settings.json
