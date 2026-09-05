@@ -78,6 +78,7 @@ $map = [ordered]@{
         start = "npx supabase start"
         reset = "npx supabase db reset"
         smoke = "docker exec -i supabase_db_ORVION psql -U postgres -d postgres -f - < scripts/verify_database.sql  (expect: ALL CHECKS PASSED)"
+        impact = "pwsh -NoProfile -File scripts/impact.ps1 -Target <name>  (query, not a guard: what consumes/derives from a structure -- AGENTS.md 5b question 2)"
     }
     canonical_docs = $canonical
     counts = [ordered]@{ canonical_docs = $canonical.Count }
