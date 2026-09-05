@@ -9,13 +9,13 @@ Status: **COMPLETE — one new capability (`scripts/impact.ps1`), one new sessio
 
 ## 0. HANDOFF (read this first — `AGENTS.md §6`)
 
-- **INHERITED:** Phase 8, Active CR `None.`, 194 migrations, consistency CLEAN 1–19, zero open owner decisions. The manifest's next capability is unchanged: **GOV-20**, then GOV-19, SUP-4d, CUST-5.
-- **PROVEN:** `scripts/impact.ps1` answers §5b question 2 against table / function / view / policy-name / trigger-name / trigger-ARGUMENT targets; staleness detection and `-RequireFresh` fail closed; the input filter refuses injection before psql; the run mutates nothing (tuple counters unchanged across a full run); the awareness wiring installs on a simulated fresh clone and is idempotent; repository consistency CLEAN and smoke `ALL CHECKS PASSED (77 tables)`.
-- **UNPROVEN:** pgTAP Pass A/B, the six HTTP suites, and **Primary** — none were run, because nothing database-changing shipped. Do not quote this session as parity evidence.
-- **CHANGED:** commit `e4c7ae8` (impact capability, SessionStart hook, permission guardrails) plus this session's second commit (awareness wiring reproducibility, handoff rule, two impact defects fixed). No migration, no schema, no RPC, no business logic.
-- **REMAINING:** use `impact.ps1` as the first move of GOV-20 — it has no track record inside a real package yet.
-- **DO NOT TOUCH:** do not wire `impact.ps1` into CI — it has no verdict and a lead-generator used as a gate is the overclaiming class `§6` forbids. Do not rewrite `reports/README.md` pointer rows written before 2026-09-05 (history). Do not "fix" the multiple objects one name can resolve to (`app.` function + `public.` PostgREST wrapper + `reporting.` read-model view): checked and **by design** — `202607055500_api_surface.sql` and `202607048900_reporting_read_model.sql` create them deliberately. **No ORVION defect was discovered this session**; nothing is queued for another agent.
-- **NEXT:** GOV-20 — bind a ratification record to the rows it ratifies.
+- **INHERITED:** Phase 8, Active CR `None.`, **194 migrations** (repository = local = 194 applied), consistency **CLEAN 1–19**, smoke `ALL CHECKS PASSED (77 tables)`, zero open owner decisions, working tree clean, `main` **ahead 2 / behind 0** at `4e6e591` + the closure commit. The roadmap's next capability is **unchanged**: GOV-19, SUP-4d, CUST-5, … and **ORVION's own GOV-20 — "bind a ratification record to the rows it ratifies" — is still OPEN and unbuilt**; only the *proof-of-value experiment* that borrowed that label was performed.
+- **PROVEN (behavioural evidence, this session):** `impact.ps1` resolves table · function · view · policy-name · trigger-name · trigger-ARGUMENT · column, and refuses a false-positive substring; `-RequireFresh` exits 2 on a repository/database mismatch and 0 once recovered; `-NoDatabase` degrades; malformed input exits 2 before psql; a full run mutates nothing (tuple delta **0**); the awareness wiring installs byte-identically on a simulated fresh clone, preserves a personal allowlist, and is idempotent; `doctor.ps1` reports it; the SessionStart hook reports branch/ahead/behind/tree in 1.6 s.
+- **UNPROVEN:** pgTAP Pass A/B, the six HTTP suites, and **Primary** — not run, because nothing database-changing shipped. Do not quote this session as parity evidence. The **`ask` rules on protected files are configured and syntactically verified but never behaviourally observed** in this harness (the `deny` rules *were* — the tools disappeared from the surface).
+- **CHANGED:** `e4c7ae8` (impact capability, SessionStart hook, permission guardrails) · `4e6e591` (reproducible activation, HANDOFF rule, two impact defects) · the closure commit (orphan cleanup, GOV-20 experiment, this block). **No migration, no schema, no RPC, no business logic, no canon rule** — only `AGENTS.md §6`'s report format and `§5`'s tool registration.
+- **REMAINING:** nothing in the awareness layer. The next session is **ORVION system testing**, not governance work.
+- **DO NOT TOUCH:** do not wire `impact.ps1` into CI — it has no verdict, and a lead-generator used as a gate is the overclaiming class `§6` forbids. Do not rewrite `reports/README.md` pointer rows written before 2026-09-05 (history). Do not "fix" one name resolving to several objects (`app.` function + `public.` PostgREST wrapper + `reporting.` read-model view) — checked, **by design** (`202607055500_api_surface.sql`, `202607048900_reporting_read_model.sql`). Do not "fix" `app.active_tenant_id` or `app.derive_actor` appearing in migrations while absent from the catalog — checked: the first is a **GUC setting name** inside `current_setting()`, the second appears **only in a comment** describing a rejected design. **No ORVION defect was discovered this session.**
+- **NEXT:** start the system-testing session from `§11` below — the baseline it must establish, and what it must not assume.
 
 ---
 
@@ -131,6 +131,45 @@ Windows 11, pwsh 7, Docker Desktop up, `supabase_db_ORVION` healthy. MCP: `supab
 
 ---
 
-## 9. NEXT STEP
+## 9. GAP CLOSURE — every gap this effort opened, with its evidence
 
-Exactly one: **use `impact.ps1` as the first move of the next capability** — the governance backlog the manifest names, starting with **GOV-20** — and let its output drive the §5b cross-path sweep instead of ad-hoc grep. The capability is built and proven; what it has not yet earned is a track record inside a real package.
+| Gap | State | Evidence |
+|---|---|---|
+| §5b question 2 had no mechanism | **CLOSED** | `impact.ps1`; proof-of-value in §10 |
+| Nothing compared local `main` to `origin/main` (§4 step 8, RECOVER-1) | **CLOSED** | SessionStart hook; `ahead 2 / behind 0 … clean` observed, plus dirty · no-upstream · behind-parse cases |
+| A schema-changing call could reach the wrong Supabase project (§4 step 11) | **CLOSED** | `deny` rules; the 11 account-level mutation tools left the tool surface — verified **by effect** |
+| Protected-resource rule was honour-system (§6) | **PARTIALLY CLOSED** | `ask` rules present and syntactically valid; **never behaviourally observed** in this harness. The gap is the *proof*, not the rule. |
+| A capability could exist in git without its activation | **CLOSED** | `.claude/awareness.json` + `claude-awareness.ps1`; fresh-clone simulation produced a byte-identical block, merge preserved a personal allowlist, second apply md5-identical, `doctor.ps1` reports it |
+| Handoff had no "do not touch"; the index restated the report | **CLOSED** | `AGENTS.md §6` rule; applied to §0 above and to the one-line pointer |
+| `impact.ps1` blind to policy and trigger **names** | **CLOSED** | found by the object-kind matrix, fixed, both now resolve |
+| Manifest exceeded its cold-boot budget after this session's edit | **CLOSED** | trimmed, not waived — 7151 → 6623 chars, **leaner than the 6813 inherited** |
+| `.claude/settings.local.json` carried dead configuration | **CLOSED** | 3 allow entries whose `/tmp` paths no longer exist, and the `github` MCP approval for a server `.mcp.json` never defined, removed |
+| ~100 one-shot allow entries in `settings.json` | **NOT A GAP** | tested: every absolute path they reference **still exists**, so they are stale-looking, not orphaned. Left alone. |
+
+## 10. GOV-20 — PROOF OF VALUE: **EARNED**
+
+*This is the experiment that borrowed the label. **ORVION's own GOV-20 remains OPEN and unbuilt.***
+
+**Scenario (chosen because a registered finding already knows the answer, so the tool could fail):** SUP-4d — *"the supplier ceiling never re-evaluates when the CEILING moves."*
+
+| | Baseline (`grep -l` over migrations + tests + scripts) | `impact.ps1` |
+|---|---|---|
+| `evaluate_supplier_credit_threshold` | **1 filename** | resolves the function, names `app.probe_supplier_credit_threshold` as its consumer |
+| `probe_supplier_credit_threshold` | **1 filename** | the probe fires on **`public.booking_items`** and **`public.payments`** — and on nothing else |
+| cost | 0.14 s | **1.27 s**, 90 lines |
+
+**Miss prevention — the decisive difference.** Both tools "found" the same file. Only one answered the question. The finding is that the ceiling is **not** re-evaluated when `suppliers` changes, and **grep cannot express an absence**: it shows presence in a file and says nothing about the complete set. The catalog states the whole attached trigger set, so the missing one is legible. Reproducing a registered finding in 1.3 s from one command, with no prior knowledge of it, is the evidence this experiment existed to obtain.
+
+**Cost, honestly.** 90 lines per run, most of them `none`. A `-Brief` mode that suppressed empty sections was considered and **rejected**: the `none` rows are exactly what made the absence visible above. The token cost buys the property that earns the tool.
+
+**Second-order result:** an extraction across all 194 migrations found four `app.*` names absent from the live catalog. All four were false alarms of the *extraction*, not ORVION defects — `app.active_tenant_id` is a GUC key inside `current_setting()`, `app.derive_actor` appears only in a comment about a rejected design, and two were truncated tokens. Recorded so nobody re-derives it.
+
+## 11. NEXT SESSION — ORVION SYSTEM TESTING
+
+The awareness work is closed. The next session's purpose is **testing the system**, not governance.
+
+**Baseline it must establish itself** (do not inherit these as facts — §4's opening rule): `git fetch` and compare to `origin/main`; `npx supabase db reset`; then the `§5a` protocol in order — Pass A, the six HTTP suites, Pass B, smoke, Primary's three values read **from** Primary, `check_database_parity.ps1`, regenerate the artifacts, `check_repository_consistency.ps1`.
+
+**What this session did NOT prove, and the next must not assume:** pgTAP Pass A/B, the six HTTP suites, and **all Primary parity**. The last recorded Primary reading is Check 19's evidence at 194 migrations, fingerprint `6802ac41eaf6f4f17f0bf4cde7b3a720`, from 2026-09-04 — HISTORICAL class, not live.
+
+**Use the awareness layer rather than rediscovering the repository:** `impact.ps1 -Target <name>` before touching any structure; the SessionStart banner for divergence; `doctor.ps1` if anything about the environment looks wrong.
