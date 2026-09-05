@@ -348,7 +348,19 @@ select is(
   -- rule at exactly the door that can see it. Verified by reading the schema and the triggers, not
   -- by matching the shape -- this detector's own header says static analysis is a lead, not a
   -- verdict, and this is that lead being run down.
-  'process_lead_sla -> notifications (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payments (invoices), upload_document -> document_links (documents), upload_subscription_payment_proof -> document_links (documents), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
+  -- SEVENTH VERIFIED NON-DEFECT, added 2026-09-05 with P3 (`202607061000`), when
+  -- `app.process_lead_sla` began recording the delivery obligation for the notifications it
+  -- already raised. `process_lead_sla -> notification_deliveries (leads)` is the SAME pair as
+  -- `process_lead_sla -> notifications (leads)` one level deeper on the same path, and it is
+  -- accepted for the same two reasons that one is. `public.notification_deliveries` has NO
+  -- `lead_id` column -- verified against the catalog, not inferred -- so a table-door guard
+  -- there would have no lead to read, exactly as with `record_payment -> payments (invoices)`
+  -- above. And a notification's delivery obligation is not gated by a lead's status: canon 10
+  -- requires the SLA notice to reach a manager whatever the lead does next, so a guard that
+  -- refused the obligation when the lead moved would suppress the very alert the lead moving
+  -- is the reason for. Run down against the schema and the triggers, as this detector's own
+  -- header demands, rather than accepted because it matched a known shape.
+  'process_lead_sla -> notification_deliveries (leads), process_lead_sla -> notifications (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payments (invoices), upload_document -> document_links (documents), upload_subscription_payment_proof -> document_links (documents), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
   'CLASS GUARD (PARENT-1): the only app functions that read a registered parent status and write another table WITHOUT a matching table-door guard are the five verified non-defects. Fails in BOTH directions -- a new unguarded pair fails it, and so does removing one of the four guards this migration added.');
 
 select * from finish();

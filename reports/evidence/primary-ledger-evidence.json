@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-05T14:05:00Z",
+  "read_at": "2026-09-05T16:20:00Z",
   "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations)",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "1df2f067e0b22d47f7454299ee59f27fe664b426",
-  "migration_count": 197,
-  "ledger_fingerprint": "aba2537d0bc95efd5869e4a5605f783e",
+  "repository_head": "8a59ebf65e7c4891db5bd47e307cce66b87d3d1a",
+  "migration_count": 199,
+  "ledger_fingerprint": "829b15676b66b7d0cc744ebb9ecbddc1",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -204,6 +204,8 @@
     "202607060500_retention_becomes_a_policy_per_document_type",
     "202607060600_the_supplier_ceiling_reaches_parity_with_the_customer_one",
     "202607060700_a_role_assignment_that_has_not_started_grants_nothing",
-    "202607060800_one_sla_pass_at_a_time"
+    "202607060800_one_sla_pass_at_a_time",
+    "202607060900_a_delivery_obligation_that_is_attempted_retried_and_abandoned",
+    "202607061000_the_sla_records_its_delivery_obligation_like_every_other_alert"
   ]
 }

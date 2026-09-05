@@ -1276,14 +1276,19 @@ additive capability.*
      enter directly into its destination — so those options carry a BLOCKED — EXTERNAL DEPENDENCY
      step that Supabase Storage does not, and the evaluation must weigh that honestly rather than let
      it silently decide the outcome.
-4. **Notifications — NARROWED 2026-08-29 (GOV-6), verified live before editing.** This read
-   "`notifications` / `notification_deliveries` have **no producer at all**"; `notifications` gained
-   its first producer on 2026-08-29 when SLA-1 wired the manager escalation. What remains true:
-   **`notification_deliveries` still has no producer** — nothing records that a notification was
-   actually *delivered* on any channel — and `app.process_lead_sla` is still the **only** writer of
-   `notifications`, which is why an expiring passport notifies nobody (**DOC-EXP-1**, owner-blocked
-   on recipient/lead-time/cadence). So the delivery half is an engineering gap and the producer half
-   is one owner decision, not a single undifferentiated hole.
+4. **Notifications — RE-NARROWED 2026-09-05 (P3), verified live before editing; the 2026-08-29 text
+   below had gone stale in BOTH of its remaining claims.** It read "**`notification_deliveries` still
+   has no producer**" and "`app.process_lead_sla` is still the **only** writer of `notifications`".
+   Measured at 199 migrations, three functions write `notifications` — `app.process_lead_sla` plus
+   **both credit evaluators**, which CUST-3 and SUP-4b added on 2026-09-04 — and all three now write
+   `notification_deliveries` as well, the SLA since `202607061000`. **The delivery half is closed**
+   (`DELIV-2`): claim, lease, widening retry, dead-letter and acknowledgement, contracted to
+   `orvion_integration` alone. What remains true is the PRODUCER half, and it is narrower than this
+   item ever stated: an expiring passport notifies nobody (**DOC-EXP-1**, owner-blocked on
+   recipient/lead-time/cadence). Two further genuinely-open items, neither of them this one:
+   **MAIL-1** (the provider, and the Egyptian PDPC cross-border transfer licence that decides which
+   providers are even eligible) and **DELIV-1** (an operator surface over work that has exhausted its
+   retries — now cheap, because `dead_lettered` makes exhaustion a fact rather than an absence).
 5. **Employee / Supplier / Branch 360 primitives.** Customer 360 and Lead 360 exist
    (`app.customer_timeline`, `app.lead_timeline` — re-verified live 2026-08-29); these three do not.
 6. ~~**`public.security_events` has zero producers.**~~ **OBSOLETE 2026-08-29 (GOV-6).** It has

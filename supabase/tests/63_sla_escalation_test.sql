@@ -32,7 +32,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(12);
+select plan(13);
 
 insert into auth.users (id, email) values
   ('63000000-0000-0000-0000-0000000000a1','emp@sla.test'),
@@ -203,6 +203,25 @@ select is(
 -- The key encoding is PostgreSQL's own: the single-argument bigint form stores the high word in
 -- `classid`, the low word in `objid`, and sets `objsubid` to 1.
 -- =============================================================================================
+-- =============================================================================================
+-- P3 (202607061000). THE SLA RECORDS ITS DELIVERY OBLIGATION.
+--
+-- Three functions write `public.notifications`. Both credit evaluators also write
+-- `notification_deliveries`; this one -- the job that runs every sixty seconds and produces the most
+-- notifications -- did not, so canon 10's "Notify reassigned employee. NOTIFY MANAGER" produced an
+-- in-system row and nothing any dispatcher could ever find. Asserted as a COUNT MATCH rather than
+-- "at least one", so a future site that raises a notification without recording its obligation fails
+-- here instead of passing quietly.
+-- =============================================================================================
+select is(
+  (select count(*)::int from public.notification_deliveries d
+    join public.notifications n on n.id = d.notification_id
+   where n.related_entity_id = '63000000-0000-0000-0000-0000000000e1'
+     and d.channel_code = 'email' and d.delivery_status_code = 'pending'),
+  (select count(*)::int from public.notifications
+    where related_entity_id = '63000000-0000-0000-0000-0000000000e1'),
+  'P3: EVERY notification this SLA pass raised carries a pending email delivery obligation -- the same footing both credit evaluators already put theirs on');
+
 select is(
   (select count(*)::int from pg_locks l
     where l.locktype = 'advisory'
