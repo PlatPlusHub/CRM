@@ -1,5 +1,15 @@
 -- pgTAP: BATCH 6 SLICE 1 -- `campaign_daily_metrics` and `exchange_rate_adjustments` (`202607061100`).
 --
+-- ATTACK-CLASSES: AUTH TENANT DOOR INPUT BUSINESS REPLAY PRIVILEGE STATE=N/A CONCURRENCY=N/A OBSERVABILITY=N/A
+--
+-- Declared retrospectively when slice 2 introduced the vocabulary and Check 24 (ADV-1) began
+-- requiring it. The classes describe what this file already attacked; nothing was added to the
+-- assertions to earn them. The three exclusions are positions, not gaps: STATE = neither table has
+-- a status column or a row in app.status_transitions; CONCURRENCY = the only contended object is the
+-- CDM-1 unique index, and a duplicate campaign-day is refused identically whether the second writer
+-- arrives a millisecond or a month later; OBSERVABILITY = neither surface has a registered event
+-- type, so there is no expected audit trace whose absence could be a defect.
+--
 -- WHY THESE TWO. Chosen by measurement, not by list: of ORVION's 77 tables, 75 are named in at least
 -- one pgTAP file and these two were named in NONE. Being named in a test is a floor rather than
 -- coverage, but a table no test mentions at all is definitively unswept -- and before the surface

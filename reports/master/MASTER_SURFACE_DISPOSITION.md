@@ -36,7 +36,9 @@ There is deliberately **no `EXHAUSTIVE` value.** Exhaustive adversarial audit is
 
 ## Coverage
 
-**2 of 77 recorded · 2 `AUDITED` · 0 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 75 `NOT-RECORDED`.**
+**3 of 77 recorded · 2 `AUDITED` · 1 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 74 `NOT-RECORDED`.**
+
+**All 3 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
 
 This count is the honest one and it is meant to be uncomfortable. It replaces two numbers that read better and mean less: "all 77 tables appear in the reports" (true, and worthless — mention is not audit) and "75 of 77 tables appear in a pgTAP file" (true, and a floor — a table named once in an unrelated fixture is not a swept surface).
 
@@ -74,7 +76,7 @@ This count is the honest one and it is meant to be uncomfortable. It replaces tw
 | `exchange_rate_adjustments` | **AUDITED** | ADVERSARIAL | `session-2026-09-05-batch6-evidence-foundation` | ERA-1 | — |
 | `exchange_rates` | NOT-RECORDED | — | — | — | — |
 | `feature_entitlements` | NOT-RECORDED | — | — | — | — |
-| `financial_accounts` | NOT-RECORDED | — | — | — | — |
+| `financial_accounts` | **AUDITED-OPEN** | ADVERSARIAL | `session-2026-09-05-batch6-adversarial-program` | FA-1, FA-2 | FA-2 is an owner question: may a bank account receive a payment in another currency? |
 | `holidays` | NOT-RECORDED | — | — | — | — |
 | `integration_cursors` | NOT-RECORDED | — | — | — | — |
 | `internal_supplier_links` | NOT-RECORDED | — | — | — | — |

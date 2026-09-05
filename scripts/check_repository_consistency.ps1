@@ -1590,6 +1590,94 @@ if ($handoffIssues -gt 0) {
 }
 
 Write-Host ""
+# =====================================================================================================
+# Check 24: ADV-1 -- `ADVERSARIAL` must be EARNED, not typed.
+#
+# The disposition record's assurance column is the strongest claim Batch 6 makes per surface, and
+# before this check the word `ADVERSARIAL` cost exactly one keystroke. That is the shape of every
+# defect this repository keeps finding in its own measuring layer (MEAS-1): a claim recorded in one
+# place while the evidence for it lives, unchecked, somewhere else.
+#
+# THREE THINGS MUST HOLD for a surface recorded ADVERSARIAL, and each closes a different lie:
+#   (a) some pgTAP file NAMES the surface           -- otherwise nothing was aimed at it at all
+#   (b) that file declares `-- ATTACK-CLASSES: ...` -- otherwise which assumptions were attacked is
+#       unrecorded, and the next session cannot tell a considered exclusion from an oversight
+#   (c) that file contains a NEGATIVE assertion     -- `throws_ok`. A file of positive controls is
+#       TESTED, never ADVERSARIAL, and LIC-2/SPP-2/FIN-3 were all found hiding behind exactly that.
+#
+# The class vocabulary is CLOSED so slices stay comparable, and `CLASS=N/A` is a first-class value:
+# stating why a class does not apply to a surface is a position, and positions can be argued with,
+# whereas silence cannot. A misspelled class fails rather than being silently ignored.
+#
+# WHAT IT CANNOT DO, stated because a registry that oversells a guard is the failure it exists to
+# prevent. It cannot tell whether the declared classes were attacked WELL, or whether the negative
+# assertions are the ones that matter, or whether `AUTH` in one file means what `AUTH` means in
+# another. It measures that the evidence EXISTS and is declared -- the named immutable session report
+# is what says whether it is any good.
+# =====================================================================================================
+Write-Host "== Check 24: ADVERSARIAL is earned, not typed (ADV-1) ==" -ForegroundColor Cyan
+$attackClasses = @('AUTH','TENANT','DOOR','STATE','INPUT','BUSINESS','CONCURRENCY','REPLAY','PRIVILEGE','OBSERVABILITY')
+$testDir = Join-Path $RepoRoot 'supabase/tests'
+$advIssues = 0
+$advChecked = 0
+if ((Test-Path $dispPath) -and (Test-Path $testDir)) {
+    $testFiles = @{}
+    foreach ($tf in (Get-ChildItem $testDir -Filter *.sql -File)) {
+        $body = [System.IO.File]::ReadAllText($tf.FullName)
+        $declared = $null
+        if ($body -match '(?m)^\s*--\s*ATTACK-CLASSES:\s*(.+)$') { $declared = $Matches[1].Trim() }
+        $testFiles[$tf.Name] = @{ body = $body; declared = $declared; negative = ($body -match 'throws_ok') }
+    }
+
+    # Every declaration anywhere must use the closed vocabulary -- checked across ALL files, not only
+    # the ones a surface happens to point at, so a typo cannot hide in an unreferenced file.
+    foreach ($name in ($testFiles.Keys | Sort-Object)) {
+        $d = $testFiles[$name].declared
+        if ($null -eq $d) { continue }
+        foreach ($tok in ($d -split '\s+' | Where-Object { $_ })) {
+            $cls = ($tok -split '=')[0]
+            if ($attackClasses -notcontains $cls) {
+                Write-Host "  UNKNOWN ATTACK CLASS: supabase/tests/$name declares '$cls' (allowed: $($attackClasses -join ', '), each optionally '=N/A')" -ForegroundColor Yellow
+                $advIssues++
+            }
+        }
+    }
+
+    foreach ($line in [System.IO.File]::ReadAllLines($dispPath)) {
+        if ($line -cnotmatch '^\|\s*`([a-z_][a-z0-9_]*)`\s*\|') { continue }
+        $surface = $Matches[1]
+        $cells = @($line.Trim('|') -split '\|' | ForEach-Object { $_.Trim() })
+        if ($cells.Count -lt 3) { continue }
+        if (($cells[2] -replace '\*', '').Trim() -ne 'ADVERSARIAL') { continue }
+        $advChecked++
+
+        $naming = @($testFiles.Keys | Where-Object { $testFiles[$_].body -match ('\b' + [regex]::Escape($surface) + '\b') })
+        if ($naming.Count -eq 0) {
+            Write-Host "  ADVERSARIAL WITHOUT A TEST: '$surface' is recorded ADVERSARIAL and no pgTAP file names it" -ForegroundColor Yellow
+            $advIssues++
+            continue
+        }
+        $withDecl = @($naming | Where-Object { $testFiles[$_].declared })
+        if ($withDecl.Count -eq 0) {
+            Write-Host "  ADVERSARIAL WITHOUT DECLARED CLASSES: '$surface' -- no file naming it carries an '-- ATTACK-CLASSES:' line, so which assumptions were attacked is unrecorded" -ForegroundColor Yellow
+            $advIssues++
+            continue
+        }
+        if (-not ($withDecl | Where-Object { $testFiles[$_].negative })) {
+            Write-Host "  ADVERSARIAL WITHOUT NEGATIVE EVIDENCE: '$surface' -- the declaring file(s) contain no throws_ok. Positive controls make a surface TESTED, never ADVERSARIAL" -ForegroundColor Yellow
+            $advIssues++
+        }
+    }
+}
+if ($advIssues -gt 0) {
+    Write-Host "  Remedy: either attack the surface and record the classes, or lower the assurance to TESTED." -ForegroundColor DarkGray
+    Write-Host "  Lowering it is not a defeat -- an honest TESTED is worth more than an ADVERSARIAL nothing measured." -ForegroundColor DarkGray
+    $issues += $advIssues
+} else {
+    Write-Host "  all $advChecked surface(s) recorded ADVERSARIAL carry a declaring test file with negative assertions" -ForegroundColor Green
+}
+
+Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green
     # Scope disclaimer, added after the 2026-08-26 incident in which this script printed CLEAN while

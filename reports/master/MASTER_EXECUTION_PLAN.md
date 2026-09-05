@@ -1346,6 +1346,51 @@ additive capability.*
 always been the *completeness and assurance* layer over Batches 0–5, and it has no finish line until
 one is written down. This is that finish line. Nothing here reopens a closed package.
 
+### The adversarial loop (strengthened 2026-09-05, slice 2)
+
+**The mindset is hostile, the changes are conservative.** A slice does not ask "does the intended
+operation work?" — it asks *can I make an operation work that should not?* The loop below is the
+shape slices 1 and 2 both ran, written down so a session that inherits nothing can run it again:
+
+> **DISCOVER** the surface from the catalog · **MODEL THE TRUST BOUNDARIES** (which doors exist, who
+> owns them) · **NAME THE ASSUMPTIONS** the surface relies on · **ATTACK** each one · **REPRODUCE**
+> anything that gives · **CLASSIFY** it · **REPAIR** the root cause · **RETEST** · **ATTACK THE
+> REPAIR** · **INJECT THE DEFECT** to prove the test detects it · **GUARD** · **PARITY** ·
+> **EVIDENCE** · **UPDATE THE DISPOSITION** · **SELECT THE NEXT TARGET BY MEASUREMENT.**
+
+**The attack taxonomy is CLOSED, and `=N/A` is a position rather than a gap.** Each slice declares
+the classes it attacked on an `-- ATTACK-CLASSES:` line in its own pgTAP file, beside the assertions
+that earn them; **Check 24 (ADV-1)** parses it and refuses `ADVERSARIAL` for any surface whose test
+file lacks the declaration or carries no negative assertion. The vocabulary is deliberately small so
+slices stay comparable:
+
+| Class | The question it asks |
+|---|---|
+| **AUTH** | vertical and horizontal escalation, permission omission and confusion, temporal grants, revocation, and whether `deny > user grant > role grant > plan gate` survives this door |
+| **TENANT** | foreign tenant/parent/child ids, mixed-tenant relationships, cross-tenant read, write and error leakage — never "RLS exists", always a proven refusal |
+| **DOOR** | does every path enforce the invariant — RPC, table, view, trigger, transition, job, integration — or only the one the application happens to use |
+| **STATE** | can a forbidden or impossible lifecycle state be reached, including through a lower-level write path |
+| **INPUT** | NULL, empty, negative, extreme, malformed, duplicate, stale id, unregistered catalog value |
+| **BUSINESS** | states that are valid SQL and invalid business: money created, history re-denominated, orphaned children, closed objects altered |
+| **CONCURRENCY** | can two legitimate actors combine into an invalid result — counters, balances, leases, claims, single-use tokens |
+| **REPLAY** | can the same operation be repeated for an unintended effect |
+| **PRIVILEGE** | SECURITY DEFINER reachability, `search_path`, owner privileges, RLS bypass, and what a caller-supplied id means inside a definer function |
+| **OBSERVABILITY** | can an invalid operation happen without leaving the evidence it should |
+
+**Three rules the loop enforces on itself**, each earned by a defect in this repository's own
+measuring layer: a repair is not done until a **defect injection** proves the test detects its
+absence (**PAR-4**); an injection assertion must be **re-asserted after the rollback** or it is never
+counted (**TEST-3**); and a control found **strong** is recorded and pinned, because proving an
+existing control works is a cheaper and better outcome than adding another one.
+
+**Slice selection is a measurement, not a preference.** `scripts/batch6_select_target.ps1` ranks
+every surface still at `NOT-RECORDED` by exposure minus coverage — money, PII, unguarded write
+doors, direct grants, SECURITY DEFINER writers, RPC count, lifecycle, concurrency shape, against
+pgTAP files and negative assertions — and **stores nothing**: every number is recomputed from the
+live catalog and the repository on each run, so it selects the next slice without ever owning the
+truth about a surface. It is not a CI gate and has no verdict to give; a high score says *attacking
+here is most likely to be repaid*, and a low score is never evidence that a surface is safe.
+
 **Standing method per slice** — the shape every closed entry above already followed, stated once so it
 stops being re-derived: **DISCOVER** the surface from the catalog (schema, columns, constraints,
 indexes, FKs, RLS, policies, direct grants, triggers, RPC interactions, lifecycle, catalogs, events,
