@@ -121,7 +121,7 @@ call it -- see section 6 for what that does and does not establish.
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
-| `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, permitted boolean, exposure_amount numeric, threshold_exceeded boolean)` | invoker | inline has_permission check | - | - | 2 | yes |
+| `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, permitted boolean, exposure_amount numeric, threshold_exceeded boolean, unconvertible_currencies text[])` | invoker | inline has_permission check | - | - | 2 | yes |
 | `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | yes |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |

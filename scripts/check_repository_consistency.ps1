@@ -41,7 +41,9 @@
       ai-map AGREE about this field; Check 18 asks whether what they agree on is TRUE. Independent
       invariants, independently testable -- neither substitutes for the other. ·
     Check 19 the repository CARRIES attributable evidence that Primary's migration ledger is this
-      repository's migration ledger (RECOVER-1) -- a RECORDED reading, fail-closed, never a live one.
+      repository's migration ledger (RECOVER-1) -- a RECORDED reading, fail-closed, never a live one ·
+    Check 20 this guard's OWN CI workflow is triggered by every input this guard reads (CI-1) -- a
+      fixed list, because inferring the input set from this script would be a guess.
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -1270,6 +1272,54 @@ if (-not (Test-Path $ledgerGuard)) {
         Write-Host "  UNKNOWN IS NOT CLEAN. Refresh it by reading Primary's ledger via the" -ForegroundColor DarkGray
         Write-Host "  supabase-primary MCP; the exact query is recorded in the evidence file." -ForegroundColor DarkGray
         $issues++
+    }
+}
+
+# =====================================================================================================
+# Check 20: CI-1 -- this guard's own workflow must be TRIGGERED by every input this guard READS.
+#
+# Verified failure class (2026-09-05). The workflow already states the rule, in a comment written
+# when Check 19's script and evidence file were found missing from its path filters: "Every file the
+# guard reads or executes belongs in these lists." It was stated and then not applied to the three
+# remaining inputs. Measured in this script's own source: Check 1 resolves pgTAP references against
+# `supabase/tests/`, Check 7 reads `ai-map.json`, Check 9 derives migration state from
+# `supabase/migrations/`, Check 15 counts `supabase/tests/*.sql`. None of those three paths appeared
+# in `on.push.paths`, so a commit touching ONLY migrations, ONLY tests or ONLY `ai-map.json` changed
+# four checks' inputs and ran none of them.
+#
+# WHAT THIS CHECK IS AND IS NOT. It is a FIXED-LIST check: it asserts the paths known today are
+# present, and it CANNOT discover a new input that a future check starts reading -- a guard that
+# parsed this script for file reads would be inferring, and inferring wrongly would be worse than
+# not checking. That ceiling is the reason the list carries the check numbers that justify each
+# entry: adding an input means adding a line here, and the comment says so where the next author
+# will read it. Pinning the known regression is worth more than an inference that could be wrong.
+#
+# Migration CI is deliberately NOT merged into this workflow. It watches two of these paths but runs
+# a database stack and never runs this guard; the two validate different evidence classes.
+# =====================================================================================================
+Write-Host "== Check 20: CI triggers cover this guard's inputs (CI-1) ==" -ForegroundColor Cyan
+$ciWorkflow = Join-Path $RepoRoot '.github/workflows/repository-consistency.yml'
+if (-not (Test-Path $ciWorkflow)) {
+    Write-Host "  MISSING: .github/workflows/repository-consistency.yml -- this guard has no CI trigger at all." -ForegroundColor Red
+    $issues++
+} else {
+    $ciText = Get-Content $ciWorkflow -Raw
+    # path -> the check(s) that read it, so a failure says WHY the path matters.
+    $requiredTriggers = [ordered]@{
+        '**/*.md'                                     = 'Checks 1-6, 10-18 (every Living/Master document)'
+        'scripts/check_repository_consistency.ps1'    = 'this script itself'
+        'scripts/check_primary_ledger.ps1'            = 'Check 19 executes it'
+        'reports/evidence/primary-ledger-evidence.json' = 'Check 19 reads it'
+        'supabase/migrations/**'                      = 'Check 9 (migration count, latest, ledger fingerprint)'
+        'supabase/tests/**'                           = 'Check 1 (pgTAP reference resolution) and Check 15 (suite figures)'
+        'ai-map.json'                                 = 'Check 7 (ai-map freshness vs manifest)'
+    }
+    foreach ($p in $requiredTriggers.Keys) {
+        # Matched as a quoted YAML list item, which is how every entry in this workflow is written.
+        if ($ciText -notmatch [regex]::Escape('"' + $p + '"')) {
+            Write-Host "  CI TRIGGER GAP: '$p' is not in repository-consistency.yml paths -- $($requiredTriggers[$p]). A commit touching only this path would change the guard's input without running the guard." -ForegroundColor Yellow
+            $issues++
+        }
     }
 }
 

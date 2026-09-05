@@ -32,7 +32,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(11);
+select plan(12);
 
 insert into auth.users (id, email) values
   ('63000000-0000-0000-0000-0000000000a1','emp@sla.test'),
@@ -181,6 +181,37 @@ select is(
       and target_user_id in ('63000000-0000-0000-0000-000000000012','63000000-0000-0000-0000-000000000013')),
   2,
   '...and BOTH managers are told it was reassigned -- canon 10''s second half, which had no code at all');
+
+-- =============================================================================================
+-- LEAD-5 (202607060800). THE JOB MUST NOT OVERLAP ITSELF.
+--
+-- `cron.job` schedules this at `* * * * *` and pg_cron does NOT wait for the previous pass, so any
+-- pass exceeding sixty seconds runs concurrently with its successor. The REASSIGNMENT branch is
+-- already protected by a constraint -- `lead_assignments_one_current_idx` is UNIQUE on (lead_id)
+-- WHERE is_current, so a second concurrent reassignment cannot commit. The WARNING branch has no
+-- such constraint: it reads whether a warning exists, then writes an event and one notification per
+-- responsible manager, and two passes that read before either writes both do it.
+--
+-- WHAT IS AND IS NOT PROVEN HERE, stated rather than implied. pgTAP runs in ONE session and ONE
+-- transaction, so genuine concurrency is not reproducible in this file and nothing below claims it.
+-- What IS proven is the mechanism, behaviourally rather than by reading the source: the function
+-- takes a TRANSACTION-SCOPED advisory lock on the key naming the job. Transaction-scoped means it is
+-- still held now, three passes later, and therefore visible in `pg_locks`. Matching the exact key
+-- rather than merely counting locks is what makes this assertion specific -- an unrelated advisory
+-- lock taken by some other function would not satisfy it.
+--
+-- The key encoding is PostgreSQL's own: the single-argument bigint form stores the high word in
+-- `classid`, the low word in `objid`, and sets `objsubid` to 1.
+-- =============================================================================================
+select is(
+  (select count(*)::int from pg_locks l
+    where l.locktype = 'advisory'
+      and l.pid = pg_backend_pid()
+      and l.objsubid = 1
+      and l.classid = ((hashtextextended('app.process_lead_sla', 0) >> 32) & 4294967295)::oid
+      and l.objid   =  (hashtextextended('app.process_lead_sla', 0)        & 4294967295)::oid),
+  1,
+  'LEAD-5: the SLA pass holds a transaction-scoped ADVISORY LOCK keyed on the job -- a second overlapping pass takes the TRY and returns, so the warning branch cannot double-write');
 
 select finish();
 rollback;

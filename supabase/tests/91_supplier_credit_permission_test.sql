@@ -208,11 +208,19 @@ select lives_ok(
 
 -- =============================================================================================
 -- 22-23. PAR-4 DEFECT INJECTION on `guard_supplier_credit_authority`.
---        The mutation is chosen so that this trigger is the ONLY refuser: an ASSIGN_SUPPLIER holder
---        changing the ceiling AND another column passes `guard_write_capability` (the write is not
---        credit-only, so ASSIGN_SUPPLIER is what it charges) and is stopped solely here. Using a
---        credit-ONLY write would have been the test-85 mistake -- both guards would demand the same
---        permission and dropping one would prove nothing.
+--        REWRITTEN 2026-09-05 (CUST-5, `202607060600`). The mutation USED to isolate this trigger by
+--        choosing columns: an ASSIGN_SUPPLIER holder changing the ceiling AND another column passed
+--        `guard_write_capability`, because that guard decided "credit-only" by comparing full ROW
+--        IMAGES and charged ASSIGN_SUPPLIER for anything else. That comparison WAS CUST-5 -- correct
+--        only while no BEFORE trigger on `suppliers` mutated `new` -- and it is gone. A write
+--        touching the ceiling now costs MANAGE_SUPPLIER_CREDIT whether or not it touches anything
+--        else, so no choice of columns can separate the two guards.
+--
+--        The isolation is done by DROPPING THE OTHER GUARD instead, which proves the stronger fact:
+--        `guard_supplier_credit_authority` refuses WITHOUT `guard_write_capability` behind it. That
+--        is not the test-85 mistake -- the mistake was dropping one guard while a second, unnamed
+--        one silently produced the same refusal. Here the second guard is removed BY NAME, so the
+--        refusal can only come from the trigger under test.
 -- =============================================================================================
 reset role;
 select is(
@@ -222,15 +230,16 @@ select is(
   'CONTROL: the guard is present before the mutation -- the harness is measuring a real object');
 
 savepoint before_mutation;
-drop trigger suppliers_guard_credit_authority on public.suppliers;
+drop trigger suppliers_guard_write_capability on public.suppliers;
 
 select set_config('request.jwt.claims','{"sub":"91000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 set local role authenticated;
 
-select lives_ok(
+select throws_ok(
   $$update public.suppliers set credit_limit_amount = 888888, phone = '+20 100 000 0009'
      where id = '91000000-0000-0000-0000-0000000000e1'$$,
-  'MUTATION: with the credit guard dropped, an ASSIGN_SUPPLIER holder CAN move the ceiling -- so the refusals above are this trigger');
+  '42501', null,
+  'MUTATION: with guard_write_capability removed BY NAME, an ASSIGN_SUPPLIER holder is STILL refused the ceiling -- so guard_supplier_credit_authority refuses on its own, not with help');
 
 reset role;
 rollback to savepoint before_mutation;

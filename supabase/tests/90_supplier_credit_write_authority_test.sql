@@ -163,23 +163,39 @@ select throws_ok(
   '42501', null,
   'MUTATION CONTROL: with the dedicated trigger dropped a CREDIT-ONLY write is STILL refused -- guard_write_capability''s credit branch is a second, independent enforcer (SUP-3)');
 
--- 202607059700 (SUP-3): this mutation pair names `credit_limit_amount` AND `phone`, and the second
--- column is load-bearing. SUP-3 gave `guard_write_capability` a credit-only branch that charges
--- MANAGE_SUPPLIER_CREDIT, so on a credit-ONLY write there are now TWO guards demanding a permission
--- this actor lacks -- dropping one leaves the other, the `lives_ok` fails, and the paired `throws_ok`
--- would still pass on the survivor while measuring nothing. That is the same defect this file's own
--- header describes in test 85, arriving here the moment a second enforcement point appeared.
--- Adding an ordinary column makes the write NOT credit-only, so `guard_write_capability` charges
--- ASSIGN_SUPPLIER (which this actor HOLDS) and `guard_supplier_credit_authority` is the sole refuser
--- -- which is exactly what this pair must isolate.
-select lives_ok(
-  $$update public.suppliers set credit_limit_amount = 999999, phone = '+20 100 000 5555'
-     where id = '90000000-0000-0000-0000-0000000000e1'$$,
-  'MUTATION: with the guard dropped the senior employee CAN set the ceiling -- the refusal above is this trigger');
-
 reset role;
 select set_config('request.jwt.claims', null, true);
 rollback to savepoint before_mutation;
+
+-- REWRITTEN 2026-09-05 (CUST-5, `202607060600`). This half used to isolate
+-- `guard_supplier_credit_authority` by making the write NON-credit-only (`credit_limit_amount` AND
+-- `phone`), because the old `guard_write_capability` decided "credit-only" by comparing full ROW
+-- IMAGES and charged ASSIGN_SUPPLIER -- which this actor holds -- for anything else. That row-image
+-- comparison WAS CUST-5: it held only while no BEFORE trigger on `suppliers` mutated `new`, and the
+-- identical form had already failed on `customers`. Removing it means a write TOUCHING the ceiling
+-- costs MANAGE_SUPPLIER_CREDIT whether or not it touches anything else, so no choice of columns can
+-- separate the two guards any more.
+--
+-- The isolation is therefore done the SYMMETRIC way instead, which is a stronger statement than the
+-- one it replaces: drop the OTHER trigger and require the same write to be refused ANYWAY. Together
+-- with the assertion above -- drop this one, still refused -- the pair proves each guard refuses
+-- WITHOUT the other, which is what "two independent enforcers" means. Neither half can pass on a
+-- survivor, because each half has removed the survivor the other relies on.
+savepoint before_mutation_2;
+drop trigger suppliers_guard_write_capability on public.suppliers;
+
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"90000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
+
+select throws_ok(
+  $$update public.suppliers set credit_limit_amount = 999999
+     where id = '90000000-0000-0000-0000-0000000000e1'$$,
+  '42501', null,
+  'MUTATION CONTROL (mirror): with guard_write_capability dropped the credit write is STILL refused -- guard_supplier_credit_authority is the second, independent enforcer (SUP-3)');
+
+reset role;
+select set_config('request.jwt.claims', null, true);
+rollback to savepoint before_mutation_2;
 
 -- Re-established deliberately: after a rollback an unset session measures "never attempted" rather
 -- than "denied", the confusion already met in tests 70, 72 and 85.

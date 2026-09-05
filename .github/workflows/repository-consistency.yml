@@ -15,6 +15,21 @@ on:
       # it. Every file the guard reads or executes belongs in these lists.
       - "scripts/check_primary_ledger.ps1"
       - "reports/evidence/primary-ledger-evidence.json"
+      # The same rule, applied to the three INPUTS the guard reads that are not Markdown and not one
+      # of its own scripts. Measured in the guard's source rather than assumed:
+      #   Check 1  (GOV-13)  resolves pgTAP test references against `supabase/tests/`
+      #   Check 7  (INC-2)   reads `ai-map.json` and compares five live_state fields to the manifest
+      #   Check 9            derives the migration count, latest filename and ledger fingerprint
+      #                      from `supabase/migrations/` alone
+      #   Check 15 (META-1)  counts `supabase/tests/*.sql` and their assertions
+      # A commit touching ONLY migrations, ONLY tests, or ONLY `ai-map.json` therefore changed four
+      # checks' inputs while running none of them -- the same omission the comment above records for
+      # Check 19, in the three places it was left. Migration CI watches two of these paths but does
+      # NOT run this guard, and merging the two workflows would be wrong: they validate different
+      # evidence classes and this one deliberately needs no database stack.
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "ai-map.json"
       - ".github/workflows/repository-consistency.yml"
   pull_request:
     paths:
@@ -22,6 +37,9 @@ on:
       - "scripts/check_repository_consistency.ps1"
       - "scripts/check_primary_ledger.ps1"
       - "reports/evidence/primary-ledger-evidence.json"
+      - "supabase/migrations/**"
+      - "supabase/tests/**"
+      - "ai-map.json"
 
 jobs:
   consistency:

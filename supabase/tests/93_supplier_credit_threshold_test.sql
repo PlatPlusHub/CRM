@@ -97,7 +97,7 @@ select is(
   'CONTROL: the below-threshold write landed -- so the silence below is silence about a real row');
 
 select is(
-  app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP'),
+  (select e.exposure from app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP') e),
   400::numeric,
   'exposure is the locked cost, computed exactly as app.supplier_balance defines it');
 
@@ -119,7 +119,7 @@ select is(
   'AT THRESHOLD: the write is NOT blocked');
 
 select is(
-  app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP'),
+  (select e.exposure from app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP') e),
   1000::numeric,
   '...and exposure now equals the ceiling exactly');
 
@@ -141,7 +141,7 @@ select is(
   'ABOVE THRESHOLD: THE WRITE STILL LANDS -- the owner decision is WARN, not REFUSE, and this is the assertion that proves it');
 
 select is(
-  app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP'),
+  (select e.exposure from app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP') e),
   1500::numeric,
   '...and exposure is now 1500 against a ceiling of 1000');
 
@@ -207,7 +207,7 @@ insert into public.booking_items (id, tenant_id, booking_id, supplier_id, servic
 
 select is(
   (select count(*)::int from (
-     select app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP')
+     select (select e.exposure from app.supplier_exposure_in_limit_currency('93000000-0000-0000-0000-000000000001','93000000-0000-0000-0000-0000000000e1','EGP') e)
      from generate_series(1,3)) s),
   3,
   'CONTROL: exposure was read three more times, so the next assertion measures reads as well as writes');
