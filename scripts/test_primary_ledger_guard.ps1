@@ -100,10 +100,21 @@ Remove-Item $d -Recurse -Force
 
 # --- 4. Evidence bound to a commit that is NOT an ancestor of HEAD. A real, well-formed commit
 #        object is created with `commit-tree` -- dangling, on no branch, so history is untouched.
+#
+# AUD-01a (2026-09-06): the identity is passed with `-c`, and that is not decoration. `commit-tree`
+# writes a commit object and therefore demands an author and a committer; a GitHub Actions runner has
+# neither configured, so this scenario failed with "Author identity unknown" on every CI run --
+# except that nothing ran this suite, so its FIRST execution in CI was also its first failure. `-c`
+# supplies the identity for this one invocation and writes to no config file, local or global.
 $d = New-Sandbox
-$foreign = (git commit-tree (git rev-parse 'HEAD^{tree}') -p (git rev-parse HEAD) -m 'foreign commit for mutation test 4' 2>$null)
+$gitId = @('-c', 'user.name=orvion-guard-test', '-c', 'user.email=guard-test@orvion.invalid')
+$foreignOut = (& git @gitId commit-tree (git rev-parse 'HEAD^{tree}') -p (git rev-parse HEAD) -m 'foreign commit for mutation test 4' 2>&1)
+$foreign = ($foreignOut | Where-Object { $_ -match '^[0-9a-f]{40}$' } | Select-Object -First 1)
 if ([string]::IsNullOrWhiteSpace($foreign)) {
-    Check "MUTATION 4: could not create a foreign commit object -- scenario NOT PROVEN" $false 'git commit-tree failed'
+    # The reason is REPORTED, not swallowed. The old form redirected stderr to $null and could only
+    # say "git commit-tree failed", which is what made a one-line environment fault look like a
+    # mystery.
+    Check "MUTATION 4: could not create a foreign commit object -- scenario NOT PROVEN" $false ("git commit-tree failed: " + (($foreignOut | Out-String).Trim() -replace '\s+', ' '))
 } else {
     $ev = Get-Content (Join-Path $d 'evidence.json') -Raw | ConvertFrom-Json
     $ev.repository_head = $foreign.Trim()
