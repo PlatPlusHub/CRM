@@ -31,8 +31,10 @@
 --
 -- 10    is the anti-tautology control. Assertions 1-6 would pass equally against a table nobody can
 --       write for any reason -- including one accidentally revoked from every role, or dropped. 10
---       proves the platform side is still open, so the repair narrowed authority rather than
---       destroying the table's purpose.
+--       proves the table is still there and still writable, so the repair narrowed authority rather
+--       than destroying the table's purpose. Its own first draft was environment-dependent and CI
+--       caught it; the block above assertion 10 records why, because that is the same defect class
+--       this slice is about.
 --
 -- 11-14 prove the repair was SURGICAL rather than a blanket sweep of the canon-34 family, which is
 --       the shape a careless fix would have taken. The three tables are three different situations
@@ -135,13 +137,24 @@ select throws_ok(
 
 -- =============================================================================================
 -- 10. ANTI-TAUTOLOGY. 1-6 would pass against a table nobody can write, or one that was dropped.
+--
+-- RUN ON THE OWNER PATH, NOT AS `service_role`, AND THE REASON IS THIS SLICE'S OWN SUBJECT MATTER.
+-- The first version of this assertion did `set local role service_role`. It passed on this machine
+-- and FAILED IN CI with `42501: permission denied for table otp_challenges` -- not because of the
+-- repair, but because `service_role`'s privileges on a public table are granted by the SUPABASE
+-- PLATFORM IMAGE and by nothing in `supabase/migrations`, and CI pins CLI 2.109.1 where the
+-- development machine runs 2.117.0. A repository invariant anchored to platform state the
+-- repository does not govern is environment-dependent by construction: the same MEAS-1 shape this
+-- slice recorded against PAX-4 and the previous session recorded as GUARD-CRLF-1, reproduced here
+-- in this file's own author. The owner path is what the control actually needs -- it rules out
+-- "the table was dropped" and "nobody at all can write it", which is precisely what assertions
+-- 1-6 cannot distinguish, and it depends on nothing outside this repository.
 -- =============================================================================================
 reset role;
-set local role service_role;
 select lives_ok(
   $$insert into public.otp_challenges (auth_user_id, status_code, sent_to_email, expires_at)
     values ('06000000-0000-0000-0000-0000000000a1','pending','subject@otp6.test', now() + interval '5 minutes')$$,
-  'the PLATFORM can still issue a challenge -- the repair narrowed who may write, it did not make the table unusable');
+  'the table is still WRITABLE on the owner path -- the repair narrowed who may write, it did not make the table unusable or drop it');
 
 reset role;
 select set_config('request.jwt.claims', '', true);
