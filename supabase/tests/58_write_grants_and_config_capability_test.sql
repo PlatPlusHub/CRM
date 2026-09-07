@@ -243,8 +243,8 @@ select is(
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  25,
-  'twenty-five tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000)');
+  26,
+  'twenty-six tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -260,7 +260,13 @@ select is(
                             -- RPC already charges.
                             'bookings','complaints','conversations','customer_notes','customers',
                             'documents','leads','passengers','quotations','service_requests',
-                            'suppliers','tasks')),
+                            'suppliers','tasks',
+                            -- PAX-1 (202607061400): the manifest row. SEC-1b's sweep credited this
+                            -- table for `guard_passenger_financials`, which returns NEW when both
+                            -- override amounts are null -- so the OPERATIONAL half of the row, which
+                            -- is the half the table exists for, was never charged anything. It
+                            -- charges CREATE_BOOKING_ITEM, the permission its own RPC always has.
+                            'booking_item_passengers')),
   0,
   '...and every one of them is on a table the function has a permission mapping for');
 

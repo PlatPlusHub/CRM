@@ -2,7 +2,23 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-06 (**slices 2 and 3 recorded — EC-1 stands at 4 of 77, and slice 3 found a
+Last updated: 2026-09-07 (**slice 4 recorded — EC-1 stands at 5 of 77, and the slice found the
+ceiling that had been vouching for it.** `booking_item_passengers` (`202607061400`) closed **PAX-1**
+(a `finance_manager` with no `CREATE_BOOKING_ITEM` was refused by the RPC and allowed by the table),
+**PAX-2** (a passenger could be swapped on an existing booking with no capability and no record) and
+**PAX-3** (a SECURITY DEFINER trigger running before the RLS WITH CHECK disclosed a foreign booking
+item's existence and state). **The generalising finding is MEAS-2**, and it is the fifth
+self-enforcing rule recorded in the loop below: all three SEC-1 ceilings CREDITED this table, because
+`guard_passenger_financials` names `has_permission` and returns early when both override amounts are
+null — so the count never moved when the hole was closed. Root-causing that immediately produced
+**BOOK-3 (High, OPEN)**: `booking_items`, the parent, has the identical defect and a bare item was
+INSERTed by an actor without the capability. It is deliberately **not** repaired here — its UPDATE
+arm needs the CUST-3 treatment because finance holds `ENTER_COST` without `CREATE_BOOKING_ITEM` — and
+`booking_items` is **named as the next slice**. Also opened: **PAX-4**, **PAX-5** (owner) and
+**PAX-6** (canon: the swap is now authorized, and still not audited).
+**Batch 6 remains NOT COMPLETE**: 72 surfaces at `NOT-RECORDED`. Prior entry follows.)
+
+Previously: 2026-09-06 (**slices 2 and 3 recorded — EC-1 stands at 4 of 77, and slice 3 found a
 class defect by attacking its own repair.** Slice 2 (`financial_accounts`, `202607061200`) closed
 **FA-1** and **SECDEF-1** and left **FA-2** as an owner question; slice 3 (`company_assets`,
 `202607061300`) closed **CA-1**, **CA-2** and **MONEY-1**. MONEY-1 is the one that generalises:
@@ -1402,7 +1418,18 @@ copied from fifteen columns that already carried it and correct-looking in every
 *constraint* rather than the code found that PostgreSQL ranks `numeric` NaN above every non-NaN
 value, so that shape had never excluded NaN anywhere in the repository. A repair inherited from a
 precedent inherits the precedent's blind spots, and the cheapest moment to find that is before the
-migration exists.
+migration exists. **A fifth rule was earned 2026-09-07 by MEAS-2, and it is about the ceilings
+themselves: a green ceiling that CREDITS a table is not evidence that the table is guarded on every
+path.** All three SEC-1 ceilings ask whether *some* trigger names `app.authorize`; none can ask
+whether it charges *unconditionally*, because that is behavioural and they are text predicates.
+`booking_item_passengers` was credited by all three while a finance manager wrote its manifest rows
+freely, because `guard_passenger_financials` returns early on null amounts — and **the ceiling did
+not move when the hole was closed**, which is the diagnostic: a number that stays still through a
+real repair was never counting the thing you thought. The standing consequence: when a slice finds a
+defect on a surface a ceiling already credited, **root-cause the ceiling too**, and bound the
+population it cannot judge (assertion 9 of `10_grant_model_test` now names the ten tables whose only
+capability trigger is bespoke). Applying that rule immediately is what found **BOOK-3** on
+`booking_items` — the same defect on the parent table, one hop from the slice.
 
 **Slice selection is a measurement, not a preference.** `scripts/batch6_select_target.ps1` ranks
 every surface still at `NOT-RECORDED` by exposure minus coverage — money, PII, unguarded write
@@ -1431,7 +1458,7 @@ policy (MAIL-1, RET-1).
 
 | # | Criterion | How it is measured today |
 |---|---|---|
-| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **4 of 77 recorded** (2026-09-06). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
+| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **5 of 77 recorded** (2026-09-07). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
 | **EC-2** | **Authorization.** Every writable surface has a documented authorization rationale; exceptions explicit | Already partly earned and already pinned: `57_write_capability_map_test.sql` and `58_write_grants_and_config_capability_test.sql` carry the 54/17/3 ceilings, and the residual three are the canon-34 Human Identity tables with a stated rationale. Exit = the ceilings hold and every remaining exception names its reason |
 | **EC-3** | **Tenant isolation.** No unresolved tenant-crossing path in scope | Positive+negative HTTP proof exists (`verify_api_end_to_end.ps1` against a fully privileged owner of another agency). Exit = every table in EC-1's record has a stated isolation basis (RLS predicate, structural path prefix, or platform-only) |
 | **EC-4** | **Lifecycle integrity.** No unresolved invalid transition or parent/child contradiction | `54_transition_permission_parity_test` (both directions, all ten functions) and the PARENT-1 class guard in `88_parent_state_on_every_door_test` (seven verified non-defects, each run down against the catalog). Exit = both green with no unexplained entry |

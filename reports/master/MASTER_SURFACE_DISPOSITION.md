@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative assurance record — the SSOT for one fact and one only: what audit disposition each database surface has been given, by which session, and what remains.** Never recreate; evolve. One row per `public` table. It owns no findings (those are `MASTER_GAP_REGISTER.md`), no narrative (that is the named session report), no schema (that is the catalog and `MASTER_DOMAIN_CATALOG.md`), and no test inventory (that is `supabase/tests/**`). Every cell that is not the disposition itself is a **pointer**, deliberately, so nothing here can drift from a fact it restates. Cross-reference: `MASTER_EXECUTION_PLAN.md` Batch 6 exit criteria **EC-1**, which this file exists to satisfy.
 
-Last updated: 2026-09-06 (**slice 3 — `company_assets`, and a residue found in a row that already read AUDITED.** Coverage **3 → 4 of 77**. The slice was chosen by `scripts/batch6_select_target.ps1` and closed **CA-1**, **CA-2** and — by attacking its own draft repair — **MONEY-1**, a class defect in every money CHECK in the repository. It also found that slice 1 left `campaign_daily_metrics` able to record spend denominated in nothing (**CDM-3**); that row keeps its `AUDITED` disposition and gains the finding, because a disposition records what was assessed and the currency question was not asked. `MASTER_GAP_REGISTER.md` owns all five.)
+Last updated: 2026-09-07 (**slice 4 — `booking_item_passengers`, and the ceiling that had been crediting it.** Coverage **4 → 5 of 77**. The slice was chosen by `scripts/batch6_select_target.ps1` (score -2; exposure 10, coverage 12 — the highest-ranked `NOT-RECORDED` surface) and closed **PAX-1**, **PAX-2** and **PAX-3** via `202607061400`. The disposition is `AUDITED-OPEN` rather than `AUDITED` because two findings remain and **neither is engineering**: **PAX-5** is an owner decision (when does a manifest become immutable) and **PAX-6** a canon one (no event vocabulary exists for a manifest change, so the swap is now authorized but still not audited). **The row that matters most is not this one:** `booking_items` gains a `Next` note carrying **BOOK-3**, PAX-1's defect on the parent table, found by root-causing why the SEC-1 ceiling had rated this surface protected — it CREDITED a conditional guard (**MEAS-2**). `MASTER_GAP_REGISTER.md` owns all eight.)
+
+Previously: 2026-09-06 (**slice 3 — `company_assets`, and a residue found in a row that already read AUDITED.** Coverage **3 → 4 of 77**. The slice was chosen by `scripts/batch6_select_target.ps1` and closed **CA-1**, **CA-2** and — by attacking its own draft repair — **MONEY-1**, a class defect in every money CHECK in the repository. It also found that slice 1 left `campaign_daily_metrics` able to record spend denominated in nothing (**CDM-3**); that row keeps its `AUDITED` disposition and gains the finding, because a disposition records what was assessed and the currency question was not asked. `MASTER_GAP_REGISTER.md` owns all five.)
 
 Previously: 2026-09-05 (**created — EC-1.** Batch 6's exit criteria named a per-surface disposition record as the first thing that had to exist, because without one "how much has been audited?" is unanswerable: all 77 tables are named somewhere in `reports/**`, so *mention* is saturated and proves nothing, and 75 of 77 are named in some pgTAP file, which is a floor and not coverage. Seeded with all **77** surfaces and the first slice's **2**.)
 
@@ -38,9 +40,9 @@ There is deliberately **no `EXHAUSTIVE` value.** Exhaustive adversarial audit is
 
 ## Coverage
 
-**4 of 77 recorded · 3 `AUDITED` · 1 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 73 `NOT-RECORDED`.**
+**5 of 77 recorded · 3 `AUDITED` · 2 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 72 `NOT-RECORDED`.**
 
-**All 4 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
+**All 5 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
 
 This count is the honest one and it is meant to be uncomfortable. It replaces two numbers that read better and mean less: "all 77 tables appear in the reports" (true, and worthless — mention is not audit) and "75 of 77 tables appear in a pgTAP file" (true, and a floor — a table named once in an unrelated fixture is not a swept surface).
 
@@ -48,8 +50,8 @@ This count is the honest one and it is meant to be uncomfortable. It replaces tw
 |---|---|---|---|---|---|
 | `approval_requests` | NOT-RECORDED | — | — | — | — |
 | `attribution_clicks` | NOT-RECORDED | — | — | — | — |
-| `booking_item_passengers` | NOT-RECORDED | — | — | — | — |
-| `booking_items` | NOT-RECORDED | — | — | — | — |
+| `booking_item_passengers` | **AUDITED-OPEN** | ADVERSARIAL | `session-2026-09-07-batch6-slice4-booking-item-passengers` | PAX-1, PAX-2, PAX-3, PAX-5, PAX-6 | PAX-5 (owner: manifest immutability after issuance) and PAX-6 (canon: no event vocabulary for a manifest change) — both decisions, neither engineering |
+| `booking_items` | NOT-RECORDED | — | — | — | **Next slice.** Already carries one measured finding before its sweep begins: **BOOK-3** (High, open) — a bare item can be INSERTed by an actor with no `CREATE_BOOKING_ITEM`, because `guard_booking_item_financials` charges only when a money field is present. Found by slice 4's root-cause sweep, not by this surface's own audit, which is why the row stays `NOT-RECORDED` |
 | `bookings` | NOT-RECORDED | — | — | — | — |
 | `branch_business_hours` | NOT-RECORDED | — | — | — | — |
 | `branches` | NOT-RECORDED | — | — | — | — |

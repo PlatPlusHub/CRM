@@ -12,7 +12,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(8);
+select plan(9);
 
 -- 1. anon holds no DML of any kind on any public base table. ORVION has no anonymous flow; every
 --    RLS policy is scoped to {authenticated}, so an anon grant is pure attack surface.
@@ -214,6 +214,55 @@ select cmp_ok(
            and coalesce(pp.with_check,'') ~ 'has_permission\(''(?!VIEW_|SEE_)[A-Z_]+''')),
   '<=', 3,
   '...and at most 3 have no capability enforcement of ANY kind -- all three INTENTIONAL by canon 34');
+
+-- =============================================================================================
+-- 9. MEAS-2 (2026-09-07, from Batch 6 slice 4) -- WHAT THE THREE CEILINGS ABOVE CANNOT SEE.
+--
+-- All three ask whether SOME trigger on the table mentions `app.authorize` / `app.has_permission`.
+-- They cannot ask whether it CHARGES ON EVERY PATH, because that is a behavioural question and these
+-- are text predicates (`AGENTS.md §6`: static analysis is a lead, never a verdict).
+--
+-- PAX-1 is the proof, and it is not hypothetical. `booking_item_passengers` was CREDITED by all three
+-- ceilings on the strength of `guard_passenger_financials` -- which returns NEW immediately when both
+-- override amounts are null. So the ceilings reported a guarded table while a `finance_manager`
+-- holding no CREATE_BOOKING_ITEM inserted the manifest row directly and it persisted. A conditional
+-- guard is indistinguishable from an unconditional one at the level of text.
+--
+-- This assertion cannot fix that -- nothing textual can. What it does is bound the population that has
+-- to be checked BY HAND: every table whose only capability trigger is a bespoke one. `guard_write_-
+-- capability` charges unconditionally by construction, so a table carrying it needs no manual review;
+-- the ten below each have a purpose-written guard whose short-circuits must be read.
+--
+-- Two of the ten are ALREADY KNOWN to short-circuit and are registered, not silently tolerated:
+--   `booking_items`        BOOK-3, High, OPEN -- reproduced 2026-09-07: a finance_manager without
+--                          CREATE_BOOKING_ITEM inserted a BARE item (no amounts) and it persisted,
+--                          while pricing it afterwards was correctly refused (ENTER_SELLING_PRICE).
+--                          The financial half is guarded; the operational half is not. Deliberately
+--                          NOT repaired in slice 4 -- see the register: the UPDATE arm needs the
+--                          CUST-3 treatment (finance holds ENTER_COST and not CREATE_BOOKING_ITEM),
+--                          and `booking_items` is its own Batch 6 surface.
+--   `lead_interactions`    already the named open item of assertion 8's comment above.
+--
+-- Adding an eleventh bespoke guard fails this assertion, which is the point: it forces the author to
+-- state whether the new guard charges on every path, or to use `guard_write_capability` instead.
+-- =============================================================================================
+select set_eq(
+  $$select c.relname::text
+      from pg_class c join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public' and c.relkind = 'r'
+       and has_table_privilege('authenticated', c.oid, 'INSERT')
+       and exists (
+         select 1 from pg_trigger t join pg_proc p on p.oid = t.tgfoid
+          where t.tgrelid = c.oid and not t.tgisinternal and (t.tgtype & 4) <> 0
+            and pg_get_functiondef(p.oid) ~
+                '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
+       and not exists (
+         select 1 from pg_trigger t2 join pg_proc p2 on p2.oid = t2.tgfoid
+          where t2.tgrelid = c.oid and not t2.tgisinternal and (t2.tgtype & 4) <> 0
+            and p2.proname = 'guard_write_capability')$$,
+  array['booking_items','document_versions','invoices','lead_interactions','payment_allocations',
+        'payments','quotation_items','receipts','refunds','user_role_assignments'],
+  'MEAS-2: exactly these ten tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". booking_items is credited and is NOT unconditionally guarded (BOOK-3, open)');
 
 select * from finish();
 rollback;
