@@ -440,7 +440,19 @@ $mfPath = Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md'
 if (Test-Path $mfPath) {
     $mfContent = @(Get-Content $mfPath)
     $mfLines = $mfContent.Count
-    $mfChars = (Get-Content $mfPath -Raw).Length
+    # GUARD-CRLF-1 (2026-09-07): this measured LINE ENDINGS, not document size. `-Raw` returns the
+    # bytes as checked out, so under CRLF every line adds one character and the SAME COMMIT measures
+    # differently on two machines: manifest.md read 6,943 on an LF working copy and 7,003 on a fresh
+    # checkout of that identical commit (60 lines = +60), against a 7,000 budget — CLEAN here, 1 issue
+    # there. It had already cost real content: commit `ecb8346` deleted BOOK-3's attack narrative from
+    # the manifest to clear a 3-character overage that exists only under CRLF. The budget is NOT the
+    # defect and is unchanged at 7,000 (AGENTS.md §6 — never raised to fit); the MEASUREMENT was wrong,
+    # so the measurement is what is repaired (AGENTS.md §6 — "if a guard's description is stronger than
+    # its measurement, fix the guard"). Same family as VER-1, MEAS-1, PAR-1a, GOV-11 and the Check 12
+    # timezone defect fixed one commit earlier. Normalise CRLF→LF so the verdict is a property of the
+    # DOCUMENT, not of the checkout. The two neighbouring measurements need no fix: `Get-Content`
+    # without `-Raw` already strips line endings, so $mfLines and $mfLongest were never affected.
+    $mfChars = ((Get-Content $mfPath -Raw) -replace "`r`n", "`n").Length
     if ($mfLines -gt $manifestBudget) {
         Write-Host "  MANIFEST BLOAT: manifest.md is $mfLines lines (budget $manifestBudget) — trim changelog-style narrative; it holds current state only, pointing to reports for history" -ForegroundColor Yellow
         $issues++

@@ -2,9 +2,13 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/session-2026-09-07-batch6-slice5-booking-items.md` — **Batch 6 slice 5: `booking_items`.** `202607061500` closed **BOOK-3, BOOK-4, BOOK-5, BOOK-6, BOOK-7**; **BOOK-5** is the one to carry forward — an unconditional guard charging the right permission on every path, defeated because it asked "is this item mine?" of the attacker's own post-image. Also **GOV-16 (Check 25)** and **GOV-19**. Batch 6: **6 of 77 — NOT complete.**
+> **Latest session report:** `history/session-2026-09-07-measurement-layer-repair-and-verification.md` — **GUARD-CRLF-1, DISP-DRIFT-1 and SELECT-1 fixed after a GitHub→local fast-forward; Check 5 no longer measures line endings.** Batch 6: **6 of 77 — NOT complete.**
 >
-> **Current state & next step (read this first on a cold start):** `history/session-2026-09-07-current-state-and-next-step.md` — the full open-finding inventory, decision-debt audit, and the recommended next task, with four-surface synchronization evidence.
+> **Current state & next step (read this first on a cold start):** `history/session-2026-09-07-measurement-layer-repair-and-verification.md` — supersedes `history/session-2026-09-07-current-state-and-next-step.md`, whose open-finding inventory and decision-debt audit remain valid but whose Slice 6 justification carried the **SELECT-1** false exposure-lead claim (`otp_challenges` ranks 12th of 71, not first); the earlier report stays immutable and is not rewritten.
+>
+> *Previously:* `history/session-2026-09-07-local-first-state-reaudit.md` — **the local-first state re-audit that disproved its own premise:** local was a strict ancestor of `origin/main`, not ahead of it, and the repository guard's CLEAN verdict turned out to depend on the checkout's line endings (**GUARD-CRLF-1**). Read-only; nothing was pulled, pushed or deployed.
+>
+> *Previously:* `history/session-2026-09-07-batch6-slice5-booking-items.md` — **Batch 6 slice 5: `booking_items`.** `202607061500` closed **BOOK-3, BOOK-4, BOOK-5, BOOK-6, BOOK-7**; **BOOK-5** is the one to carry forward — an unconditional guard charging the right permission on every path, defeated because it asked "is this item mine?" of the attacker's own post-image. Also **GOV-16 (Check 25)** and **GOV-19**. Batch 6: **6 of 77 — NOT complete.**
 >
 > *Previously:* `history/session-2026-09-06-batch6-slice3-company-assets.md` — **Batch 6 slice 3: `company_assets`, and the money rule that had never once been true.** `202607061300` closed **CA-1**, **CA-2** and **MONEY-1** — the last found by attacking the slice's own draft repair rather than the schema. Migrations **201 → 202**; suite **102/1520 → 103/1560**; **six HTTP suites re-run, 430/0**; consistency CLEAN **1–24**; **Primary parity PROVEN on all three surfaces, values read FROM Primary**. **Batch 6: 4 of 77 — NOT complete.** Its §0 HANDOFF block is the summary and §8 is the next session's starting point — this row does not restate them (`AGENTS.md §6`).
 >

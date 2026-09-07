@@ -44,7 +44,7 @@ There is deliberately **no `EXHAUSTIVE` value.** Exhaustive adversarial audit is
 
 **6 of 77 recorded · 3 `AUDITED` · 3 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 71 `NOT-RECORDED`.**
 
-**All 5 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
+**All 6 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
 
 This count is the honest one and it is meant to be uncomfortable. It replaces two numbers that read better and mean less: "all 77 tables appear in the reports" (true, and worthless — mention is not audit) and "75 of 77 tables appear in a pgTAP file" (true, and a floor — a table named once in an unrelated fixture is not a swept surface).
 
