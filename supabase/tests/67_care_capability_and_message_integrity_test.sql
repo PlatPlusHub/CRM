@@ -109,8 +109,14 @@ select lives_ok(
 reset role;
 select set_config('request.jwt.claims', null, true);
 
+-- NAMED RATHER THAN COUNTED since 202607061600. This read `count(*) = 3` and would have stayed
+-- green through a SUBSTITUTION: one table leaving the uncovered set while another joined it nets to
+-- zero, and a bare count cannot tell that apart from nothing happening. The membership is the
+-- security property, so the membership is what is asserted. `otp_challenges` LEFT this set at
+-- 202607061600 (OTP-1) because the repair revoked its INSERT grant, which is why the population is
+-- now two rather than three -- a departure in that direction is the guard working.
 select is(
-  (select count(*)::int
+  (select coalesce(string_agg(c.relname, ',' order by c.relname), '')
      from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public' and c.relkind = 'r'
       and has_table_privilege('authenticated', c.oid, 'INSERT')
@@ -124,8 +130,8 @@ select is(
          where pp.schemaname = 'public' and pp.tablename = c.relname
            and pp.cmd in ('INSERT','ALL')
            and coalesce(pp.with_check,'') ~ 'has_permission\(''(?!VIEW_|SEE_)[A-Z_]+''')),
-  3,
-  'SEC-1b: measured on the INSERT PATH, exactly 3 tables have no capability enforcement -- was 15');
+  'totp_enrollments,trusted_devices',
+  'SEC-1b: measured on the INSERT PATH, the tables with no capability enforcement are exactly these TWO -- was 15, then 3, and both survivors are canon-34 identity tables where ownership IS the authorization model (totp_enrollments is OTP-2, open)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid

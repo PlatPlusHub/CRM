@@ -202,7 +202,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `notifications` | `S---` | no | no | scope_isolation |
 | `offline_conversion_deliveries` | `S---` | no | no | tenant_isolation |
 | `offline_conversions` | `SIU-` | yes | conditional | tenant_isolation |
-| `otp_challenges` | `SIU-` | no | no | owner_only |
+| `otp_challenges` | `S---` | no | no | owner_only |
 | `passengers` | `SIU-` | yes | conditional | tenant_isolation |
 | `payment_allocations` | `SIU-` | yes | conditional | scope_isolation |
 | `payments` | `SIU-` | yes | conditional | scope_isolation |

@@ -1,0 +1,95 @@
+-- ORVION Batch 6 slice 6 -- `otp_challenges`: a challenge its own subject could answer.
+--
+-- The manifest predicted this slice would conclude "correctly unguarded -- it is pre-authentication".
+-- IT IS NOT PRE-AUTHENTICATION, AND IT WAS NOT CORRECTLY UNGUARDED. Both halves were measured.
+--
+-- The "pre-authentication" claim originates in `202607061400`'s own PAX-4 note ("`otp_challenges` is
+-- a pre-authentication surface; a capability check there would be a category error") and was carried
+-- into the manifest unchallenged. Measured against the live stack, `anon` holds NO grant on this
+-- table and matches NO policy: `set local role anon; select ... from otp_challenges` answers
+--
+--     ERROR: permission denied for table otp_challenges
+--
+-- An unauthenticated caller cannot reach this table at all. The only principal that can is one who
+-- already holds a session -- which is what canon 34 § 7 actually describes: OTP is a SECOND FACTOR,
+-- presented after primary authentication, by a caller sitting at `aal1` and trying to reach `aal2`.
+-- The surface is INTRA-authentication, not PRE-authentication, and the distinction is the defect:
+-- a pre-authentication table would be unreachable, but this one is reachable by exactly the actor
+-- whose claim it is supposed to adjudicate.
+--
+-- OTP-1  High (latent).  `authenticated` held INSERT and UPDATE, RLS scoped them to
+--        `auth_user_id = auth.uid()`, and NO trigger constrained either. So the SUBJECT of a
+--        challenge was its own authority over it. Every one of these was REPRODUCED at `aal1`
+--        against the live local stack, as the challenged user, before this line was written:
+--
+--          * self-verify:      an EXPIRED, unverified challenge was UPDATEd to
+--                              status_code='verified', verified_at=now(), failed_attempts=0,
+--                              expires_at=now()+100 years.               UPDATE 1
+--          * forge:            a brand-new ALREADY-VERIFIED challenge was INSERTed for self.
+--                                                                        INSERT 0 1
+--          * rate-limit reset: `failed_attempts` is freely writable, so the attempt counter an OTP
+--                              lockout would consult is set by the party being counted.
+--          * delivery capture: `sent_to_email` was rewritten to an attacker-controlled address.
+--                                                                        UPDATE 1
+--          * backdate:         `created_at` was rewritten to 1999-01-01. UPDATE 1
+--          * garbage:          status_code='not-a-real-status' with failed_attempts=-999 stored;
+--                              only a PK and an FK constrain this table.  INSERT 0 1
+--
+--        WHAT HELD, and is asserted as a negative control rather than assumed: the cross-identity
+--        boundary. Re-pointing `auth_user_id` at another human is refused by the WITH CHECK, a
+--        foreign challenge is invisible to SELECT, an UPDATE aimed at one changes nothing, and
+--        `authenticated` has no DELETE grant. Canon 34's row-ownership model is intact. What was
+--        missing is that ownership was doing a job it cannot do: for an authentication artifact the
+--        owner IS the adversary, so "the row is yours" must not imply "you may write it".
+--
+--        LATENT, and the word is load-bearing. Measured: ZERO functions in `app` or `public`
+--        reference `otp_challenges` -- no issuer, no verifier, no consumer. Nothing today reads a
+--        row to decide anything, so nothing is exploitable today. This closes the hole before the
+--        lifecycle is built on top of it, which is the only cheap moment to close it.
+--
+-- THE REPAIR IS A REVOKE, AND DELIBERATELY NOT A CAPABILITY TRIGGER. `202607061400` was right that
+-- a capability check here would be a category error -- canon 34 § "Applying Principles 1, 6, and 7"
+-- puts these tables outside tenant RBAC, and `app.has_permission` needs a tenant context an
+-- authenticating caller may not yet have. It drew the wrong conclusion from a correct premise: that
+-- RBAC is the wrong guard does not mean no guard is owed. The right boundary for an authentication
+-- artifact is the ordinary one -- the platform issues and verifies, the subject only observes -- and
+-- ORVION already has exactly one mechanism for that, established by `202607056100` ("the grants now
+-- match the writers"). This is that mechanism, unchanged, applied to one more table.
+--
+-- SELECT is deliberately RETAINED: seeing that a code was sent to you is not authority over it, and
+-- `owner_only` already scopes the read. The policy is UNTOUCHED, so canon 34's stated RLS model
+-- ("simply row-ownership by `auth.uid()`") still reads exactly as canon specifies.
+--
+-- BLAST RADIUS: none, and it is provable rather than hoped. No function writes this table, so no
+-- code path loses a privilege it was using. Any correct future implementation must be a SECURITY
+-- DEFINER RPC -- the shape every other ORVION write path already takes -- and a definer function is
+-- unaffected by an `authenticated` grant. `58_write_grants_and_config_capability_test.sql`'s
+-- cross-identity assertion continues to pass: it expects 42501, which is what both an RLS refusal
+-- and a grant refusal raise.
+--
+-- =============================================================================================
+-- MEASURED AND DELIBERATELY NOT REPAIRED HERE
+-- =============================================================================================
+-- OTP-2 (open, DECISION -- not engineering): `totp_enrollments` carries the same shape and is NOT
+-- closed here. Reproduced at `aal1`: a user UPDATEd their own enrolment to `is_active=false,
+-- revoked_at=now()` and INSERTed a fresh active one -- MFA disabled and re-enrolled with no
+-- step-up. Unlike an OTP challenge, some of that is legitimate under a normal reading: enrolling a
+-- factor IS a user action. Whether DISABLING one requires re-authentication is a security-policy
+-- question canon does not answer, and picking an answer here would be inventing policy. Registered
+-- as OTP-2. `trusted_devices` is a THIRD shape again and is correctly left alone: its grant is
+-- load-bearing, because `app.record_trusted_device` is SECURITY INVOKER and depends on it.
+--
+-- PAX-4 (open, engineering -- COUNT CORRECTED, not closed): `202607061400` recorded that "20 tables
+-- have no trigger that calls app.authorize or app.has_permission at all". The number is true and
+-- the inference drawn from it is not. Re-measured against the live catalog, **15 of those 20 carry
+-- the capability check inside the RLS POLICY instead of a trigger** -- `user_permission_grants`,
+-- for instance, has three triggers and not one of them authorizes, yet `scope_insert` and
+-- `scope_update` both require `app.has_permission('MANAGE_PERMISSIONS')`. PAX-4 counted ENFORCEMENT
+-- SITES OF ONE KIND and reported it as GOVERNANCE. The genuinely uncovered set is FIVE, not twenty:
+-- `otp_challenges` (closed here), `totp_enrollments` (OTP-2), `trusted_devices` (canon 34, and its
+-- boundary is tested), `lead_interactions` (already registered BLOCKED/business) and
+-- `campaign_daily_metrics` (already AUDITED, slice 1). PAX-4 stays open because its remaining
+-- question is real, but it is a five-table question. Detail in MASTER_GAP_REGISTER.md.
+-- =============================================================================================
+
+revoke insert, update on public.otp_challenges from authenticated;

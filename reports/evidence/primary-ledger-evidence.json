@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-07T08:05:00Z",
-  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607061500 was applied via apply_migration and its ledger row normalised to the repository's version. GUARD-1: the array below is the repository's own filename list, written ONLY after its md5 was proven equal to the fingerprint read from Primary -- it is not a repository value standing in for a Primary one.",
+  "read_at": "2026-09-07T20:55:00Z",
+  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607061600 was applied via apply_migration and its ledger row normalised from the MCP-assigned version 20260907205145 to the repository version 202607061600. GUARD-1: the array below is the repository's own filename list, written ONLY after its md5 was proven equal to the fingerprint read from Primary -- it is not a repository value standing in for a Primary one.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "6ee639276319e4fe0a47c42b3147758781976413",
-  "migration_count": 204,
-  "ledger_fingerprint": "e9549f90784fb38b0924b6353a56d94f",
+  "repository_head": "75da7302fdb6da3492646b4468a16a4f0e45c205",
+  "migration_count": 205,
+  "ledger_fingerprint": "f718a133a11b88b61fb791350fe0dfb2",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -211,6 +211,7 @@
     "202607061200_an_account_keeps_the_currency_its_money_arrived_in",
     "202607061300_a_number_that_is_not_a_number_is_not_an_amount",
     "202607061400_the_manifest_asked_nobody_permission",
-    "202607061500_the_booked_service_itself_had_no_door"
+    "202607061500_the_booked_service_itself_had_no_door",
+    "202607061600_a_challenge_its_own_subject_could_answer"
   ]
 }
