@@ -321,17 +321,40 @@ MFA/device-trust family and are the natural slice 6–8 sequence.
 
 ## 14. Commit and CI
 
-Commit: `docs(guard): Check 5 was measuring line endings, not document size`
-(exact SHA and the CI conclusion for it are appended below by the same session that pushed it.)
+```
+6c35f69496e8237be16ff2b196e8d3e5fbcd1cff
+fix(guard): Check 5 was measuring line endings, not document size
 
-- Pushed to `origin/main` as a fast-forward; no force, no history rewrite.
-- CI observed after the push: see §15.
+ _ORVION_CANONICAL/manifest.md                |   4 +-
+ ai-map.json                                  |   6 +-
+ reports/README.md                            |   8 +-
+ reports/history/…local-first-state-reaudit.md| 435 +++
+ reports/history/…measurement-layer-repair…md | 352 +++
+ reports/master/MASTER_SURFACE_DISPOSITION.md |   2 +-
+ scripts/check_repository_consistency.ps1     |  14 +-
+ 7 files changed, 812 insertions(+), 9 deletions(-)
+
+ecb8346..6c35f69  main -> main        (fast-forward; no force, no history rewrite)
+HEAD == origin/main == 6c35f69 · ahead/behind 0/0 · working tree clean
+```
+
+`reports/master/MASTER_API_CONTRACT.md` was regenerated and came back **byte-identical**, so it does not
+appear in the diff — the generated contract was already current.
 
 ## 15. Post-Push CI
 
-Recorded live after the push — workflow **Repository Consistency** and **Migration CI** on this session's
-commit. Result: **see the session's closing report line**; a failure here would have been a finding, not a
-footnote, and the commit would not have been reported as complete.
+**Repository Consistency — `success`** on `6c35f69`
+(`https://github.com/PlatPlusHub/CRM/actions/runs/34157728525`).
+
+**Migration CI did not run, and that is the correct result, not a gap.** Its `on.push.paths` filter is
+`supabase/migrations/**`, `supabase/tests/**`, `supabase/config.toml`, `scripts/verify_database.sql` and its
+own workflow file; this commit touches none of them. Its absence is therefore independent corroboration that
+the package contains no database change — a second signal agreeing with §11's "no migration was written".
+
+**One asymmetry worth stating, because it is the reason GUARD-CRLF-1 survived:** CI checks out on Ubuntu with
+LF, so a green CI proves Check 5 passes on the **LF** form only. The **CRLF** form is proven by §5's battery
+and by this working copy, which has been CRLF since the fast-forward. Neither evidence source covers both;
+together they do.
 
 ## 16. Future-LLM Handoff
 
