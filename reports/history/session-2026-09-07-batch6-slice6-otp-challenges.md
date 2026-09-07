@@ -186,6 +186,40 @@ so no data is at risk on either side of the gap, and the function surface is ide
 The manifest's `Live state` line states this divergence explicitly rather than continuing to claim a parity that
 no longer holds.
 
+## 9. CI found a third instance of the same pattern, in this session's own test
+
+`8b5f7d1` passed Repository Consistency and **failed Migration CI**: assertion 10 of the new test died
+with `42501: permission denied for table otp_challenges`, having passed on the development machine
+minutes earlier.
+
+The repair was not the cause. Assertion 10 ran its anti-tautology `INSERT` as `service_role` — whose
+privileges on a `public` table are granted by the **Supabase platform image**, not by anything in
+`supabase/migrations`. CI pins CLI **2.109.1** (deliberately, with a stated reason in
+`migration-ci.yml`); this machine runs **2.117.0**. The assertion was resting a repository invariant
+on an input the repository does not govern.
+
+That is the *third* occurrence of one shape in two sessions:
+
+| where | claimed | actually measured |
+|---|---|---|
+| Check 5 (GUARD-CRLF-1) | document size | checkout line endings |
+| PAX-4 | writes are ungoverned | absence of one *kind* of enforcement site |
+| this file, assertion 10 | the table is still writable | a platform-managed grant that differs per CLI version |
+
+Fixed at `208f8a2` by anchoring the control to the owner path, which still rules out both things
+assertions 1-6 cannot distinguish — that the table was dropped, and that it is writable by nobody —
+and depends on nothing outside this repository. **The CI pin was not bumped:** changing the
+environment to suit a test is the wrong direction, and it would have converted a real finding into a
+hidden one.
+
+The generalisable rule, and the reason this section exists rather than a silent amendment: **a
+repository invariant may only be anchored to state the repository itself produces.** Local agreement
+is not evidence of environment-independence; here the only layer with a different environment was CI,
+and it is the layer that noticed — exactly as `parity_surface.sql`'s own header records for PAR-3.
+
+Commits: `8b5f7d1` (slice), `208f8a2` (this fix). Both CI workflows green on `208f8a2`; Migration CI
+ran on both because `supabase/migrations` changed.
+
 ---
 
 End of report.
