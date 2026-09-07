@@ -1696,6 +1696,80 @@ if ($advIssues -gt 0) {
     Write-Host "  all $advChecked surface(s) recorded ADVERSARIAL carry a declaring test file with negative assertions" -ForegroundColor Green
 }
 
+
+# Check 25: GOV-16 -- the manifest's open-decision line must carry every decision the register is
+#     still waiting on. Check 11 runs manifest -> register ("does this id exist?"); NOTHING ran the
+#     other way, so a finding could be registered as an open OWNER/BUSINESS/COUNSEL/CANON question
+#     and be invisible to a fresh session, which reads the manifest and not a 1,700-line register.
+#     Measured on 2026-09-07: SEVEN such rows existed and the manifest named ONE.
+#
+#     WHY THIS TOOK THREE ATTEMPTS TO BE WRITABLE, recorded because the reason is the design:
+#     GOV-16 first said "bind the open ROWS to the line", and the 2026-09-04 census proved that
+#     naive: of the ~100 non-closed rows, 69 are scheduling backlog. A guard demanding the manifest
+#     carry 100 ids would have destroyed the boot line to satisfy a checkbox. The register's own
+#     conclusion was "compare DECISIONS, not open rows", and it stopped there because no mechanical
+#     signal for "decision" had been found.
+#
+#     The signal was already there, in the register's own eleventh column. `Owner Decision` is
+#     free text, but it is written in two distinct registers: it either NAMES A DECIDER
+#     ("owner:", "business:", "canon:", "owner + counsel:") or it carries a scheduling word
+#     ("pending", "done", "cert-2026-07", "-"). The first is a decision; the second is a queue
+#     position. That distinction is the census's finding, made executable.
+#
+#     ITS CEILING, stated because a guard that oversells itself is the class this repository keeps
+#     rediscovering: this reads a PROSE column, so a row that names its decider in words this regex
+#     does not know is invisible to it. It is a floor on honesty, not a proof of completeness -- it
+#     cannot find a decision nobody wrote down. What it does guarantee is that a decision written
+#     down IN THE ESTABLISHED FORM cannot sit unsurfaced, which is the failure that actually
+#     happened seven times.
+Write-Host "== Check 25: registered decisions reach the manifest's boot line (GOV-16) ==" -ForegroundColor Cyan
+$decLine25 = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
+if (-not $decLine25) {
+    Write-Host "  MANIFEST has no 'Open owner decisions' line -- cannot verify" -ForegroundColor Red
+    $issues++
+} else {
+    $onLine = [regex]::Matches($decLine25, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
+              ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    # A row is RESOLVED if its status cell says so -- tested against the cell's OPENING, never the
+    # whole cell. The first draft tested the whole cell and silently exonerated three of the six
+    # rows it was written to find: MONEY-2 and PAX-5 both CITE resolutions belonging to other
+    # findings ("MONEY-1 ... FIXED", "the controls all shipped") hundreds of characters into their
+    # prose. That is the MEAS-2 defect verbatim -- the same one Check 11's comment above records
+    # itself committing -- and it was caught by running the guard rather than by reading it. The
+    # register writes its verdict FIRST in the cell, so 80 characters is where a verdict can be.
+    $resolvedRx = 'RESOLVED|DECIDED|FIXED|IMPLEMENTED|BOUNDED|NOT A DEFECT|INTENTIONAL|SUPERSEDED|RETIRED|✅'
+    # ...and it is a DECISION if the Owner-Decision cell names who must take it. `owner (already
+    # recorded under PLAN-1)` is a decider too, so the separator may be a bracket as well as a colon.
+    $deciderRx  = '(?i)\b(owner|business|canon|counsel|legal|compliance)\b\s*[:+/(]|(?i)\bowner\b.*\bcounsel\b'
+    $unsurfaced = @()
+    foreach ($line in ($registerRaw -split "`n")) {
+        if ($line -notmatch '^\|') { continue }
+        $cells = $line -split '\|'
+        if ($cells.Count -lt 13) { continue }
+        $id     = $cells[1].Trim()
+        $status = $cells[9]
+        $owner  = $cells[10]
+        if ($id -notmatch '^[A-Z][A-Za-z0-9\-]*$') { continue }
+        if ($owner -notmatch $deciderRx) { continue }
+        $statusHead = $status.Substring(0, [Math]::Min(80, $status.Length))
+        if ($statusHead -match $resolvedRx) { continue }
+        if ($onLine -contains $id) { continue }
+        $unsurfaced += $id
+    }
+    $unsurfaced = @($unsurfaced | Sort-Object -Unique)
+    if ($unsurfaced.Count -gt 0) {
+        foreach ($u in $unsurfaced) {
+            Write-Host "  UNSURFACED DECISION: register row '$u' waits on a decider and the manifest's open-decision line does not name it" -ForegroundColor Red
+        }
+        Write-Host "  Remedy: add the id to the manifest's open-decision line, or -- if it is NOT a decision --" -ForegroundColor DarkGray
+        Write-Host "  rewrite its Owner-Decision cell to say what it actually is. Do not silence it by resolving a row" -ForegroundColor DarkGray
+        Write-Host "  that is not resolved: a decision nobody can see at boot is how MAIL-1's six siblings hid." -ForegroundColor DarkGray
+        $issues += $unsurfaced.Count
+    } else {
+        Write-Host "  every register row awaiting a decider is named on the manifest's boot line" -ForegroundColor Green
+    }
+}
+
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green

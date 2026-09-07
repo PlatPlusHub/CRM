@@ -2,7 +2,24 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-07 (**slice 4 recorded — EC-1 stands at 5 of 77, and the slice found the
+Last updated: 2026-09-07 (**slice 5 recorded — EC-1 stands at 6 of 77, and the slice found the
+one thing no ceiling can measure.** `booking_items` (`202607061500`) closed **BOOK-3** (carried in
+from slice 4 and re-reproduced WIDER than recorded: not only INSERT — a bare booked service could
+also be re-typed, redenominated, re-owned and moved to another booking, none of which any RPC
+offers), **BOOK-4** (a cross-tenant existence-and-state oracle, PAX-3 one table up), **BOOK-5**,
+**BOOK-6** (the finance execution gate was clearable by anyone who could reach the row) and
+**BOOK-7** (a priced item could be redenominated with no money permission). **BOOK-5 is the sixth
+self-enforcing rule recorded in the loop below** and the most uncomfortable one yet: an
+UNCONDITIONAL guard, charging the right permission on every path, defeated because it asked "is this
+item mine?" of the attacker's own post-image. **BOOK-3's own recorded obstacle was false** — it said
+finance holds `ENTER_COST` without `CREATE_BOOKING_ITEM`; finance holds NEITHER, and measuring that
+rather than inheriting it is what unblocked the slice. Also, and NOT part of the target: **GOV-19**
+(a register row that contradicted itself for fourteen days) and **GOV-16** (**Check 25**) fixed —
+the second measured that SEVEN registered decisions were invisible on the manifest's boot line,
+which named one. Opened: **BOOK-8** (business) and **BOOK-9** (canon).
+**Batch 6 remains NOT COMPLETE**: 71 surfaces at `NOT-RECORDED`. Prior entry follows.)
+
+Previously: 2026-09-07 (**slice 4 recorded — EC-1 stands at 5 of 77, and the slice found the
 ceiling that had been vouching for it.** `booking_item_passengers` (`202607061400`) closed **PAX-1**
 (a `finance_manager` with no `CREATE_BOOKING_ITEM` was refused by the RPC and allowed by the table),
 **PAX-2** (a passenger could be swapped on an existing booking with no capability and no record) and
@@ -1427,6 +1444,21 @@ freely, because `guard_passenger_financials` returns early on null amounts — a
 not move when the hole was closed**, which is the diagnostic: a number that stays still through a
 real repair was never counting the thing you thought. The standing consequence: when a slice finds a
 defect on a surface a ceiling already credited, **root-cause the ceiling too**, and bound the
+**A SIXTH rule was earned 2026-09-07 by BOOK-5, and it is the hardest one so far: a guard that
+charges the correct permission, unconditionally, on every path, can still be defeated if it asks its
+question of the row the attacking statement just wrote.** `guard_booking_item_financials` computed
+canon-28's assignment scope as `app.is_my_booking_item(new.owner_user_id, ...)` on UPDATE — so
+`set owner_user_id = <me>, cost_amount = 555` supplied the answer to "is this item mine?" and the
+scope evaporated. The fifth rule says a text ceiling cannot see a CONDITIONAL guard; this one says no
+ceiling of any kind can see a guard that is unconditional and still wrong, because there is nothing
+textual to see: the permission is right, the path coverage is complete, the code reviews clean. The
+standing consequence is a question to ask of every authorization predicate: **does it read `new` to
+decide AUTHORITY, or only to validate CONTENT?** Reading `new` to validate content is correct and
+normal. Reading `new` to decide authority hands the decision to the caller. Both halves of PAX-3 —
+the rejected `new.tenant_id` draft and this live defect — are the same sentence. And the only thing
+that found it was a DISCRIMINATING PAIR: the same statement run twice, one clause apart, with the
+ground truth read as `postgres` rather than through the attacker's own RLS.
+
 population it cannot judge (assertion 9 of `10_grant_model_test` now names the ten tables whose only
 capability trigger is bespoke). Applying that rule immediately is what found **BOOK-3** on
 `booking_items` — the same defect on the parent table, one hop from the slice.
@@ -1458,7 +1490,7 @@ policy (MAIL-1, RET-1).
 
 | # | Criterion | How it is measured today |
 |---|---|---|
-| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **5 of 77 recorded** (2026-09-07). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
+| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **6 of 77 recorded** (2026-09-07). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
 | **EC-2** | **Authorization.** Every writable surface has a documented authorization rationale; exceptions explicit | Already partly earned and already pinned: `57_write_capability_map_test.sql` and `58_write_grants_and_config_capability_test.sql` carry the 54/17/3 ceilings, and the residual three are the canon-34 Human Identity tables with a stated rationale. Exit = the ceilings hold and every remaining exception names its reason |
 | **EC-3** | **Tenant isolation.** No unresolved tenant-crossing path in scope | Positive+negative HTTP proof exists (`verify_api_end_to_end.ps1` against a fully privileged owner of another agency). Exit = every table in EC-1's record has a stated isolation basis (RLS predicate, structural path prefix, or platform-only) |
 | **EC-4** | **Lifecycle integrity.** No unresolved invalid transition or parent/child contradiction | `54_transition_permission_parity_test` (both directions, all ten functions) and the PARENT-1 class guard in `88_parent_state_on_every_door_test` (seven verified non-defects, each run down against the catalog). Exit = both green with no unexplained entry |

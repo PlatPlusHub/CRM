@@ -231,16 +231,15 @@ select cmp_ok(
 -- This assertion cannot fix that -- nothing textual can. What it does is bound the population that has
 -- to be checked BY HAND: every table whose only capability trigger is a bespoke one. `guard_write_-
 -- capability` charges unconditionally by construction, so a table carrying it needs no manual review;
--- the ten below each have a purpose-written guard whose short-circuits must be read.
+-- the nine below each have a purpose-written guard whose short-circuits must be read.
 --
--- Two of the ten are ALREADY KNOWN to short-circuit and are registered, not silently tolerated:
---   `booking_items`        BOOK-3, High, OPEN -- reproduced 2026-09-07: a finance_manager without
---                          CREATE_BOOKING_ITEM inserted a BARE item (no amounts) and it persisted,
---                          while pricing it afterwards was correctly refused (ENTER_SELLING_PRICE).
---                          The financial half is guarded; the operational half is not. Deliberately
---                          NOT repaired in slice 4 -- see the register: the UPDATE arm needs the
---                          CUST-3 treatment (finance holds ENTER_COST and not CREATE_BOOKING_ITEM),
---                          and `booking_items` is its own Batch 6 surface.
+-- THE LIST WENT FROM TEN TO NINE ON 2026-09-07 (slice 5, `202607061500`), and how it moved is the
+-- point of the assertion. `booking_items` was one of the two named short-circuits; BOOK-3 is now
+-- CLOSED, the table carries `guard_write_capability`, and it therefore leaves this population by
+-- construction rather than by anybody editing a list. That is the intended way for this number to
+-- fall. It may fall further and must never rise.
+--
+-- One of the nine is still ALREADY KNOWN to short-circuit and is registered, not silently tolerated:
 --   `lead_interactions`    already the named open item of assertion 8's comment above.
 --
 -- Adding an eleventh bespoke guard fails this assertion, which is the point: it forces the author to
@@ -260,9 +259,9 @@ select set_eq(
          select 1 from pg_trigger t2 join pg_proc p2 on p2.oid = t2.tgfoid
           where t2.tgrelid = c.oid and not t2.tgisinternal and (t2.tgtype & 4) <> 0
             and p2.proname = 'guard_write_capability')$$,
-  array['booking_items','document_versions','invoices','lead_interactions','payment_allocations',
+  array['document_versions','invoices','lead_interactions','payment_allocations',
         'payments','quotation_items','receipts','refunds','user_role_assignments'],
-  'MEAS-2: exactly these ten tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". booking_items is credited and is NOT unconditionally guarded (BOOK-3, open)');
+  'MEAS-2: exactly these NINE tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". Ten until 2026-09-07, when BOOK-3 closed and booking_items left the population by acquiring the unconditional guard');
 
 select * from finish();
 rollback;

@@ -243,8 +243,8 @@ select is(
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  26,
-  'twenty-six tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400)');
+  27,
+  'twenty-seven tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400 + booking_items, BOOK-3, 202607061500)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -266,7 +266,15 @@ select is(
                             -- override amounts are null -- so the OPERATIONAL half of the row, which
                             -- is the half the table exists for, was never charged anything. It
                             -- charges CREATE_BOOKING_ITEM, the permission its own RPC always has.
-                            'booking_item_passengers')),
+                            'booking_item_passengers',
+                            -- BOOK-3 (202607061500): the PARENT, found by chasing PAX-1 to its root.
+                            -- `guard_booking_item_financials` authorizes only when a money field is
+                            -- present, so a BARE booked service -- the thing the table exists for --
+                            -- cost nothing to create, rewrite, re-parent or seize. This is the only
+                            -- entry so far with a SEVEN-permission UPDATE arm, because finance
+                            -- legitimately locks, approves, archives and assigns suppliers on items
+                            -- it does not own.
+                            'booking_items')),
   0,
   '...and every one of them is on a table the function has a permission mapping for');
 

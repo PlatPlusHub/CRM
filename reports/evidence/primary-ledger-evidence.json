@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-07T04:35:00Z",
-  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607061400 was applied via apply_migration and its ledger row normalised to the repository's version",
+  "read_at": "2026-09-07T08:05:00Z",
+  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607061500 was applied via apply_migration and its ledger row normalised to the repository's version. GUARD-1: the array below is the repository's own filename list, written ONLY after its md5 was proven equal to the fingerprint read from Primary -- it is not a repository value standing in for a Primary one.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "b552987bf41e70e77ac526ece2adb213f143bc6b",
-  "migration_count": 203,
-  "ledger_fingerprint": "36d87db9a2a106de2808d608c59ec6c2",
+  "repository_head": "6ee639276319e4fe0a47c42b3147758781976413",
+  "migration_count": 204,
+  "ledger_fingerprint": "e9549f90784fb38b0924b6353a56d94f",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -210,6 +210,7 @@
     "202607061100_a_daily_metric_is_one_row_a_day_and_a_rate_correction_is_written_once",
     "202607061200_an_account_keeps_the_currency_its_money_arrived_in",
     "202607061300_a_number_that_is_not_a_number_is_not_an_amount",
-    "202607061400_the_manifest_asked_nobody_permission"
+    "202607061400_the_manifest_asked_nobody_permission",
+    "202607061500_the_booked_service_itself_had_no_door"
   ]
 }
