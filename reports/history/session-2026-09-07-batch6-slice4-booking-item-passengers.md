@@ -257,15 +257,17 @@ The `AGENTS.md §5a` protocol was executed in order, and every step's real outpu
 | Local Git | final implementation committed | 203 migrations, 104 test files, all governance files updated | `git log`, `git status` | **PASS** |
 | Local working tree | clean | clean | `git status --short` empty | **PASS** |
 | Local Supabase | final repository migration state | 203, replayed from scratch this session | reset + Pass A/B + smoke | **PASS** |
-| Local HEAD | `== origin/main` | *verified after the push that carries this file — §8.1* | `git rev-parse` both refs | see §8.1 |
-| GitHub `origin/main` | final verified commit | *verified after push — §8.1* | `git rev-parse origin/main` after fetch | see §8.1 |
-| GitHub CI | GREEN | *verified after push — §8.1* | workflow run for this commit | see §8.1 |
+| Local HEAD | `== origin/main` | both `2573eaff3c9b368aa3c518e5f4ee4385a5325e38`, 0 ahead / 0 behind | `git rev-parse` both refs after `git fetch` | **PASS** |
+| GitHub `origin/main` | final verified commit | `b552987..2573eaf main -> main`, fast-forward | push output + post-fetch `rev-parse` | **PASS** |
+| GitHub CI | GREEN | **Repository Consistency success (1m4s)** · **Migration CI success (3m22s)** | runs `34084016035` and `34084016033` for `2573eaf` | **PASS** |
 | Remote Supabase migrations | final state | 203, latest `202607061400` | live MCP read | **PASS** |
 | Remote Supabase schema | matches repository | functions `8754ef0a…`/277, structure `06a3c59e…`/3,562 — identical to local | `parity_surface.sql`, **both sides ran the same file** | **PASS** |
 
 ### 8.1 The three rows this file could not assert about itself
 
-A report cannot honestly record the result of pushing the commit that contains it, or of the CI run that commit triggers — writing `PASS` there before the run exists is precisely the *"declare completion immediately after a successful push"* that `AGENTS.md` forbids. Those three rows are therefore left open above and closed by the **immediately following commit**, which carries nothing but their verified values. If that follow-up commit is absent from `git log`, the three rows were never confirmed and must be treated as **UNPROVEN**, not as PASS.
+A report cannot honestly record the result of pushing the commit that contains it, or of the CI run that commit triggers — writing `PASS` there before the run exists is precisely the *"declare completion immediately after a successful push"* that `AGENTS.md` forbids. Those three rows were therefore left open in the slice commit `2573eaf` and filled by **this** follow-up commit, which carries nothing else.
+
+**The slice's own state is `2573eaf`** — the migration, the tests and the governance. This commit changes three table cells in this file and no engineering artifact, so the parity proved above still describes `2573eaf` exactly; its own CI run is the one that confirms the repository stayed CLEAN with these values written in.
 
 ---
 
