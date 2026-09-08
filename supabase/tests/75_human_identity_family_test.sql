@@ -68,20 +68,20 @@ select is(
   'app.activate_membership is SECURITY DEFINER -- it must bypass RLS to link an identity that has no membership yet, which is exactly why its own preconditions have to be airtight');
 
 select is(
-  (select count(*)::int from pg_policies
+  (select string_agg(distinct tablename, ',' order by tablename) from pg_policies
     where schemaname = 'public'
       and tablename in ('trusted_devices','otp_challenges','totp_enrollments')
       and qual = '(auth_user_id = ( SELECT auth.uid() AS uid))'
       and with_check = '(auth_user_id = ( SELECT auth.uid() AS uid))'),
-  3,
-  'all three canon-34 identity tables carry owner_only on BOTH using and with_check -- SEC-1''s INTENTIONAL classification, verified rather than quoted');
+  'otp_challenges,totp_enrollments,trusted_devices',
+  'all three canon-34 identity tables carry owner_only on BOTH using and with_check -- SEC-1''s INTENTIONAL classification, verified rather than quoted, and NAMED rather than counted: a bare 3 would still read 3 if one table lost its policy while another gained a second matching one');
 
 select is(
-  (select count(*)::int from pg_class c join pg_namespace n on n.oid = c.relnamespace
+  (select string_agg(c.relname, ',' order by c.relname) from pg_class c join pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'public'
       and c.relname in ('trusted_devices','otp_challenges','totp_enrollments')
       and c.relrowsecurity),
-  3,
+  'otp_challenges,totp_enrollments,trusted_devices',
   'and ROW SECURITY IS ACTUALLY ENABLED on all three -- PAR-3''s lesson: pg_policies lists a policy whether or not it can ever fire');
 
 select is(
@@ -213,7 +213,7 @@ select is(
 select is(
   (select app.record_trusted_device('device-alpha')),
   (select id from app.my_trusted_devices() where device_identifier = 'device-alpha'),
-  'IDEMPOTENT: recording the same identifier returns the SAME row rather than a duplicate -- there is no unique constraint, so this is the function''s update-then-insert doing the work');
+  'IDEMPOTENT: recording the same identifier returns the SAME row rather than a duplicate -- STALE CLAIM CORRECTED 2026-09-07: this said "there is no unique constraint, so this is the function''s update-then-insert doing the work", which stopped being true at 202607059500. The constraint is trusted_devices_user_device_key and the function is now INSERT .. ON CONFLICT; the assertion was always right, its explanation had gone out of date');
 
 select is(
   (select count(*)::int from public.trusted_devices),
