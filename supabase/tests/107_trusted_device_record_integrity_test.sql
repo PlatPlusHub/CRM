@@ -199,7 +199,11 @@ select is(
        select n.nspname || '.' || p.proname as src
          from pg_proc p join pg_namespace n on n.oid = p.pronamespace
         where p.prosrc like '%trusted_devices%'
-          and n.nspname in ('app','public')
+          and n.nspname not in ('pg_catalog','information_schema')
+       union all
+       select 'VIEW:' || n.nspname || '.' || c.relname
+         from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where c.relkind in ('v','m') and pg_get_viewdef(c.oid) like '%trusted_devices%'
        union all
        select 'POLICY:' || c.relname
          from pg_policy pol join pg_class c on c.oid = pol.polrelid
@@ -207,7 +211,7 @@ select is(
               || coalesce(pg_get_expr(pol.polwithcheck, pol.polrelid), '') like '%trusted_devices%'
      ) s),
   'app.emit_creation_event,app.emit_entity_event,app.forbid_trusted_device_record_rewrite,app.my_trusted_devices,app.record_trusted_device,app.revoke_trusted_device,public.my_trusted_devices',
-  'THE CONDITION THAT BOUNDS THIS SLICE: trusted_devices is a RECORD, not a GATE -- this is its ENTIRE mention set, every member a writer, a self-read or this slice''s own guard, and NO policy anywhere references it. app.mfa_satisfied() consults requires_mfa() and the JWT aal claim only. That is why TD-3 (is revocation durable?) is a deferred design question and not an open hole. Matching is on function TEXT and so includes the two emit_* helpers, which only NAME the table in a comment explaining that it carries no tenant_id: deliberately over-inclusive, because a tripwire that errs toward review is the safe direction and a false negative here would let a gate slip in unnoticed');
+  'TRIPWIRE, NOT A PROOF OF IMPOSSIBILITY -- and the difference is the whole point of the assertion. WHAT IT PROVES: no FUNCTION in any non-system schema, no VIEW, and no RLS POLICY on any table references trusted_devices outside this set, every member of which is a writer, a self-read or this slice''s own guard. That is what makes TD-3 (is revocation durable?) a deferred design question today rather than an open hole, because app.mfa_satisfied() consults requires_mfa() and the JWT aal claim only -- if it named this table it would appear here. WHAT IT DOES NOT PROVE: that trusted_devices can never BE a security gate. It cannot see an Edge Function, a PostgREST client or any application-layer check, so it is evidence about the DATABASE and nothing wider. Matching is on function TEXT, so it deliberately over-matches: the two emit_* helpers only NAME the table in a comment saying it carries no tenant_id, and they are kept in the expected set rather than filtered out, because a tripwire that errs toward review is the safe direction while a false negative would let a gate slip in unnoticed. Schemas and views were widened on 2026-09-08 after measuring that the narrower app/public function-only form returned the identical string: free coverage against a gate arriving somewhere the first draft could not look');
 
 select * from finish();
 rollback;

@@ -41,12 +41,23 @@
     state      x2  a status column with rows in app.status_transitions: lifecycle attack surface.
     concurrency x2 a unique constraint or a claim/lease/counter-shaped column: the LIC-2 class.
 
-  COVERAGE -- what has already been aimed at it:
-    tests      x2  per pgTAP file naming the surface. A floor, never proof (a table named once in
-                   an unrelated fixture is not a swept surface) -- which is why the weight is low.
-    negative   x4  per pgTAP file that names the surface AND contains `throws_ok`. Negative evidence
-                   is worth double a positive file, because a positive-only surface is exactly where
-                   LIC-2, SPP-2 and FIN-3 were found hiding.
+  COVERAGE -- what has already been aimed at it. READ THE LIMIT BEFORE READING THE NUMBER:
+    tests      x2  per pgTAP file naming the surface.
+    negative   x4  per pgTAP file that names the surface AND contains `throws_ok` ANYWHERE IN THE
+                   FILE -- not necessarily about this surface.
+
+  COVERAGE IS FILE CO-OCCURRENCE, AND IT SATURATES. This was measured on 2026-09-08 and the result
+  is why `Score` no longer orders this report. A fixture-heavy file that creates a tenant, a branch
+  and a user, and throws once about something else, pays every table it touches +6. So `users`
+  scored coverage 450 (87 files name it) and `branches` 458 -- not because they are well attacked
+  but because they are in everybody's fixture. Score = exposure - coverage therefore ranked by
+  "fewest files mention it", which is close to the INVERSE of exposure: the old Top 12 opened with
+  `languages`, `nationalities` and `countries`, all of which have exposure 0 and cannot repay an
+  hour of attacking, while `leads` (exposure 22, the highest on the board) sat near the bottom.
+
+  So the ORDER is now EXPOSURE first, coverage only as the tie-break. `Score` is retained as a
+  DIAGNOSTIC column -- it still says "how much incidental test traffic has this surface seen" --
+  but it is no longer the ranking function, because it never measured what its name implied.
 
   Weights are judgement, and they are visible rather than buried: change them here, re-run, and the
   ranking moves. Nothing downstream depends on the numbers.
@@ -93,7 +104,13 @@ select t.relname
                                         and coalesce(p.with_check,'') ~ '(has_permission|authorize)')
                      and not exists (select 1 from pg_trigger tg join pg_proc pr on pr.oid=tg.tgfoid
                                       where tg.tgrelid=t.oid and not tg.tgisinternal
-                                        and pr.proname ~ '(guard_|capability|authoriz)')
+                                        -- ORVION names its controls forbid_*/enforce_*/derive_*, not
+                                        -- guard_*. Matching only the latter reported `trusted_devices`
+                                        -- as having no control at all on the day TD-1/TD-2 fitted it
+                                        -- with two: 21 trigger functions use the real idiom, 13 the
+                                        -- one this regex knew. Detecting a control by its NAME is the
+                                        -- proxy that made the heaviest weight on the board misfire.
+                                        and pr.proname ~ '(guard_|capability|authoriz|forbid_|enforce_|derive_)')
                     then 1 else 0 end)
     || '|' || (select count(*) from pg_proc p join pg_namespace n on n.oid=p.pronamespace
                 where n.nspname='app' and p.prosrc ~ ('(insert into|update)\s+public\.' || t.relname || '\M'))
@@ -170,17 +187,23 @@ $scored = foreach ($r in $rows) {
     }
 }
 
-$candidates = $scored | Where-Object { $All -or $_.Disposition -eq 'NOT-RECORDED' } | Sort-Object -Property Score -Descending
+# EXPOSURE leads, coverage only breaks ties. Sorting by Score put exposure-0 reference tables at the
+# top because coverage saturates -- see COVERAGE in the header for the measurement that showed it.
+$candidates = $scored | Where-Object { $All -or $_.Disposition -eq 'NOT-RECORDED' } |
+    Sort-Object -Property @{ Expression = 'Exposure'; Descending = $true },
+                          @{ Expression = 'Coverage'; Descending = $false }
 
 Write-Host ""
 Write-Host "== Batch 6 slice selection by measurement ==" -ForegroundColor Cyan
-Write-Host "   score = exposure - coverage; components shown so the ranking can be argued with." -ForegroundColor DarkGray
+Write-Host "   ordered by EXPOSURE, coverage breaks ties; components shown so it can be argued with." -ForegroundColor DarkGray
 Write-Host "   $($candidates.Count) candidate surface(s)$(if(-not $All){' still at NOT-RECORDED'})." -ForegroundColor DarkGray
 Write-Host ""
 $candidates | Select-Object -First $Top | Format-Table Surface, Disposition, Score, Exposure, Coverage, Money, PII, Unguarded, Direct, SecDef, RPCs, State, Conc, Tests, NegTests -AutoSize
 
 Write-Host "SELECTION IS A SUGGESTION, NEVER A VERDICT." -ForegroundColor DarkGray
-Write-Host "  A high score says 'attacking here is most likely to be repaid', not 'this is broken'." -ForegroundColor DarkGray
-Write-Host "  A low score is NOT evidence a surface is safe -- coverage counts files, and a file that" -ForegroundColor DarkGray
-Write-Host "  merely NAMES a table in a fixture scores the same as one that attacks it. Nothing here" -ForegroundColor DarkGray
-Write-Host "  is stored: re-run it and it is recomputed from the catalog and the test files." -ForegroundColor DarkGray
+Write-Host "  High exposure says 'attacking here is most likely to be repaid', not 'this is broken'." -ForegroundColor DarkGray
+Write-Host "  Low exposure is NOT evidence a surface is safe: exposure is a catalog shape, and a table" -ForegroundColor DarkGray
+Write-Host "  with no money column and no PII can still hold a broken rule (TD-1 scored 12)." -ForegroundColor DarkGray
+Write-Host "  SCORE IS A DIAGNOSTIC, NOT THE RANKING -- coverage counts FILE CO-OCCURRENCE, so a file" -ForegroundColor DarkGray
+Write-Host "  that merely names a table in a fixture pays it the same as one that attacks it. Nothing" -ForegroundColor DarkGray
+Write-Host "  here is stored: re-run it and it is recomputed from the catalog and the test files." -ForegroundColor DarkGray

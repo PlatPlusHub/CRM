@@ -194,7 +194,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `journal_entry_lines` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `languages` | `S---` | no | no | read_all_authenticated |
 | `lead_assignments` | `SIU-` | yes | conditional | scope_isolation |
-| `lead_interactions` | `SIU-` | yes | conditional | scope_isolation |
+| `lead_interactions` | `SI--` | yes | conditional | scope_isolation |
 | `leads` | `SIU-` | yes | conditional | scope_isolation |
 | `marketing_campaigns` | `SIU-` | no | conditional | scope_isolation |
 | `nationalities` | `S---` | no | no | read_all_authenticated |

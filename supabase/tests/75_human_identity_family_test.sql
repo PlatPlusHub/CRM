@@ -23,7 +23,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(24);
+select plan(25);
 
 -- Two identities for the SAME email: one confirmed, one not. Everything else about them is
 -- identical, so the only variable in assertions 5/8 is `email_confirmed_at` itself.
@@ -296,6 +296,47 @@ select is(
   (select count(*)::int from app.activate_membership()),
   1,
   'THE ONE THAT MATTERS for IDENT-4: an identity confirmed as MIXED@ident.test still claims the membership stored as mixed@ident.test -- case-insensitive onboarding is intact, which is the whole reason the match uses lower()');
+
+-- ================================================================================================
+-- THE FAMILY'S GRANT POSTURE, AS ONE EXECUTABLE RULE (added 2026-09-08)
+--
+-- `202607056100` §3 classified all three canon-34 tables together as "INTENTIONAL, not residue --
+-- ownership IS the capability", and left owner-write on every one of them. That blanket sentence
+-- has since been proven WRONG on one member and RIGHT on another, one slice at a time:
+--
+--   otp_challenges    OTP-1 (`202607061600`) REVOKED insert/update. Owning the row is not authority
+--                     to answer the challenge posed to you -- the subject could self-verify.
+--   trusted_devices   TD-1/TD-2 (`202607061700`) KEPT the grant and fitted two doors instead,
+--                     because app.record_trusted_device is SECURITY INVOKER and the grant is the
+--                     sanctioned path. Revoking here would have broken real work.
+--   totp_enrollments  neither. Still owner-writable with NO writer function anywhere.
+--
+-- The rule that actually survives all three is not "ownership is the capability". It is: A WRITE
+-- GRANT IS KEPT EXACTLY WHERE A SANCTIONED WRITER NEEDS IT. This assertion states that rule as
+-- membership rather than as prose, so the next person to add a canon-34 table cannot inherit the
+-- blanket sentence by accident, and so `totp_enrollments`' dormancy is a measured fact rather than
+-- an assumption. It pairs the two halves deliberately: a table may appear as writable ONLY while it
+-- also appears as written, and the pairing is what makes a silent drift visible from either side.
+select is(
+  (select string_agg(t || '=' || w, ' | ' order by t)
+     from (
+       select c.relname as t,
+              (case when exists (select 1 from information_schema.role_table_grants g
+                                  where g.table_schema = 'public' and g.table_name = c.relname
+                                    and g.grantee = 'authenticated'
+                                    and g.privilege_type in ('INSERT','UPDATE','DELETE'))
+                    then 'writable' else 'read-only' end)
+              || ':' ||
+              (case when exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+                                  where n.nspname in ('app','public')
+                                    and p.prosrc ~ ('(insert into|update)\s+public\.' || c.relname || '\M'))
+                    then 'has-writer' else 'no-writer' end) as w
+         from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public'
+          and c.relname in ('otp_challenges','totp_enrollments','trusted_devices')
+     ) s),
+  'otp_challenges=read-only:no-writer | totp_enrollments=writable:no-writer | trusted_devices=writable:has-writer',
+  'THE CANON-34 FAMILY''S GRANT POSTURE. Two of three now satisfy "a write grant is kept exactly where a sanctioned writer needs it". The third, totp_enrollments, is writable:no-writer -- the ONLY table in the schema that is -- and it is pinned here rather than repaired because nothing in the database reads it, so there is no behaviour to defend today; what there IS, is a dormant record shaped like an authorization artifact (is_active, revoked_at, enrolled_at) that any subject can plant and BACKDATE. This assertion is the tripwire: wire a writer to it, or revoke the grant, and this line fails and forces the question to be answered deliberately instead of inherited');
 
 select finish();
 rollback;

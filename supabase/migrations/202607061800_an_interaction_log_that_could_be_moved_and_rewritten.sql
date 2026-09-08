@@ -1,0 +1,127 @@
+-- Batch 6 slice 8 -- `lead_interactions`, the contact log that could be moved onto another lead and
+-- rewritten after the fact.
+--
+-- ================================================================================================
+-- THE INHERITED QUESTION, AND WHY ITS RECORDED ANSWER WAS STALE
+--
+-- `202607056100` §3 left this table open with a stated reason: "lead_interactions -- BLOCKED,
+-- BUSINESS DECISION. `app.record_lead_interaction` is SECURITY INVOKER, granted to `authenticated`,
+-- and authorizes nothing. So unlike every table `202607056000` fixed, there is no bypass here: the
+-- RPC and direct DML charge exactly the same thing, which is nothing."
+--
+-- Both halves of that sentence are now false, and in OPPOSITE directions:
+--
+--   * The RPC no longer authorizes nothing. It requires the caller to be the assigned handler or to
+--     hold ASSIGN_LEAD, and to satisfy MFA. `app.guard_lead_interaction_authority` was added later
+--     and replicates BOTH checks through `app.require_lead_handler`. MEASURED at `aal1`: an
+--     `employee` who is not the handler and holds no ASSIGN_LEAD was refused **42501** on a direct
+--     INSERT onto a colleague's lead. So on the AUTHORITY axis the door and the RPC now agree, and
+--     that half needed no repair -- it is asserted rather than assumed in `108_...` (1-4).
+--
+--   * But "no bypass" was never true about what the RPC MAINTAINS. Measured on the same run:
+--     a direct-DML `phone_call` left the lead at `lead_status_code = 'assigned'` with
+--     `last_contact_at = NULL` and emitted no event, while the identical call through the RPC
+--     produced `contacted`, a timestamp, and `lead_contacted`. That is LI-3 below, recorded and
+--     deliberately NOT half-built here.
+--
+-- ================================================================================================
+-- LI-1 -- BOOK-5'S SHAPE, SECOND OCCURRENCE, ON A SECOND TABLE
+--
+-- `app.guard_lead_interaction_authority` fires BEFORE INSERT OR UPDATE and asks exactly one
+-- question: who is the handler of `new.lead_id`? On INSERT that is the whole question. On UPDATE it
+-- is the WRONG question, because `lead_id` is a column the attacking statement supplies.
+--
+-- REPRODUCED at `aal1`, actor proven first (`current_user = authenticated`,
+-- `app.current_user_id()` resolved, `has_permission('ASSIGN_LEAD') = false`): handler A issued
+--
+--     update public.lead_interactions set lead_id = <A's own lead> where lead_id = <B's lead>;
+--
+-- and handler B's private interaction was re-parented onto A's lead, still attributed to B. RLS
+-- permitted the row (its USING clause tests tenant and the existence of the parent lead, not who
+-- handles it); the guard then asked "am I the handler of the lead this row is moving TO?" -- yes --
+-- and never asked about the lead it was moving FROM. Ground truth read as `postgres` after
+-- `reset role` confirmed the move.
+--
+-- This is the sixth rule of the adversarial loop, earned by BOOK-5 fourteen days ago and recorded
+-- as a standing question to ask of every authorization predicate: **does it read `new` to decide
+-- AUTHORITY, or only to validate CONTENT?** BOOK-5 was `set owner_user_id = <me>, cost_amount = 555`
+-- supplying the answer to "is this item mine?". This is `set lead_id = <my lead>` supplying the
+-- answer to "is this lead mine?". Same sentence, different table.
+--
+-- THE SIBLING SWEEP THAT THE RULE OBLIGES, and its one interesting result. Every UPDATE-firing
+-- trigger function naming `require_`/`has_permission`/`authorize`/`is_my_` was enumerated and READ
+-- (the text census that generated the candidates is a proxy and produced two false positives --
+-- `guard_financial_capability` and `enforce_status_transition` both read the old row through
+-- `to_jsonb(old)` rather than `old.<col>`, which no substring count can see). The one real instance
+-- found elsewhere is in `app.enforce_status_transition`, which authorizes a `leads` transition with
+-- `app.require_lead_handler((to_jsonb(new) ->> 'assigned_user_id')::uuid)` -- reading the NEW
+-- assignee to decide whether the caller may transition the lead. It is NOT exploitable, and it was
+-- proven so rather than argued: seizing and transitioning in one statement
+-- (`set assigned_user_id = <me>, lead_status_code = 'contacted'`) is refused **23514** by
+-- `leads_owner_matches_assignee_chk`, and the transition alone is refused **42501** by the handler
+-- check. Recorded as a VERIFIED NON-DEFECT and pinned in `108_...` (11-12), because the defence is
+-- INCIDENTAL -- a constraint about owner/assignee coherence, not a deliberate answer to BOOK-5 --
+-- and if that constraint is ever relaxed the shape becomes live with nothing else in the way.
+--
+-- ================================================================================================
+-- LI-2 -- THE LOG WAS REWRITABLE AFTER THE FACT
+--
+-- Same run: handler A rewrote its own interaction's `summary` and backdated `interaction_at` to
+-- 2001-01-01. `app.derive_interaction_actor` already prevents the one rewrite anybody had thought
+-- about (`user_id` is pinned to `old.user_id` on UPDATE, and a forged `user_id` on INSERT is
+-- overwritten with the caller's real id -- both re-asserted in `108_...` 5-6 so the repair below
+-- cannot be credited for them). Nothing protected the rest of the row.
+--
+-- ================================================================================================
+-- THE REPAIR: ONE REVOKE, AND WHY IT IS NOT A NEW MECHANISM
+--
+-- LI-1 and LI-2 both require UPDATE, and **no function in this database updates this table.**
+-- `app.record_lead_interaction` is the only consumer and it only INSERTs. So `authenticated`'s
+-- UPDATE grant has no sanctioned writer behind it, and the rule the canon-34 family arrived at one
+-- slice ago -- now executable as assertion 25 of `75_human_identity_family_test` -- applies here
+-- unchanged: **A WRITE GRANT IS KEPT EXACTLY WHERE A SANCTIONED WRITER NEEDS IT.** This is also
+-- `202607056100`'s own stated preference, quoted from its category 1: "REMOVE AN UNNECESSARY WRITE
+-- RATHER THAN INVENT A BUSINESS PERMISSION FOR IT."
+--
+-- INSERT IS DELIBERATELY KEPT. `app.record_lead_interaction` is SECURITY INVOKER, so the grant is
+-- the sanctioned path itself and revoking it would break the RPC -- the `trusted_devices` lesson
+-- (TD-1/TD-2) rather than the `otp_challenges` one (OTP-1). Assertions 9-10 of `108_...` CALL the
+-- RPC after the revoke to prove exactly that, so a future widening of this revoke fails loudly.
+-- SELECT is kept: reading the contact history of a lead you can already see is not authority over it.
+--
+-- WHAT THIS COSTS, stated plainly rather than discovered later: there is no longer any way to
+-- correct a typo in a `summary`. That capability was never offered -- ORVION exposes no RPC to
+-- amend an interaction -- so what is removed is an ungoverned path, not a feature. If amending a
+-- logged interaction becomes a product requirement it wants an RPC that says who may do it and
+-- leaves a record, not a bare table grant.
+--
+-- ================================================================================================
+-- MEASURED AND DELIBERATELY NOT REPAIRED HERE
+--
+-- LI-3 -- the door does not maintain what the RPC maintains. A direct-DML interaction of a
+-- QUALIFYING type (`phone_call`, `whatsapp_message`, `chat_opened`, `customer_reply`) does not set
+-- `leads.last_contact_at`, does not walk `assigned -> contacted`, and emits no `lead_contacted`
+-- event; the RPC does all three. The lead therefore reads as never contacted while its own contact
+-- log says otherwise, and `app.process_lead_sla` escalates on `last_contact_at`. It is recorded
+-- rather than half-built because the repair is an AFTER INSERT trigger that would have to replicate
+-- the RPC's derived-state maintenance, and doing that naively double-fires when the RPC itself
+-- inserts -- emitting `lead_contacted` twice for one contact. It also needs a deliberate answer to a
+-- question this migration must not invent: SHOULD a bare table INSERT advance a lead's lifecycle at
+-- all, or should the direct door be limited to non-qualifying types? The failure direction is
+-- conservative (a contacted lead is escalated, never a silent un-escalation), which is why this is
+-- Medium and not a blocker. Registered as LI-3.
+--
+-- `interaction_at` remains settable on INSERT. The RPC never sets it (the column defaults to
+-- `now()`), but logging a call that genuinely happened an hour ago is ordinary business behaviour
+-- and forbidding it would be inventing policy for a column no consumer reads. What is closed is
+-- rewriting it afterwards.
+-- ================================================================================================
+
+revoke update on public.lead_interactions from authenticated;
+
+comment on table public.lead_interactions is
+    'Contact log for a lead. INSERT is granted to authenticated because app.record_lead_interaction '
+    'is SECURITY INVOKER and needs it; UPDATE was revoked by LI-1/LI-2 (202607061800) because no '
+    'function in this database updates this table, and the grant let a handler re-parent a '
+    'colleague''s interaction onto their own lead and backdate their own. Amending a logged '
+    'interaction wants an RPC, not a table grant.';

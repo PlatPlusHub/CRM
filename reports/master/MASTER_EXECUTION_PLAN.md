@@ -2,7 +2,24 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-07 (**slice 5 recorded — EC-1 stands at 6 of 77, and the slice found the
+Last updated: 2026-09-08 (**slices 6, 7 and 8 recorded — EC-1 stands at 9 of 77, and the
+measuring layer was audited against the rule the slices kept earning.** `otp_challenges`
+(`202607061600`) closed **OTP-1** by REVOKE; `trusted_devices` (`202607061700`) closed **TD-1**/**TD-2**
+by two DOORS, the deliberate opposite, because its RPCs are SECURITY INVOKER and the grant is the
+sanctioned path; `lead_interactions` (`202607061800`) closed **LI-1**/**LI-2** by revoking an UPDATE
+grant that no function in the database uses. The three together settle a rule the family had been
+groping at: **a write grant is kept exactly where a sanctioned writer needs it** — not
+`202607056100` §3's blanket "ownership IS the capability", which slice 6 disproved. **LI-1 is
+BOOK-5's shape on a second table**, fourteen days after the sixth rule wrote down the question that
+finds it, and nobody had asked it of `guard_lead_interaction_authority`. **The SEVENTH rule is
+recorded below — PROXY-TO-INVARIANT CONFUSION** — and applying it to `batch6_select_target.ps1`
+found the selector's ranking INVERTED (coverage counted file co-occurrence and saturated, so
+exposure-0 reference tables led the Top 12) and its heaviest exposure component detecting controls
+by trigger NAME. Both repaired; `Score` is now a diagnostic and EXPOSURE is the sort key. The
+security-test actor boundary was audited and **no test was changed**: the committed suite is
+structurally immune and fails loudly, proven by two mutations. Prior entry follows.)
+
+Previously: 2026-09-07 (**slice 5 recorded — EC-1 stands at 6 of 77, and the slice found the
 one thing no ceiling can measure.** `booking_items` (`202607061500`) closed **BOOK-3** (carried in
 from slice 4 and re-reproduced WIDER than recorded: not only INSERT — a bare booked service could
 also be re-typed, redenominated, re-owned and moved to another booking, none of which any RPC
@@ -1463,13 +1480,52 @@ population it cannot judge (assertion 9 of `10_grant_model_test` now names the t
 capability trigger is bespoke). Applying that rule immediately is what found **BOOK-3** on
 `booking_items` — the same defect on the parent table, one hop from the slice.
 
-**Slice selection is a measurement, not a preference.** `scripts/batch6_select_target.ps1` ranks
-every surface still at `NOT-RECORDED` by exposure minus coverage — money, PII, unguarded write
-doors, direct grants, SECURITY DEFINER writers, RPC count, lifecycle, concurrency shape, against
-pgTAP files and negative assertions — and **stores nothing**: every number is recomputed from the
-live catalog and the repository on each run, so it selects the next slice without ever owning the
-truth about a surface. It is not a CI gate and has no verdict to give; a high score says *attacking
-here is most likely to be repaid*, and a low score is never evidence that a surface is safe.
+**A SEVENTH rule was earned 2026-09-08, and unlike the first six it was earned by the measuring
+layer itself rather than by any table: PROXY-TO-INVARIANT CONFUSION — measuring `P` and concluding
+`Q`, where `P` is an implementation-dependent proxy that `Q` does not actually depend on.** The
+prior six rules are all special cases of it, and once the shape was named it turned up in five more
+places on the day it was named. Check 5 measured *line endings* as document size (GUARD-CRLF-1);
+PAX-4 measured *trigger presence* as authorization; slice 6's CI-caught defect measured a
+*platform-managed grant* as repository-controlled writability; slice 7's first attack battery
+measured *owner execution* as actor execution, and two static censuses measured *substring matches
+on trigger arguments* and *a foreign-key sweep* as catalog enforcement. Then, on 2026-09-08:
+`batch6_select_target.ps1` measured *file co-occurrence with `throws_ok` anywhere in the file* as
+negative coverage of a surface, and *a trigger function's NAME* as the presence of a control —
+reporting `trusted_devices` as having no control at all on the very day TD-1/TD-2 fitted it with
+two. **The tell is always the same: the number does not move when the thing it names really
+changes** (the fifth rule's diagnostic, generalised).
+
+The standing consequence is two rules, not one. First: **an assertion that claims a semantic
+invariant must state what it measures AND what it does not** — `107_...` assertion 15 is the worked
+example, rewritten on 2026-09-08 to say plainly that it proves no *database* function, view or
+policy references the table outside a named set, and does **not** prove the table can never *be* a
+gate, since it cannot see an Edge Function or any application-layer check. A tripwire may
+deliberately over-match; a semantic invariant may not overstate. Second: **prove the actor before
+the attack.** `set local role` outside a transaction block is a silent no-op, so an attack battery
+must assert `current_user` and `auth.uid()` as its first statements. Measured 2026-09-08, this is
+**not** a weakness in the committed suite and no test was changed for it: all 107 pgTAP files open
+an explicit transaction before any role switch, and an actor mix-up in one of them fails *loudly*
+rather than silently, because every role-switching file carries at least one assertion that expects
+LESS than a superuser sees — either a `throws_ok`, or a visibility control expecting zero rows
+(verified by neutering the role switches in `48_document_storage_test.sql`, the single file that
+reached the last round of elimination: assertions 7 and 10 fail). The vulnerable artifact is the
+**ad-hoc battery**, where no expectation is encoded and a false result is therefore
+indistinguishable from a true one. That is why this rule lives here, in the method, and not in a
+new guard.
+
+**Slice selection is a measurement, not a preference — and on 2026-09-08 the measurement was found
+to have inverted.** `scripts/batch6_select_target.ps1` ranks every surface still at `NOT-RECORDED`
+by **exposure, with coverage only as the tie-break** — money, PII, unguarded write doors, direct
+grants, SECURITY DEFINER writers, RPC count, lifecycle, concurrency shape — and **stores nothing**:
+every number is recomputed from the live catalog and the repository on each run, so it selects the
+next slice without ever owning the truth about a surface. It ranked by `exposure - coverage` until
+the seventh rule was applied to it: coverage is FILE CO-OCCURRENCE and it saturates, so `users`
+scored coverage 450 and `branches` 458 for being in everybody's fixture, and the ranking became
+approximately the inverse of exposure — the old Top 12 opened with `languages`, `nationalities` and
+`countries`, all with exposure **0**, while `leads` at exposure 22 sat near the bottom. `Score` is
+retained as a diagnostic column and is no longer the sort key. It is not a CI gate and has no
+verdict to give; high exposure says *attacking here is most likely to be repaid*, and low exposure
+is never evidence that a surface is safe.
 
 **Standing method per slice** — the shape every closed entry above already followed, stated once so it
 stops being re-derived: **DISCOVER** the surface from the catalog (schema, columns, constraints,
