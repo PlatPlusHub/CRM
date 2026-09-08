@@ -1491,6 +1491,14 @@ plain: **content validation** asks whether the new value is legal, and reading `
 correct; **authority validation** asks whether this actor was permitted to cause the change, and it
 may never be sourced from the attacker's own image.
 
+A FOURTH occurrence followed on 2026-09-08 in `invoices` (**INVOICE-5**) — and it is the first one that
+appears as a *design choice rather than a defect*, which is why it is recorded here. The new rule
+"an invoice's total stops moving once it is no longer a draft" has to ask which state the row is in,
+and asking `new.status_code` would have let one statement set the status back to `draft` and change
+the total under it. It reads `old.status_code`. The habit the rule is trying to build is not "never
+touch `new`" but **write the predicate the safe way the first time**, so the question never has to
+be asked again by someone attacking it.
+
 **A SEVENTH rule was earned 2026-09-08, and unlike the first six it was earned by the measuring
 layer itself rather than by any table: PROXY-TO-INVARIANT CONFUSION — measuring `P` and concluding
 `Q`, where `P` is an implementation-dependent proxy that `Q` does not actually depend on.** The
@@ -1563,6 +1571,31 @@ prove the point; the savepoint is the whole technique, and it is the PAR-4 injec
 at the defences rather than at the guard. An incidental defense may keep the system safe today and
 still be latent debt, because the day someone relaxes it for an unrelated reason nothing announces
 what else it was holding up (`109_...` 15-18 is the worked example).
+
+Slice 10 (`invoices`) supplied two more instances the day after, and neither looked like a
+constraint at all. Detaching an invoice from its booking was refused by an **RLS with-check** — the
+resulting row would have been invisible to that actor — which reads exactly like "you may not move
+this invoice" and is not: re-run onto a *second* booking the same actor owned, the move succeeded.
+And `corrects_invoice_id = id` was refused by `invoices_corrects_not_self_check`, a **coherence
+CHECK** about self-reference; pointing the column at any other invoice was accepted. Visibility
+rules and coherence rules are the two most convincing impostors, because both produce a refusal that
+mentions the row you were trying to change.
+
+**AND THE INVERSE, which slice 10's own suite caught and which the five steps above do not cover:
+MECHANISM SUBSTITUTION.** An incidental defense is an *unintended* mechanism answering for the
+intended one. The mirror image is a *new* mechanism answering for an existing one — and it is
+invisible for the same reason, because the assertion pins an SQLSTATE and both raise it.
+`72_invoice_allocation_ceiling_test` assertion 9 shrinks an invoice below what is already allocated
+and expects `23514`; `202607062000` added a BEFORE trigger that refuses the same statement, with the
+same code, for an entirely different reason. **The assertion kept passing while measuring a
+different guard, and would have gone on passing if the allocation ceiling were dropped tomorrow.**
+The standing consequence: **a package that adds a guard must ask which existing ASSERTIONS now pass
+for a different reason** — the `AGENTS.md §5b` question 2 ("which code consumes, parses or derives
+from the structure this package changed?") applied to the test suite, which derives its meaning from
+the mechanism it names. It is answered the same way it is asked of code: re-run the PAR-4 injection
+and see whether the old enforcer is still the one refusing. Here it was not, and the four probes
+were re-pointed onto the **platform path**, where the ceiling has no session-less exemption (its own
+assertion 2 says so) and is therefore the only thing that can refuse.
 
 **Slice selection is a measurement, not a preference — and on 2026-09-08 the measurement was found
 to have inverted.** `scripts/batch6_select_target.ps1` ranks every surface still at `NOT-RECORDED`

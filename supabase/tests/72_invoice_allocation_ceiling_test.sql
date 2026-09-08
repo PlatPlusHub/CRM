@@ -118,6 +118,18 @@ select throws_ok(
   '23514', null,
   'REPRODUCTION CLOSED: a direct allocation beyond the invoice total is refused -- 1300 against a 1000 invoice was the original probe');
 
+-- EVERY `total_amount` PROBE FROM HERE ON RUNS ON THE PLATFORM PATH, AND THAT IS THE POINT.
+-- `202607062000` (INV-5) freezes an invoice's total once it leaves `draft`, in a BEFORE trigger --
+-- so for a session-carrying actor it answers first, with the same 23514, and this assertion would
+-- have gone on passing while measuring a completely different guard. That is the mechanism
+-- substitution this file exists to detect, caught here by its own suite. Assertion 2 above states
+-- that the ceiling has NO session-less exemption because it is INTEGRITY, not authorization; the
+-- platform path is therefore exactly where it is the only enforcer, and running the probe here
+-- proves assertion 2's claim rather than assuming it. The authenticated door is proven separately,
+-- by `110_invoice_document_integrity_test.sql`.
+reset role;
+select set_config('request.jwt.claims','{}', true);
+
 select throws_ok(
   $q$do $x$
      begin
@@ -190,18 +202,17 @@ select cmp_ok(
 -- asserted: the violation must SUCCEED while the triggers are gone, and be REFUSED once restored.
 -- One without the other proves half of it.
 -- =============================================================================================
--- Back to the finance_manager who legitimately holds CREATE_INVOICE. Assertion 15 left the EMPLOYEE
--- session in place, and without this the mutation probe fails on 42501 before it ever reaches the
--- ceiling -- which would have proved authorization, not enforcement. Exactly the confusion this pair
--- exists to prevent: "operation denied" and "operation never attempted" are different results.
-select set_config('request.jwt.claims','{"sub":"72000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
-set local role authenticated;
-
+-- The session matters here and has moved once. It used to be restored to the finance_manager,
+-- because assertion 15 left the EMPLOYEE in place and the probe would then have failed on 42501
+-- before ever reaching the ceiling -- authorization, not enforcement, and this pair exists to keep
+-- "operation denied" and "operation never attempted" apart. Since `202607062000` a finance session
+-- is no longer neutral either: `invoices_guard_integrity` refuses the same statement first. The
+-- platform path is the only place where dropping these two triggers is the ONLY thing that changed.
 savepoint before_enforcer_mutation;
 reset role;
+select set_config('request.jwt.claims','{}', true);
 drop trigger payment_allocations_within_invoice_total on public.payment_allocations;
 drop trigger invoices_total_covers_allocations on public.invoices;
-set local role authenticated;
 
 select lives_ok(
   $q$do $x$
@@ -212,6 +223,10 @@ select lives_ok(
   'MUTATION: with both ceiling triggers dropped, the SAME violation now SUCCEEDS -- 1000 allocated against a total of 1. The refusals above are those triggers, not some other constraint doing the work');
 
 rollback to savepoint before_enforcer_mutation;
+-- TEST-3: the rollback restores the role and the GUC as well as the triggers, so the session is
+-- re-established before the identical statement is repeated.
+reset role;
+select set_config('request.jwt.claims','{}', true);
 
 select throws_ok(
   $q$do $x$

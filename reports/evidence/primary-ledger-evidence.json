@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-08T18:50:00Z",
-  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607061900 was applied via apply_migration and its ledger row normalised from the MCP-assigned version 20260908184430 to the repository version 202607061900. GUARD-1: the array below is the repository's own filename list, written ONLY after its md5 was proven equal to the fingerprint read from Primary (1caf71daa1f4df9d89d03f3df0aa9d25, count 208) -- it is not a repository value standing in for a Primary one.",
+  "read_at": "2026-09-08T19:35:00Z",
+  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after 202607062000 was applied via apply_migration and its ledger row normalised from the MCP-assigned version 20260908193229 to the repository version 202607062000. GUARD-1: the array below is the repository's own filename list, written ONLY after its md5 was proven equal to the fingerprint read from Primary (102a08f0009493b58d2583ae28a0c17c, count 209) -- it is not a repository value standing in for a Primary one.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "cf94b718736ff8f0175fa7a618d17870d96e31fc",
-  "migration_count": 208,
-  "ledger_fingerprint": "1caf71daa1f4df9d89d03f3df0aa9d25",
+  "repository_head": "a15ead207fef18c36f850acdab4002a0dfac2e42",
+  "migration_count": 209,
+  "ledger_fingerprint": "102a08f0009493b58d2583ae28a0c17c",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -215,6 +215,7 @@
     "202607061600_a_challenge_its_own_subject_could_answer",
     "202607061700_a_device_record_its_own_subject_could_rewrite",
     "202607061800_an_interaction_log_that_could_be_moved_and_rewritten",
-    "202607061900_the_lead_door_that_answered_its_own_authority_question"
+    "202607061900_the_lead_door_that_answered_its_own_authority_question",
+    "202607062000_an_invoice_that_could_be_rewritten_after_it_was_issued"
   ]
 }

@@ -627,6 +627,46 @@ $r = Post-Rest $fin "payment_allocations" @{ tenant_id = $T; payment_id = $payId
 Check "NEGATIVE CONTROL: the IDENTICAL POST succeeds once the invoice is issued -- the guard reads the invoice's state, it does not close the door" `
     (Ok $r) "$($r.StatusCode) $(Err $r)"
 
+# =============================================================================================
+Write-Host "`n-- INV-1..INVOICE-7: the invoice document, over the browser-facing door --" -ForegroundColor Cyan
+# PostgREST serves `invoices` as a TABLE beside the RPCs, and `authenticated` holds UPDATE on it.
+# Everything below was measured succeeding through this exact door before 202607062000.
+# =============================================================================================
+$invBefore = (Psql "select currency_code || '|' || total_amount::text || '|' || status_code from public.invoices where id='$draftInv';").Trim()
+
+$r = Get-Rest $emp "invoices?id=eq.$draftInv"
+Check "REACH: the employee who owns the booking CAN read the invoice over HTTP -- so every refusal below is capability, not visibility" `
+    ((Ok $r) -and (@(Val $r).Count -eq 1)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "invoices?id=eq.$draftInv" @{ currency_code = 'USD' }
+Check "INVOICE-1 over HTTP: PATCH /rest/v1/invoices cannot flip the CURRENCY -- an amount is a PAIR, and 9,000 EGP read as 9,000 USD in app.customer_balance while total_amount never moved" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "invoices?id=eq.$draftInv" @{ invoice_number = 'INV-2026-abcd' }
+Check "INVOICE-2/INVOICE-7 over HTTP: nor rewrite the invoice NUMBER -- the same rewrite made every later app.create_invoice in that tenant and year raise 22P02" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $fin "invoices?id=eq.$draftInv" @{ total_amount = 99000 }
+Check "INVOICE-5 over HTTP: even FINANCE, holding CREATE_INVOICE, cannot move the total of an invoice that has left draft" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $fin "invoices" @{ tenant_id = $T; customer_id = $customerId; invoice_number = 'INV-HTTP-9001'
+                                  invoice_date = '2026-09-08'; currency_code = 'EGP'; total_amount = 4242; status_code = 'paid' }
+Check "INVOICE-4 over HTTP: POST /rest/v1/invoices cannot raise one already PAID -- 4,242 EGP declared settled with no payment and no allocation" `
+    (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Post-Rest $fin "invoices" @{ tenant_id = $T; customer_id = $customerId; invoice_number = 'INV-HTTP-9002'
+                                  invoice_date = '2026-09-08'; currency_code = 'EGP'; total_amount = 4242; status_code = 'draft' }
+Check "POSITIVE CONTROL: the IDENTICAL POST as a DRAFT is accepted -- the rule is about the entry STATE, it did not close the door" `
+    (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "invoices?id=eq.$draftInv" @{ due_date = (Get-Date).AddDays(45).ToString('yyyy-MM-dd') }
+Check "SEC-2 STILL INTENTIONAL: `due_date` -- which nothing reads -- still PATCHes on the same row; the guard names columns by consequence and did not become a row freeze" `
+    (Ok $r) "$($r.StatusCode) $(Err $r)"
+
+$invAfter = (Psql "select currency_code || '|' || total_amount::text || '|' || status_code from public.invoices where id='$draftInv';").Trim()
+Check "NON-MUTATION: after four refusals the invoice still reads $invAfter" ($invAfter -eq $invBefore) "before=$invBefore after=$invAfter"
+
 Write-Host ""
 if ($fail -gt 0) { $findings | ForEach-Object { Write-Host "  - $_" -ForegroundColor Yellow } }
 Write-Host "== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail) { 'Red' } else { 'Green' })

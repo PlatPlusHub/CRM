@@ -269,9 +269,13 @@ select is(
 reset role;
 select set_config('request.jwt.claims','{"sub":"87000000-0000-0000-0000-0000000000a3","aal":"aal2"}',true);
 set local role authenticated;
+-- Raised as a DRAFT and issued through the RPC. It used to be inserted directly as `issued`, which
+-- `202607062000` refuses: an invoice is born a draft (INV-4), and this actor holds CREATE_INVOICE,
+-- so the sanctioned two-step is available to them and is what a real caller would do.
 insert into public.invoices (id,tenant_id,customer_id,invoice_number,invoice_date,currency_code,status_code,total_amount)
 values ('87000000-0000-0000-0000-0000000000c9','87000000-0000-0000-0000-000000000001','87000000-0000-0000-0000-0000000000d1',
-        'INV-F87-1',now(),'EGP','issued',300);
+        'INV-F87-1',now(),'EGP','draft',300);
+select app.issue_invoice('87000000-0000-0000-0000-0000000000c9');
 
 -- Each RPC is called in its OWN statement and the row found by a deterministic key. Calling the
 -- function inside the `where` clause of the assertion makes it a correlated subquery -- Postgres is
