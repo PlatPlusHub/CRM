@@ -1461,6 +1461,10 @@ freely, because `guard_passenger_financials` returns early on null amounts — a
 not move when the hole was closed**, which is the diagnostic: a number that stays still through a
 real repair was never counting the thing you thought. The standing consequence: when a slice finds a
 defect on a surface a ceiling already credited, **root-cause the ceiling too**, and bound the
+population it cannot judge (assertion 9 of `10_grant_model_test` now names the ten tables whose only
+capability trigger is bespoke). Applying that rule immediately is what found **BOOK-3** on
+`booking_items` — the same defect on the parent table, one hop from the slice.
+
 **A SIXTH rule was earned 2026-09-07 by BOOK-5, and it is the hardest one so far: a guard that
 charges the correct permission, unconditionally, on every path, can still be defeated if it asks its
 question of the row the attacking statement just wrote.** `guard_booking_item_financials` computed
@@ -1476,9 +1480,16 @@ the rejected `new.tenant_id` draft and this live defect — are the same sentenc
 that found it was a DISCRIMINATING PAIR: the same statement run twice, one clause apart, with the
 ground truth read as `postgres` rather than through the attacker's own RLS.
 
-population it cannot judge (assertion 9 of `10_grant_model_test` now names the ten tables whose only
-capability trigger is bespoke). Applying that rule immediately is what found **BOOK-3** on
-`booking_items` — the same defect on the parent table, one hop from the slice.
+The rule found its THIRD occurrence on 2026-09-08 in `leads` (**LEAD-1**), and the third one is the
+widest: `app.guard_write_capability` decided a full bypass of the capability check —
+`if v_relationship_ok then return new` — from `new.assigned_user_id`, a column the attacking
+statement supplies. So naming yourself in the SET list did not merely authorize the assignment, it
+skipped every permission, `app.authorize` call and MFA check for every other column in the same
+statement. Three tables, one sentence: `set owner_user_id = <me>` · `set lead_id = <my lead>` ·
+`set assigned_user_id = <me>`. The distinction to apply, in the words the third occurrence made
+plain: **content validation** asks whether the new value is legal, and reading `new` for it is
+correct; **authority validation** asks whether this actor was permitted to cause the change, and it
+may never be sourced from the attacker's own image.
 
 **A SEVENTH rule was earned 2026-09-08, and unlike the first six it was earned by the measuring
 layer itself rather than by any table: PROXY-TO-INVARIANT CONFUSION — measuring `P` and concluding
@@ -1512,6 +1523,46 @@ reached the last round of elimination: assertions 7 and 10 fail). The vulnerable
 **ad-hoc battery**, where no expectation is encoded and a false result is therefore
 indistinguishable from a true one. That is why this rule lives here, in the method, and not in a
 new guard.
+
+**A THIRD standing consequence, added 2026-09-08 (slice 9) because naming the failure never said
+what a proxy IS allowed to do, and half of this repository's measuring layer is proxies doing it
+legitimately. The line is between two uses, and only the second is forbidden:**
+
+* **DIAGNOSTIC PROXY — allowed, and it needs no apology.** Ranking, suggesting, flagging for review,
+  narrowing an investigation. `batch6_select_target.ps1` still ranks on a file-co-occurrence proxy
+  and that is fine, because its only output is a suggestion a human then verifies. A tripwire that
+  deliberately over-matches (`107_...` 15) is the same thing. What a diagnostic owes the reader is
+  the label: it must say it is one, and it must never be quoted as proof of the property it names.
+* **EVIDENCE OF AN INVARIANT — must observe the state that DEFINES the invariant**, or a formally
+  equivalent state the repository controls. Not something correlated with it, not something that
+  usually accompanies it, not something that happened to be true when the guard was written.
+
+The failure this forbids is one step, always the same one: *"P is correlated with Q"* → *"P proves
+Q."* That step is a class promotion in the `AGENTS.md §5a` evidence table — from **INFERENCE** ("a
+lead worth testing; anything at all until tested") to whatever class the claim wants — and every row
+of that table exists to refuse it. The table stays the single authority on the classes; this says
+which of the two things you are doing when you write a number down.
+
+**Its sharpest application, named 2026-09-08 and immediately load-bearing: INCIDENTAL DEFENSE ≠
+INTENTIONAL CONTROL.** A refusal is a proxy for enforcement. A forbidden operation may fail because
+of a CHECK constraint, an FK, a unique index, an unrelated trigger, or the order two triggers happen
+to fire in — none of which was designed to enforce the invariant in question. **"The attack currently
+fails" and "the intended authorization invariant is enforced" are different claims**, and slice 9 is
+where they came apart: slice 8 recorded the `leads` seize-plus-transition as a VERIFIED NON-DEFECT
+on the strength of a 23514 from `leads_owner_matches_assignee_chk`, and re-running it with the pair
+of columns that constraint actually couples showed the constraint satisfied and the refusal coming
+from `app.require_assignment_history` — a *timeline-completeness* control. Two incidental defences
+stacked, and the authorization model behind them was wide open. The procedure, five steps, and step
+5 is the one that cannot be skipped:
+
+1. verify the behaviour; 2. identify the mechanism that actually refuses; 3. ask whether that
+mechanism was designed to enforce this invariant; 4. if not, classify it as an **incidental
+defense**; 5. **remove or relax it inside a transaction and ask again** — that is the only way to
+learn whether the intended control stands alone. Never weaken a valid constraint in production to
+prove the point; the savepoint is the whole technique, and it is the PAR-4 injection pattern pointed
+at the defences rather than at the guard. An incidental defense may keep the system safe today and
+still be latent debt, because the day someone relaxes it for an unrelated reason nothing announces
+what else it was holding up (`109_...` 15-18 is the worked example).
 
 **Slice selection is a measurement, not a preference — and on 2026-09-08 the measurement was found
 to have inverted.** `scripts/batch6_select_target.ps1` ranks every surface still at `NOT-RECORDED`

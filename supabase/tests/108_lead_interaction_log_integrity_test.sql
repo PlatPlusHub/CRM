@@ -29,13 +29,12 @@
 --       `otp_challenges` two slices ago. 10 goes further than "it did not throw" and reads the
 --       derived state back, because a returned uuid is not evidence the lead moved.
 --
--- 11-12 are a VERIFIED NON-DEFECT, pinned deliberately. `app.enforce_status_transition` authorizes
---       a `leads` transition with `require_lead_handler((to_jsonb(new) ->> 'assigned_user_id'))` --
---       BOOK-5's shape, reading NEW to decide authority. It is not exploitable, but the thing that
---       stops it is INCIDENTAL: a check constraint about owner/assignee coherence (11), not a
---       deliberate answer. 12 proves the refusal in 11 is the seize and not the transition, which
---       is the discriminating pair BOOK-5 itself was only found by. If that constraint is ever
---       relaxed, 11 fails and says so.
+-- 11-12 WERE a VERIFIED NON-DEFECT pinned on an INCIDENTAL defence, and the pin fired. Slice 9
+--       (`202607061900`, LEAD-1) proved the defence was incidental twice over -- the coherence
+--       constraint, and behind it `require_assignment_history` -- and replaced both with an
+--       intentional control. The pair now discriminates by MECHANISM: 11 is the seize, refused by
+--       `guard_write_capability`; 12 is the transition, refused by `enforce_status_transition`.
+--       Both 42501. See the block above assertion 11.
 --
 -- 13    is the grant posture by MEMBERSHIP, not by count.
 --
@@ -164,16 +163,28 @@ select is(
   'contacted',
   '...and the RPC still maintains the lead END TO END -- a returned uuid is not evidence that the qualifying interaction advanced the lead, so the derived state is read back');
 
+-- 2026-09-08, slice 9 (LEAD-1): THIS PIN FIRED, WHICH IS THE ONLY REASON IT EXISTED. It used to
+-- assert 23514 and name `leads_owner_matches_assignee_chk`, because that constraint was what refused
+-- the seize. Slice 9 re-ran the same attack with the PAIR of columns the constraint actually couples
+-- (`owner_user_id` as well as `assigned_user_id`), found the constraint satisfied and the refusal
+-- coming from `app.require_assignment_history` -- an INTEGRITY control, equally incidental -- and
+-- replaced both with an intentional one in `202607061900`: moving a lead's assignment costs
+-- ASSIGN_LEAD or REASSIGN_LEAD, and the handler shortcut is decided from OLD. So the code is now
+-- 42501 and the pair below discriminates by MECHANISM rather than by errcode: the seize is refused by
+-- `guard_write_capability`, the transition by `enforce_status_transition`. That the guard stands
+-- alone -- with the constraint and the history trigger both removed -- is proven by mutation in
+-- `109_lead_authority_and_lifecycle_test.sql` 15-18, not here.
 select throws_ok(
   $$update public.leads set assigned_user_id = '08000000-0000-0000-0000-000000000011',
-        lead_status_code = 'contacted' where id = '08000000-0000-0000-0000-0000000000e2'$$,
-  '23514', null,
-  'VERIFIED NON-DEFECT, pinned because its defence is INCIDENTAL: app.enforce_status_transition authorizes a leads transition with require_lead_handler(to_jsonb(new) ->> ''assigned_user_id'') -- reading NEW to decide authority, BOOK-5''s shape. Seizing and transitioning in ONE statement is refused by leads_owner_matches_assignee_chk, a constraint about owner/assignee coherence rather than a deliberate answer to BOOK-5. Relax that constraint and the shape goes live with nothing else in the way, and this assertion is what says so');
+        owner_user_id = '08000000-0000-0000-0000-000000000011'
+      where id = '08000000-0000-0000-0000-0000000000e2'$$,
+  '42501', null,
+  'LEAD-1 (was a VERIFIED NON-DEFECT here, now CLOSED): seizing a colleague''s lead is refused by the AUTHORIZATION model -- app.guard_write_capability charges ASSIGN_LEAD or REASSIGN_LEAD for moving an assignment, instead of letting the attacker''s own NEW image answer "are you the handler?"');
 
 select throws_ok(
   $$update public.leads set lead_status_code = 'contacted' where id = '08000000-0000-0000-0000-0000000000e2'$$,
   '42501', null,
-  '...and the DISCRIMINATING PAIR that makes assertion 10 mean something: the same UPDATE one clause shorter is refused 42501 by the handler check, not 23514. Without this, assertion 10 would pass equally well if leads transitions were simply unreachable');
+  '...and the DISCRIMINATING PAIR: the transition without the seize is refused by a DIFFERENT guard -- app.enforce_status_transition''s handler fallback, which now resolves the handler from OLD (LEAD-1b). Without this, assertion 11 would pass equally well if leads transitions were simply unreachable');
 
 select is(
   (select string_agg(privilege_type, ',' order by privilege_type)

@@ -388,6 +388,58 @@ Check "POSITIVE CONTROL: the employee CAN SEE the colleague's lead (VIEW_DEPARTM
 $r = Rpc $emp 'advance_lead' @{ p_lead_id = $leadO; p_to_status = 'contacted'; p_reason = 'not mine to work' }
 Check "TRANS-2 over HTTP: ...but CANNOT advance it -- the handler rule, not RLS, is what refuses" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
+# =================================================================================================
+# LEAD-1 / LEAD-2 / LEAD-4 over HTTP (202607061900, Batch 6 slice 9).
+#
+# PostgREST serves the `leads` TABLE beside the RPCs, and `authenticated` holds INSERT and UPDATE on
+# it -- so the three findings below are reachable with a PATCH and a POST, by a signed-in employee,
+# with no RPC involved at all. That is BOOK-1's rule and it is why these live here rather than only
+# in pgTAP. LEAD-3 is a CHECK CONSTRAINT and therefore cannot be door-specific by construction; its
+# evidence is `109_...` 11 and it is not restated over the wire.
+#
+# The discriminating control is already established two assertions above: this employee CAN SEE
+# $leadO. So every refusal here is authority, not reach.
+# =================================================================================================
+function Patch-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+
+# Defined here rather than in the routing section below, because PowerShell binds a function when
+# its definition statement RUNS -- and this block runs first.
+function Post-Rest($jwt, $path, $body) {
+    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
+        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
+}
+
+$r = Patch-Rest $emp "leads?id=eq.$leadO" @{ assigned_user_id = $U_EMP; owner_user_id = $U_EMP; lead_status_code = 'contacted' }
+Check "LEAD-1 over HTTP: the employee cannot SEIZE the colleague's lead and transition it in one PATCH" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Patch-Rest $emp "leads?id=eq.$leadO" @{ assigned_user_id = $U_EMP; owner_user_id = $U_EMP }
+Check "...nor seize it alone -- moving an assignment costs ASSIGN_LEAD or REASSIGN_LEAD, which an employee holds neither of" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Get-Rest $emp "leads?id=eq.$leadO&select=assigned_user_id"
+Check "GROUND TRUTH over HTTP: the lead is still the owner's -- a refused PATCH can degrade into a silent zero-row no-op" `
+    ((@(Val $r)[0]).assigned_user_id -ne $U_EMP) "assignee=$((@(Val $r)[0]).assigned_user_id)"
+
+$r = Post-Rest $emp 'leads' @{ tenant_id = $T; branch_id = $BR; department_id = $DP
+                               lead_source_code = 'direct_call'; title = 'Born won'; lead_status_code = 'won' }
+Check "LEAD-2 over HTTP: a lead cannot be BORN in a terminal status through the table door" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+# LEAD-4: the SLA escape. A lead the employee genuinely handles, with no interaction logged yet.
+$leadSla = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
+                                          p_lead_source_code = 'direct_call'; p_title = 'SLA escape target' })
+$r = Rpc $owner 'assign_lead' @{ p_lead_id = $leadSla; p_assignee_user_id = $U_EMP; p_reason = 'front line' }
+Check "a lead is assigned to the employee with no interaction logged against it" (Ok $r) (Err $r)
+
+$r = Patch-Rest $emp "leads?id=eq.$leadSla" @{ lead_status_code = 'contacted' }
+Check "LEAD-4 over HTTP: even its OWN handler cannot assert 'contacted' with no qualifying interaction -- that flip leaves process_lead_sla's working set" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Rpc $emp 'record_lead_interaction' @{ p_lead_id = $leadSla; p_interaction_type_code = 'phone_call'; p_summary = 'a real call' }
+Check "POSITIVE CONTROL: ...and the sanctioned producer of that edge still carries it over HTTP" (Ok $r) (Err $r)
+
 # convert_lead: won -> converted, the step where a lead becomes a customer relationship.
 $r = Rpc $emp 'convert_lead' @{ p_lead_id = $leadJ; p_customer_id = $customerId; p_reason = 'booking to follow' }
 Check "convert_lead carries the won lead to converted" (Ok $r) (Err $r)
@@ -412,12 +464,6 @@ Check "the lead timeline records the walk, not just its last state" ($tl.Count -
 # and the trainee are placed here and are NOT eligible handlers.
 # =============================================================================================
 Write-Host "`n-- API-3: lead routing --" -ForegroundColor Cyan
-
-function Post-Rest($jwt, $path, $body) {
-    Invoke-WebRequest -Uri "$API/rest/v1/$path" -Method Post -SkipHttpErrorCheck `
-        -Headers @{ apikey = $ANON; Authorization = "Bearer $jwt" } `
-        -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 6 -Compress)
-}
 
 $leadRR = Val (Rpc $emp 'create_lead' @{ p_branch_id = $BR; p_department_id = $DP
                                           p_lead_source_code = 'direct_call'; p_title = 'Round robin target' })
