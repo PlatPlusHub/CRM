@@ -4,7 +4,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(45);
+select plan(57);
 
 insert into auth.users (id, email, email_confirmed_at) values
   ('b1100000-0000-0000-0000-0000000000a1','owner@slice11.test',   now()),
@@ -82,6 +82,28 @@ select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-00000000
 select throws_ok($q$update public.customers set archived_at='2001-01-01',archived_by='b1100000-0000-0000-0000-000000000013' where id='b1100000-0000-0000-0000-0000000000d3'$q$,'42501',null,'metadata cannot be rewritten without changing archive state');
 select throws_ok($q$insert into public.customers(tenant_id,customer_type_code,full_name,is_archived) values('b1100000-0000-0000-0000-000000000001','person','prearchived',true)$q$,'42501',null,'INSERT cannot bypass archive authority');
 
+-- Reason is caller-authored but still belongs to archive authority.
+select throws_ok($q$update public.customers set archive_reason='employee rewrite' where id='b1100000-0000-0000-0000-0000000000d3'$q$,
+ '42501','permission denied: ARCHIVE_RECORD','reason-only edit on an archived customer charges archive authority');
+reset role;
+savepoint archive_reason_mechanism;
+drop trigger customers_enforce_archive_authority on public.customers;
+set local role authenticated;
+update public.customers set archive_reason='mechanism removed' where id='b1100000-0000-0000-0000-0000000000d3';
+select is((select archive_reason from public.customers where id='b1100000-0000-0000-0000-0000000000d3'),'mechanism removed','removing the named enforcer permits the exact reason rewrite');
+reset role;
+rollback to archive_reason_mechanism;
+set local role authenticated;
+select throws_ok($q$update public.customers set archive_reason='employee rewrite' where id='b1100000-0000-0000-0000-0000000000d3'$q$,
+ '42501','permission denied: ARCHIVE_RECORD','restoring the enforcer restores refusal');
+select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a1","aal":"aal2"}',true);
+update public.customers set archive_reason='authorized correction' where id='b1100000-0000-0000-0000-0000000000d3';
+select is((select archive_reason from public.customers where id='b1100000-0000-0000-0000-0000000000d3'),'authorized correction','archive authority can correct caller-authored reason');
+select ok((select archived_at=now() and archived_by='b1100000-0000-0000-0000-000000000011' from public.customers where id='b1100000-0000-0000-0000-0000000000d3'),'reason correction preserves archive actor and time');
+select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a3","aal":"aal2"}',true);
+select throws_ok($q$insert into public.customers(tenant_id,customer_type_code,full_name,archive_reason) values('b1100000-0000-0000-0000-000000000001','person','reason forgery','forged')$q$,
+ '42501','permission denied: ARCHIVE_RECORD','INSERT cannot plant archive narrative without its authority');
+
 -- Structural, numeric and tenant controls, with a real positive authority.
 select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a1","aal":"aal2"}',true);
 select throws_ok($q$update public.customers set credit_limit_amount=-1 where id='b1100000-0000-0000-0000-0000000000d1'$q$,'23514',null,'negative ceiling CHECK');
@@ -136,12 +158,27 @@ insert into public.customer_contact_methods(tenant_id,customer_id,contact_method
 ('b1100000-0000-0000-0000-000000000001','b1100000-0000-0000-0000-0000000000d1','email','source@slice11.test',true),
 ('b1100000-0000-0000-0000-000000000001','b1100000-0000-0000-0000-0000000000d2','email','target@slice11.test',true);
 
+-- Independent literal fixture inventory, not the production FK-discovery algorithm.
+create function pg_temp.customer_ref_counts(p_customer uuid)
+returns table(surface text, n bigint) language plpgsql as $$
+declare v_table text;
+begin
+ foreach v_table in array array['bookings','invoices','payments','refunds','leads','quotations',
+ 'passengers','conversations','complaints','service_requests','offline_conversions','customer_notes',
+ 'customer_identity_signals','customer_contact_methods'] loop
+  return query execute format('select %L::text, count(*) from public.%I where customer_id=$1',v_table,v_table) using p_customer;
+ end loop;
+end $$;
+select ok((select count(*)=14 and bool_and(n=1) from pg_temp.customer_ref_counts('b1100000-0000-0000-0000-0000000000d1')),'all 14 dependent fixtures exist before merge');
+
 select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a1","aal":"aal2"}',true);
 set local role authenticated;
 select is((select outstanding_balance from app.customer_balance('b1100000-0000-0000-0000-0000000000d1')),85::numeric,'source balance is 100 - 20 + 5 before merge');
 select lives_ok($q$select app.merge_customer_identity('b1100000-0000-0000-0000-0000000000d1','b1100000-0000-0000-0000-0000000000d2','duplicate identity')$q$,'authorized merge includes invoices and the complete dependent history');
 select is((select outstanding_balance from app.customer_balance('b1100000-0000-0000-0000-0000000000d2')),85::numeric,'survivor balance preserves amount and currency');
 reset role;
+select ok((select count(*)=14 and bool_and(n=0) from pg_temp.customer_ref_counts('b1100000-0000-0000-0000-0000000000d1')),'zero dependents remain on source across all 14 referrers');
+select ok((select count(*)=14 and bool_and(n=case when surface='customer_contact_methods' then 2 else 1 end) from pg_temp.customer_ref_counts('b1100000-0000-0000-0000-0000000000d2')),'every dependent reaches survivor, not merely its balance');
 select is((select count(*)::int from public.customer_identity_merges where source_customer_id='b1100000-0000-0000-0000-0000000000d1' and target_customer_id='b1100000-0000-0000-0000-0000000000d2' and merged_by='b1100000-0000-0000-0000-000000000011'),1,'one attributed immutable merge record');
 select is((select count(*)::int from public.events where tenant_id='b1100000-0000-0000-0000-000000000001' and event_type_code='customer_identity_merged'),1,'one critical merge event');
 select is((select count(*)::int from public.customer_contact_methods where customer_id='b1100000-0000-0000-0000-0000000000d2'),2,'source and target contact values survive');
@@ -151,5 +188,26 @@ select throws_ok($q$select app.merge_customer_identity('b1100000-0000-0000-0000-
 select throws_ok($q$select app.merge_customer_identity('b1100000-0000-0000-0000-0000000000d2','b1100000-0000-0000-0000-0000000000d1')$q$,'P0001','target customer is already archived','reverse merge cannot create a cycle');
 select throws_ok($q$update public.invoices set customer_id='b1100000-0000-0000-0000-0000000000d3' where id='b1100000-0000-0000-0000-0000000000f1'$q$,'23514',null,'owner direct DML remains unable to move an invoice after the sanctioned merge');
 
+select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a1","aal":"aal1"}',true);
+select throws_ok($q$select app.merge_customer_identity('b1100000-0000-0000-0000-0000000000d2','b1100000-0000-0000-0000-0000000000d3')$q$,'42501',null,'merge owner requires MFA before lifecycle validation');
+select set_config('request.jwt.claims','{"sub":"b1100000-0000-0000-0000-0000000000a3","aal":"aal2"}',true);
+select throws_ok($q$select app.merge_customer_identity('b1100000-0000-0000-0000-0000000000d2','b1100000-0000-0000-0000-0000000000d3')$q$,'42501','permission denied: MERGE_CUSTOMER_IDENTITY','customer administration does not confer merge authority');
+
+-- `guard_invoice_integrity` exempts `current_user = 'postgres'`, which reads broader than it is: the
+-- exemption is reachable only by a SECURITY DEFINER function `authenticated` may call. Measured, that
+-- set is TWO, and neither can be steered at an immutable column -- `merge_customer_identity` re-points
+-- customer_id under MERGE_CUSTOMER_IDENTITY after its own tenant and lifecycle checks, `void_invoice`
+-- writes only status_code under VOID_INVOICE. So the exemption is bounded by its callers, not by its
+-- condition, and a third caller would inherit the bypass without its own source saying so. Pinned for
+-- the same reason test 71 pins the catalog-driven set: the next one must arrive WITH a behavioural test.
+select set_eq(
+  $q$select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'app' and p.prokind = 'f' and p.prosecdef
+        and pg_get_userbyid(p.proowner) = 'postgres'
+        and has_function_privilege('authenticated', p.oid, 'EXECUTE')
+        and (p.prosrc ~* 'update[[:space:]]+public\.invoices'
+             or p.prosrc ~ 'pg_constraint|pg_attribute|information_schema|pg_class')$q$,
+  $q$values ('merge_customer_identity'), ('void_invoice')$q$,
+  'TRUSTED-PATH GUARD: exactly two SECURITY DEFINER functions can reach the invoice trusted-caller exemption, and these are they');
 select finish();
 rollback;

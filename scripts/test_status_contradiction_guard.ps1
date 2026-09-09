@@ -181,6 +181,48 @@ $after = Get-Contradictions $d
 Check "CONTROL (second direction): an untouched copy still reports NO contradiction after every mutation above" ($after.Count -eq 0) "got: $($after -join ' | ')"
 Remove-Item $d -Recurse -Force
 
+# Slice-11 reconciliation: attack the two summaries that previously hid a real row/count.
+$d = New-Sandbox
+try {
+    $sandboxRoot = [IO.Path]::GetFullPath($d)
+    if (-not $sandboxRoot.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase)) { throw 'Sandbox escaped temp root' }
+    # Unlike the Check-2-only probes, these reach Checks 13/22 and need the intervening inputs.
+    foreach ($relative in (git -C $repoRoot ls-files)) {
+        $destination = Join-Path $sandboxRoot $relative
+        New-Item -ItemType Directory -Force (Split-Path -Parent $destination) | Out-Null
+        Copy-Item -LiteralPath (Join-Path $repoRoot $relative) -Destination $destination
+    }
+    function Get-RecordDefects {
+        $out = & pwsh -NoProfile -File $guard -RepoRoot $d 2>&1 | Out-String
+        if ($out -notmatch '== Check 25:') { throw "Guard failed before record checks completed: $out" }
+        @($out -split "`n" | Where-Object { $_ -cmatch 'JOINED TABLE ROW:|COVERAGE TOTAL DRIFT:' })
+    }
+    $path = Join-Path $d 'reports/master/MASTER_GAP_REGISTER.md'
+    $original = [IO.File]::ReadAllText($path)
+    $clean = Get-RecordDefects
+    Check 'RECORD CONTROL: correct rows and coverage summaries are accepted' ($clean.Count -eq 0) ($clean -join ' | ')
+    foreach ($escape in @('`r`n','`n')) {
+        $mutated = [regex]::Replace($original, '\r?\n(?=\| CUST-6 \|)', $escape)
+        [IO.File]::WriteAllText($path, $mutated)
+        $hits = Get-RecordDefects
+        Check "RECORD MUTATION: literal $escape cannot hide CUST-6" ($mutated -ne $original -and ($hits -match 'JOINED TABLE ROW:'))
+    }
+    [IO.File]::WriteAllText($path, $original + "`nA prose example of literal " + '`r`n' + " is not a row.`n")
+    Check 'RECORD CONTROL: prose may quote newline escapes' ((Get-RecordDefects).Count -eq 0)
+    $path = Join-Path $d 'reports/master/MASTER_SURFACE_DISPOSITION.md'
+    $original = [IO.File]::ReadAllText($path)
+    foreach ($pattern in @('\d+ of \d+ recorded','\d+ `AUDITED`','All \d+ recorded')) {
+        $claim = [regex]::Match($original,$pattern).Value
+        $changed = [regex]::Replace($claim,'\d+', { param($m) ([int]$m.Value + 1).ToString() })
+        [IO.File]::WriteAllText($path, $original.Replace($claim,$changed))
+        Check "RECORD MUTATION: stale $claim is detected" ($claim -ne $changed -and (((Get-RecordDefects) -match 'COVERAGE TOTAL DRIFT:').Count -gt 0))
+    }
+    [IO.File]::WriteAllText($path, $original)
+    Check 'RECORD CONTROL: restored totals pass after mutations' ((Get-RecordDefects).Count -eq 0)
+} finally {
+    if ($sandboxRoot -and $sandboxRoot -eq [IO.Path]::GetFullPath($d)) { Remove-Item -LiteralPath $sandboxRoot -Recurse -Force }
+}
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($fail -gt 0) { exit 1 }
 exit 0

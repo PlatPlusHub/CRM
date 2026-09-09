@@ -52,9 +52,9 @@ There is deliberately **no `EXHAUSTIVE` value.** Exhaustive adversarial audit is
 
 ## Coverage
 
-**11 of 77 recorded · 5 `AUDITED` · 6 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 66 `NOT-RECORDED`.**
+**12 of 77 recorded · 6 `AUDITED` · 6 `AUDITED-OPEN` · 0 `PARTIAL` · 0 `EXEMPT` · 65 `NOT-RECORDED`.**
 
-**All 11 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
+**All 12 recorded surfaces stand at `ADVERSARIAL`, and Check 24 (ADV-1) is what makes that word cost something**: a surface may not carry it unless a pgTAP file names it, declares which attack classes it aimed at (`-- ATTACK-CLASSES:`, closed vocabulary), and carries at least one negative assertion. A file of positive controls earns `TESTED` and no more.
 
 This count is the honest one and it is meant to be uncomfortable. It replaces two numbers that read better and mean less: "all 77 tables appear in the reports" (true, and worthless — mention is not audit) and "75 of 77 tables appear in a pgTAP file" (true, and a floor — a table named once in an unrelated fixture is not a swept surface).
 
@@ -81,7 +81,7 @@ This count is the honest one and it is meant to be uncomfortable. It replaces tw
 | `customer_identity_merges` | NOT-RECORDED | — | — | — | — |
 | `customer_identity_signals` | NOT-RECORDED | — | — | — | — |
 | `customer_notes` | NOT-RECORDED | — | — | — | — |
-| `customers` | AUDITED | ADVERSARIAL | `session-2026-09-09-batch6-slice11-customers` | CUST-7, CUST-8, CUST-9, CUST-10 | — |
+| `customers` | AUDITED | ADVERSARIAL | `session-2026-09-09-slice11-closure` | CUST-7, CUST-8, CUST-9, CUST-10, CUST-11, CUST-12 | — |
 | `departments` | NOT-RECORDED | — | — | — | — |
 | `document_links` | NOT-RECORDED | — | — | — | — |
 | `document_retention_policies` | NOT-RECORDED | — | — | — | — |

@@ -1083,6 +1083,12 @@ if (Test-Path $masterDir) {
                 Write-Host "  ESCAPED TABLE ROW: $($md.Name):$lineNo begins with a backslash-escaped pipe -- the row is invisible to Check 2 and renders one column to the left" -ForegroundColor Yellow
                 $escapedRows++
             }
+            # A literal newline escape can hide a second row from every leading-row parser.
+            # Match only a row boundary followed by a finding ID, not prose quoting escapes.
+            if ($line -match '^\|' -and $line -cmatch '\|(?:`r)?`n\|\s*[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?\s*\|') {
+                Write-Host "  JOINED TABLE ROW: $($md.Name):$lineNo contains a literal newline escape before a finding row" -ForegroundColor Yellow
+                $escapedRows++
+            }
         }
     }
 }
@@ -1507,6 +1513,8 @@ if (-not (Test-Path $dispPath)) {
     $okDisposition = @('NOT-RECORDED', 'AUDITED', 'AUDITED-OPEN', 'PARTIAL', 'EXEMPT')
     $okAssurance   = @('—', '-', 'TESTED', 'ADVERSARIAL')
     $listed = @()
+    $dispositionCounts = @{}
+    $adversarialCount = 0
     $dispIssues = 0
     foreach ($line in [System.IO.File]::ReadAllLines($dispPath)) {
         # `-cnotmatch`, not `-notmatch`: PowerShell's default comparison is CASE-INSENSITIVE, so the
@@ -1524,6 +1532,8 @@ if (-not (Test-Path $dispPath)) {
         }
         $disp = ($cells[1] -replace '\*', '').Trim()
         $assr = ($cells[2] -replace '\*', '').Trim()
+        $dispositionCounts[$disp] = 1 + [int]$dispositionCounts[$disp]
+        if ($assr -eq 'ADVERSARIAL') { $adversarialCount++ }
         if ($okDisposition -notcontains $disp) {
             Write-Host "  OFF-VOCABULARY DISPOSITION: $surface -> '$disp' (allowed: $($okDisposition -join ', '))" -ForegroundColor Yellow
             $dispIssues++
@@ -1548,6 +1558,27 @@ if (-not (Test-Path $dispPath)) {
         }
     }
     $listed = @($listed | Sort-Object -Unique)
+    # The rows own the totals. Check the current Coverage section, never dated history.
+    $dispText = [IO.File]::ReadAllText($dispPath)
+    $coverage = [regex]::Match($dispText, '(?ms)^## Coverage\s*\n(.*?)(?=^## |\z)').Groups[1].Value
+    $recorded = $listed.Count - [int]$dispositionCounts['NOT-RECORDED']
+    $summary = [regex]::Match($coverage, '(\d+) of (\d+) recorded')
+    if (-not $summary.Success -or [int]$summary.Groups[1].Value -ne $recorded -or [int]$summary.Groups[2].Value -ne $listed.Count) {
+        Write-Host "  COVERAGE TOTAL DRIFT: recorded summary must be $recorded of $($listed.Count)" -ForegroundColor Yellow
+        $dispIssues++
+    }
+    foreach ($value in $okDisposition) {
+        $countMatch = [regex]::Match($coverage, '(\d+) `' + [regex]::Escape($value) + '`')
+        if (-not $countMatch.Success -or [int]$countMatch.Groups[1].Value -ne [int]$dispositionCounts[$value]) {
+            Write-Host "  COVERAGE TOTAL DRIFT: $value must be $([int]$dispositionCounts[$value])" -ForegroundColor Yellow
+            $dispIssues++
+        }
+    }
+    $assuranceMatch = [regex]::Match($coverage, 'All (\d+) recorded surfaces stand at `ADVERSARIAL`')
+    if (-not $assuranceMatch.Success -or [int]$assuranceMatch.Groups[1].Value -ne $adversarialCount -or $adversarialCount -ne $recorded) {
+        Write-Host "  COVERAGE TOTAL DRIFT: ADVERSARIAL summary disagrees with the disposition rows" -ForegroundColor Yellow
+        $dispIssues++
+    }
     foreach ($ghost in ($listed | Where-Object { $expected -notcontains $_ })) {
         Write-Host "  PHANTOM SURFACE: '$ghost' has a disposition row but no migration creates it" -ForegroundColor Yellow
         $dispIssues++
