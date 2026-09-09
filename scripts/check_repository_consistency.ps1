@@ -6,7 +6,7 @@
 
 .DESCRIPTION
   Deterministic, dependency-free. Precision over recall — it must not cry wolf, or agents
-  will learn to ignore it. Nineteen checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
+  will learn to ignore it. Twenty-five checks (1–2 Living docs; 3 boot routers; 4 all reports; 5 manifest;
   6 roadmap↔manifest; 7 ai-map freshness; 8 dual-project Supabase topology registry;
   9 manifest migration state vs the actual migration files; 10 latest-session pointer currency;
   11 manifest decision IDs resolve in the findings SSOT; 12 no future-dated evidence;
@@ -48,7 +48,28 @@
       fixed list, because inferring the input set from this script would be a guess ·
     Check 21 no document's freshness metadata (`Last updated:` / `Last measured:`) is OLDER than the
       newest date its own body carries (STALE-1) -- semantic, never wall-clock: a document nobody has
-      touched passes forever; only added-dated-content-without-a-header-update fails.
+      touched passes forever; only added-dated-content-without-a-header-update fails ·
+    Check 22 the surface disposition record covers exactly the surfaces the migrations create (DISP-1) ·
+    Check 23 every session report written under the HANDOFF rule carries its seven fields (HANDOFF-1) ·
+    Check 24 `ADVERSARIAL` is earned by a declaring test file with negative assertions, not typed (ADV-1) ·
+    Check 25 every registered decision reaches the manifest's boot line (GOV-16).
+
+  COLD-START STATE IS ONE FACT WITH ONE PARSE (2026-09-09). Three synchronization defects were
+  repaired together because they were one shape -- a check reading LESS than its name claims:
+    * Check 10 validated the FIRST `Latest session report` row and never asked whether it was the
+      ONLY live one, while a second un-prefixed cold-start directive named a three-slices-old report.
+      It now requires exactly one live declaration, judged by this file's own `Previously:` marker.
+    * Checks 11/14/16/25 each re-parsed the manifest's `Open owner decisions` line with a different
+      regex, so the SENTENCE EXPLAINING the line donated a closed `GOV-16` to the open set. The line
+      is now parsed ONCE: `$openDecisionIds` is the ENUMERATION (state, used by 14/16/25) and
+      `$decisionLineIds` is every id on the line (a reference question, used by 11 alone).
+    * Checks 2/14/25 each carried their own "settled" vocabulary over the SAME register and
+      disagreed on 14 rows; Check 14 read table rows only, blind to all 65 section-only findings;
+      Check 25 matched unanchored, so `deliberately NOT FIXED` read as settled. There is now ONE
+      vocabulary (`$statusResolvedLead`, taken from the register's own Legend) and ONE resolver
+      (`Get-RegisterFindingState`) reading table rows, `###` headings and detail blocks together.
+  Checks 14 and 25 are exact inverses over the same two signals (settled · names a decider), so
+  they can no longer answer one row differently and deadlock.
 
   Checks 1, 10 and 11 are three different questions about a reference and none substitutes for
   another: does it RESOLVE (1), is it the CURRENT one (10), and does the ID the boot sequence is
@@ -215,7 +236,155 @@ $idPat = '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|R[0-9]+|A[0-9]+|B[0-9]+|
 # prove the row is judged on its declared Status cell alone. Two controls bracket the suite.
 # It found and killed a real defect in its own harness before it certified anything here.
 $statusOpenLead = '^[\s*`]*(?:📋[\s*`]*)?(OPEN|BLOCKED|DESIGN-READY|PENDING|IN PROGRESS|PARTIALLY RESOLVED|TRIGGER-DEFERRED|VALIDATED-REQUIRED|MOVED\s*(?:→|->)\s*PENDING)\b'
-$statusResolvedLead = '^(\*\*)?\s*(✅|RESOLVED\b|IMPLEMENTED\b)'
+
+# ONE SETTLED VOCABULARY FOR THE WHOLE SCRIPT (2026-09-09). Until now Checks 2, 14 and 25 each
+# carried their OWN idea of "settled" over the SAME register, and they disagreed on 14 rows:
+#   Check 2   '^(\*\*)?\s*(✅|RESOLVED|IMPLEMENTED)'                             -- no CLOSED, no VERIFIED
+#   Check 14  '^(\*\*)?\s*(✅|RESOLVED|FIXED|IMPLEMENTED|CLOSED|DECIDED|...)'    -- no VERIFIED, no INTENTIONAL
+#   Check 25  'RESOLVED|DECIDED|FIXED|...|SUPERSEDED|RETIRED|✅'  UNANCHORED     -- a different set AND
+#             matched anywhere in the first 80 characters rather than at the cell's opening.
+# Checks 14 and 25 ask INVERSE questions of the same rows -- "is a listed decision already settled?"
+# and "is a settled-less decision missing from the list?" -- so two vocabularies can deadlock: a row
+# Check 14 calls settled (remove it from the manifest line) that Check 25 calls open (put it back)
+# cannot be made CLEAN by any edit. Measured: 14 rows already sit in that disagreement, and the only
+# reason it has not fired is that none of the 14 currently names a decider.
+#
+# Check 25's UNANCHORED match is a live false-negative, not a latent one, and it is the MEAS-2 class
+# its own comment claims to have fixed: `ARCH-2`, `DEAD-4`, `SYNC-1`, `ORIG-1`, `JE-2`, `GOV-9`,
+# `PLACE-2` and `CAP-1` all OPEN their status cell with `OPEN` / `RECORDED` / `UNPROVEN` and are read
+# as SETTLED because the phrase "deliberately NOT **FIXED**" contains the word FIXED. Narrowing the
+# window to 80 characters bounded that defect; it did not close it. Anchoring does.
+#
+# THE VOCABULARY IS THE REGISTER'S OWN, not an invention. `MASTER_GAP_REGISTER.md`'s Legend declares
+# `Status: OPEN · DESIGN-READY · RESOLVED · VERIFIED · INTENTIONAL · RESOLVED BY DERIVATION`, and the
+# five-state table beneath it assigns each state a meaning: `INTENTIONAL` is "intentional dormant
+# state" and `RESOLVED`/`VERIFIED`/`RESOLVED BY DERIVATION` are "completed / closed" -- both terminal.
+# ✅/FIXED/IMPLEMENTED/CLOSED/DECIDED/PROVEN-NOT-A-DEFECT/PROVEN-INTENTIONAL are the forms already in
+# use that the three checks between them already accepted; they are unified here, not widened.
+# DELIBERATELY STILL OUT: `SUPERSEDED`, `RETIRED`, `OBSOLETE`, `DELIVERED`, `MITIGATED`, `NARROWED`,
+# `BOUNDED`, `MEASURED`, `RECORDED`, `UNPROVEN`, `ACCEPTED RISK`, `NOT REPRODUCIBLE`, `EVIDENCE ONLY`.
+# None appears in the register's declared vocabulary, and deciding what they mean is a policy call
+# about findings, not a parser repair. They resolve to NEITHER open nor settled, exactly as before.
+#
+# ANCHORED AT THE CELL'S OPENING, because that is where this register writes its verdict and because
+# 17 rows legitimately RETAIN superseded wording after it ("**✅ RESOLVED ... Superseded text:**
+# **BLOCKED ...**"). Both directions are pinned by scripts/test_status_contradiction_guard.ps1.
+$statusResolvedLead = '^[\s*`]*(?:✅|RESOLVED BY DERIVATION\b|RESOLVED\b|VERIFIED\b|FIXED\b|IMPLEMENTED\b|CLOSED\b|DECIDED\b|INTENTIONAL\b|PROVEN\s+(?:NOT A DEFECT|INTENTIONAL)\b)'
+
+# ONE RESOLVER FOR "WHAT DOES THE REGISTER SAY ABOUT THIS ID?", covering BOTH representations the
+# register legitimately uses and BOTH signals its own five-state table names (2026-09-09).
+#
+# WHY IT READS DETAIL BLOCKS AT ALL. Check 14 read TABLE ROWS ONLY, and 65 of the register's findings
+# have no table row -- they exist solely as `###` detail blocks. Measured: 42 of those 65 are SETTLED
+# and Check 14 could see none of them. Not academic: `GOV-16` is
+# `### GOV-16 — ✅ FIXED 2026-09-07 (Check 25), mutation-tested` with `- **Status:** **✅ RESOLVED**`,
+# and it sat inside this guard's own open-decision set while Check 14 printed "every manifest
+# owner-decision ID is still open in the register". Same class as GOV-11 and REG-1.
+#
+# THREE SUBSTRATES, in the order the register uses them:
+#   (a) the `###` heading itself        -- `### API-3 — ✅ CLOSED 2026-08-30`
+#   (b) the block's `**Status:**` field -- the form 89 blocks actually use (GOV-11)
+#   (c) the table row's status cell, located from the table's OWN header (GOV-18), never guessed
+#
+# TWO SIGNALS, NOT ONE, and this is the correction that matters. A status test ALONE gets `RET-1`
+# wrong, and it got it wrong on the first run of this repair: RET-1's blocks say
+# `✅ RESOLVED — IMPLEMENTED (the MECHANISM; the VALUES remain counsel's)`, so a settled-status
+# reading would have told a weak agent to DELETE a live compliance decision from the boot line --
+# a worse failure than the miss being fixed, and in the destructive direction.
+#
+# The discriminator is the register's OWN, declared in its five-state table: a **critical unresolved
+# decision** is where "the Owner Decision column is non-empty, and the id appears on manifest.md's
+# open-decision line". So this returns Settled AND Decider, and the two consumers combine them as
+# exact inverses:
+#   Check 14  on the line + SETTLED + NO decider   -> stale, remove it
+#   Check 25  has a decider + NOT settled + absent -> unsurfaced, add it
+# GOV-16 is settled with `**Owner:** engineering` (not a decider) -> stale. RET-1 is settled with
+# `**Owner:** owner + counsel for any period` -> still a decision. No special case for either.
+#
+# MONOTONIC IN BOTH FIELDS -- once settled, stays settled; once a decider is named, it stays named.
+# The register is append-only narrative (a discovery block says BLOCKED and a later closure block
+# says FIXED, which is correct history, not a contradiction), and both directions are the SAFE one:
+# a resolution is never lost, and a decision never silently disappears.
+#
+# ITS CEILING, stated because a guard that oversells itself is the class this repository keeps
+# finding: if a finding is settled and nobody ever clears its decider, it stays eligible for the boot
+# line forever and no check here will say otherwise. That is a documentation act this script cannot
+# perform, and reading a stale decider as "no decision" would be inventing the clearance.
+function Get-RegisterFindingState {
+    param([string]$Path, [string]$IdPattern, [string]$SettledLead, [string]$DeciderRx)
+    $state = @{}
+    if (-not (Test-Path $Path)) { return $state }
+    function Set-Signal([hashtable]$s, [string]$id, [string]$field, [string]$where) {
+        if (-not $id) { return }
+        if (-not $s.ContainsKey($id)) { $s[$id] = @{ Settled = $null; Decider = $null } }
+        if (-not $s[$id][$field]) { $s[$id][$field] = $where }
+    }
+    $statusIdx = -1
+    $ownerIdx  = -1
+    $blockId   = $null
+    $lineNo    = 0
+    foreach ($line in [System.IO.File]::ReadAllLines($Path)) {
+        $lineNo++
+        $head = [regex]::Match($line, '^###\s+(?<id>' + $IdPattern + ')\s*(?<rest>.*)$')
+        if ($line -match '^#{1,3}\s') { $blockId = $(if ($head.Success) { $head.Groups['id'].Value } else { $null }) }
+        if ($head.Success) {
+            # Strip the heading's separator (`— `, `-- `, `: `) so the verdict sits at the head.
+            $rest = $head.Groups['rest'].Value -replace '^[\s\*`:—–-]+', ''
+            if ($rest -match $SettledLead) {
+                Set-Signal $state $head.Groups['id'].Value 'Settled' ("line $lineNo (heading): " + $rest.Substring(0, [Math]::Min(60, $rest.Length)))
+            }
+        }
+        # `[regex]::Match`, not `-match`: an inner `-match` REBINDS $Matches, so reading $Matches['v']
+        # after testing it against $SettledLead returns the SettledLead match's groups -- and that
+        # pattern has no 'v'. Cost the first run of this repair a null-reference at line 318.
+        $blkStatusM = [regex]::Match($line, '\*\*Status:?\*\*\s*(?<v>.*)$')
+        if ($blockId -and $blkStatusM.Success) {
+            $sv = $blkStatusM.Groups['v'].Value
+            if ($sv -match $SettledLead) {
+                Set-Signal $state $blockId 'Settled' ("line $lineNo (block status): " + $sv.Substring(0, [Math]::Min(60, $sv.Length)))
+            }
+        }
+        # The VALUE after `**Owner:**`, never the label. `**Owner:**` itself trivially satisfies any
+        # "names a decider" pattern, so reading the whole line would make every detail block in the
+        # register a live decision.
+        $blkOwnerM = [regex]::Match($line, '\*\*Owner:?\*\*\s*(?<v>[^·]*)')
+        if ($blockId -and $blkOwnerM.Success) {
+            $ov = $blkOwnerM.Groups['v'].Value
+            if ($ov -match $DeciderRx) {
+                Set-Signal $state $blockId 'Decider' ("line $lineNo (block owner): " + $ov.Trim())
+            }
+        }
+        if ($line -match '^\s*\|') {
+            $cells = @(($line -split '(?<!\\)\|') | ForEach-Object { $_.Trim() })
+            $hS = -1; $hO = -1
+            for ($ci = 0; $ci -lt $cells.Count; $ci++) {
+                if ($cells[$ci] -eq 'Status')         { $hS = $ci }
+                if ($cells[$ci] -eq 'Owner Decision') { $hO = $ci }
+            }
+            if ($hS -ge 0) { $statusIdx = $hS; $ownerIdx = $hO; continue }
+            $lead = [regex]::Match($line, '^\|\s*(?<id>[A-Z][A-Za-z0-9\-/\.]*)\s*\|')
+            if (-not $lead.Success) { continue }
+            foreach ($piece in ($lead.Groups['id'].Value -split '/')) {
+                $p = $piece.Trim()
+                if (-not $p) { continue }
+                if ($statusIdx -ge 0 -and $statusIdx -lt $cells.Count -and $cells[$statusIdx] -match $SettledLead) {
+                    Set-Signal $state $p 'Settled' ("line $lineNo (row): " + $cells[$statusIdx].Substring(0, [Math]::Min(60, $cells[$statusIdx].Length)))
+                }
+                if ($ownerIdx -ge 0 -and $ownerIdx -lt $cells.Count -and $cells[$ownerIdx] -match $DeciderRx) {
+                    Set-Signal $state $p 'Decider' ("line $lineNo (row owner): " + $cells[$ownerIdx])
+                }
+            }
+        }
+    }
+    return $state
+}
+
+# A row/block records a DECISION when its Owner-Decision field names WHO must take it, rather than a
+# scheduling word (`pending`, `done`, `cert-2026-07`, `-`). GOV-16's finding, kept verbatim; hoisted
+# here from Check 25 because Check 14 now needs the identical predicate and two copies of it would
+# be the very divergence this pass exists to remove. `owner (already recorded under PLAN-1)` is a
+# decider too, so the separator may be a bracket as well as a colon.
+$registerDeciderRx = '(?i)\b(owner|business|canon|counsel|legal|compliance)\b\s*[:+/(]|(?i)\bowner\b.*\bcounsel\b'
 
 # AUD-04 (2026-08-29): `MASTER_REPOSITORY_HEALTH.md §3` published the indicator "Conflicting finding
 # status across MASTERS = 0", but this check has only ever compared a file against ITSELF -- the
@@ -264,10 +433,11 @@ if (Test-Path $masterDir) {
             # INTENTIONAL, IN PROGRESS, OBSOLETE, MITIGATED, NARROWED, DEFER, SUPERSEDED,
             # DELIVERED) do not.
             #
-            # STATE THE LIMIT: the resolved VOCABULARY is deliberately unchanged
-            # (RESOLVED|FIXED|IMPLEMENTED|CLOSED). `DELIVERED` and `SUPERSEDED` read as terminal to
-            # a human and are still not counted here; widening the vocabulary is a separate
-            # decision about what those words mean, not part of repairing an anchor.
+            # THE VOCABULARY IS NOW $statusResolvedLead -- the ONE settled vocabulary defined above,
+            # shared with Checks 14 and 25 (2026-09-09). It was a fourth private list here; the
+            # header comment on $statusResolvedLead records which words were unified and which are
+            # still deliberately excluded, and why that exclusion is a policy call rather than a
+            # parser gap.
             # SECOND HALF OF GOV-11, found by ATTACKING the first half rather than by reading it.
             # Repairing the anchor above fixed the SAME-FILE contradiction pass only. A detail-block
             # status line is neither a table row nor a `###` heading, so it never reaches the
@@ -277,7 +447,8 @@ if (Test-Path $masterDir) {
             # a second Master while CLOSED here came back CLEAN. Wiring the cross-file table here is
             # what makes the published "conflicting finding status across Masters = 0" indicator
             # true for findings whose only verdict lives in a detail block.
-            if ($blockId -and $line -match '^\s*-\s.*\*\*Status:?\*\*\s*\*{0,2}\s*(?:✅\s*)?(RESOLVED|FIXED|IMPLEMENTED|CLOSED)\b') {
+            $blkStatus = [regex]::Match($line, '^\s*-\s.*\*\*Status:?\*\*\s*(?<v>.*)$')
+            if ($blockId -and $blkStatus.Success -and $blkStatus.Groups['v'].Value -match $statusResolvedLead) {
                 $resolvedAt[$blockId] = $lineNo
                 if (-not $xResolved.ContainsKey($blockId)) { $xResolved[$blockId] = "$($md.Name):$lineNo" }
             }
@@ -301,9 +472,16 @@ if (Test-Path $masterDir) {
             # row's own status and reported a contradiction with itself. Cell-anchoring keeps the
             # precision this script's header demands, since every real status cell leads with the
             # marker (`✅RESOLVED (SPEC-117)`, `**RESOLVED 2026-08-24 ...**`, `✅IMPLEMENTED ...`).
-            # `###` detail-block headings keep the loose match: they are prose, not cells.
             if ($line -match '^###\s') {
-                $rowResolved = $line -match '✅|\bRESOLVED\b|\bIMPLEMENTED\b'
+                # UNIFIED 2026-09-09 with Get-RegisterFindingState: strip the heading's id and its
+                # separator, then read the verdict AT THE HEAD. This branch used to match
+                # ✅/RESOLVED/IMPLEMENTED ANYWHERE on the line, so a heading whose prose mentioned a
+                # resolution ("the finding that was never RESOLVED") read as the block's own verdict
+                # -- the unanchored-substring class that Check 25 still carried until this pass, one
+                # branch away from where GOV-11 fixed exactly the same mistake. One rule, one
+                # meaning, both places.
+                $hRest = ($line -replace '^###\s+[A-Za-z0-9\-/\.]+\s*', '') -replace '^[\s\*`:—–-]+', ''
+                $rowResolved = $hRest -match $statusResolvedLead
             } elseif ($statusIdx -ge 0 -and $statusIdx -lt $rowCells.Count) {
                 # GOV-18: the declared status cell is the row's status. Both verdicts are read from
                 # the SAME cell, so a row can never be open and resolved at once -- a contradiction
@@ -780,10 +958,64 @@ if (-not (Test-Path $migDir)) {
 #     verifies that references RESOLVE, which is a different question from whether they are current.
 #     The manifest's `Narrative:` field is updated every package by construction, so the two must
 #     name the same file; disagreement means one of them was forgotten.
-Write-Host "== Check 10: latest-session pointer is current ==" -ForegroundColor Cyan
-$manifestText = Get-Content (Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md') -Raw
+# =====================================================================================================
+# SHARED MANIFEST STATE, PARSED ONCE (2026-09-09). Checks 10, 11, 14, 16 and 25 all read the manifest
+# and four of them independently re-parsed its `Open owner decisions` line with three different
+# regexes and two different scopes. That duplication was not cosmetic -- it is how GOV-16 became a
+# live owner decision inside this guard.
+#
+# THE DEFECT. The manifest's line is an ENUMERATION followed by PROSE ABOUT the enumeration:
+#     Open owner decisions - **MAIL-1**, ..., **BOOK-9**. IDs here are read as OPEN, so a decided one
+#     is removed rather than annotated; ... **This line named only MAIL-1 until 2026-09-07**, when
+#     GOV-16's guard (**Check 25**) was written and measured seven registered decisions ...
+# Every consumer scraped ids from the WHOLE line, so the narrative sentence explaining how the line
+# came to be donated `GOV-16` to the open set. GOV-16 is `### GOV-16 - ✅ FIXED 2026-09-07` in the
+# register: a finding that was closed two days earlier, counted as a live blocker because its id
+# appears in a sentence. Guard-derived open decisions: 11. Actual: 10.
+#
+# The damage runs in the direction that HIDES work, not merely the one that invents it. Check 25 asks
+# "is any registered decision missing from this line?" and SKIPS every id the line already carries --
+# so a narrative mention silently exempts a real decision from ever being surfaced. Check 16 asks
+# "does canon present a settled finding as current?" and treats the same polluted set as authority.
+#
+# THE RULE, structural rather than linguistic: THE ENUMERATION IS THE STATE, and it ends at the first
+# sentence terminator. Finding ids contain no periods, so the boundary is unambiguous, and prose that
+# explains the list can never again become the list. Two sets are derived and they are deliberately
+# different:
+#   $openDecisionIds   -- the enumeration only. This is the OPEN-DECISION STATE (Checks 14, 16, 25).
+#   $decisionLineIds   -- every id anywhere on the line. This is a REFERENCE question, not a state
+#                         question: Check 11 asks whether an id the boot line NAMES resolves in the
+#                         register, and a narrative citation that dangles is still a broken reference
+#                         in the one line a cold start reads. Superset by construction, so the two
+#                         can never contradict.
+# =====================================================================================================
+$manifestRaw  = Get-Content (Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md') -Raw
 $readmeText   = Get-Content (Join-Path $RepoRoot 'reports/README.md') -Raw
-$mNarr = [regex]::Match($manifestText, 'Narrative:\s*`([^`]+\.md)`')
+$registerPathShared = Join-Path $RepoRoot 'reports/master/MASTER_GAP_REGISTER.md'
+$registerRaw  = Get-Content $registerPathShared -Raw
+$decisionIdRx = '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b'
+$decisionLine = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
+$decisionLineIds = @()
+$openDecisionIds = @()
+if ($decisionLine) {
+    $decisionLineIds = @([regex]::Matches($decisionLine, $decisionIdRx) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+    # The enumeration ends at the first sentence terminator -- a period followed by whitespace or the
+    # end of the line. `$enumeration` is the whole line when the list is the whole line.
+    $enumeration = $decisionLine
+    $stop = [regex]::Match($decisionLine, '\.(\s|$)')
+    if ($stop.Success) { $enumeration = $decisionLine.Substring(0, $stop.Index) }
+    $openDecisionIds = @([regex]::Matches($enumeration, $decisionIdRx) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique)
+}
+# FAIL LOUD, never silently empty. An empty open set would make Checks 14 and 16 vacuously pass and
+# Check 25 demand that every registered decision be added, which is the failure mode that looks like
+# a clean repository. If the line exists it must enumerate at least one id before its first period.
+if ($decisionLine -and $openDecisionIds.Count -eq 0) {
+    Write-Host "  UNREADABLE OPEN-DECISION LINE: manifest.md has an 'Open owner decisions' line but no finding id before its first sentence terminator. The ENUMERATION is the state; prose after it is not. Add the id(s) to the list itself." -ForegroundColor Red
+    $issues++
+}
+
+Write-Host "== Check 10: latest-session pointer is current ==" -ForegroundColor Cyan
+$mNarr = [regex]::Match($manifestRaw, 'Narrative:\s*`([^`]+\.md)`')
 $mPtr  = [regex]::Match($readmeText,   'Latest session report:\*\*\s*`(?:history/)?([^`]+\.md)`')
 if (-not $mNarr.Success) {
     Write-Host "  MANIFEST has no 'Narrative: <file>.md' field -- cannot verify the pointer" -ForegroundColor Red
@@ -804,6 +1036,59 @@ if (-not $mNarr.Success) {
     } else {
         Write-Host "  README and manifest both name $ptr" -ForegroundColor Green
     }
+
+    # -------------------------------------------------------------------------------------------
+    # COLD-2b (2026-09-09): ONE LIVE POINTER, NOT MERELY A CORRECT FIRST ONE.
+    #
+    # Everything above uses [regex]::Match -- the FIRST match in the file. `reports/README.md` is a
+    # stack of pointer rows, and the guard validated the top of the stack while a SECOND live-looking
+    # cold-start directive sat eight lines below it saying something different:
+    #     > **Current state & next step (read this first on a cold start):**
+    #       `history/session-2026-09-08-batch6-slice8-lead-interactions.md` ...
+    #       Next surface: **`leads`** (slice 9) ...
+    # Slices 9, 10 and 11 were complete by then. A cold-starting agent that reached that line first --
+    # and its own text tells the reader to read it first -- would have re-run finished work, which is
+    # the most expensive cold-start failure there is because it looks like progress. Check 10 printed
+    # CLEAN throughout: it proved the row it looked at, never that it was the only one.
+    #
+    # THE INVARIANT IS STRUCTURAL, and it is the file's OWN convention made executable. Every
+    # superseded row in this file is prefixed `Previously:` or `Before that:`. So: a blockquote line
+    # carrying a cold-start directive and NO historical prefix is a LIVE declaration; there must be
+    # exactly one, and it must name the same report the manifest's `Narrative:` field names.
+    #
+    # The claim set is CLOSED and derived from the two shapes this file has actually used -- no NLP,
+    # no inference (Check 16's discipline). Widening it is a deliberate act, not an accident.
+    # Measured before trusting: over the real file these gates produce exactly ONE live row.
+    $liveClaimRx    = '(?i)(Latest session report|read this first on a cold start|Current state & next step)'
+    $historicalRx   = '(?i)^\s*>?\s*[*_]*\s*(Previously|Before that|Prior|Superseded)\b'
+    $liveRows = @()
+    $lineNo = 0
+    foreach ($line in ($readmeText -split "`r?`n")) {
+        $lineNo++
+        if ($line -notmatch '^\s*>') { continue }          # blockquote rows are where pointers live
+        if ($line -notmatch $liveClaimRx) { continue }
+        if ($line -match $historicalRx)   { continue }      # structurally historical -- exempt
+        $named = [regex]::Match($line, '`(?:history/)?([^`]+\.md)`')
+        $liveRows += [pscustomobject]@{
+            Line  = $lineNo
+            Names = $(if ($named.Success) { $named.Groups[1].Value.Trim() } else { '<no report named>' })
+        }
+    }
+    if ($liveRows.Count -eq 0) {
+        Write-Host "  NO LIVE COLD-START POINTER: reports/README.md carries no un-prefixed 'Latest session report' row -- AGENTS.md 4 Stage A step 7 reads that row and would find nothing" -ForegroundColor Red
+        $issues++
+    } elseif ($liveRows.Count -gt 1) {
+        Write-Host "  COMPETING LIVE COLD-START STATE: reports/README.md carries $($liveRows.Count) un-prefixed current-state declarations; exactly one may be live" -ForegroundColor Red
+        foreach ($r in $liveRows) { Write-Host "    line $($r.Line) -> $($r.Names)" -ForegroundColor Red }
+        Write-Host "  Remedy: a superseded pointer is prefixed 'Previously:' (this file's own convention) or deleted." -ForegroundColor DarkGray
+        Write-Host "  Two live rows means a cold start can resolve two different current states, and the stale one wins if it is read first." -ForegroundColor DarkGray
+        $issues++
+    } elseif ($mNarr.Success -and $liveRows[0].Names -ne $mNarr.Groups[1].Value.Trim()) {
+        Write-Host "  LIVE POINTER DISAGREES WITH THE MANIFEST: reports/README.md line $($liveRows[0].Line) names '$($liveRows[0].Names)' but the manifest's narrative is '$($mNarr.Groups[1].Value.Trim())'" -ForegroundColor Red
+        $issues++
+    } else {
+        Write-Host "  exactly one live cold-start declaration (line $($liveRows[0].Line)), and it names the manifest's narrative" -ForegroundColor Green
+    }
 }
 
 # 11. GOV-3: the manifest lists its open owner decisions as IDs ONLY, and states that "every
@@ -816,18 +1101,17 @@ if (-not $mNarr.Success) {
 #     broken in the one direction the boot sequence actually walks. Check 1 cannot see this: these
 #     are finding IDs, not document filenames.
 Write-Host "== Check 11: manifest open-decision IDs resolve in the gap register ==" -ForegroundColor Cyan
-$manifestRaw = Get-Content (Join-Path $RepoRoot '_ORVION_CANONICAL/manifest.md') -Raw
-$registerRaw = Get-Content (Join-Path $RepoRoot 'reports/master/MASTER_GAP_REGISTER.md') -Raw
-$decLine = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
-if (-not $decLine) {
+if (-not $decisionLine) {
     Write-Host "  MANIFEST has no 'Open owner decisions' line -- cannot verify" -ForegroundColor Red
     $issues++
 } else {
-    # Same id shape as Check 2, plus the bare A<n> form. Deliberately applied to the WHOLE line,
-    # resolved ids included: an id the manifest calls resolved must still be findable, because the
-    # register is where its evidence lives.
-    $found = [regex]::Matches($decLine, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
-             ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+    # $decisionLineIds -- EVERY id on the line, narrative citations included. This is the ONE
+    # consumer that legitimately wants the whole line, and the reason is that it asks a REFERENCE
+    # question, not a state question: an id the boot line names must be findable in the register,
+    # whether the line names it as an open decision or merely cites it. The open-decision STATE is
+    # $openDecisionIds (the enumeration alone) and is used by Checks 14, 16 and 25 -- see the shared
+    # parse above for why conflating the two put a closed GOV-16 into this guard's open set.
+    $found = $decisionLineIds
 
     # MEAS-2 (2026-09-01): this used to test `$registerRaw -notmatch '\bID\b'` -- a match ANYWHERE in
     # a thousand lines of prose, including a cross-reference inside a DIFFERENT finding's row. PP-1
@@ -939,43 +1223,43 @@ Write-Host "== Check 14: no manifest owner-decision ID is already decided in the
 # re-escalation of a decision the owner already gave. The same "restated moving list goes stale"
 # shape had by then bitten canon 32 twice and the execution plan once.
 #
-# The resolved-set is DERIVED from the register's own status cells (same cell-anchored markers
-# Check 2 uses), never from a list maintained here -- an exemption list would be one more thing to
-# go stale, which is the defect this check exists to catch.
-$decidedInRegister = @{}
-$regLines = Get-Content (Join-Path $masterDir 'MASTER_GAP_REGISTER.md')
-foreach ($line in $regLines) {
-    $lead = [regex]::Match($line, '^\|\s*([A-Z][A-Za-z0-9\-/\.]*)\s*\|')
-    if (-not $lead.Success) { continue }
-    $cells = $line -split '(?<!\\)\|'
-    if ($cells.Count -le 9) { continue }
-    $status = $cells[9].Trim()
-    # Cell-anchored, as in Check 2: the marker must LEAD the status, not merely appear in prose
-    # about some other object. "RESOLVED 2026-.." and "✅ FIXED .." lead; "...revisit if" does not.
-    if ($status -match '^(\*\*)?\s*(✅|RESOLVED\b|FIXED\b|IMPLEMENTED\b|CLOSED\b|DECIDED\b|PROVEN (NOT A DEFECT|INTENTIONAL)\b)') {
-        foreach ($piece in ($lead.Groups[1].Value -split '/')) {
-            $p = $piece.Trim(); if ($p) { $decidedInRegister[$p] = $status }
-        }
-    }
-}
+# The resolved-set is DERIVED from the register's own status fields, never from a list maintained
+# here -- an exemption list would be one more thing to go stale, which is the defect this check
+# exists to catch.
+#
+# WIDENED 2026-09-09 FROM TABLE ROWS TO THE WHOLE REGISTER. This check used to read `$cells[9]` of a
+# leading-id table row and nothing else. **65 of the register's findings have no table row at all** --
+# they exist only as `###` detail blocks -- and 42 of those 65 are SETTLED, so this check was
+# structurally incapable of seeing any of them. The proof is not hypothetical and it was sitting in
+# this guard's own output: `GOV-16` is `### GOV-16 - ✅ FIXED 2026-09-07 (Check 25), mutation-tested`
+# with `- **Status:** **✅ RESOLVED**`, and Check 14 printed "every manifest owner-decision ID is
+# still open in the register" while carrying it. Same class as GOV-11 (a detail-block reader that
+# matched 0 of 96 blocks) and REG-1 (a row that no leading-pipe parser could see): a guard reporting
+# a verdict over less than it claims to cover.
+#
+# Get-RegisterFindingState reads all three substrates with the ONE settled vocabulary this script now
+# shares, so Check 14 ("is a listed decision already settled?") and Check 25 ("is a settled-less
+# decision missing from the list?") can no longer answer the same row differently and deadlock.
+$registerState = Get-RegisterFindingState -Path $registerPathShared -IdPattern $idPat.Trim('\b') `
+                                          -SettledLead $statusResolvedLead -DeciderRx $registerDeciderRx
 $staleDecisions = 0
-if ($decLine) {
-    # Only the ENUMERATION is the list of open decisions. The line legitimately also cites the
-    # register row that explains a reconciliation, and a citation is not a blocker -- reading it as
-    # one is how this check first reported its own evidence row as stale. The manifest marks the
-    # boundary with "Genuinely open:"; everything before it is prose about the list, not the list.
-    $enumeration = $decLine
-    $cut = $decLine.IndexOf('Genuinely open:')
-    if ($cut -ge 0) { $enumeration = $decLine.Substring($cut) }
-    $manifestIds = [regex]::Matches($enumeration, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
-                   ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-    foreach ($id in $manifestIds) {
-        if ($decidedInRegister.ContainsKey($id)) {
-            $s = $decidedInRegister[$id]
-            Write-Host "  STALE OWNER DECISION: manifest lists '$id' as open, but the register marks it $($s.Substring(0,[Math]::Min(60,$s.Length)))" -ForegroundColor Yellow
-            $staleDecisions++
-        }
-    }
+# $openDecisionIds is the ENUMERATION ONLY -- see the shared parse above. The dead `Genuinely open:`
+# cut that used to scope this line was removed with it: that marker has not been in the manifest for
+# some time, so the cut silently fell through to the whole line and this check had been reading the
+# narrative sentence too.
+#
+# SETTLED **AND** NO DECIDER. Status alone is not the test, and RET-1 is why: its blocks read
+# `✅ RESOLVED — IMPLEMENTED (the MECHANISM; the VALUES remain counsel's)` beside
+# `**Owner:** owner + counsel for any period`. The mechanism shipped; the compliance decision did
+# not, the manifest says exactly that, and a status-only reading told this guard to strike a live
+# decision off the boot line. The register's five-state table already names the Owner Decision
+# column as the authority for "is this a decision"; this uses it rather than a second rule.
+foreach ($id in $openDecisionIds) {
+    if (-not $registerState.ContainsKey($id)) { continue }
+    if (-not $registerState[$id].Settled)     { continue }
+    if ($registerState[$id].Decider) { continue }   # settled mechanism, decision still outstanding
+    Write-Host "  STALE OWNER DECISION: manifest lists '$id' as open, but the register marks it settled at $($registerState[$id].Settled) and names no decider for it" -ForegroundColor Yellow
+    $staleDecisions++
 }
 if ($staleDecisions -gt 0) {
     Write-Host "  Remedy: remove the id from the manifest's 'Open owner decisions' line. A decided item is an" -ForegroundColor DarkGray
@@ -1130,14 +1414,17 @@ Write-Host "== Check 16: canon does not name a settled finding as a CURRENT owne
 # WHOLE manifest line -- parenthetical references included -- so its only possible error is to be
 # MORE permissive, never to cry wolf.
 $canonDir = Join-Path $RepoRoot '_ORVION_CANONICAL'
-$decisionLine = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
 $canonClaims = 0
 if (-not $decisionLine) {
     Write-Host "  MANIFEST has no 'Open owner decisions' line -- Check 16 cannot run" -ForegroundColor Red
     $issues++
 } else {
-    $openDecisionIds = @{}
-    foreach ($m in [regex]::Matches($decisionLine, $idPat)) { $openDecisionIds[$m.Groups[1].Value] = $true }
+    # 2026-09-09: this used to re-scrape the WHOLE line into its own hashtable, which is how a
+    # narrative mention of GOV-16 became one of this gate's "open" ids. It now consumes
+    # $openDecisionIds -- the enumeration alone -- so canon naming a settled finding as a current
+    # owner decision is caught even when that finding's id happens to appear in the manifest's prose.
+    $openDecisionSet = @{}
+    foreach ($id in $openDecisionIds) { $openDecisionSet[$id] = $true }
     $claimPat    = '(open owner decision|awaiting owner|owner must decide|blocked on)'
     $resolvedPat = '(decided|resolved|closed|ratified|superseded|no longer|was an open)'
     foreach ($md in Get-ChildItem $canonDir -Filter *.md -File) {
@@ -1149,7 +1436,7 @@ if (-not $decisionLine) {
             if ($line -match $resolvedPat)            { continue }   # gate 4: self-exempting history
             foreach ($m in [regex]::Matches($line, $idPat)) {
                 $id = $m.Groups[1].Value
-                if (-not $openDecisionIds.ContainsKey($id)) {        # gate 5: not on the open list
+                if (-not $openDecisionSet.ContainsKey($id)) {        # gate 5: not on the open list
                     Write-Host "  SETTLED FINDING PRESENTED AS A CURRENT OWNER DECISION: $($md.Name):$lineNo names $id, which the manifest's open-decision line does not carry" -ForegroundColor Yellow
                     $issues++; $canonClaims++
                 }
@@ -1157,7 +1444,7 @@ if (-not $decisionLine) {
         }
     }
     if ($canonClaims -eq 0) {
-        Write-Host "  no canonical document asserts a current owner decision the manifest does not list (checked against $($openDecisionIds.Count) open id(s))" -ForegroundColor Green
+        Write-Host "  no canonical document asserts a current owner decision the manifest does not list (checked against $($openDecisionSet.Count) open id(s))" -ForegroundColor Green
     }
 }
 
@@ -1356,12 +1643,81 @@ if (-not (Test-Path $ciWorkflow)) {
         'supabase/tests/**'                           = 'Check 1 (pgTAP reference resolution) and Check 15 (suite figures)'
         'ai-map.json'                                 = 'Check 7 (ai-map freshness vs manifest)'
     }
-    foreach ($p in $requiredTriggers.Keys) {
-        # Matched as a quoted YAML list item, which is how every entry in this workflow is written.
-        if ($ciText -notmatch [regex]::Escape('"' + $p + '"')) {
-            Write-Host "  CI TRIGGER GAP: '$p' is not in repository-consistency.yml paths -- $($requiredTriggers[$p]). A commit touching only this path would change the guard's input without running the guard." -ForegroundColor Yellow
-            $issues++
+    # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
+    # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent
+    # change to what this gate means -- the CI-1 class one file over. The list is read out of the
+    # workflow's own `foreach ($suite in ...)` line rather than copied, so adding a fifth suite
+    # brings it under the trigger requirement automatically instead of quietly not.
+    # The fixed list above stays fixed for the reason its own comment gives: inferring the guard's
+    # INPUTS from this script would be a guess. Reading the workflow's EXECUTED suites is not an
+    # inference -- it is the workflow's own statement of what it runs.
+    $suiteLine = [regex]::Match($ciText, "foreach\s*\(\s*\`$suite\s+in\s+(?<l>[^)]+)\)")
+    if ($suiteLine.Success) {
+        foreach ($m in [regex]::Matches($suiteLine.Groups['l'].Value, "'(?<s>[A-Za-z0-9_\-]+)'")) {
+            $requiredTriggers["scripts/$($m.Groups['s'].Value).ps1"] = "this workflow executes it as a guard-of-the-guard suite"
         }
+    } else {
+        Write-Host "  CI SUITE LIST UNREADABLE: repository-consistency.yml has no parseable 'foreach (\$suite in ...)' list -- cannot confirm the mutation suites are triggered by their own edits" -ForegroundColor Yellow
+        $issues++
+    }
+    # CI-1b (2026-09-09): PER TRIGGER BLOCK, NOT PER FILE. This check used to ask whether each path
+    # string appears ANYWHERE in the workflow, so an entry present on `push` and missing on
+    # `pull_request` satisfied it. That is not a hypothetical: `.github/workflows/repository-
+    # consistency.yml` and all three guard-of-the-guard suites were on `push` alone, so a PR touching
+    # only a detector's calibration changed what this gate MEANS without running it -- and this check,
+    # whose entire subject is "every input the guard reads must trigger the guard", printed CLEAN.
+    # A guard that greps a file cannot see which of two lists a line is in. Same class as GUARD-CRLF-1
+    # (measuring line endings instead of size) and VER-1 (measuring source text instead of execution):
+    # the measurement was of the wrong object. Both blocks are now extracted and judged separately.
+    # Line-based rather than one large regex: the blocks legitimately carry comment lines between the
+    # event key and `paths:`, and between the items, and a single pattern that tolerates all of that
+    # is harder to read than the thing it measures. Scan state: which event we are inside, and
+    # whether we have reached its `paths:` list.
+    $blocks = [ordered]@{ 'push' = $null; 'pull_request' = $null }
+    $curEvent = $null
+    $inPaths  = $false
+    foreach ($line in ($ciText -split "`r?`n")) {
+        if ($line -match '^\s*#') { continue }                       # comment: never a key or an item
+        if ($line -match '^  (?<k>[A-Za-z_]+):\s*$') {               # a two-space key starts a new event
+            $curEvent = $Matches['k']; $inPaths = $false
+            if ($blocks.Contains($curEvent) -and $null -eq $blocks[$curEvent]) { $blocks[$curEvent] = @() }
+            continue
+        }
+        if ($line -match '^\S') { $curEvent = $null; $inPaths = $false; continue }   # top-level key ends the section
+        if ($null -eq $curEvent -or -not $blocks.Contains($curEvent)) { continue }
+        if ($line -match '^\s{4}paths:\s*$') { $inPaths = $true; continue }
+        if ($line -match '^\s{4}\S') { $inPaths = $false }           # a sibling key of `paths:`
+        if ($inPaths -and $line -match '^\s{6}-\s*"(?<p>[^"]+)"\s*$') { $blocks[$curEvent] += $Matches['p'] }
+    }
+    foreach ($ev in $blocks.Keys) {
+        if ($null -eq $blocks[$ev]) {
+            Write-Host "  CI TRIGGER BLOCK UNREADABLE: repository-consistency.yml has no parseable 'on.$ev.paths' list -- this check cannot prove the guard is triggered at all" -ForegroundColor Yellow
+            $issues++
+            continue
+        }
+        foreach ($p in $requiredTriggers.Keys) {
+            if ($blocks[$ev] -notcontains $p) {
+                Write-Host "  CI TRIGGER GAP: '$p' is not in repository-consistency.yml on.$ev.paths -- $($requiredTriggers[$p]). A change touching only this path would alter the guard's input without running the guard." -ForegroundColor Yellow
+                $issues++
+            }
+        }
+    }
+    # The two lists must also AGREE. A path that earns a run on push earns one on a pull request, and
+    # the divergence above arrived precisely by adding to one list and forgetting the other. Compared
+    # symmetrically so neither direction can drift silently.
+    $asymmetry = 0
+    if ($blocks['push'] -and $blocks['pull_request']) {
+        foreach ($pair in @(@('push', 'pull_request'), @('pull_request', 'push'))) {
+            foreach ($p in ($blocks[$pair[0]] | Where-Object { $blocks[$pair[1]] -notcontains $_ })) {
+                Write-Host "  CI TRIGGER ASYMMETRY: '$p' triggers on $($pair[0]) but not on $($pair[1]) -- the same change is gated on one event and unguarded on the other" -ForegroundColor Yellow
+                $issues++; $asymmetry++
+            }
+        }
+    }
+    # Say what was measured. A check that prints nothing on success is indistinguishable from one
+    # that parsed nothing, which is the whole defect above.
+    if ($blocks['push'] -and $blocks['pull_request'] -and $asymmetry -eq 0) {
+        Write-Host "  push ($($blocks['push'].Count) paths) and pull_request ($($blocks['pull_request'].Count) paths) both cover all $($requiredTriggers.Count) guard inputs, and agree with each other" -ForegroundColor Green
     }
 }
 
@@ -1766,50 +2122,58 @@ if ($advIssues -gt 0) {
 #     down IN THE ESTABLISHED FORM cannot sit unsurfaced, which is the failure that actually
 #     happened seven times.
 Write-Host "== Check 25: registered decisions reach the manifest's boot line (GOV-16) ==" -ForegroundColor Cyan
-$decLine25 = ($manifestRaw -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
-if (-not $decLine25) {
+if (-not $decisionLine) {
     Write-Host "  MANIFEST has no 'Open owner decisions' line -- cannot verify" -ForegroundColor Red
     $issues++
 } else {
-    $onLine = [regex]::Matches($decLine25, '\b([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?|A[0-9]+)\b') |
-              ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-    # A row is RESOLVED if its status cell says so -- tested against the cell's OPENING, never the
-    # whole cell. The first draft tested the whole cell and silently exonerated three of the six
-    # rows it was written to find: MONEY-2 and PAX-5 both CITE resolutions belonging to other
-    # findings ("MONEY-1 ... FIXED", "the controls all shipped") hundreds of characters into their
-    # prose. That is the MEAS-2 defect verbatim -- the same one Check 11's comment above records
-    # itself committing -- and it was caught by running the guard rather than by reading it. The
-    # register writes its verdict FIRST in the cell, so 80 characters is where a verdict can be.
-    $resolvedRx = 'RESOLVED|DECIDED|FIXED|IMPLEMENTED|BOUNDED|NOT A DEFECT|INTENTIONAL|SUPERSEDED|RETIRED|✅'
-    # ...and it is a DECISION if the Owner-Decision cell names who must take it. `owner (already
-    # recorded under PLAN-1)` is a decider too, so the separator may be a bracket as well as a colon.
-    $deciderRx  = '(?i)\b(owner|business|canon|counsel|legal|compliance)\b\s*[:+/(]|(?i)\bowner\b.*\bcounsel\b'
+    # 2026-09-09: `$onLine` used to be scraped from the WHOLE manifest line, which meant a NARRATIVE
+    # mention of an id silently exempted that decision from ever being surfaced -- the exact failure
+    # this check exists to prevent, reachable by writing the id in a sentence. It now consumes
+    # $openDecisionIds, the enumeration alone (see the shared parse above).
+    $onLine = $openDecisionIds
+    # A row is SETTLED if its status field says so, ANCHORED at the field's opening.
+    #
+    # THIS WAS THE LIVE DEFECT (2026-09-09). The pattern here was a private vocabulary matched
+    # ANYWHERE in the first 80 characters. Narrowing the window to 80 bounded the MEAS-2 class this
+    # check's own comment claims to have fixed; it did not close it, because the register's terminal
+    # NON-resolutions are written with the resolved words inside them. Measured: `ARCH-2`, `DEAD-4`,
+    # `SYNC-1`, `ORIG-1`, `JE-2`, `GOV-9`, `PLACE-2` and `CAP-1` all OPEN with `OPEN` / `RECORDED` /
+    # `UNPROVEN` and were read as SETTLED because "deliberately NOT **FIXED**" contains FIXED. Any
+    # one of them acquiring a decider would have been exempted from this gate on a substring.
+    # Anchoring is the fix, and it is what Checks 2 and 14 have always done.
+    #
+    # BOTH SUBSTRATES, and the same $statusResolvedLead vocabulary Check 14 uses. Check 25 read table
+    # rows only, so it agreed with Check 14 only by accident; the two ask INVERSE questions of the
+    # same rows and a disagreement is unfixable by any edit (remove the id and one fires; add it back
+    # and the other does). Measured before this repair: they disagreed on 14 rows.
+    # The SAME two signals Check 14 consumes, from the SAME single pass, combined the other way round.
+    # `$registerState` is already computed at Check 14 above; it is recomputed here only if this
+    # script is ever re-ordered, which is cheap and keeps the two checks independent of sequence.
+    if (-not $registerState) {
+        $registerState = Get-RegisterFindingState -Path $registerPathShared -IdPattern $idPat.Trim('\b') `
+                                                  -SettledLead $statusResolvedLead -DeciderRx $registerDeciderRx
+    }
     $unsurfaced = @()
-    foreach ($line in ($registerRaw -split "`n")) {
-        if ($line -notmatch '^\|') { continue }
-        $cells = $line -split '\|'
-        if ($cells.Count -lt 13) { continue }
-        $id     = $cells[1].Trim()
-        $status = $cells[9]
-        $owner  = $cells[10]
-        if ($id -notmatch '^[A-Z][A-Za-z0-9\-]*$') { continue }
-        if ($owner -notmatch $deciderRx) { continue }
-        $statusHead = $status.Substring(0, [Math]::Min(80, $status.Length))
-        if ($statusHead -match $resolvedRx) { continue }
-        if ($onLine -contains $id) { continue }
+    foreach ($id in ($registerState.Keys | Sort-Object)) {
+        if (-not $registerState[$id].Decider) { continue }   # not a decision -- a scheduling position
+        if ($registerState[$id].Settled)      { continue }   # decided already
+        if ($onLine -contains $id)            { continue }   # already on the boot line
         $unsurfaced += $id
     }
     $unsurfaced = @($unsurfaced | Sort-Object -Unique)
     if ($unsurfaced.Count -gt 0) {
         foreach ($u in $unsurfaced) {
-            Write-Host "  UNSURFACED DECISION: register row '$u' waits on a decider and the manifest's open-decision line does not name it" -ForegroundColor Red
+            Write-Host "  UNSURFACED DECISION: register entry '$u' waits on $($registerState[$u].Decider) and the manifest's open-decision line does not name it" -ForegroundColor Red
         }
-        Write-Host "  Remedy: add the id to the manifest's open-decision line, or -- if it is NOT a decision --" -ForegroundColor DarkGray
-        Write-Host "  rewrite its Owner-Decision cell to say what it actually is. Do not silence it by resolving a row" -ForegroundColor DarkGray
-        Write-Host "  that is not resolved: a decision nobody can see at boot is how MAIL-1's six siblings hid." -ForegroundColor DarkGray
+        Write-Host "  Remedy: add the id to the manifest's open-decision line -- INSIDE THE ENUMERATION, before its first" -ForegroundColor DarkGray
+        Write-Host "  full stop. Ids written into the prose AFTER that point are narrative and are not read as state." -ForegroundColor DarkGray
+        Write-Host "  Or -- if it is NOT a decision -- rewrite its Owner-Decision field to say what it actually is. Do not" -ForegroundColor DarkGray
+        Write-Host "  silence it by resolving an entry that is not resolved: a decision nobody can see at boot is how" -ForegroundColor DarkGray
+        Write-Host "  MAIL-1's six siblings hid." -ForegroundColor DarkGray
         $issues += $unsurfaced.Count
     } else {
-        Write-Host "  every register row awaiting a decider is named on the manifest's boot line" -ForegroundColor Green
+        $liveDecisions = @($registerState.Keys | Where-Object { $registerState[$_].Decider -and -not $registerState[$_].Settled })
+        Write-Host "  all $($liveDecisions.Count) register entr(ies) awaiting a decider are named on the manifest's boot line (of $($registerState.Count) findings read across table rows and detail blocks)" -ForegroundColor Green
     }
 }
 

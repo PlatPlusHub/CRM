@@ -36,7 +36,16 @@ on:
       - "scripts/test_future_date_guard.ps1"
       - "scripts/test_status_contradiction_guard.ps1"
       - "scripts/test_primary_ledger_guard.ps1"
+      - "scripts/test_cold_start_state_guard.ps1"
   pull_request:
+    # CI-1b (2026-09-09): THIS LIST MUST MATCH `push.paths` ABOVE, ENTRY FOR ENTRY. It did not: the
+    # workflow file itself and all three guard-of-the-guard suites were added to `push` and never to
+    # `pull_request`, so a PR that touched ONLY a detector's calibration -- or only this file's own
+    # triggers -- changed what the gate MEANS and did not run the gate. Check 20 reported CLEAN
+    # throughout because it searched the whole file for each path string and found every one of them
+    # on the push side. A guard that greps a file cannot see which of two lists a line is in; that is
+    # the MEAS-1 class inside the check written to close exactly this failure, and Check 20 now
+    # parses the two blocks separately and compares them.
     paths:
       - "**/*.md"
       - "scripts/check_repository_consistency.ps1"
@@ -45,6 +54,11 @@ on:
       - "supabase/migrations/**"
       - "supabase/tests/**"
       - "ai-map.json"
+      - ".github/workflows/repository-consistency.yml"
+      - "scripts/test_future_date_guard.ps1"
+      - "scripts/test_status_contradiction_guard.ps1"
+      - "scripts/test_primary_ledger_guard.ps1"
+      - "scripts/test_cold_start_state_guard.ps1"
 
 jobs:
   consistency:
@@ -97,7 +111,7 @@ jobs:
         # failing first suite pass silently -- a CI step that cannot fail, which is the same vacuous
         # -guard class this whole entry exists to close.
         run: |
-          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard') {
+          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard') {
             pwsh -File "scripts/$suite.ps1"
             if ($LASTEXITCODE -ne 0) { throw "$suite FAILED (exit $LASTEXITCODE)" }
           }

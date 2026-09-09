@@ -39,7 +39,7 @@ Open owner decisions — **MAIL-1**, **RET-1**, **AUDIT-2**, **PD-23**, **FA-2**
 
 Last Completed: **Batch 6 slice 11 -- `customers`, CLOSED (2026-09-09).** `20260909060754` closed the first four customer-surface findings; `20260909114354` closed the two residues an independent closure pass proved afterwards -- CUST-11 (`archive_reason` was outside archive authority) and CUST-12 (reciprocal merges archived both identities, leaving no survivor); evidence: `session-2026-09-09-slice11-closure.md`.
 
-Narrative: `session-2026-09-09-slice11-closure.md`
+Narrative: `session-2026-09-09-cold-start-synchronization.md`
 
 Current session blocker: **None.** The 2026-09-09 Windows/Docker port blocker is RESOLVED -- local rebuilt from repository migrations and parity re-proven against live Primary reads at 211 migrations.
 
