@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/session-2026-09-09-batch6-slice11-primary-access-blocked.md` — Slice 11 bootstrap blocked on Primary access; no audit disposition or product change.
+> **Latest session report:** `history/session-2026-09-09-batch6-slice11-customers.md` — Slice 11 `customers` audit complete; migration deployed and parity proven.
 >
 > Previously: **Latest session report:** `history/session-2026-09-08-batch6-slice9-leads.md` -- **Batch 6 slice 9: `leads`, the door that answered its own authority question.** `202607061900` closed **LEAD-1** (High -- BOOK-5's shape a third time and the widest: a FULL capability bypass decided from `new.assigned_user_id`), **LEAD-2**, **LEAD-3** and **LEAD-4**. The slice's headline is a method finding, **INCIDENTAL DEFENSE != INTENTIONAL CONTROL**: with the two mechanisms that had been refusing the seize removed in a transaction, the attack succeeded. Batch 6: **10 of 77 -- NOT complete.**
 >

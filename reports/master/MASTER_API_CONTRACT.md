@@ -103,7 +103,7 @@ call it -- see section 6 for what that does and does not establish.
 | `lead_timeline` | p_lead_id uuid | `TABLE(seq bigint, occurred_at timestamp with time zone, event_type_code text, entity_type text, entity_id uuid, actor_user_id uuid, previous_state text, new_state text, reason text, payload jsonb)` | invoker | - | - | - | 0 | yes |
 | `link_internal_supplier` | p_booking_item_id uuid, p_provider_branch_id uuid, p_provider_department_id uuid, p_rea... | `uuid` | invoker | ASSIGN_SUPPLIER | internal_supplier_links | - | 5 | yes |
 | `link_passenger_to_booking_item` | p_booking_item_id uuid, p_passenger_id uuid, p_selling_amount_override numeric, p_cost_... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_item_passengers | - | 7 | yes |
-| `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 6 | yes |
+| `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 7 | yes |
 | `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | yes |
 | `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | yes |
 | `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | yes |
