@@ -9,7 +9,7 @@ Class: **HISTORICAL-IMMUTABLE**
 - **PROVEN** — both residual product defects reproduced against a clean local reset BEFORE repair, then closed and re-tested; 111 files / 1796 pgTAP assertions (Pass A = Pass B); 445 HTTP; smoke; guard-of-guard 33/33; Primary parity across ledger, functions and all ten structural surfaces read live FROM Primary.
 - **UNPROVEN** — nothing this session claims. AUDIT-2's residual scope (Enterprise feature enumeration) and PD-23's post-PLAN-1 remainder are recorded as leads, not verdicts.
 - **CHANGED** — `20260909114354_customers_slice11_closure` deployed to Primary; CUST-11, CUST-12, GOV-21, GOV-22 recorded; two guards widened; assertion 57 added. Commit in this closure.
-- **REMAINING** — Batch 6 slice 12 target selection. PD-23 and AUDIT-2 need reclassification by whoever next opens their rows; MONEY-2's manifest placement disagrees with its own register row.
+- **REMAINING** — **ARCH-2**, proven here and deliberately not fixed: the archive INSERT door is still open on the twelve archivable tables that are not `customers`. Batch 6 slice 12 target selection. PD-23 and AUDIT-2 need reclassification by whoever next opens their rows; MONEY-2's manifest placement disagrees with its own register row.
 - **DO NOT TOUCH** — Secondary `brplkqmbzffpxqgkkdzo`; settled CUST-3 (warning-only credit ceiling, owner-approved); Slice 12; the `current_user = 'postgres'` invoice exemption, now pinned rather than narrowed.
 - **NEXT** — select the slice 12 target with `scripts/batch6_select_target.ps1`. Slice 11 is closed.
 
@@ -40,6 +40,8 @@ Reproduction and repair both ran against a database reset from repository migrat
 
 **Lock ordering was verified structurally, not inferred.** `explain` shows `LockRows` above an index scan on `customers_tenant_id_id_key`, so acquisition follows ascending `id` for both callers; opposite merges queue on the same first row rather than deadlocking.
 
+**ARCH-2 — the same guard's other door, found by the mandatory cross-path sweep.** Changing a shared archive function triggers `AGENTS.md §5b`, and the sweep asked which paths now meet the new rule. Answer: on twelve of the thirteen tables, none — `202607052800` created every archive trigger as `before update`, so the shared function **never fires on INSERT** there. Only `customers` carries `before insert or update`. Reproduced: an employee holding no `ARCHIVE_RECORD` ran a plain `insert into public.customer_notes(… is_archived=true, archive_reason='forged narrative', archived_by=<self>)` and it **succeeded** — a row born archived, with a narrative nobody was authorized to write and an archiver the server never stamped. INVOICE-6 measured, repaired and guarded the UPDATE path across thirteen tables on 2026-09-08; the INSERT path was never the subject of that measurement, so a `coalesce` that no longer wins on UPDATE is simply not consulted on INSERT. **BOOK-1's "test both doors", applied to an archive guard rather than to an RPC.** Recorded OPEN and deliberately not repaired — see NOT FIXED.
+
 ## FIXED
 
 `20260909114354_customers_slice11_closure`:
@@ -51,6 +53,7 @@ Also this session: **assertion 57** pins the set of SECURITY DEFINER functions t
 
 ## NOT FIXED
 
+- **ARCH-2** is OPEN by choice. The one-line repair — widening the twelve triggers to `before insert or update` — changes archive-creation semantics on `bookings`, `invoices`, `documents`, `suppliers`, `passengers`, `leads`, `quotations`, `tasks`, `complaints`, `service_requests`, `booking_items` and `customer_notes`, every one a surface outside slice 11. `§5b` requires each affected execution path be classified and proven **separately, never with one generic answer**, and doing that for twelve surfaces is twelve slices of work, not a closing edit. Half-building it here would ship an unproven behaviour change across the whole archive model on the strength of one table's reproduction. Its row exists so no future slice can reach one of those tables without meeting it.
 - **CUST-6** remains OPEN and unchanged — repairing the malformed line that hid it deliberately did not touch its status or meaning. It needs a distinct required-permission mechanism, which is a design change.
 - **MONEY-2 is misclassified and was left alone.** Its register row reads *"OPEN — **engineering**, deferred to each column's own Batch 6 slice"* and its decision cell begins `engineering/canon`, yet the manifest's boot line lists it among **Open owner decisions**. Correcting that is outside a Slice-11 closure and belongs with whoever next opens the row.
 - **PD-23's owner pointer is stale.** Its decision cell reads *"owner (already recorded under PLAN-1): the three 'Limited' ceilings canon leaves undefined"* — the premise **PLAN-1 explicitly rejected on 2026-09-04** as a misreading of canon. What remains of PD-23 is its own measured finding (the quota class is structurally inert), which is engineering, not an owner question.
