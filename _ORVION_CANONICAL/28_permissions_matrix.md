@@ -190,6 +190,8 @@ Notes:
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | CREATE_BOOKING | Yes | Yes | Yes | Yes | No | Yes | Assigned only | No | branch/department |
 | CREATE_BOOKING_ITEM | Yes | Yes | Yes | Yes | No | Yes | Assigned only | No | branch/department |
+| REASSIGN_BOOKING_ITEM | Yes | Yes | Yes | Yes | No | No | No | No | branch/department |
+| CORRECT_PASSENGER_MANIFEST | Yes | Yes | Yes | Yes | Yes | No | No | No | branch/department |
 | APPROVE_BOOKING | Yes | Yes | Yes | Yes | No | No | No | No | branch/department |
 | ISSUE_BOOKING | Yes | Yes | Yes | No | Yes | No | No | No | branch/department |
 | CANCEL_BOOKING | Yes | Yes | Yes | No | Yes | No | No | No | branch/department |
@@ -205,6 +207,8 @@ Notes:
 
 - Issuing before full collection requires explicit permission and creates risk flag event.
 - Department Manager does not receive negative balance issuance permission by default.
+- A passenger manifest freezes when its booking item reaches `issued`. A post-issue correction requires `CORRECT_PASSENGER_MANIFEST`, a fresh reason, and server-stamped actor/time; finance managers receive this authority because they already control issue/reissue paths.
+- Moving any occupied booking-item ownership field requires `REASSIGN_BOOKING_ITEM` independently of `CREATE_BOOKING_ITEM`, with a fresh reason and immutable event history. Its role bundle is exactly the existing `REASSIGN_LEAD` population.
 - Booking lifecycle authority is capability-driven (ADR-0020): APPROVE_BOOKING governs the booking-level management approval `pending_approval -> confirmed` ("Required approval granted", 26) and is a management act, distinct from the item-level finance execution approval (APPROVE_FINANCE). ISSUE_BOOKING governs `in_progress -> issued` (issuance) and is finance-consequential (owner/ceo/branch_manager/finance_manager); issuing before full collection additionally requires ALLOW_ISSUE_WITH_NEGATIVE_BALANCE and emits the `booking_item_risk_flag_created` risk event capturing the customer balance snapshot. CANCEL_BOOKING governs the post-approval cancellations (`confirmed/in_progress -> cancelled`) and the void (`issued -> void`) and is finance-consequential (owner/ceo/branch_manager/finance_manager); pre-approval cancels (`draft/pending_approval -> cancelled`) stay under CREATE_BOOKING (discarding not-yet-approved work). Every `cancelled` transition requires a cancellation reason (27). REFUND_BOOKING governs `issued -> refunded` and REISSUE_BOOKING governs `issued -> reissue` (both finance-consequential: owner/ceo/branch_manager/finance_manager); completing a re-issuance (`reissue -> issued`) reuses ISSUE_BOOKING, since every transition into `issued` is issuance and runs the negative-balance risk-flag check. This completes the capability-driven booking lifecycle authority set (Submit/Approve/Issue/Cancel/Refund/Reissue) per ADR-0020.
 
 ---
@@ -214,6 +218,7 @@ Notes:
 | Permission | Owner | CEO | Finance Manager | Branch Manager | Department Manager | Senior Employee | Employee | Scope |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | APPROVE_FINANCE | Yes | Yes | Yes | Optional | No | No | No | tenant/branch |
+| WITHDRAW_FINANCE_APPROVAL | Yes | Yes | Yes | Optional | No | No | No | tenant/branch |
 | EDIT_LOCKED_COST | Yes | Yes | Yes | No | No | No | No | tenant |
 | SET_EXCHANGE_RATE | Yes | Yes | Yes | No | No | No | No | tenant |
 | CREATE_EXCHANGE_RATE_ADJUSTMENT | Yes | Yes | Yes | No | No | No | No | tenant |
@@ -229,6 +234,7 @@ Notes:
 
 - Assigned employee may view financial documents directly related to their lead/booking.
 - Finance approval is required before controlled execution gate.
+- A pending finance requirement may be withdrawn only by the same role population that holds `APPROVE_FINANCE`, through `WITHDRAW_FINANCE_APPROVAL`, with a fresh reason and server-stamped actor/time. Granted, executed, or locked-cost history is never rewritten by withdrawal.
 - Operations cannot edit locked cost.
 - REVIEW_APPROVAL_REQUEST governs `approval_requests` rows whose `approval_type_code` is not `finance_execution_approval` (covered by APPROVE_FINANCE) and not `subscription_approval` (covered by REVIEW_SUBSCRIPTION_PAYMENT) — i.e. `refund_approval`, `discount_approval`, `booking_override`, `manual_price_change`, `sensitive_data_change`. This is a conservative default; per-type role refinement is an open business decision (see `reports/phase-02-prioritized-findings.md`).
 
@@ -248,6 +254,7 @@ Notes:
 
 - Incorrect files are archived, not deleted.
 - Financial documents require stricter visibility.
+- Placing or releasing a document legal hold reuses `MANAGE_TENANT_SETTINGS`. A hold always overrides retention scanning and claiming; both transitions require a reason and emit critical events.
 
 ---
 

@@ -55,7 +55,7 @@ call it -- see section 6 for what that does and does not establish.
 | `add_customer_contact_method` | p_customer_id uuid, p_contact_method_type_code text, p_value text, p_is_primary boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_contact_methods | customer_contact_methods | 4 | yes |
 | `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | yes |
 | `add_document_version` | p_document_id uuid, p_file_name text, p_file_type_code text, p_file_size bigint | `uuid` | invoker | CREATE_DOCUMENT_VERSION | document_versions | document_versions, documents | 4 | yes |
-| `add_quotation_item` | p_quotation_id uuid, p_service_type_code text, p_unit_price numeric, p_quantity numeric... | `uuid` | invoker | CREATE_QUOTATION | quotation_items | quotations | 5 | yes |
+| `add_quotation_item` | p_quotation_id uuid, p_service_type_code text, p_unit_price numeric, p_quantity numeric... | `uuid` | invoker | CREATE_QUOTATION | quotation_items | - | 5 | yes |
 | `advance_booking` | p_booking_id uuid, p_to_status text, p_reason text | `text` | invoker | ALLOW_ISSUE_WITH_NEGATIVE_BALANCE + per transition: APPROVE_BOOKING, CANCEL_BOOKING, CREATE_BOOKING, ISSUE_BOOKING, REFUND_BOOKING, REISSUE_BOOKING | - | bookings | 5 | yes |
 | `advance_booking_item` | p_booking_item_id uuid, p_to_status text, p_reason text, p_sub_status_code text, p_canc... | `text` | invoker | UPDATE_BOOKING_ITEM_STATUS + per transition: UPDATE_BOOKING_ITEM_STATUS | - | booking_items | 9 | yes |
 | `advance_complaint` | p_complaint_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_COMPLAINT | - | complaints | 3 | yes |
@@ -73,6 +73,7 @@ call it -- see section 6 for what that does and does not establish.
 | `assign_user_branch` | p_user_id uuid, p_branch_id uuid, p_department_id uuid, p_is_primary boolean, p_transfe... | `uuid` | invoker | MANAGE_USERS | user_branch_assignments | - | 4 | yes |
 | `assign_user_role` | p_user_id uuid, p_role_code text, p_scope_type text, p_branch_id uuid, p_department_id ... | `uuid` | invoker | MANAGE_USERS | user_role_assignments | - | 3 | yes |
 | `convert_lead` | p_lead_id uuid, p_customer_id uuid, p_reason text | `uuid` | invoker | inline has_permission check | - | leads | 7 | yes |
+| `correct_passenger_manifest` | p_booking_item_passenger_id uuid, p_new_passenger_id uuid, p_reason text | `void` | invoker | - | - | booking_item_passengers | 5 | yes |
 | `create_booking` | p_customer_id uuid, p_lead_id uuid, p_title text, p_branch_id uuid, p_department_id uui... | `uuid` | invoker | CREATE_BOOKING | bookings | - | 10 | yes |
 | `create_booking_item` | p_booking_id uuid, p_service_type_code text, p_currency_code text, p_cost_amount numeri... | `uuid` | invoker | CREATE_BOOKING_ITEM | booking_items | - | 9 | yes |
 | `create_branch` | p_name text, p_slug text, p_branch_type text, p_primary_phone text, p_address text | `uuid` | invoker | MANAGE_BRANCHES | branches | - | 1 | yes |
@@ -106,6 +107,7 @@ call it -- see section 6 for what that does and does not establish.
 | `merge_customer_identity` | p_source_customer_id uuid, p_target_customer_id uuid, p_reason text | `uuid` | invoker | MERGE_CUSTOMER_IDENTITY | customer_identity_merges | customer_contact_methods, customers | 7 | yes |
 | `my_memberships` |  | `TABLE(membership_id uuid, tenant_id uuid, tenant_name text, is_active boolean)` | invoker | - | - | - | 0 | yes |
 | `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | yes |
+| `reassign_booking_item` | p_booking_item_id uuid, p_reason text, p_owner_user_id uuid, p_sales_owner_user_id uuid... | `void` | invoker | - | - | booking_items | 5 | yes |
 | `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | yes |
 | `record_lead_interaction` | p_lead_id uuid, p_interaction_type_code text, p_summary text, p_metadata jsonb | `uuid` | invoker | inline has_permission check | lead_interactions | leads | 5 | yes |
 | `record_offline_conversion` | p_conversion_event_type_code text, p_lead_id uuid, p_booking_id uuid, p_booking_item_id... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | offline_conversions | - | 6 | yes |
@@ -120,14 +122,16 @@ call it -- see section 6 for what that does and does not establish.
 | `revoke_user_role` | p_assignment_id uuid | `void` | invoker | MANAGE_USERS | - | user_role_assignments | 2 | yes |
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
 | `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
+| `set_document_legal_hold` | p_document_id uuid, p_active boolean, p_reason text | `void` | invoker | - | - | documents | 5 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
 | `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, permitted boolean, exposure_amount numeric, threshold_exceeded boolean, unconvertible_currencies text[])` | invoker | inline has_permission check | - | - | 2 | yes |
 | `tenant_capabilities` |  | `TABLE(feature_code text, is_enabled boolean, limit_value numeric)` | invoker | - | - | - | 0 | yes |
 | `upload_document` | p_document_type_code text, p_title text, p_file_name text, p_file_type_code text, p_lin... | `uuid` | invoker | UPLOAD_DOCUMENT | document_links, document_versions, documents | documents | 8 | yes |
 | `upload_subscription_payment_proof` | p_file_name text, p_file_type_code text, p_file_size bigint, p_note text | `uuid` | invoker | MANAGE_TENANT_SETTINGS | document_links, document_versions, documents, subscription_payment_proofs | documents | 4 | yes |
 | `void_invoice` | p_invoice_id uuid, p_reason text | `uuid` | invoker | VOID_INVOICE | - | invoices | 4 | yes |
+| `withdraw_finance_approval` | p_booking_item_id uuid, p_reason text | `void` | invoker | - | - | approval_requests, booking_items | 4 | yes |
 
-**75 RPC endpoints executable by `authenticated`; 75 exercised over HTTP by a suite.**
+**79 RPC endpoints executable by `authenticated`; 79 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 

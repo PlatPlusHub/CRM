@@ -90,6 +90,8 @@ Every booking item has an independent lifecycle and status.
 
 The booking has an overall state, but item states must remain separate.
 
+Responsibility for an existing booked service is also independent of creating or editing one. Once any booking-item owner slot is occupied, moving or clearing it requires the dedicated reassignment capability, a fresh reason, a server-derived actor/time stamp, and an immutable event. Reassignment never rewrites prior commission or accounting history.
+
 Example:
 
 One booking may contain a ticket that is issued, a hotel that is pending, and a visa that is under review.

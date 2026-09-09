@@ -2,7 +2,9 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/session-2026-09-09-cold-start-synchronization.md` — COLD-2b, GOV-23, GOV-24, CI-1b and SYNC-2 repaired; cold-start state now resolves to exactly one live pointer.
+> **Latest session report:** `history/session-2026-09-09-ten-decision-closure.md` — ten-decision package verified/deployed; Batch 6 remains 12/77 and Slice 12 was not started.
+>
+> Previously: **Latest session report:** `history/session-2026-09-09-cold-start-synchronization.md` — COLD-2b, GOV-23, GOV-24, CI-1b and SYNC-2 repaired; cold-start state now resolves to exactly one live pointer.
 >
 > Previously: **Latest session report:** `history/session-2026-09-09-slice11-closure.md` — Slice 11 CLOSED: CUST-11, CUST-12, GOV-21 and GOV-22 reproduced and repaired; Batch 6 stays 12/77.
 >

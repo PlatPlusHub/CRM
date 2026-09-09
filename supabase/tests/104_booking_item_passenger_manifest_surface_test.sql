@@ -367,13 +367,19 @@ select throws_ok(
 
 reset role;
 select set_config('request.jwt.claims', '', true);
+-- PAX-5 (2026-09-09) added a SECOND executable function, app.correct_passenger_manifest, so this
+-- assertion is now stated as the SET rather than the count -- which is what it was always really
+-- guarding. Its teeth are in the second half: what must never appear is another SECURITY DEFINER
+-- door, and both of these are INVOKER. A definer function naming this table and executable by
+-- `authenticated` would be a privilege path around RLS, and it still fails here.
 select is(
-  (select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+  (select string_agg(p.proname || case when p.prosecdef then ' (DEFINER)' else ' (invoker)' end, ', ' order by p.proname)
+     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname in ('app','public','reporting')
       and p.prosrc like '%booking_item_passengers%'
       and has_function_privilege('authenticated', p.oid, 'EXECUTE')),
-  1,
-  'PRIVILEGE: exactly ONE function naming this table is executable by authenticated -- app.link_passenger_to_booking_item. A second definer door cannot appear without failing here');
+  'correct_passenger_manifest (invoker), link_passenger_to_booking_item (invoker)',
+  'PRIVILEGE: exactly TWO functions naming this table are executable by authenticated -- the manifest writer and PAX-5''s correction path -- and NEITHER is SECURITY DEFINER. A definer door here would be a path around RLS and cannot appear without failing this assertion');
 
 select ok(not has_function_privilege('public','app.guard_write_capability()','EXECUTE'),
   'PRIVILEGE: the guard itself is not executable by public -- 202607061400 revokes it, per Supabase''s own SECURITY DEFINER guidance');
@@ -489,21 +495,29 @@ select throws_ok(
   'TEST-3: and opaque again after the rollback. Both mutations are restored, so this file leaves the schema byte-identical to the migration (PAR-2)');
 
 -- =============================================================================================
--- 41. OBSERVABILITY. PAX-6, pinned as an ABSENCE rather than repaired. A manifest change -- the row
---     that decides WHO FLIES -- emits no business event through either door, because canon 27
---     registers no event vocabulary for it at all (passenger_created exists; nothing for the LINK).
---     Minting one here would be inventing canon, which this programme forbids (OWNER-1 / EVT-2).
---     Pinned so a producer cannot arrive without a test, and so the gap cannot be forgotten.
+-- 41. OBSERVABILITY. PAX-6, ANSWERED 2026-09-09 by owner decision and no longer an absence.
+--
+--     This assertion used to require that canon register NO event vocabulary for a manifest change,
+--     and said in its own message: "add the vocabulary and this assertion fails, demanding the
+--     producer and its test together." That is exactly what happened. The owner ratified PAX-6, and
+--     `20260909133000_a_manifest_change_is_a_business_event.sql` registered the three types and
+--     installed their single producer, with behavioural coverage in
+--     `114_passenger_manifest_freeze_and_events_test.sql`.
+--
+--     The assertion is INVERTED rather than deleted: the vocabulary must now be present, so a later
+--     change that removes it -- or that adds a fourth manifest event type without bringing this file
+--     and 114 with it -- still fails here. The demand this assertion makes is unchanged in kind; only
+--     its direction moved when the question was answered.
 -- =============================================================================================
 reset role;
 select set_config('request.jwt.claims', '', true);
 select is(
-  (select count(*)::int from public.catalog_values
+  (select string_agg(code, ',' order by code) from public.catalog_values
     where catalog_type_code = 'event_type'
-      and (code ilike '%passenger%link%' or code ilike '%passenger%swap%'
+      and (code ilike '%passenger%link%' or code ilike '%passenger%replac%'
            or code ilike '%manifest%' or code ilike '%passenger_removed%')),
-  0,
-  'OBSERVABILITY / PAX-6: canon registers NO event type for a manifest change, so neither door can record one. Registered as open rather than invented -- add the vocabulary and this assertion fails, demanding the producer and its test together');
+  'booking_item_passenger_linked,booking_item_passenger_removed,booking_item_passenger_replaced',
+  'OBSERVABILITY / PAX-6 (answered 2026-09-09): canon now registers exactly three manifest event types, and app.record_manifest_change_event is their sole producer on both doors. This assertion previously required their ABSENCE and was inverted, not deleted, in the change that answered the question');
 
 select * from finish();
 rollback;

@@ -247,12 +247,14 @@ select throws_ok(
   'BOOK-5: the SAME change carrying an ownership grab is now refused IDENTICALLY. Before 202607061500 this took, and the ground truth read as postgres was 100 -> 555 with ownership seized');
 
 -- 13 and 14 already pin the SAME literal string, so indistinguishability is proven by those two
--- calls and a third assertion restating it would be a tautology (AGENTS.md §6). 15 spends the slot
--- on the RESIDUAL instead, recorded honestly rather than left for someone to discover.
-select lives_ok(
+-- calls and a third assertion restating it would be a tautology (AGENTS.md §6). BOOK-9 has now
+-- closed the residual this assertion deliberately carried: CREATE_BOOKING_ITEM is not authority
+-- to move a booked service away from the colleague holding it.
+select throws_ok(
   $$update public.booking_items set owner_user_id = 'b5000000-0000-0000-0000-000000000012'
      where id = 'b5000000-0000-0000-0000-0000000000e2'$$,
-  'RESIDUAL / BOOK-9: an ownership grab WITHOUT money still succeeds for a CREATE_BOOKING_ITEM holder, because canon defines no permission for reassigning a booked service and inventing one is forbidden. BOOK-5 removed the PROFIT in grabbing (the money guard no longer believes it); who may reassign is BOOK-9, open. This assertion fails the day canon answers it, which is the point');
+  '42501', null,
+  'BOOK-9 CLOSED: an ownership grab WITHOUT money is refused for a CREATE_BOOKING_ITEM holder; moving responsibility now costs REASSIGN_BOOKING_ITEM independently');
 
 reset role;
 select set_config('request.jwt.claims','{"sub":"b5000000-0000-0000-0000-0000000000a3","aal":"aal2"}', true);
@@ -328,8 +330,8 @@ select lives_ok(
 select throws_ok(
   $$update public.booking_items set finance_approval_required = false
      where id = 'b5000000-0000-0000-0000-0000000000e2'$$,
-  '42501', 'finance_approval_required cannot be withdrawn: no governed path lowers it',
-  'BOOK-6: and may NOT withdraw it. Before 202607061500 anyone who could reach the row could clear the flag advance_booking_item reads to BLOCK execution');
+  '42501', 'permission denied: WITHDRAW_FINANCE_APPROVAL',
+  'BOOK-8 CLOSED: CREATE_BOOKING_ITEM may raise the gate but may not withdraw it; lowering now charges its independent authority');
 
 reset role;
 select set_config('request.jwt.claims','{"sub":"b5000000-0000-0000-0000-0000000000a1","aal":"aal2"}', true);
@@ -337,8 +339,8 @@ set local role authenticated;
 select throws_ok(
   $$update public.booking_items set finance_approval_required = false
      where id = 'b5000000-0000-0000-0000-0000000000e2'$$,
-  '42501', 'finance_approval_required cannot be withdrawn: no governed path lowers it',
-  'BOOK-6: not even for APPROVE_FINANCE. The refusal is structural, not a permission ceiling -- whether a requirement may EVER be withdrawn is BOOK-8, and it is a business question this deliberately does not answer');
+  '23514', 'withdrawing a finance approval requirement requires its own reason',
+  'BOOK-8 CLOSED: APPROVE_FINANCE derives withdrawal authority, but the table door still refuses an unattributed lowering without a fresh reason');
 
 -- =============================================================================================
 -- 25-27. BOOK-7 / INPUT. A currency change is a change to the money (canon 30, via SUP-4a and CA-2).
@@ -528,6 +530,10 @@ begin
     return new;
 end
 $fn$;
+-- BOOK-9 is a second, independent enforcer on the same adversarial statement. Remove it inside
+-- this savepoint so the mutation continues to isolate BOOK-5's PRE-image scope guard; rollback
+-- restores both the function and this trigger before the identical negative control below.
+drop trigger booking_items_guard_reassignment on public.booking_items;
 select set_config('request.jwt.claims','{"sub":"b5000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 set local role authenticated;
 select lives_ok(

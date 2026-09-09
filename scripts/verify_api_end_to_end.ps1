@@ -235,6 +235,16 @@ Check "...and cannot append an item to the other agency's booking" ($r.StatusCod
 # =============================================================================================
 # 23. INTERNAL HELPERS ARE NOT ENDPOINTS. record_event is the audit spine's only writer.
 # =============================================================================================
+Write-Host "`n-- decision-closure endpoint reachability --"
+$r = Rpc $jwtEmp 'correct_passenger_manifest' @{ p_booking_item_passenger_id = '00000000-0000-0000-0000-000000000001'; p_new_passenger_id = '00000000-0000-0000-0000-000000000002'; p_reason = 'reachability probe' }
+Check "correct_passenger_manifest is exposed over HTTP (business refusal, not 404)" ($r.StatusCode -ne 404) "$($r.StatusCode) $($r.Content)"
+$r = Rpc $jwtEmp 'withdraw_finance_approval' @{ p_booking_item_id = '00000000-0000-0000-0000-000000000001'; p_reason = 'reachability probe' }
+Check "withdraw_finance_approval is exposed over HTTP (authority refusal, not 404)" ($r.StatusCode -ne 404) "$($r.StatusCode) $($r.Content)"
+$r = Rpc $jwtEmp 'reassign_booking_item' @{ p_booking_item_id = '00000000-0000-0000-0000-000000000001'; p_reason = 'reachability probe'; p_owner_user_id = $null; p_sales_owner_user_id = $null; p_operational_owner_user_id = $null }
+Check "reassign_booking_item is exposed over HTTP (input refusal, not 404)" ($r.StatusCode -ne 404) "$($r.StatusCode) $($r.Content)"
+$r = Rpc $jwtEmp 'set_document_legal_hold' @{ p_document_id = '00000000-0000-0000-0000-000000000001'; p_active = $true; p_reason = 'reachability probe' }
+Check "set_document_legal_hold is exposed over HTTP (authority/row refusal, not 404)" ($r.StatusCode -ne 404) "$($r.StatusCode) $($r.Content)"
+
 Write-Host "`n-- the surface is closed --"
 $r = Rpc $jwtEmp 'record_event' @{ p_tenant_id = $TA; p_event_type_code = 'booking_created'; p_entity_type = 'booking'; p_entity_id = $bookingId }
 Check "record_event is NOT reachable -- audit forgery has no front door" ($r.StatusCode -eq 404) "$($r.StatusCode) $($r.Content)"

@@ -340,9 +340,12 @@ select is(
       and not exists (select 1 from pg_constraint k
                        where k.conrelid=('public.'||t.table_name)::regclass and k.contype='c'
                          and pg_get_constraintdef(k.oid) ilike '%currency%'
-                         and pg_get_constraintdef(k.oid) ilike '%null%')),
+                         and pg_get_constraintdef(k.oid) ilike '%null%')
+      and not exists (select 1 from pg_trigger tr
+                       where tr.tgrelid=('public.'||t.table_name)::regclass and not tr.tgisinternal
+                         and pg_get_triggerdef(tr.oid) ilike '%guard_payment_currency_conversion%')),
   0,
-  'CA-2 CLASS: every table with a nullable currency_code beside a numeric amount carries the pairing rule -- five of five now (customers, suppliers, offline_conversions, campaign_daily_metrics, company_assets)');
+  'CA-2 CLASS: every table with a nullable currency_code beside a numeric amount carries a row CHECK or the cross-table payment/account FX guard -- six of six now');
 
 -- =============================================================================================
 -- 33. PAR-4 DEFECT INJECTION. "It did not throw" is not evidence that anything was enforced. Drop

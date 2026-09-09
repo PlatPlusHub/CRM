@@ -45,6 +45,7 @@ insert into _expected_endpoints (name) values
     ('assign_user_role'),
     ('claim_storage_actions'),
     ('convert_lead'),
+    ('correct_passenger_manifest'),
     ('create_booking'),
     ('create_booking_item'),
     ('create_branch'),
@@ -89,6 +90,7 @@ insert into _expected_endpoints (name) values
     ('record_refund'),
     ('record_supplier_payment'),
     ('record_trusted_device'),
+    ('reassign_booking_item'),
     ('redeem_license_token'),
     ('request_finance_approval'),
     ('resolve_storage_finding'),
@@ -103,6 +105,7 @@ insert into _expected_endpoints (name) values
     ('revoke_user_role'),
     ('seed_default_chart_of_accounts'),
     ('send_conversation_message'),
+    ('set_document_legal_hold'),
     ('start_conversation'),
     -- PD-24 / SUP-1: the gated reader for `suppliers.credit_limit_amount`, whose column grant was
     -- revoked from `authenticated` in the same migration. Tenant-facing on purpose -- it returns
@@ -121,6 +124,7 @@ insert into _expected_endpoints (name) values
     ('tenant_capabilities'),
     ('upload_document'),
     ('upload_subscription_payment_proof');
+insert into _expected_endpoints (name) values ('withdraw_finance_approval');
 
 -- =============================================================================================
 -- 1-3. THE EXPOSED SET IS EXACTLY THE CLASSIFIED SET.
@@ -142,11 +146,11 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  79,
+  83,
   -- The prose said "75" while the assertion compared 76 -- a guard's description drifting from its
   -- own measurement, the MEAS-1 class in miniature. Corrected to 77 alongside RBAC-4's
   -- `effective_permissions`, and the number is now written once so the two cannot disagree again.
-  'POSITIVE CONTROL: 77 endpoints are pinned, so the two zeros above are not drawn from an empty set');
+  'POSITIVE CONTROL: 83 public functions are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================
 -- 4-6. THE EXCLUSIONS. Named explicitly, because an absence proves nothing on its own.

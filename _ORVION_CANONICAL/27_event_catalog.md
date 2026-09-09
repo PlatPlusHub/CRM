@@ -405,6 +405,14 @@ Requires:
 
 Severity: warning
 
+## booking_item_reassigned
+
+Created whenever responsibility moves away from an occupied booking-item owner field. Requires previous/new owners, actor, reason, and time. Severity: warning.
+
+## finance_approval_requirement_withdrawn
+
+Created when an authorized actor withdraws a still-pending finance requirement. Requires actor, reason, previous/new state, and closure of the pending approval request. Severity: critical.
+
 ---
 
 # Passenger Events
@@ -420,6 +428,22 @@ Severity: info
 ## passenger_passport_expiry_warning
 
 Severity: warning
+
+## booking_item_passenger_linked
+
+Created when a passenger joins a booking-item manifest. Severity: info.
+
+## booking_item_passenger_replaced
+
+Created when a manifest row changes passenger. Requires previous/new passenger and, after issue, correction reason and actor. Severity: warning.
+
+## booking_item_passenger_removed
+
+Created when a passenger leaves a booking-item manifest. After issue, requires correction reason and actor. Severity: warning.
+
+## document_legal_hold_placed / document_legal_hold_released
+
+Created for each legal-hold transition with actor and reason. Both are critical because they change destruction eligibility.
 
 ---
 

@@ -109,6 +109,10 @@ Finance approval may be based on:
 
 The booking item cannot proceed past the controlled execution gate without finance approval.
 
+A still-pending finance-approval requirement may be withdrawn deliberately by an authorized finance approver, with a fresh reason and server-stamped actor/time. The pending approval request is cancelled in the same transaction. A granted approval, executed service, or locked cost is historical truth and cannot be withdrawn through this operation.
+
+The passenger manifest becomes immutable when a booking item reaches `issued`. Post-issue corrections use the dedicated manifest-correction capability and must record a fresh reason, actor, time, and link/replace/remove event.
+
 ---
 
 # Cancellation And Refund

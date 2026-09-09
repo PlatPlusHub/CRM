@@ -75,6 +75,10 @@ After issuance and execution, the exchange rate is locked.
 
 Any later correction must be handled through an Exchange Rate Adjustment.
 
+Every payment records the currency in which value arrived. When that currency differs from the invoice currency, the allocation must also carry a positive exchange rate, the allocated amount in invoice currency, and a server-derived evidence timestamp; a cross-currency payment is never silently treated as same-currency.
+
+Quotation header and line monetary totals are never negative. The header total is derived from its lines and has one enforcement home; callers may not supply or independently maintain a second total.
+
 ---
 
 # Exchange Rate Adjustment

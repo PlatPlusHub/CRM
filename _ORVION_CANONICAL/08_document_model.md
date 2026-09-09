@@ -85,3 +85,9 @@ When a newer document replaces an older one, the older version remains preserved
 
 The system must show current version and previous versions according to permission.
 
+---
+
+# Retention And Legal Hold
+
+Retention applies only to superseded document versions under an explicit active per-tenant, per-document-type policy. No policy means retain forever. A document-level legal hold always overrides the policy: held data is excluded both from candidate scanning and from action claiming, so one held tenant cannot abort or stall another tenant's scan. Placing and releasing a hold are authorized, reasoned, server-stamped, event-producing actions. The actual retention periods remain counsel-supplied configuration, not an engineering default.
+

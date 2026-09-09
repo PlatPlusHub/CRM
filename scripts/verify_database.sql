@@ -5,7 +5,7 @@
 -- freshly reset database: raises an exception on the first broken invariant, otherwise prints
 -- "ALL CHECKS PASSED". CI-able: a non-zero exit signals a regression.
 --   docker exec -i <db> psql -U postgres -d postgres -f - < scripts/verify_database.sql
--- Expected values track the frozen baseline: 77 public base tables, 71 catalog types, 611 catalog
+-- Expected values track the frozen baseline: 77 public base tables, 71 catalog types, 618 catalog
 -- values (565 + 4 refund lifecycle events registered by 202607049800, audit 2026-08-10; + 14
 -- related_entity_type values seeded by 202607050700 / SPEC-130, which also added the 68th type).
 -- NOTE (2026-08-29, GOV-5): this comment said "74 public base tables" while CHECK 2 eighteen lines
@@ -125,7 +125,9 @@ begin
     -- _dead_lettered). `app.record_event` REFUSES an unregistered code, so those three are not
     -- decoration: without them every delivery path fails closed at runtime.
     -- The pin moves with the seed; the check is not weakened.
-    if n <> 611 then raise exception 'CHECK 6b FAILED: expected 611 catalog_values, found %', n; end if;
+    -- 611 -> 618: PAX-6 registered three manifest-change events, BOOK-8/BOOK-9 one event each,
+    -- and RET-1/RET-2 two legal-hold transition events.
+    if n <> 618 then raise exception 'CHECK 6b FAILED: expected 618 catalog_values, found %', n; end if;
 
     -- 7. Referential Action Standard: every public FK is restrict/no-action, except the documented
     --    exceptions (users.auth_user_id set null; 3 auth-support cascades to auth.users).
@@ -173,6 +175,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (77 tables, RLS + policies, resolver + read-scope model, 71/611 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (77 tables, RLS + policies, resolver + read-scope model, 71/618 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

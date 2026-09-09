@@ -98,3 +98,5 @@ Initial plan limits:
 | API | No | Read Only | Full |
 
 These limits are product defaults and may later become configurable per subscription contract.
+
+Database semantics (AUDIT-2 / PD-23 closure, 2026-09-09): the six numeric metrics are stored in `feature_entitlements.limit_value`; `NULL` is the sole representation of no ceiling, including Enterprise "Unlimited" and "Custom". Negative and large sentinel values are forbidden by convention and regression guard. Numeric ceilings are readable through `app.plan_limit` but are deliberately **not enforced** while pricing is provisional: `usage_counters` has no producer or reader. Boolean feature availability remains independently enforced through `app.plan_allows` and `app.has_permission`. Numeric enforcement is a later pricing-activation capability, triggered only when pricing is finalized or a real tenant approaches a ceiling; it must distinguish current-state limits from period consumption.

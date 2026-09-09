@@ -61,7 +61,6 @@ Important business tables include archive fields:
 - archived_at
 - archived_by
 - archive_reason
-
 Events are immutable and never archived as normal business action.
 
 Operational ownership fields should be applied consistently to work records:
@@ -1449,6 +1448,10 @@ Core fields:
 - document_type_code
 - title
 - current_version_id nullable
+- legal_hold_active boolean — default false; when true, retention scan and claim both skip the document
+- legal_hold_reason nullable — required while a hold is active
+- legal_hold_changed_at nullable — server-stamped on each transition
+- legal_hold_changed_by nullable — tenant-qualified user FK, server-derived on each transition
 - lifecycle_status_code
 - is_confidential boolean
 - expires_at nullable
