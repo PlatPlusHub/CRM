@@ -39,11 +39,11 @@ Open owner decisions — **MAIL-1**, **RET-1**, **AUDIT-2**, **PD-23**, **FA-2**
 
 Last Completed: **Batch 6 slice 11 -- `customers` (2026-09-09).** `20260909060754` closed the customer-surface findings; evidence: `session-2026-09-09-batch6-slice11-customers.md`.
 
-Narrative: `session-2026-09-09-batch6-slice11-customers.md`
+Narrative: `session-2026-09-09-slice11-bootstrap-reconciliation.md`
 
-Current session blocker: none. Dedicated `supabase-primary` access was restored and repository, local and Primary parity was proven live; Slice 11 is complete.
+Current session blocker: **local recovery required** (2026-09-09 independent audit bootstrap). Primary and repository have 210 migrations; local was observed at 204. Windows excludes ports 54311–54410, preventing Docker from binding 54322. Backup retained; local stack is stopped after failed recreation. Current local parity and fresh tests are UNPROVEN. Evidence: `session-2026-09-09-slice11-bootstrap-reconciliation.md`.
 
-Next capability: **the n8n notification-dispatch workflow, which P3 unblocked** -- its contract is `app.claim_notification_deliveries` / `app.record_notification_delivery_result`, and it needs MAIL-1 answered first because it is the half that actually sends. Batch 6 slice 12 remains ranked by the selector; do not begin it in this unit. Then **ENTRY-1**, **DELIV-1**, **GOV-20**, **CUST-6**, **DOC-LC-3**, **PH8-2**, then the RBAC-6 class. `MASTER_EXECUTION_PLAN.md` owns the order.
+Next capability: **restore local Windows/Docker networking, rebuild from repository migrations and prove parity; then resume the requested independent Slice-11 customer audit.** Do not begin Slice 12 or notification workflows in this unit. `MASTER_EXECUTION_PLAN.md` owns subsequent programme order.
 
 The workflow build steps remain preserved and unchanged in `MASTER_INTEGRATION_CATALOG.md §2/§2a`.
 
