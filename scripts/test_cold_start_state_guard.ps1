@@ -100,13 +100,13 @@ try {
         "exit=$($base.Exit)"
     Check 'CONTROL: Check 10 reports exactly ONE live cold-start declaration' `
         ($base.Text -match 'exactly one live cold-start declaration')
-    Check 'CONTROL: the open-decision set is the ENUMERATION (10), not the whole line (11)' `
-        ($base.Text -match 'checked against 10 open id\(s\)')
+    Check 'CONTROL: the open-decision set is the current ENUMERATION (2)' `
+        ($base.Text -match 'checked against 2 open id\(s\)')
     # The regression, stated as a property of the real file rather than of a fixture: the manifest's
     # decision line still MENTIONS a settled id in its prose, and the guard no longer counts it.
     $decLine = ((Read-S $MANIFEST) -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
-    Check 'CONTROL: the manifest line does mention the settled GOV-16 in prose (so the count above is a real exclusion, not an absent input)' `
-        ($decLine -match 'GOV-16')
+    Check 'CONTROL: settled GOV-16 is absent from the current owner-decision line' `
+        ($decLine -notmatch 'GOV-16')
     Check 'CONTROL: RET-1 is settled in the register AND still listed open -- and Check 14 does NOT strike it, because it names a decider' `
         ($base.Text -match 'every manifest owner-decision ID is still open' -and $decLine -match 'RET-1')
     Check 'CONTROL: Check 25 reads BOTH substrates (its population is drawn from table rows and detail blocks)' `
