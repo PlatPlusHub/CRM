@@ -16,7 +16,7 @@ function Step($Title, [scriptblock]$Cmd) {
 
 Step "winget upgrades (workstation tools)" {
     if (Get-Command winget -ErrorAction SilentlyContinue) {
-        foreach ($id in @("Git.Git", "OpenJS.NodeJS.LTS", "Docker.DockerDesktop", "Python.Python.3.12", "Microsoft.VisualStudioCode")) {
+        foreach ($id in @("Git.Git", "GitHub.cli", "OpenJS.NodeJS.LTS", "Docker.DockerDesktop", "Python.Python.3.12", "Microsoft.PowerShell", "Microsoft.VisualStudioCode")) {
             winget upgrade --id $id -e --accept-source-agreements --accept-package-agreements 2>&1 | Out-Null
         }
     }
@@ -25,6 +25,10 @@ Step "winget upgrades (workstation tools)" {
 
 Step "npm global (Claude Code)" {
     npm update -g @anthropic-ai/claude-code 2>&1 | Out-Null
+}
+
+Step "npm global (Codex CLI)" {
+    npm update -g @openai/codex 2>&1 | Out-Null
 }
 
 Step "Supabase CLI (project-local via npx - nothing global to update)" {

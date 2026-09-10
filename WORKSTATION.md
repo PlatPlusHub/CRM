@@ -39,17 +39,17 @@ Desktop once when prompted. When `prepare` reports a clean `doctor`, return to `
 you place in the repo's scripts once cloned. This is the standard Windows bootstrap pattern (Chocolatey,
 Scoop, rustup). The script is tiny and reviewable in the repo.
 
-## Already have the repo? — Recovery & Maintenance launcher
+## Already have the repo? — one-click preparation
 
-Double-click **`workstation.cmd`** in the repo root. It is **recovery-first**: if base tools are
-missing it offers to run recovery immediately; otherwise it shows the maintenance menu —
-**Prepare/Repair · Verify · Update · Cleanup · Decommission** — with a GitHub-sync header. `prepare.ps1`
-refreshes PATH in-session, so no shell restart is ever needed.
+Double-click **`workstation.cmd`** in the repo root. It immediately runs the complete idempotent
+prepare/repair flow and final verification. `prepare.ps1` refreshes PATH in-session so a newly
+installed tool is available to later steps without restarting the shell. It returns non-zero when a
+required component remains unavailable.
 
-- **Terminal / no double-click:** run `./.workstation/prepare.ps1` (recover/repair) or `doctor.ps1` (verify).
+- **Terminal / no double-click:** run `./workstation.cmd`, `./.workstation/prepare.ps1` (recover/repair), or `doctor.ps1` (verify).
 - **AI agent controlling Windows:** call the `.workstation/*.ps1` scripts directly — **not** the menu.
 
-`bootstrap.ps1` (remote entry) and `workstation.cmd → .workstation/menu.ps1` (local entry) are both thin
+`bootstrap.ps1` (remote entry) and `workstation.cmd → .workstation/prepare.ps1` (local entry) are both thin
 — they only clone/launch. The real implementation lives in `.workstation/*.ps1`. No duplicated logic,
 no second authority.
 
@@ -65,12 +65,12 @@ is permanent).
 | Concern | Source of truth |
 |---|---|
 | Remote bootstrap (fresh machine, pre-clone) | `bootstrap.ps1` (root; served via GitHub raw URL) |
-| Recovery & Maintenance launcher (human) | `workstation.cmd` (root) → `.workstation/menu.ps1` |
+| One-click local preparation (human) | `workstation.cmd` (root) → `.workstation/prepare.ps1` |
 | What to install (tools, extensions, MCPs, plugins) + why | `.workstation/manifest.md` |
 | Recover / provision the environment (real logic) | `.workstation/prepare.ps1` |
 | Verify the environment (real logic) | `.workstation/doctor.ps1` |
 | Decommission (remove ORVION from a retired machine) | `.workstation/decommission.ps1` |
-| MCP server configuration | `.mcp.json` (repo root; secrets via env vars, never committed) |
+| Project MCP configuration | `.mcp.json` (Claude project scope) + `prepare.ps1` Codex registration; secrets/OAuth never committed |
 | Claude engineering-awareness wiring (expected shape) | `.claude/awareness.json` (tracked) — applied by `.workstation/claude-awareness.ps1 -Apply`, verified by `-Verify`; `.claude/settings.json` itself stays machine-local |
 | Known blockers | `.workstation/reports/INCIDENT_*.md` |
 | Current install status | `.workstation/reports/INSTALLATION_STATUS.md` |

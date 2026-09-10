@@ -1,8 +1,7 @@
 {
-  "// note": "Recommended extensions for ORVION. See .workstation/manifest.md (SSOT) for rationale. Copilot Chat is built into VS Code; not listed. Azure/Codespaces extensions are intentionally unwanted — ORVION is a local Supabase/Postgres project.",
+  "// note": "Required and optional extensions for ORVION. See .workstation/manifest.md (SSOT) for rationale. Copilot Chat is optional and built into VS Code. Azure/Codespaces extensions are intentionally unwanted because ORVION is a local Supabase/Postgres project.",
   "recommendations": [
     "anthropic.claude-code",
-    "github.copilot",
     "openai.chatgpt",
     "supabase.vscode-supabase-extension",
     "mtxr.sqltools",

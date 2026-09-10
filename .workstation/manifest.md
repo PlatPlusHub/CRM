@@ -1,112 +1,108 @@
 # ORVION Workstation Manifest
 
-**This file is the single source of truth for what the ORVION engineering workstation contains.**
-`prepare.ps1` provisions exactly this list; `doctor.ps1` verifies it. Every entry earns its place by
-measurable value to ORVION or to the primary engineering agent (Claude Code). Nothing is listed
-"because it exists."
+Status: Living-Authoritative
+Last curated: 2026-09-10
+Platform: Current supported Windows 11, x64
 
-Last curated: 2026-08-21 · Platform: Windows 11 + PowerShell · Primary agent: Claude Code
+This file is the single source of truth for what the ORVION engineering workstation needs and why.
+`.workstation/prepare.ps1` provisions it and `.workstation/doctor.ps1` verifies it. Observed versions
+are evidence, not pins; package identities and `package-lock.json` are the reproducible contracts.
 
-Every version below was re-verified by executing the tool on 2026-08-21 (remediation pass). Values are recorded only when observed; anything not observable from the shell is marked as such rather than carried forward on trust.
+## 1. Required environment and tools
 
----
+| Component | Installation source | Why required | Live evidence 2026-09-10 | Bootstrap coverage |
+|---|---|---|---|---|
+| Windows 11 x64 | Laptop/Windows Update | Supported Docker and agent host | Build 26200, x64 | Prerequisite; doctor verifies |
+| Windows Package Manager | Microsoft App Installer | Official package installer | winget 1.29.290 | Prerequisite; bootstrap fails clearly if absent |
+| WSL 2 | `wsl --install --no-distribution` | Docker Linux-container backend | WSL 2.7.11, Docker distro running | Detected; admin/reboot boundary reported |
+| Git | winget `Git.Git` | Repository is durable truth | 2.55.0.windows.4 | Installed and verified |
+| GitHub CLI | winget `GitHub.cli` | GitHub identity and reachability | 2.100.0, authenticated | Installed; OAuth login external |
+| Node.js LTS / npm / npx | winget `OpenJS.NodeJS.LTS` | Dependencies, Supabase, MCPs, agent CLIs | Node 24.19.0, npm/npx 11.17.0 | Installed and verified |
+| Docker Desktop / Compose | winget `Docker.DockerDesktop` | Local Supabase/Postgres | Engine 29.7.2, Compose 5.5.1 | Installed, launched, readiness verified |
+| Python 3.12 | winget `Python.Python.3.12` | Repository and agent scripts | 3.12.10, pip 25.0.1 | Installed and verified |
+| PowerShell 7 | winget `Microsoft.PowerShell` | Repository scripts and guards | 7.6.6 | Installed and verified |
+| VS Code | winget `Microsoft.VisualStudioCode` | Editor and agent host | 1.136.2 | Installed and verified |
+| Claude Code CLI | npm `@anthropic-ai/claude-code` | Supported engineering client | 2.1.260 | Installed only when missing; auth external |
+| Codex CLI | npm `@openai/codex` | Supported engineering client | 0.153.4 | Installed only when missing; auth external |
+| Supabase CLI | project dev dependency `supabase` | Migration reset/test and local stack | package range `^2.109.0`; dependency missing before repair | Restored by `npm ci`; invoked project-locally |
+| PostgreSQL client | Supabase database container | SQL tests and diagnostics | Host `psql` absent; container client operational | Docker/Supabase supplies it; no duplicate host install |
 
-## 1. Base tools (required — ORVION cannot be built without these)
+Gemini CLI and an n8n CLI are not required: neither is installed, no repository workflow invokes
+them, and n8n is accessed through remote MCP. A host PostgreSQL install is unnecessary because the
+repository deliberately executes `psql` in the local Supabase container.
 
-| Tool | winget id | Why it earns its place | Verified |
-|---|---|---|---|
-| Git | `Git.Git` | version control; the repo is the SSOT | ✅ 2.55.0.windows.4 (2026-08-21) |
-| Node.js LTS | `OpenJS.NodeJS.LTS` | runs `npx supabase`, tooling | ✅ v24.19.0 (2026-08-21) |
-| Docker Desktop | `Docker.DockerDesktop` | local Supabase/Postgres stack (`supabase start`) | ✅ 29.6.2 (2026-08-21) |
-| Python 3 | `Python.Python.3.12` | base scripting dependency | ✅ 3.12.10 (2026-08-21) |
-| PowerShell 7 | `Microsoft.PowerShell` | runs `scripts/*.ps1` incl. the consistency guard | ✅ 7.6.5 (2026-08-21) |
-| VS Code | `Microsoft.VisualStudioCode` | editor host for all agents/extensions | ⚠️ 1.129 as previously recorded — not re-verifiable from this shell; treat as unconfirmed |
-| Supabase CLI | via `npx supabase` (no global install) | migrations, `db reset`, `test db` | ⚠️ `supabase/.temp/cli-latest` reports `v2.115.0`, but that marker is the *latest available*, not proof of the resolved binary. `npx supabase db reset` and `npx supabase test db` both ran successfully 2026-08-21 (91 migrations, 10 test files) — capability verified by effect, exact version unconfirmed |
+## 2. Required VS Code extensions
 
-> Supabase CLI is intentionally **not** installed globally — `npx supabase` pins per-project and avoids a stale global. Verified working this session.
+`prepare.ps1` installs and `doctor.ps1` verifies:
 
-## 2. VS Code extensions
-
-**Auto-installed by `prepare.ps1`** — the minimum ORVION-essential set (a clean, intentional recovery
-environment, NOT a copy of anyone's editor):
-
-| Extension | id | Why it earns auto-install |
-|---|---|---|
-| Claude Code | `anthropic.claude-code` | primary engineering interface — non-negotiable |
-| Supabase | `supabase.vscode-supabase-extension` | ORVION *is* Supabase |
-| SQLTools | `mtxr.sqltools` | ORVION is SQL/Postgres-heavy |
-| PowerShell | `ms-vscode.powershell` | workstation scripts + shell are `.ps1` |
-| Docker | `ms-azuretools.vscode-docker` | local Supabase stack runs on Docker |
-
-**Recommended, NOT auto-installed** (owner/personal tools — offered via `.vscode/extensions.json` for
-one-click add, but a fresh recovery does not force them): `github.copilot`, `openai.chatgpt` (Codex).
-Not required for ORVION development or recovery.
-
-Recommended **removals** (installed but fail Earn-It for ORVION — a local Supabase/Postgres project; user-global, so removal is owner-confirmed, not auto):
-
-| Extension | Why it fails |
+| Extension | Purpose |
 |---|---|
-| `ms-azuretools.vscode-azure-github-copilot` | Azure — ORVION has no Azure surface |
-| `ms-azuretools.vscode-azure-mcp-server` | Azure MCP — irrelevant |
-| `ms-azuretools.vscode-azureresourcegroups` | Azure resource mgmt — irrelevant |
-| `github.codespaces` | cloud dev environments — ORVION is local |
-| `continue.continue` | already removed — overlapped the primary agent |
+| `anthropic.claude-code` | Claude Code client |
+| `openai.chatgpt` | Codex/ChatGPT IDE client |
+| `supabase.vscode-supabase-extension` | Supabase tooling |
+| `mtxr.sqltools` | PostgreSQL/SQL inspection |
+| `ms-vscode.powershell` | PowerShell editing |
+| `ms-azuretools.vscode-docker` | Docker container inspection |
 
-Kept as owner conveniences (harmless, not part of the reproducible set): gitlens, errorlens, prettier, eslint, markdown/yaml tooling, python support, path-intellisense, etc. — the owner's editor, out of scope for the ORVION manifest.
+GitHub Copilot and personal editor extensions are optional. Azure, Codespaces, and unrelated
+extensions are neither installed nor removed by bootstrap.
 
-## 3. Claude plugins
+## 3. MCP inventory and authentication
 
-| Plugin | Earn-It verdict |
+The four project MCP definitions live in `.mcp.json`, which Claude loads at project scope.
+`prepare.ps1` idempotently mirrors them into Codex because Codex uses user configuration rather than
+importing `.mcp.json`. A mismatching Codex definition is reported, never silently overwritten.
+
+| Server | Clients | Connection/runtime | Authentication | Bootstrap status |
+|---|---|---|---|---|
+| `context7` | Claude, Codex | stdio `npx -y @upstash/context7-mcp` | None | Defined, registered, enumerated |
+| `postgres-local` | Claude, Codex | stdio Node MCP to local port 54322 | Local-dev credentials only | Defined, registered, usable with stack |
+| `supabase-primary` | Claude, Codex | official remote MCP scoped to Primary ref | Browser OAuth; no PAT in repo | Defined and registered; auth separate |
+| `n8n` | Claude, Codex | `https://plat.app.n8n.cloud/mcp-server/http` | OAuth/account authorization | Defined and registered; auth separate |
+| `github` | Codex; shell uses `gh` | GitHub Copilot MCP endpoint | `GITHUB_PAT_TOKEN` env name; value external | Registered; variable presence checked |
+
+Claude.ai account connectors, Codex bundled MCPs (`node_repl`, computer use), and bundled/account
+plugins are client-managed or account-managed. They are not repository dependencies and private
+profiles are never copied. Supported client login/sync flows restore that state.
+
+## 4. Agent integrations
+
+- `.claude/awareness.json` is the tracked Claude hook/permission expectation;
+  `claude-awareness.ps1 -Apply` merges it without replacing personal settings.
+- `AGENTS.md` is the cross-client instruction authority; no duplicate agent rule file is generated.
+- Codex bundled plugins and account connectors restore after `codex login`; scripts do not pin
+  client-internal runtime paths or copy `%USERPROFILE%\.codex`.
+- `claude plugin list` reported no installed plugins on 2026-09-10, so no Claude plugin is required.
+
+## 5. One-click flow and safety
+
+`workstation.cmd` invokes `.workstation/prepare.ps1` directly. The provisioner:
+
+1. detects or installs base tools through official winget package IDs;
+2. refreshes current-process PATH after installations;
+3. verifies WSL 2 and reports the unavoidable elevation/reboot boundary;
+4. installs missing agent CLIs and runs `npm ci` from the lockfile;
+5. installs only required VS Code extensions;
+6. validates `.mcp.json` and registers missing Codex MCPs without secrets;
+7. applies Claude repository-awareness wiring;
+8. starts Docker Desktop if needed and waits for readiness;
+9. runs `doctor.ps1` and returns non-zero for any required failure.
+
+Repeated runs detect valid installations and never uninstall, overwrite credentials, or replace
+unrelated configuration. OAuth/browser authorization, first-time WSL elevation plus reboot, and
+Docker Desktop's first-run agreement are the legitimate manual boundaries.
+
+## 6. Scripts
+
+| Script | Purpose |
 |---|---|
-| GitKraken Hooks | **Keep** — provides durability (auto-commit). Improve commit-message convention (currently `"y"`). |
-| Ponytail | **Keep (as-used)** — second-opinion review flow; occasional but real value |
-| claude-mem | **Disabled** — `failed to load: cache-miss` + Windows worker never healthy; redundant with file-memory + self-describing repo. Confirmed `false` in global `.claude/settings.json` (2026-07-13) — its dead `UserPromptSubmit` hook was timing out at 60s. Re-enable only if upstream ships a Windows fix. |
-| Impeccable (`pbakaus/impeccable`) | **Deferred** — frontend design skill pack (typography/color/motion, UI critique, browser Live Mode). ORVION is backend-only (SQL migrations + RPCs, no UI surface), so it has nothing to act on. Adopt when the first application UI is built — same trigger as Playwright (§4). |
+| `prepare.ps1` | One-click provisioning and final verification |
+| `doctor.ps1` | Read-only verification with authoritative exit code |
+| `update.ps1` | Upgrade the required tools and agents, then verify |
+| `menu.ps1` | Optional maintenance menu; not the setup entry point |
+| `cleanup.ps1` | Remove only known transient workstation artifacts |
+| `decommission.ps1` | Confirmation-gated ORVION-specific removal |
+| `claude-awareness.ps1` | Additive apply/verify of Claude repository wiring |
 
-## 4. MCP servers (`.mcp.json` at repo root)
-
-| MCP | Earn-It verdict |
-|---|---|
-| Postgres MCP (`postgres-local` in `.mcp.json`) | **Adopted** — `@modelcontextprotocol/server-postgres` pointed at the local Supabase Postgres; the one MCP that measurably speeds the agent's ORVION work (direct schema/SQL/RLS vs `docker exec`). Uses the standard local dev string (`127.0.0.1:54322`, non-secret); a hosted/remote target would move the string to an env var — never commit a real secret. |
-| Context7 | **Keep** — connected, near-zero maintenance, occasional doc lookups |
-| `supabase-primary` (`.mcp.json`, added 2026-08-15, **switched local-stdio/PAT → official Remote MCP/OAuth 2026-08-15**) | **Adopted and VERIFIED WORKING (2026-08-15).** Official Supabase-hosted **Remote MCP server**, `"type": "http"`, `"url": "https://mcp.supabase.com/mcp?project_ref=vrvtsxexkiiiivlkdxzp"` (Streamable HTTP transport, project-ref-scoped to the authoritative Primary Supabase project; full topology `MASTER_INTEGRATION_CATALOG.md §0`). Config verified against official docs (`supabase.com/docs/guides/ai-tools/mcp`) 2026-08-15. **No `SUPABASE_ACCESS_TOKEN` / PAT of any kind — this entry has no `env` block.** Authenticates via OAuth 2.1 + dynamic client registration: the MCP client opens a browser, the owner signs in and authorizes (use the `platplustours@gmail.com` account — the Primary project's owning account per the topology table). **`list_migrations` confirmed successful (2026-08-15)** — a real authenticated Management API call, returning 88 migrations through `202607049900`, and `get_project_url` confirms the live ref matches `vrvtsxexkiiiivlkdxzp` exactly; Secondary (via `claude_ai_Supabase`, ref `brplkqmbzffpxqgkkdzo`) confirmed simultaneously reachable in the same session. **Known intermittency (2026-08-15):** the first two OAuth attempts that same session (initial auth, then a full disconnect + fresh re-auth) both produced `Unauthorized. Please provide a valid access token...` on every data-access tool while `get_project_url` kept succeeding — matching upstream report `supabase/supabase#38926`. A *third* `/mcp` disconnect+reauthenticate cycle then succeeded with no config change. **Treat as flaky, not fixed:** a new session must independently re-verify with a real data call (`list_migrations`, not just `get_project_url`) before trusting Primary is reachable; if `Unauthorized` recurs, try one more full disconnect+reauth cycle before escalating — do not fall back to a PAT without explicit owner authorization. **Replaces the prior local `npx @supabase/mcp-server-supabase` stdio server + PAT approach entirely** (PAT dependency removed, not parallel). |
-| `n8n` (`.mcp.json`, **project scope, added 2026-08-20**) | **Adopted — registration fixed AND MCP authentication VERIFIED WORKING (2026-08-20).** Proven by effect, not by a health indicator: five successful read-only n8n MCP calls against `plat.app.n8n.cloud` (`search_workflows`, `list_credentials`, `search_workflow_executions`, `search_projects`, `list_workflow_tags`) returned real instance data, scoped to the personal project `Platinum Plus Tours <platplustours@gmail.com>` (`VUZBcB1VwpIXk3h2`). No OAuth prompt; nothing in n8n was created, modified, or executed. **Scope of this claim: the n8n MCP connection/session only.** It says nothing about the Google OAuth or Postgres *credentials stored inside n8n* — neither was tested, and neither has been observed to authenticate. n8n's official MCP server, `"type": "http"`, `"url": "https://plat.app.n8n.cloud/mcp-server/http"` (non-secret endpoint, exactly like `supabase-primary` — no credential is committed); grants workflow create/update/execute + execution-read, and is available on **all n8n editions, so no paid upgrade is required**. **Root cause it fixes (verified 2026-08-20):** the server had been registered in `~/.claude.json` under *local scope for `C:/Users/Platinum Plus/Documents/GitHub/ORVION`* — the pre-migration path, which no longer exists (the repository was intentionally migrated `Shehabhub/ORVION` → `PlatPlusHub/CRM`, local `.../GitHub/CRM`). From the current directory `claude mcp get n8n` reported "No MCP server named n8n", so **no** fresh session could ever load its tools — the 2026-08-17 "a fresh session is the only remaining prerequisite" diagnosis was wrong. That orphaned entry was removed and the server re-registered at **project scope so the configuration travels with the repository** into every future session and clone. **Approved and connected 2026-08-20:** approval is granted by listing the server in `enabledMcpjsonServers` in `.claude/settings.local.json` (per-machine, not versioned — a fresh clone re-approves there, `.mcp.json` carries the registration itself); `claude mcp get n8n` then reports **`✔ Connected`** with no OAuth prompt, i.e. the stored authorization survived the scope move. **Remaining prerequisite: a FRESH SESSION.** MCP tool registries are built at session start, so a server registered mid-session never exposes its tools — independently confirmed 2026-08-20 (a tool search for n8n tools returned nothing while `claude mcp get n8n` said Connected). **`✔ Connected` is a health check, not proof the tools work (`AGENTS.md §2`):** the next session must confirm with a real n8n data call before trusting it, and must still independently re-verify the two owner-reported-only n8n credentials (Google OAuth2, Postgres) per `MASTER_INTEGRATION_CATALOG.md §3/§4`. |
-| GitHub push authentication (`origin` = `PlatPlusHub/CRM`) | **RESOLVED — re-verified 2026-08-21.** Push to `PlatPlusHub/CRM` works. Evidence, not assertion: `git ls-remote origin main` and local `HEAD` were identical at `0cdcfd25b36f14de95093ca46e6d8b04bb20f44a` at the start of the 2026-08-21 remediation pass, and the pass pushed further commits to the same remote. *(This row previously cited `c5590c4`, correct when written on 2026-08-20 and superseded since — the specific hash is evidence of a successful push at a point in time, not a value to keep current.)* No credential, helper, or remote was changed by the session recording this; the resolution is recorded, not performed. Nothing is local-only. *(Historical diagnosis, retained — accurate when written, superseded by the evidence above.)* Git uses credential helper `manager` (Git Credential Manager, set in `C:/Program Files/Git/etc/gitconfig`); Windows Credential Manager held `git:https://github.com` with **User `Shehabhub`** — the pre-migration account. Authentication *succeeded* and read worked (`git ls-remote` returned refs), but `git push` failed **403 Permission to PlatPlusHub/CRM.git denied to Shehabhub** — an *authorization* failure, not a remote-URL or migration error. `gh` CLI is not installed; no `GH_TOKEN`/`GITHUB_TOKEN` is set; a non-destructive `git -c credential.https://github.com.username=PlatPlusHub push --dry-run` with `GCM_INTERACTIVE=never` failed with "Cannot prompt", proving **no PlatPlusHub git credential is cached** and interactive sign-in is genuinely required. (`git config user.name=Shehabhub` is commit *authorship* only and is not the cause; the `GitHub - https://api.github.com/PlatPlusHub` credential is a Desktop/API-style entry git's HTTPS helper does not read.) The two remedies offered at the time — (A) delete the `git:https://github.com` credential (`cmdkey /delete:LegacyGeneric:target=git:https://github.com`) then `git push` and sign in as **PlatPlusHub**; or (B) on github.com grant **Shehabhub** the **Write** role on `PlatPlusHub/CRM` — are recorded for reference only; **no owner action is outstanding**, and which of the two took effect was not observed by any agent session. If a 403 ever recurs, start from this diagnosis. |
-| Serena / GitHub / Playwright | **Deferred** — Serena (little payoff on a SQL/RPC repo), GitHub (gh CLI suffices), Playwright (no app UI to drive yet) |
-
-## 5. Deliberately excluded (with reason)
-- `opencode-ai` (global npm) — third-party AI CLI, not the primary agent, not an owner tool. Removed.
-- Claude Mem worker — Windows blocker; see `reports/INCIDENT_CLAUDE_MEM_WINDOWS.md`.
-
----
-
-**Reversibility:** every removal here is reinstallable (`winget`, `npm i -g`, `code --install-extension`, `claude plugin`). Nothing removed is irrecoverable.
-
----
-
-## 6. Scripts (`.workstation/*.ps1`) — what each is and who runs it
-
-The `.ps1` files hold all logic. Two thin entry points feed them: the **remote** `bootstrap.ps1`
-(root; run via `irm …/bootstrap.ps1 | iex` on a bare machine — ensures git, clones the repo, hands off
-to `prepare.ps1`) and the **local** `workstation.cmd` → `.workstation/menu.ps1` — a **Recovery & Maintenance** launcher
-(NOT a dev dashboard). It is **recovery-first**: on launch, if base tools are missing it offers to run
-recovery immediately; otherwise it shows maintenance — Prepare/Repair, Verify, Update, Cleanup,
-Decommission — with a GitHub-sync header. The menu only dispatches / reads state; no logic lives in it.
-
-**5.1 compatibility (hard constraint):** a fresh Windows machine runs **Windows PowerShell 5.1**, which reads a no-BOM `.ps1` as ANSI (not UTF-8) and lacks PS7-only syntax. All workstation scripts MUST be **pure ASCII** (no em dashes / box-drawing / smart-quotes) and avoid PS7-only syntax (ternary `?:`, `&&`, `||`, `??`). Verify with `powershell.exe` (5.1), not only `pwsh` 7.
-
-`prepare.ps1` is intentionally a single linear script (~60 lines) -
-not split into modules, because that would add orchestration overhead without earning it.
-
-| Script | Purpose | When to run | Human? | AI agent? | Auto-called by | Idempotent / safe to repeat |
-|---|---|---|---|---|---|---|
-| `prepare.ps1` | **Recover/provision the environment:** install missing base tools (winget) + VS Code extensions + **Claude Code CLI** (npm global) + **project deps** (`npm install` → restores `node_modules` from `package-lock`); point at MCP config; refresh PATH in-session; then verify. Fault-tolerant — continues past failures and prints a summary + the manual re-provisions (Claude login, secrets, stack start). | Once on a fresh machine (menu → **1 Prepare**); re-run to **retry** failed items. | Yes (`workstation.cmd` → 1) | Yes (call `prepare.ps1` directly) | — | ✅ installs only what is missing |
-| `doctor.ps1` | Verify the environment (read-only): tools on PATH, key repo files, Docker engine. | Anytime to check health; after `prepare`. | Yes (`workstation.cmd` → 2) | Yes | `prepare.ps1`, `update.ps1` (run it at the end) | ✅ read-only, changes nothing |
-| `menu.ps1` | Interactive menu — the single human entry; invokes the scripts above. Refuses non-interactive input. | Whenever a human wants to run any workstation action. | Yes (via `workstation.cmd`) | No (call the `.ps1` scripts directly) | `workstation.cmd` | ✅ no logic of its own |
-| `update.ps1` | Periodic maintenance: `winget upgrade` the workstation tools + `npm update -g` Claude Code, continue past failures, print a summary, then verify. (This is the "maintenance" command — update + verify in one; no separate `maintenance.ps1`.) | Occasionally (e.g. monthly). | Yes (run directly) | Optional | — (calls `doctor.ps1` at the end) | ✅ upgrades are no-ops if current |
-| `cleanup.ps1` | Remove only transient/obsolete artifacts: retired-experiment env vars, gitignored generated logs, stray backups. Never touches committed files, migrations, or canon. | Rarely, if the tree accumulates transient logs. | Yes (run directly) | Optional | — | ✅ safe; skips what is absent |
-| `decommission.ps1` | **Secure decommission** — remove ORVION from this machine (local repo + ORVION env vars; stops the local stack) for retire/sell/replace. Never touches general tools or unrelated data. Recoverable via the bootstrap (GitHub is permanent). | Only when retiring/selling this machine. | Yes (confirmation: type `DECOMMISSION`) | Optional | menu option 5 | ✅ but destructive — confirmation-gated |
-
-`menu.ps1` (interactive, human-only — refuses non-interactive input) is reached via `workstation.cmd`;
-it is the one entry point that exposes all four operations, so there are no per-action root launchers
-(Earn-It: one launcher, not four). AI agents call the `.ps1` scripts directly.
+The disabled Claude Mem experiment remains historical evidence in
+`.workstation/reports/INCIDENT_CLAUDE_MEM_WINDOWS.md`; it is not required.

@@ -3,7 +3,7 @@
   Reproduce (or verify) Claude Code's engineering-awareness wiring on this machine.
 
 .DESCRIPTION
-  `.claude/settings.json` is gitignored on purpose — it is machine-local and personal, and it
+  `.claude/settings.json` is gitignored on purpose - it is machine-local and personal, and it
   carries each engineer's own permission allowlist. But three of its keys are NOT personal: the
   SessionStart awareness hook, the protected-resource `ask` rules, and the `deny` rules that stop a
   schema-changing call reaching the wrong Supabase project. A capability must not silently exist
@@ -35,20 +35,20 @@ $settings = Join-Path $Root '.claude/settings.json'
 $hookFile = Join-Path $Root '.claude/hooks/session-state.ps1'
 
 if (-not (Test-Path $expected)) {
-    Write-Host "[FAIL] .claude/awareness.json missing — the repository cannot state what the wiring should be."
+    Write-Host "[FAIL] .claude/awareness.json missing - the repository cannot state what the wiring should be."
     exit 1
 }
 $want = Get-Content $expected -Raw | ConvertFrom-Json
 
 # The hook script is tracked, so its absence means a broken checkout, not an unwired machine.
 if (-not (Test-Path $hookFile)) {
-    Write-Host "[FAIL] .claude/hooks/session-state.ps1 missing (tracked file) — checkout is incomplete."
+    Write-Host "[FAIL] .claude/hooks/session-state.ps1 missing (tracked file) - checkout is incomplete."
     exit 1
 }
 
 $have = if (Test-Path $settings) {
     try { Get-Content $settings -Raw | ConvertFrom-Json } catch {
-        Write-Host "[FAIL] .claude/settings.json is not valid JSON — fix or delete it, then re-run."
+        Write-Host "[FAIL] .claude/settings.json is not valid JSON - fix or delete it, then re-run."
         exit 1
     }
 } else { $null }
@@ -66,7 +66,7 @@ foreach ($key in @('ask', 'deny')) {
     $haveList = @()
     if ($have -and $have.permissions -and $have.permissions.$key) { $haveList = @($have.permissions.$key) }
     $gap = @($wantList | Where-Object { $haveList -notcontains $_ })
-    if ($gap.Count -gt 0) { $missing += "permissions.$key — $($gap.Count) of $($wantList.Count) rule(s) absent" }
+    if ($gap.Count -gt 0) { $missing += "permissions.$key - $($gap.Count) of $($wantList.Count) rule(s) absent" }
 }
 
 # --- verify ------------------------------------------------------------------------------------
@@ -83,7 +83,7 @@ if (-not $Apply) {
 }
 
 # --- apply -------------------------------------------------------------------------------------
-if ($missing.Count -eq 0) { Write-Host "[ OK ] Claude awareness wiring already present — nothing to change"; exit 0 }
+if ($missing.Count -eq 0) { Write-Host "[ OK ] Claude awareness wiring already present - nothing to change"; exit 0 }
 
 # Work on an ordered hashtable so keys we never touch survive verbatim.
 $out = [ordered]@{}
@@ -94,7 +94,7 @@ if (-not $haveHook) {
     $hooks = [ordered]@{}
     foreach ($p in $out['hooks'].PSObject.Properties) { $hooks[$p.Name] = $p.Value }
     # Append rather than replace: another SessionStart hook on this machine is not ours to remove.
-    # The outer @() is load-bearing — a `| Where-Object` pipeline returns a SCALAR for one match, and
+    # The outer @() is load-bearing - a `| Where-Object` pipeline returns a SCALAR for one match, and
     # ConvertTo-Json then writes "SessionStart": {...} instead of [...], which Claude Code ignores.
     # Caught by running -Apply on a simulated fresh clone; inspection would not have shown it.
     $hooks['SessionStart'] = @(@($hooks['SessionStart']) + @($want.hooks.SessionStart) | Where-Object { $_ })

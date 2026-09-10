@@ -22,15 +22,19 @@ $ErrorActionPreference = "Stop"
 # discarded it and the defect returned. The fix therefore belongs HERE, in a tracked file that
 # recreates the remote, so it survives every future rebuild.
 $RepoUrl = "https://PlatPlusHub@github.com/PlatPlusHub/CRM.git"
-$Target  = Join-Path $HOME "CRM"
+$Target  = Join-Path ([Environment]::GetFolderPath("UserProfile")) "CRM"
 
 Write-Host "== ORVION bootstrap ==  target: $Target"
 
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "winget is unavailable. Install Microsoft's App Installer, then rerun this bootstrap."
+    }
     Write-Host "Git not found - installing via winget..."
     winget install --id Git.Git -e --accept-source-agreements --accept-package-agreements
     # Refresh PATH so git is usable in this same session.
     $env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { throw "Git installation completed but git is not available on PATH." }
 }
 
 if (Test-Path (Join-Path $Target ".git")) {
@@ -44,3 +48,4 @@ else {
 Set-Location $Target
 Write-Host "Handing off to the in-repo provisioner (.workstation\prepare.ps1)..."
 & (Join-Path $Target ".workstation\prepare.ps1")
+exit $LASTEXITCODE

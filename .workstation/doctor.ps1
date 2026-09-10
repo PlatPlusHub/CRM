@@ -1,94 +1,70 @@
-# ORVION Workstation Doctor - read-only verification + diagnostics.
-# Checks tools, key repo files, Docker, tool versions, and GitHub sync (local is disposable -
-# unpushed work is at risk). Changes nothing. Safe to run anytime.
+# ORVION Workstation Doctor - read-only, Windows PowerShell 5.1 compatible, ASCII-only.
 $ErrorActionPreference = "Continue"
 $Root = Split-Path $PSScriptRoot -Parent
 Set-Location $Root
+$Failures = New-Object System.Collections.Generic.List[string]
+$Warnings = New-Object System.Collections.Generic.List[string]
+function Pass($Text) { Write-Host "[ OK ] $Text" }
+function Fail($Text) { Write-Host "[FAIL] $Text"; $Failures.Add($Text) }
+function Warn($Text) { Write-Host "[WARN] $Text"; $Warnings.Add($Text) }
+function Test-RequiredCommand($Name) { $cmd = Get-Command $Name -ErrorAction SilentlyContinue | Select-Object -First 1; if ($cmd) { Pass "$Name -> $($cmd.Path)" } else { Fail "$Name is not on PATH" } }
+function Test-Version($Label, [scriptblock]$Command) { try { $allOutput = & $Command 2>&1; $succeeded = $?; $out = $allOutput | Select-Object -First 1; if ($succeeded -and $out) { Pass "$Label $out" } else { Fail "$Label version command failed" } } catch { Fail "$Label version command failed: $($_.Exception.Message)" } }
 
-function Test-Cmd { param($Name)
-    if (Get-Command $Name -ErrorAction SilentlyContinue) { Write-Host "[ OK ] $Name" } else { Write-Host "[FAIL] $Name" }
+Write-Host ""; Write-Host "========================================="; Write-Host "ORVION WORKSTATION DOCTOR"; Write-Host "========================================="
+Write-Host ""; Write-Host "[Operating environment]"
+$os = Get-CimInstance Win32_OperatingSystem
+Pass "$($os.Caption) build $($os.BuildNumber), $($os.OSArchitecture)"
+Pass "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+foreach ($name in @("git","gh","node","npm","npx","docker","python","pwsh","code","claude","codex")) { Test-RequiredCommand $name }
+if (Get-Command wsl -ErrorAction SilentlyContinue) { wsl --status *> $null; if ($LASTEXITCODE -eq 0) { Pass "WSL 2 available" } else { Fail "WSL installed but not ready" } } else { Fail "WSL is unavailable" }
+
+Write-Host ""; Write-Host "[Versions and capability]"
+Test-Version "git" { git --version }; Test-Version "gh" { gh --version }; Test-Version "node" { node --version }; Test-Version "npm" { npm --version }
+Test-Version "python" { python --version }; Test-Version "docker" { docker --version }; Test-Version "docker compose" { docker compose version }
+Test-Version "pwsh" { pwsh --version }; Test-Version "code" { code --version }; Test-Version "claude" { claude --version }; Test-Version "codex" { codex --version }
+if (Test-Path "node_modules\.bin\supabase.cmd") { Test-Version "supabase" { & "node_modules\.bin\supabase.cmd" --version } } else { Fail "project-local Supabase CLI is missing (run npm ci)" }
+
+Write-Host ""; Write-Host "[Repository dependencies and configuration]"
+foreach ($f in @("README.md","AGENTS.md","GOVERNANCE.md","package.json","package-lock.json","supabase\config.toml",".mcp.json",".vscode\extensions.json",".claude\awareness.json")) { if (Test-Path $f) { Pass $f } else { Fail "$f missing" } }
+npm ls --depth=0 *> $null
+if ($LASTEXITCODE -eq 0) { Pass "npm dependency tree" } else { Fail "npm dependency tree incomplete or invalid" }
+
+Write-Host ""; Write-Host "[Docker]"
+docker info *> $null
+if ($LASTEXITCODE -eq 0) { Pass "Docker Engine ready" } elseif (Get-Command docker -ErrorAction SilentlyContinue) { Fail "Docker installed but engine not ready" }
+
+Write-Host ""; Write-Host "[VS Code extensions]"
+$requiredExtensions = @("anthropic.claude-code","openai.chatgpt","supabase.vscode-supabase-extension","mtxr.sqltools","ms-vscode.powershell","ms-azuretools.vscode-docker")
+if (Get-Command code -ErrorAction SilentlyContinue) { $installed = @(code --list-extensions 2>$null); foreach ($ext in $requiredExtensions) { if ($installed -contains $ext) { Pass $ext } else { Fail "VS Code extension $ext missing" } } }
+
+Write-Host ""; Write-Host "[MCP definitions]"
+try { $mcp = Get-Content -Raw ".mcp.json" | ConvertFrom-Json; foreach ($name in @("context7","postgres-local","supabase-primary","n8n")) { if ($mcp.mcpServers.PSObject.Properties.Name -contains $name) { Pass ".mcp.json contains $name" } else { Fail ".mcp.json missing $name" } } } catch { Fail ".mcp.json is invalid JSON" }
+if (Get-Command claude -ErrorAction SilentlyContinue) { $claudeMcp = (claude mcp list 2>&1 | Out-String); foreach ($name in @("context7","postgres-local","supabase-primary","n8n")) { if ($claudeMcp -match "(?m)^$([regex]::Escape($name)):") { Pass "Claude MCP $name enumerated" } else { Fail "Claude MCP $name not enumerated" } } }
+if (Get-Command codex -ErrorAction SilentlyContinue) {
+    $codexMcp = (codex mcp list 2>&1 | Out-String)
+    foreach ($name in @("context7","postgres-local","supabase-primary","n8n","github")) { if ($codexMcp -match "(?m)^$([regex]::Escape($name))\s") { Pass "Codex MCP $name enumerated" } else { Fail "Codex MCP $name not enumerated" } }
+    if ($codexMcp -match "supabase-primary.*Not logged in") { Warn "Codex supabase-primary configured; OAuth authentication required" }
 }
+if (-not $env:GITHUB_PAT_TOKEN) { Warn "Codex GitHub MCP configured; GITHUB_PAT_TOKEN is not present in this process" } else { Pass "Codex GitHub MCP credential variable is present (value not inspected)" }
 
-Write-Host ""
-Write-Host "========================================="
-Write-Host "ORVION WORKSTATION DOCTOR"
-Write-Host "========================================="
+Write-Host ""; Write-Host "[Authentication boundaries]"
+gh auth status *> $null; if ($LASTEXITCODE -eq 0) { Pass "GitHub CLI authenticated" } else { Warn "GitHub CLI installed; run gh auth login" }
+claude auth status *> $null; if ($LASTEXITCODE -eq 0) { Pass "Claude Code authenticated" } else { Warn "Claude Code installed; launch claude to authenticate" }
+codex login status *> $null; if ($LASTEXITCODE -eq 0) { Pass "Codex authenticated" } else { Warn "Codex installed; run codex login" }
 
-Write-Host ""
-Write-Host "[Applications]"
-foreach ($c in @("git", "node", "npm", "docker", "python", "claude", "code")) { Test-Cmd $c }
-
-Write-Host ""
-Write-Host "[Repository]"
-foreach ($f in @("README.md", "AGENTS.md", "PROJECT_CONTEXT.md", "GOVERNANCE.md", ".gitignore", ".mcp.json")) {
-    if (Test-Path $f) { Write-Host "[ OK ] $f" } else { Write-Host "[FAIL] $f" }
-}
-
-Write-Host ""
-Write-Host "[Docker]"
-docker version *> $null
-if ($LASTEXITCODE -eq 0) { Write-Host "[ OK ] Docker Engine" } else { Write-Host "[WARN] Docker Engine not running (start Docker Desktop)" }
-
-Write-Host ""
-Write-Host "[Versions]"
-foreach ($v in @(
-        @("git", "git --version"), @("node", "node -v"), @("npm", "npm -v"),
-        @("docker", "docker --version"), @("python", "python --version"),
-        @("claude", "claude --version"), @("code", "code --version"))) {
-    if (Get-Command $v[0] -ErrorAction SilentlyContinue) {
-        $out = (& ([scriptblock]::Create($v[1])) 2>$null | Select-Object -First 1)
-        Write-Host ("  {0,-8} {1}" -f $v[0], $out)
-    }
-}
-
-Write-Host ""
-Write-Host "[Claude engineering awareness]  (tracked expectation: .claude/awareness.json)"
-# The hook script and the expected wiring are tracked; the settings file that ACTIVATES them is
-# machine-local and gitignored. Without this check a fresh clone would carry the capability with
-# no activation and report nothing missing - the failure mode WORKSTATION.md's "local machine is
-# disposable" assumption exists to prevent.
+Write-Host ""; Write-Host "[Claude engineering awareness]"
 & (Join-Path $PSScriptRoot "claude-awareness.ps1") -Verify
+if ($LASTEXITCODE -ne 0) { Fail "Claude awareness wiring incomplete" }
 
-Write-Host ""
-Write-Host "[GitHub identity]  (ORVION pushes as PlatPlusHub; never Shehabhub)"
-if (Get-Command git -ErrorAction SilentlyContinue) {
-    # Git Credential Manager keys credentials by URL. An unqualified https://github.com/... origin
-    # resolves to `git:https://github.com` -- on the owner's machine the pre-migration Shehabhub
-    # account -- which pushes as the wrong identity (historically 403, later a non-interactive hang).
-    # This regressed silently once already: fixed in .git/config on 2026-08-26, destroyed by the
-    # 2026-08-30 re-clone because git does not track .git/config. bootstrap.ps1 now clones with the
-    # qualifier; this check catches any clone or set-url that reintroduces the unqualified form.
-    $originUrl = git remote get-url origin 2>$null
-    if (-not $originUrl) { Write-Host "[WARN] no 'origin' remote configured" }
-    elseif ($originUrl -match '^https://PlatPlusHub@github\.com/PlatPlusHub/CRM(\.git)?$') {
-        Write-Host "[ OK ] origin is username-qualified as PlatPlusHub"
-    }
-    elseif ($originUrl -match 'github\.com/PlatPlusHub/CRM') {
-        Write-Host "[FAIL] origin is '$originUrl' - NOT username-qualified"
-        Write-Host "       Git Credential Manager will fall back to the stored Shehabhub credential."
-        Write-Host "       Remedy: git remote set-url origin https://PlatPlusHub@github.com/PlatPlusHub/CRM.git"
-    }
-    else { Write-Host "[WARN] origin is '$originUrl' - not the expected PlatPlusHub/CRM remote" }
+Write-Host ""; Write-Host "[GitHub repository]"
+$originUrl = git remote get-url origin 2>$null
+if ($originUrl -match '^https://PlatPlusHub@github\.com/PlatPlusHub/CRM(\.git)?$') { Pass "origin is username-qualified for PlatPlusHub" } else { Fail "origin is not the canonical username-qualified URL" }
+$author = git config user.name 2>$null
+if ($author -eq "PlatPlusHub") { Pass "commit author is PlatPlusHub" } else { Warn "commit author is '$author'; expected PlatPlusHub on the owner workstation" }
+git ls-remote origin HEAD *> $null
+if ($LASTEXITCODE -eq 0) { Pass "GitHub remote reachable" } else { Fail "GitHub remote is not reachable" }
 
-    $author = git config user.name 2>$null
-    if ($author -eq "PlatPlusHub") { Write-Host "[ OK ] commit author is PlatPlusHub" }
-    else { Write-Host "[FAIL] commit author is '$author' - expected PlatPlusHub (git config --global user.name PlatPlusHub)" }
-}
-
-Write-Host ""
-Write-Host "[GitHub sync]  (local is disposable - GitHub is the source of truth)"
-if (Get-Command git -ErrorAction SilentlyContinue) {
-    $branch = git rev-parse --abbrev-ref HEAD 2>$null
-    git rev-parse "@{u}" *> $null
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[WARN] branch '$branch' has no upstream - push it so GitHub has your work"
-    }
-    else {
-        $ahead = (git rev-list --count "@{u}..HEAD" 2>$null)
-        if ([int]$ahead -gt 0) { Write-Host "[WARN] $ahead local commit(s) not pushed - at risk until 'git push'" }
-        else { Write-Host "[ OK ] in sync with origin/$branch" }
-    }
-}
-
-Write-Host ""
-Write-Host "Doctor completed."
+Write-Host ""; Write-Host "Doctor summary: $($Failures.Count) required failure(s), $($Warnings.Count) warning(s)."
+if ($Warnings.Count -gt 0) { Write-Host "Warnings are authentication, readiness, or owner-workstation boundaries; they are not missing software." }
+if ($Failures.Count -gt 0) { Write-Host "WORKSTATION VERIFICATION: FAILED"; exit 1 }
+Write-Host "WORKSTATION VERIFICATION: PASSED"; exit 0
