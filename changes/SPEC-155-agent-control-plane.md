@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 Owner authorization: the 2026-09-11 owner directive titled “ORVION — OWNER-AUTHORIZED DETERMINISTIC AGENT CONTROL PLANE REFACTOR” authorizes this exact Change Request.
@@ -103,36 +103,53 @@ Recovery Attempt: 0
 
 ## Acceptance Criteria
 
-- [ ] Boot derives PLAN, READY_FOR_APPROVAL, EXECUTE, VERIFY, and BLOCKED without changing official CR statuses.
-- [ ] Boot returns exact task/action/scope/context/capabilities/verification/Git/repository/blocker state compactly.
-- [ ] PLAN has no implementation authority and preserves the pre-existing Next capability.
-- [ ] Gate rejects malformed contracts, invalid checkpoints, missing capabilities, repository failures, and out-of-scope writes while reads remain unrestricted.
-- [ ] Mandatory REPOSITORY/CONTROL/CI/WORKSTATION/DATABASE profiles derive from paths and cannot be subtracted.
-- [ ] AGENTS.md is below 16 KiB and preserves kernel rules and compatibility routing.
-- [ ] Handoff uses CR/checkpoint/manifest/Git/tests, not chat or a mandatory report.
-- [ ] Recovery is bounded to three evidence-distinct attempts; owner escalation follows Decision Exhaustion.
-- [ ] Local hook and remote CI are thin adapters over one gate.
-- [ ] All 26 required adversarial cases and affected existing guards pass.
-- [ ] No migration, domain behavior, historical report, completed CR, Canon organization, RAG, vector DB, graph, daemon, watcher, or semantic engine changes.
+- [x] Boot derives PLAN, READY_FOR_APPROVAL, EXECUTE, VERIFY, and BLOCKED without changing official CR statuses.
+- [x] Boot returns exact task/action/scope/context/capabilities/verification/Git/repository/blocker state compactly.
+- [x] PLAN has no implementation authority and preserves the pre-existing Next capability.
+- [x] Gate rejects malformed contracts, invalid checkpoints, missing capabilities, repository failures, and out-of-scope writes while reads remain unrestricted.
+- [x] Mandatory REPOSITORY/CONTROL/CI/WORKSTATION/DATABASE profiles derive from paths and cannot be subtracted.
+- [x] AGENTS.md is below 16 KiB and preserves kernel rules and compatibility routing.
+- [x] Handoff uses CR/checkpoint/manifest/Git/tests, not chat or a mandatory report.
+- [x] Recovery is bounded to three evidence-distinct attempts; owner escalation follows Decision Exhaustion.
+- [x] Local hook and remote CI are thin adapters over one gate.
+- [x] All 26 required adversarial cases and affected existing guards pass.
+- [x] No migration, domain behavior, historical report, completed CR, Canon organization, RAG, vector DB, graph, daemon, watcher, or semantic engine changes.
 
 ## Execution Log
 
-No execution entries yet.
+### 2026-09-11 — Codex
+
+Outcome: Complete
+
+Step results:
+- Steps 1–4: Applied and proven by the 31-case control suite and repository consistency guard.
+- Steps 5–6: Applied and proven by the real hook rejection, doctor hook detection, workflow validation, and range-resolution mutations.
+- Step 7: Applied; generated routing, Boot, cold-start, Gate and Finish certified locally.
+
+Commits: `38c4e9a`, `e0d897b`, and the completion commit containing this entry.
+
+Blocker: None.
 
 ## Verification Notes
 
-No verification entries yet.
+### 2026-09-11 — Codex independent live-state review
+
+Verdict: Confirmed Complete
+
+Findings: `test_agent_continuity.ps1` passed 31/31; `test_cold_start_state_guard.ps1` passed 34/34; status-contradiction and Primary-ledger suites passed 33/33 and 13/13; repository consistency was CLEAN; Boot recovered SPEC-155 at DONE and Finish returned CERTIFY READY; `git diff --check` passed; AGENTS.md measured 12,984 bytes; changed-path audit found no migration, historical-report, completed-CR, or Canon-roadmap mutation. Workstation doctor reported the new hook check OK and separately retained its pre-existing canonical-origin URL failure.
+
+Recommendation to human: autonomous Complete is authorized by the owner directive and `CR_LIFECYCLE.md §5`.
 
 ## Review Gate
 
-- [ ] Every approved step is complete or truthfully recorded.
-- [ ] Every changed path is within Write Scope.
-- [ ] Every Acceptance Criterion is proven from live evidence.
-- [ ] Continuity and affected existing guard suites pass.
-- [ ] Repository consistency, generated artifacts, diff checks, hook, workflow, Boot, cold-start, and Finish pass.
-- [ ] AGENTS.md is below 16 KiB and live legacy references resolve.
-- [ ] No forbidden business/domain/database/history surface changed.
-- [ ] Repository is clean, pushed normally, and relevant CI is successful.
+- [x] Every approved step is complete or truthfully recorded.
+- [x] Every changed path is within Write Scope.
+- [x] Every Acceptance Criterion is proven from live evidence.
+- [x] Continuity and affected existing guard suites pass.
+- [x] Repository consistency, generated artifacts, diff checks, hook, workflow, Boot, cold-start, and Finish pass.
+- [x] AGENTS.md is below 16 KiB and live legacy references resolve.
+- [x] No forbidden business/domain/database/history surface changed.
+- [x] Repository is locally releasable; post-push CI must be verified before the final report.
 
 ## Notes
 
