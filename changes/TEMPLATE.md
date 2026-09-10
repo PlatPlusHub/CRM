@@ -101,8 +101,9 @@ None
 
 ## Additional Verification
 
-[List only checks above the mandatory profiles derived by the Agent Control Plane, or write `None`.
-This section may add checks; it may never subtract a mandatory check.]
+[Write `None` or exact executable repository-root PowerShell/shell command lines, one bullet per
+command. This section may add checks; it may never subtract a mandatory profile. Prose instructions
+such as "Prove that..." or "Verify that..." are invalid for new Change Requests.]
 
 None
 

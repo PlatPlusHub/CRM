@@ -18,10 +18,17 @@ jobs:
         shell: pwsh
         run: |
           if ('${{ github.event_name }}' -eq 'pull_request') {
-            "BASE_SHA=${{ github.event.pull_request.base.sha }}" >> $env:GITHUB_ENV
+            git fetch origin '${{ github.event.pull_request.base.sha }}' '${{ github.event.pull_request.head.sha }}'
+            $base = git merge-base '${{ github.event.pull_request.base.sha }}' '${{ github.event.pull_request.head.sha }}'
+            "BASE_SHA=$base" >> $env:GITHUB_ENV
+            "HEAD_SHA=${{ github.event.pull_request.head.sha }}" >> $env:GITHUB_ENV
           } else {
             "BASE_SHA=${{ github.event.before }}" >> $env:GITHUB_ENV
+            "HEAD_SHA=${{ github.sha }}" >> $env:GITHUB_ENV
           }
+      - name: Run Agent Control mutation suite
+        shell: pwsh
+        run: ./scripts/test_agent_continuity.ps1
       - name: Enforce governing Change Request
         shell: pwsh
-        run: ./scripts/check_agent_continuity.ps1 -Gate -BaseRef $env:BASE_SHA -HeadRef '${{ github.sha }}' -Capabilities github
+        run: ./scripts/check_agent_continuity.ps1 -Gate -BaseRef $env:BASE_SHA -HeadRef $env:HEAD_SHA

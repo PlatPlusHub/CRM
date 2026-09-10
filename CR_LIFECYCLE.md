@@ -33,6 +33,8 @@ No other status word is used. In particular, "Review" is not a Status value — 
 
 `Complete` and `Cancelled` are terminal. A closed Change Request is never reopened; a correction is made through a new Change Request (see `changes/SPEC-003-phase1-consistency-fix.md` for the established precedent).
 
+Completed and cancelled Change Requests are terminal historical artifacts. The control Gate rejects their later modification, deletion, or rename; every correction requires a new Change Request. The 2026-09-11 Agent Control Plane identity correction is a one-time owner-authorized correction performed before this immutable-history guard was installed and is documented by `SPEC-1001`.
+
 ## 5. Responsibility Of Each Transition
 
 | Transition | Responsible party |
@@ -52,6 +54,8 @@ IMPLEMENT applies a Change Request's Implementation Steps exactly as written. IM
 
 The mutable `## Runtime Checkpoint` is the normal cold-start handoff: `Resume Step`, stable `Blocker`, and bounded `Recovery Attempt` only. It contains semantic progress, never HEAD, branch, timestamps, CI state, migration counts, or other facts derived live by Git/tooling. The append-only `## Execution Log` records meaningful durable outcomes rather than every routine session.
 
+For new Change Requests, `## Additional Verification` is either `None` or exact executable repository-root PowerShell/shell commands, one bullet per command. It may add verification and can never subtract a scope-derived mandatory profile. Historical completed Change Requests are not retrofitted.
+
 ## 7. Meaning Of REVIEW
 
 REVIEW is independent verification of a Change Request's execution against the live repository state, not against the Execution Log's self-report. REVIEW checks every Acceptance Criterion and every Review Gate item, and records its findings as a Verification Notes entry with a verdict (`Confirmed Complete`, `Discrepancy Found`, or `Needs Corrective Change Request`). REVIEW does not itself change Status — it is an activity performed while Status is `In Progress`. Completion follows REVIEW per §5.
@@ -65,6 +69,8 @@ Synchronization means updating only a Change Request's workflow-state sections �
 ## 9. Command Vocabulary
 
 Handoff between agents happens through the active CR (including Runtime Checkpoint), manifest, Git, and executable evidence — never through chat. Run `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Boot` to derive the current runtime mode and exact next action. Runtime modes (`PLAN`, `READY_FOR_APPROVAL`, `EXECUTE`, `VERIFY`, `BLOCKED`) and `CERTIFY` are not CR Status values.
+
+`-Finish` is local executable certification: it runs the locally applicable derived profiles and every Additional Verification command, and only then may emit `LOCAL_CERTIFY: READY`. Remote CI success, when the CI profile applies, is separate observed evidence verified after push; local Finish never implies it.
 
 - **`Approve SPEC-NNN`** — requires Status `Draft`; flips Status to `Approved`, sets `manifest.md`'s `Active Change Request` to this Change Request's path, commits. If already `Approved` or further along, report that instead of re-applying.
 - **`Execute SPEC-NNN`** — requires Status `Approved`; flips Status to `In Progress`, performs the Implementation Steps exactly as written, appends an `## Execution Log` entry, commits. If Status is still `Draft`, refuse — never treat `Execute` as an implicit `Approve`.

@@ -84,7 +84,7 @@ Depends on the completed Agent Control Plane Change Request originally committed
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 7
 Blocker: None
 Recovery Attempt: 0
 
@@ -136,6 +136,16 @@ Step results:
 - Step 1: Applied — exact baseline passed; repository-wide census produced SPEC-1000 and SPEC-1001; corrective authority and active manifest state established.
 
 Commits: pending first corrective commit.
+
+### 2026-09-11 — Codex enforcement repair
+
+Outcome: Complete
+
+Step results:
+- Step 2: Applied — Agent Control Plane identity corrected to SPEC-1000 while preserving product SPEC-155 history.
+- Steps 3–6: Applied — directed AGENTS authority, parser/Gate/Finish controls, lifecycle/template contract, 45-case mutation suite, and CI range workflow repaired.
+
+Commits: `66eaea6`, `dfcb44a`, and the pending enforcement-repair commit.
 
 ## Verification Notes
 
