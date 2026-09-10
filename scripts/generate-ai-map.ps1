@@ -54,7 +54,7 @@ $map = [ordered]@{
     generated_at = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     project      = "ORVION"
     one_liner    = "Travel CRM / operations / revenue platform for Egyptian travel agencies; Supabase/PostgreSQL backend = SQL migrations + app-schema RPCs. No application UI yet."
-    boot_order   = @("README.md","AGENTS.md","GOVERNANCE.md","_ORVION_CANONICAL/manifest.md","(active changes/SPEC-*.md, else _ORVION_CANONICAL/32_execution_roadmap.md)")
+    boot_order   = @("README.md","pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Boot","(follow Boot ACTION and START_CONTEXT pointers)")
     live_state   = [ordered]@{
         source                = $manifestPath
         phase                 = Get-Field $manifest "Current Phase:"

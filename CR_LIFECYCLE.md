@@ -50,7 +50,7 @@ No other status word is used. In particular, "Review" is not a Status value — 
 
 IMPLEMENT applies a Change Request's Implementation Steps exactly as written. IMPLEMENT is not considered complete until the Change Request has been synchronized with the execution state — its Status advanced to `In Progress` and its Execution Log appended — as the final part of the same task, not a separate action. Review and Complete remain independent phases and are not merged into IMPLEMENT.
 
-The `## Execution Log` (append-only) may be extended incrementally at meaningful checkpoints during a long IMPLEMENT — not only at its end — so that a mid-capability interruption (context limit, crash, handoff) leaves the true current step recorded and recovery is a cold boot rather than a reconstruction from the diff. This is the recoverability invariant in `AGENTS.md` §6 applied to Change Request execution; the final synchronization that completes IMPLEMENT is unchanged.
+The mutable `## Runtime Checkpoint` is the normal cold-start handoff: `Resume Step`, stable `Blocker`, and bounded `Recovery Attempt` only. It contains semantic progress, never HEAD, branch, timestamps, CI state, migration counts, or other facts derived live by Git/tooling. The append-only `## Execution Log` records meaningful durable outcomes rather than every routine session.
 
 ## 7. Meaning Of REVIEW
 
@@ -58,13 +58,13 @@ REVIEW is independent verification of a Change Request's execution against the l
 
 ## 8. Meaning Of Synchronization
 
-A Change Request is a living repository artifact and the authoritative state record of the work it describes. Its declared Scope governs engineering artifacts only; a Change Request's own workflow-state sections are always implicitly in scope for whichever agent is synchronizing them, and doing so is never a Scope violation.
+A Change Request is a living repository artifact and the authoritative semantic state record of its work. Its declared Write Scope governs engineering artifacts; its own workflow-state sections are implicitly writable for synchronization and never a Write Scope violation.
 
-Synchronization means updating only a Change Request's own workflow-state sections — `Status` (only transitions permitted by §4), `Acceptance Criteria`, `Review Gate` (when applicable), `Execution Log`, and `Verification Notes`. Synchronization never authorizes modifying `Objective`, `Business Reason`, `Risks`, `Scope`, `Out of Scope`, `Minimum Reading List`, or `Implementation Steps` — those remain fixed once Approved and are corrected only by a new Change Request. Every other reference to "synchronizing a Change Request" in this repository means exactly this definition. A Change Request's `## Execution Log` and `## Verification Notes` sections are append-only — never edit or delete a prior entry.
+Synchronization means updating only a Change Request's workflow-state sections — `Status` (only transitions permitted by §4), `Runtime Checkpoint`, `Acceptance Criteria`, `Review Gate`, `Execution Log`, and `Verification Notes`. Synchronization never authorizes modifying `Objective`, `Business Reason`, `Risks`, `Write Scope`, `Out of Scope`, `Required Reading`, `Required Capabilities`, `Additional Verification`, or `Implementation Steps` after approval. Reading is repository-wide; only Write Scope grants create/modify/delete authority. Historical CRs retain their former `Scope` and `Minimum Reading List` headings. Execution Log and Verification Notes remain append-only.
 
 ## 9. Command Vocabulary
 
-Handoff between agents happens through `changes/*.md` files and the `Active Change Request` field in `_ORVION_CANONICAL/manifest.md` — never through chat. The commands below drive the transitions in §4.
+Handoff between agents happens through the active CR (including Runtime Checkpoint), manifest, Git, and executable evidence — never through chat. Run `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Boot` to derive the current runtime mode and exact next action. Runtime modes (`PLAN`, `READY_FOR_APPROVAL`, `EXECUTE`, `VERIFY`, `BLOCKED`) and `CERTIFY` are not CR Status values.
 
 - **`Approve SPEC-NNN`** — requires Status `Draft`; flips Status to `Approved`, sets `manifest.md`'s `Active Change Request` to this Change Request's path, commits. If already `Approved` or further along, report that instead of re-applying.
 - **`Execute SPEC-NNN`** — requires Status `Approved`; flips Status to `In Progress`, performs the Implementation Steps exactly as written, appends an `## Execution Log` entry, commits. If Status is still `Draft`, refuse — never treat `Execute` as an implicit `Approve`.
@@ -99,7 +99,7 @@ Cancelled   (terminal)
 
 ## 11. Engineering Observations
 
-A discovery made during IMPLEMENT or REVIEW that was not anticipated by the Change Request's own Implementation Steps is recorded as an Engineering Observation — what was discovered, why it matters, and which of two outcomes applies. It stays inside the current Change Request only if it touches a file already in that Change Request's Scope, uses a mechanism the Change Request already relies on, and requires no judgment beyond what the Change Request was already drafted to make — and only if flagged before that Change Request is Approved, never added silently afterward. Otherwise it becomes its own future Change Request. An Engineering Observation is never silently implemented and never silently discarded.
+A discovery made during IMPLEMENT or REVIEW that was not anticipated by the Change Request's Implementation Steps is recorded as an Engineering Observation. It stays inside the CR only if its repair is already explicitly authorized by Write Scope and objective, uses an existing mechanism, and requires no new judgment; otherwise it becomes a future CR. Never silently implement or discard it, and never widen approved Write Scope to absorb it.
 
 An Observation concerning the engineering methodology itself — as distinct from repository content — never interrupts the Change Request that surfaced it. The current Change Request always completes its own lifecycle normally first; only afterward is a methodology refinement considered, and only through its own Change Request.
 

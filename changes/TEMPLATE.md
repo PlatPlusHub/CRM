@@ -46,9 +46,10 @@ to the new file — never leave two files describing overlapping work both marke
 
 ---
 
-## Scope — Files Allowed to Modify
+## Write Scope
 
-[List every file that MAY be read or modified during this task. Exact paths only. No wildcards.]
+[List every file that MAY be created, modified, or deleted during this task. Exact paths only.
+Repository reading/search is unrestricted and never grants write authority.]
 
 -
 
@@ -57,26 +58,53 @@ to the new file — never leave two files describing overlapping work both marke
 ## Out of Scope — Files Forbidden to Modify
 
 [List every file that must NOT be touched. Include files the agent might reasonably assume are in
-scope. Scope above is exhaustive for engineering artifacts: any engineering file not listed in
-Scope is out of scope by default, with no exceptions, whether or not it is separately listed here.
+scope. Write Scope above is exhaustive for engineering artifacts: any engineering file not listed in
+Write Scope is out of scope by default, with no exceptions, whether or not it is separately listed here.
 This section exists to call out specific files that pose a realistic risk of being assumed
 in-scope (adjacent files in the same folder, related governance files, the changes/ folder
 itself) — it is not required to enumerate the entire repository, but every file it does name must
 be an exact path, never a category or a wildcard.
 
 Exception: this Change Request's own file is always implicitly in scope for synchronization, as
-defined in `CR_LIFECYCLE.md` §8. Updating it in that sense is never a Scope
+defined in `CR_LIFECYCLE.md` §8. Updating it in that sense is never a Write Scope
 violation; this exception is defined once, there, and is not restated here.]
 
 -
 
 ---
 
-## Minimum Reading List
+## Required Reading
 
-[List only the files the agent must read to complete this task. No additional files may be read.]
+[List the minimum starting context. Additional repository reading/search is always allowed for
+evidence, dependency tracing, impact verification, or current-state verification. Reading never
+grants write authority.]
 
 -
+
+---
+
+## Runtime Checkpoint
+
+Resume Step: 1
+Blocker: None
+Recovery Attempt: 0
+
+---
+
+## Required Capabilities
+
+[List only capabilities actually required by this task, one per bullet, or write `None`.]
+
+None
+
+---
+
+## Additional Verification
+
+[List only checks above the mandatory profiles derived by the Agent Control Plane, or write `None`.
+This section may add checks; it may never subtract a mandatory check.]
+
+None
 
 ---
 
@@ -157,7 +185,7 @@ is checked.]
 
 - [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside the Scope list was modified or created.
+- [ ] No file outside Write Scope was modified, created, or deleted.
 - [ ] No section was added, removed, or restructured outside the approved steps.
 - [ ] Every Acceptance Criteria item is confirmed true.
 - [ ] Any step that could not be resolved deterministically was reported, not guessed.

@@ -62,7 +62,7 @@ Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidenc
 >
 > *Previously:* `history/session-2026-09-01-parent-state.md` — **PARENT-1: the parent's state is a rule on every door.** The care/conversation slice was re-entered from live state and `conversation_messages` exposed a class: four RPCs refuse a write because of the PARENT row's state — an unaccepted quotation, a cancelled booking item, an archived document, a closed conversation — and not one of those rules existed on the table door `authenticated` reaches through PostgREST. The population was derived from `app.status_transitions` + `pg_proc` + `pg_trigger` rather than listed; twelve candidate pairs were reduced to four by reading each function instead of trusting the match. All four reproduced live with the RPC as positive control, and closed by one guard function plus four BEFORE INSERT triggers with the RPCs' messages copied verbatim. The HTTP suite already asserted both halves of the conversation case and missed it because they were never asked at the same moment. Also: a live instance of GOV-9 — QUO-4 had been an open owner decision the manifest never listed. Migration `202607059400`, deployed.
 >
-> `AGENTS.md §4` Stage A step 7 requires every session to read this before proposing work. **Whoever writes the next session report updates this row in the same commit** — an unlinked report is invisible to the boot sequence, which is the one job this pointer has.
+> This pointer indexes the newest durable report; ordinary Boot does not preload it. When a new report is genuinely earned under `GOVERNANCE.md §4`, update this row in the same commit.
 
 **Physical structure (reorganized 2026-07-11, session 9):**
 ```

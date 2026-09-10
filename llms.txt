@@ -6,7 +6,7 @@ This file is the AI-convention entry point (llmstxt.org). It is a **pointer only
 
 ## Start
 1. **`README.md`** — one-hop router (what ORVION is; which authority to read for your goal).
-2. **`AGENTS.md`** — how work is done. Its **§4 is the single, mandatory boot sequence** — it walks you through orientation → `GOVERNANCE.md` → `_ORVION_CANONICAL/manifest.md` (live state) → the active `changes/SPEC-*.md` or `_ORVION_CANONICAL/32_execution_roadmap.md`. Follow it; do not read the whole repo.
+2. **Run `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Boot`** — it derives runtime state and routes the smallest context. `AGENTS.md §3–§4` owns conduct and fallback routing; reading remains unrestricted.
 
 ## The only rules you need before reading
 - Where every fact lives, how decisions/documents flow, and where you may/may not write → **`GOVERNANCE.md`** (SSOT matrix §2, lifecycles §3–§4, agent write-rules §8).
