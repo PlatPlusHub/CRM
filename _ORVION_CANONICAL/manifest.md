@@ -37,7 +37,7 @@ Active Change Request: changes/SPEC-1001-agent-control-plane-corrective-repair.m
 
 Open owner decisions — **MAIL-1**, **RET-1**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-155 Agent Control Plane, Complete (2026-09-11).** Deterministic Boot/Gate/Finish, CR-scoped writes, Runtime Checkpoint handoff, compact kernel, local hook and remote CI gate are implemented and locally certified. Product work was not changed.
+Last Completed: **SPEC-1000 Agent Control Plane, Complete (2026-09-11).** Deterministic Boot/Gate/Finish, CR-scoped writes, Runtime Checkpoint handoff, compact kernel, local hook and remote CI gate are implemented and locally certified. Product work was not changed.
 
 Narrative: `session-2026-09-09-ten-decision-closure.md`
 

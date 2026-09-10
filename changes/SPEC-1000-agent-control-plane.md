@@ -1,4 +1,4 @@
-# Change Request — SPEC-155
+# Change Request — SPEC-1000
 
 ## Status
 
@@ -32,7 +32,7 @@ None.
 - `GOVERNANCE.md`
 - `CR_LIFECYCLE.md`
 - `changes/TEMPLATE.md`
-- `changes/SPEC-155-agent-control-plane.md`
+- `changes/SPEC-1000-agent-control-plane.md`
 - `_ORVION_CANONICAL/manifest.md`
 - `scripts/check_agent_continuity.ps1`
 - `scripts/test_agent_continuity.ps1`
@@ -136,7 +136,7 @@ Blocker: None.
 
 Verdict: Confirmed Complete
 
-Findings: `test_agent_continuity.ps1` passed 31/31; `test_cold_start_state_guard.ps1` passed 34/34; status-contradiction and Primary-ledger suites passed 33/33 and 13/13; repository consistency was CLEAN; Boot recovered SPEC-155 at DONE and Finish returned CERTIFY READY; `git diff --check` passed; AGENTS.md measured 12,984 bytes; changed-path audit found no migration, historical-report, completed-CR, or Canon-roadmap mutation. Workstation doctor reported the new hook check OK and separately retained its pre-existing canonical-origin URL failure.
+Findings: `test_agent_continuity.ps1` passed 31/31; `test_cold_start_state_guard.ps1` passed 34/34; status-contradiction and Primary-ledger suites passed 33/33 and 13/13; repository consistency was CLEAN; Boot recovered SPEC-1000 at DONE and Finish returned CERTIFY READY; `git diff --check` passed; AGENTS.md measured 12,984 bytes; changed-path audit found no migration, historical-report, completed-CR, or Canon-roadmap mutation. Workstation doctor reported the new hook check OK and separately retained its pre-existing canonical-origin URL failure.
 
 Recommendation to human: autonomous Complete is authorized by the owner directive and `CR_LIFECYCLE.md §5`.
 
@@ -154,3 +154,5 @@ Recommendation to human: autonomous Complete is authorized by the owner directiv
 ## Notes
 
 External refresh completed against official OpenAI, Git, and GitHub sources before implementation.
+
+Identity correction (2026-09-11): this Agent Control Plane Change Request was originally committed under the conflicting identifier SPEC-155. Corrective Change Request SPEC-1001 reassigned only this Agent Control Plane Change Request to SPEC-1000. The pre-existing SPEC-155 product lineage remains unchanged. Original Git commit messages are intentionally not rewritten.
