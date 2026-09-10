@@ -78,7 +78,7 @@ Additional repository reading/search is always allowed for evidence, dependency 
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 

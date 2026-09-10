@@ -26,6 +26,8 @@ if (Test-Path "node_modules\.bin\supabase.cmd") { Test-Version "supabase" { & "n
 
 Write-Host ""; Write-Host "[Repository dependencies and configuration]"
 foreach ($f in @("README.md","AGENTS.md","GOVERNANCE.md","package.json","package-lock.json","supabase\config.toml",".mcp.json",".vscode\extensions.json",".claude\awareness.json")) { if (Test-Path $f) { Pass $f } else { Fail "$f missing" } }
+$hooksPath = git config --get core.hooksPath 2>$null
+if ($hooksPath -eq '.githooks' -and (Test-Path '.githooks\pre-commit')) { Pass 'Git hooks path -> .githooks' } else { Fail "Git hooks path is '$hooksPath'; run workstation.cmd" }
 npm ls --depth=0 *> $null
 if ($LASTEXITCODE -eq 0) { Pass "npm dependency tree" } else { Fail "npm dependency tree incomplete or invalid" }
 

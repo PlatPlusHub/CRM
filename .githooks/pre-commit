@@ -1,0 +1,3 @@
+#!/bin/sh
+# Thin adapter: all policy remains in the repository control plane.
+exec pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Gate

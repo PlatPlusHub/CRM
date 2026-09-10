@@ -1,0 +1,27 @@
+name: Agent Control
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Resolve changed range
+        shell: pwsh
+        run: |
+          if ('${{ github.event_name }}' -eq 'pull_request') {
+            "BASE_SHA=${{ github.event.pull_request.base.sha }}" >> $env:GITHUB_ENV
+          } else {
+            "BASE_SHA=${{ github.event.before }}" >> $env:GITHUB_ENV
+          }
+      - name: Enforce governing Change Request
+        shell: pwsh
+        run: ./scripts/check_agent_continuity.ps1 -Gate -BaseRef $env:BASE_SHA -HeadRef '${{ github.sha }}' -Capabilities github

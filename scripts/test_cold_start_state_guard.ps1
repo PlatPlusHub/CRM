@@ -124,7 +124,9 @@ try {
     # written as history/... with the backticks silently eaten, and the guard reads those backticks.
     $staleDirective = '> **Current state & next step (read this first on a cold start):** `history/session-2026-09-08-batch6-slice9-leads.md` -- probe.'
     $stalePrevious  = '> Previously: **Latest session report:** `history/session-2026-09-08-batch6-slice9-leads.md` -- probe.'
-    $liveRowRx      = '(?m)^(> \*\*Latest session report:\*\*[^\r\n]*)$'
+    # Accept both LF and CRLF working copies; `$` in .NET multiline mode sits before `\n` but
+    # after `\r`, so the former pattern silently matched zero rows on Windows CRLF checkouts.
+    $liveRowRx      = '(?m)^(> \*\*Latest session report:\*\*[^\r\n]*)\r?$'
 
     # A1 -- the defect verbatim: a SECOND un-prefixed cold-start directive naming an older report.
     $mutated = $readmeOriginal -replace $liveRowRx, ('$1' + $NL + '>' + $NL + $staleDirective)
@@ -157,7 +159,7 @@ try {
     # RegexOptions instead, so the 1 silently became `IgnoreCase` and every one of the six rows was
     # replaced -- producing the six-live-rows case rather than the one-wrong-row case under test.
     # The suite caught it because A3 asserts on a SPECIFIC message, not merely on a non-zero exit.
-    $onceRx = [regex]'(?m)^(> Previously: \*\*Latest session report:\*\*[^\r\n]*)$'
+    $onceRx = [regex]'(?m)^(> Previously: \*\*Latest session report:\*\*[^\r\n]*)\r?$'
     Write-S $README ($onceRx.Replace($demoted, ('$1' + $NL + '>' + $NL + $staleDirective), 1))
     $r = Invoke-Guard
     Check 'A3 MUTATION: a single live declaration that names a DIFFERENT report than the manifest is DETECTED' `

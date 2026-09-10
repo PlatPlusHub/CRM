@@ -47,8 +47,10 @@ function Changed {
     @(@(git -C $Root diff --name-only --diff-filter=ACDMRT --)+@(git -C $Root diff --cached --name-only --diff-filter=ACDMRT --)+@(git -C $Root ls-files --others --exclude-standard)|%{$_-replace'\\','/'}|sort -Unique)
 }
 function Resolve-Contract($m) {
-    if($m.Active){return $m.Active};if(!$BaseRef){return $null}
-    $c=@();foreach($p in @(git -C $Root diff --name-only "$BaseRef..$HeadRef" -- 'changes/SPEC-*.md')){try{$x=Contract(Join-Path $Root $p);if($x.Status-eq'Complete'){$c+=$p}}catch{}}
+    if($m.Active){return $m.Active}
+    $changed=if($BaseRef){@(git -C $Root diff --name-only "$BaseRef..$HeadRef" -- 'changes/SPEC-*.md')}else{@(git -C $Root diff --cached --name-only -- 'changes/SPEC-*.md')}
+    $c=@();foreach($p in $changed){try{$x=Contract(Join-Path $Root $p);if($x.Status-eq'Complete'){$c+=$p}}catch{}}
+    if(!$BaseRef-and!$c.Count){return $null}
     if(!$c.Count){throw 'NO_GOVERNING_CR'};if($c.Count-gt 1){throw 'AMBIGUOUS_GOVERNING_CR'};$c[0]
 }
 function Profiles($scope) {
@@ -75,7 +77,8 @@ function Block($message){$p=$message-split':',2;Write-Output 'ORVION: BLOCKED';W
 try{
     Set-Location $Root;$agents=Join-Path $Root 'AGENTS.md';if(!(Test-Path $agents)){throw 'AGENTS_MISSING'};if((Get-Item $agents).Length-gt16384){throw "AGENTS_SIZE_EXCEEDED:$((Get-Item $agents).Length)"};$m=Manifest;$rel=Resolve-Contract $m
     if(!$rel){if($Gate){$bad=@(Changed|?{$_-notmatch'^changes/SPEC-[0-9]+[^/]*\.md$'});if($bad.Count){throw "NO_GOVERNING_CR:$($bad-join',')"}};Write-Output 'ORVION: READY';Write-Output 'MODE: PLAN';Write-Output 'ACTIVE_CR: none';Write-Output "NEXT_CAPABILITY: $($m.Next)";Write-Output 'WRITE_AUTHORITY: none (Draft CR authoring only)';exit 0}
-    $c=Contract(Join-Path $Root $rel);$mode=switch($c.Status){'Draft'{'READY_FOR_APPROVAL'} {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}} default{'BLOCKED'}}
+    $c=Contract(Join-Path $Root $rel);$rangeCompletion=(-not$m.Active-and($BaseRef-or$Gate));$mode=switch($c.Status){'Draft'{'READY_FOR_APPROVAL'} {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}} 'Complete'{if($rangeCompletion){'VERIFY'}else{'BLOCKED'}} default{'BLOCKED'}}
+    if($mode-eq'BLOCKED'){throw "RUNTIME_BLOCKED:$($c.Blocker)"}
     if($mode-eq'EXECUTE'){Capabilities $c};$repo=Repo-Guard;$git=Git-State;if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
     if($Gate-or$Finish){$scope=@($c.Scope|%{$_-replace'\\','/'});foreach($p in Changed){if($p-ne($rel-replace'\\','/')-and$scope-notcontains$p){throw "OUT_OF_SCOPE_WRITE:$p"}}}
     $profiles=Profiles $c.Scope;if($Finish-and$mode-ne'VERIFY'){throw "FINISH_NOT_READY:$mode"}

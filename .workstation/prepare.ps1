@@ -62,6 +62,8 @@ Ensure-Tool python "Python.Python.3.12" "Python 3.12"
 Ensure-Tool pwsh "Microsoft.PowerShell" "PowerShell 7"
 Ensure-Tool code "Microsoft.VisualStudioCode" "VS Code"
 Refresh-Path
+git config core.hooksPath .githooks
+if ((git config --get core.hooksPath) -eq '.githooks') { Write-Host "[ OK ] Git hooks path .githooks"; Note "Git hooks path" "configured" } else { Write-Host "[FAIL] Git hooks path"; Note "Git hooks path" "FAILED" }
 
 Write-Host ""
 Write-Host "== WSL 2 prerequisite =="
