@@ -95,28 +95,28 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_agent_continuity.ps1 -Finish` writes `.orvion-local-certification.json` only on the `LOCAL_CERTIFY: READY` branch, and the file records the Change Request identity, the derived verification profiles, an implementation fingerprint and the expected workflow names.
-- [ ] A local `In Progress -> Complete` transition with every completion prerequisite textually satisfied and no receipt present is rejected with `COMPLETION_PREREQUISITE:no local certification receipt`.
-- [ ] A receipt naming a different Change Request, a receipt whose recorded profiles differ from the derived profiles, and a receipt whose fingerprint no longer matches the working tree are each rejected with their own distinct `COMPLETION_PREREQUISITE:` subject.
-- [ ] A local `In Progress -> Complete` transition with a fresh matching receipt is accepted.
-- [ ] A CI range run reaches the same completion without a receipt, so the receipt never becomes an unsatisfiable CI precondition.
-- [ ] `.gitignore` excludes `.orvion-local-certification.json`, and `git status --porcelain` is empty with the receipt present.
-- [ ] The DATABASE profile's mandatory local commands are the `ENGINEERING_METHOD.md §4` protocol in its documented order, with the smoke step expressed as a valid PowerShell pipeline.
-- [ ] A DATABASE Change Request whose every mandatory local command succeeds reaches `LOCAL_CERTIFY: READY`.
-- [ ] A DATABASE Change Request where one mandatory local command exits non-zero fails with that command, its exit code and a diagnostic tail, and never reaches `LOCAL_CERTIFY: READY`.
-- [ ] pgTAP Pass A and Pass B both execute despite being the same command string, and a command contributed by two different profiles still executes once.
-- [ ] A contract deriving the DATABASE profile without declaring `supabase-local` is rejected, and one naming no `scripts/verify_` HTTP suite in Additional Verification is rejected, each with its own error code.
-- [ ] Declaring the `supabase-primary` capability makes `scripts/check_primary_ledger.ps1` a mandatory `-Finish` command, and its Boot line claims recorded evidence rather than a live read.
-- [ ] The DATABASE-sensitive path surface includes `supabase/migrations/`, `supabase/tests/`, `supabase/config.toml` and `scripts/verify_database.sql`, matching Migration CI's trigger surface.
-- [ ] `-Certify` reports FAILED when a required workflow produced no run on the exact `HEAD` SHA while every observed run has completed, including the case where that workflow succeeded only on a different SHA.
-- [ ] `-Certify` reports PENDING when a required workflow is queued or in progress, and FAILED when an observed run concluded failure, cancellation or timeout.
-- [ ] `-Certify` reports READY only when every expected workflow is observed on the exact `HEAD` SHA and every observed run concluded `success`, and fails closed when no receipt is readable.
-- [ ] The expected workflow set is derived from the `push:` triggers declared in `.github/workflows/*.yml` and recorded in the receipt, so `-Certify` re-derives nothing and no second authority for workflow expectations exists.
-- [ ] `scripts/test_agent_continuity.ps1` reports 0 failed, retains every one of the 94 pre-existing assertions in rejecting and accepting form, and adds the DEFECT A, B and C groups.
-- [ ] `CR_LIFECYCLE.md §8` records the receipt requirement and no longer implies that no fingerprint of any kind is stored; §9 records the expected-versus-observed rule.
-- [ ] `ENGINEERING_METHOD.md §4` states that `-Finish` executes the database protocol rather than listing it as `LOCAL_NOT_EXECUTED`.
-- [ ] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
-- [ ] No file outside this Change Request's Write Scope is created, modified or deleted, and `git diff --check` is clean.
+- [x] `scripts/check_agent_continuity.ps1 -Finish` writes `.orvion-local-certification.json` only on the `LOCAL_CERTIFY: READY` branch, and the file records the Change Request identity, the derived verification profiles, an implementation fingerprint and the expected workflow names.
+- [x] A local `In Progress -> Complete` transition with every completion prerequisite textually satisfied and no receipt present is rejected with `COMPLETION_PREREQUISITE:no local certification receipt`.
+- [x] A receipt naming a different Change Request, a receipt whose recorded profiles differ from the derived profiles, and a receipt whose fingerprint no longer matches the working tree are each rejected with their own distinct `COMPLETION_PREREQUISITE:` subject.
+- [x] A local `In Progress -> Complete` transition with a fresh matching receipt is accepted.
+- [x] A CI range run reaches the same completion without a receipt, so the receipt never becomes an unsatisfiable CI precondition.
+- [x] `.gitignore` excludes `.orvion-local-certification.json`, and `git status --porcelain` is empty with the receipt present.
+- [x] The DATABASE profile's mandatory local commands are the `ENGINEERING_METHOD.md §4` protocol in its documented order, with the smoke step expressed as a valid PowerShell pipeline.
+- [x] A DATABASE Change Request whose every mandatory local command succeeds reaches `LOCAL_CERTIFY: READY`.
+- [x] A DATABASE Change Request where one mandatory local command exits non-zero fails with that command, its exit code and a diagnostic tail, and never reaches `LOCAL_CERTIFY: READY`.
+- [x] pgTAP Pass A and Pass B both execute despite being the same command string, and a command contributed by two different profiles still executes once.
+- [x] A contract deriving the DATABASE profile without declaring `supabase-local` is rejected, and one naming no `scripts/verify_` HTTP suite in Additional Verification is rejected, each with its own error code.
+- [x] Declaring the `supabase-primary` capability makes `scripts/check_primary_ledger.ps1` a mandatory `-Finish` command, and its Boot line claims recorded evidence rather than a live read.
+- [x] The DATABASE-sensitive path surface includes `supabase/migrations/`, `supabase/tests/`, `supabase/config.toml` and `scripts/verify_database.sql`, matching Migration CI's trigger surface.
+- [x] `-Certify` reports FAILED when a required workflow produced no run on the exact `HEAD` SHA while every observed run has completed, including the case where that workflow succeeded only on a different SHA.
+- [x] `-Certify` reports PENDING when a required workflow is queued or in progress, and FAILED when an observed run concluded failure, cancellation or timeout.
+- [x] `-Certify` reports READY only when every expected workflow is observed on the exact `HEAD` SHA and every observed run concluded `success`, and fails closed when no receipt is readable.
+- [x] The expected workflow set is derived from the `push:` triggers declared in `.github/workflows/*.yml` and recorded in the receipt, so `-Certify` re-derives nothing and no second authority for workflow expectations exists.
+- [x] `scripts/test_agent_continuity.ps1` reports 0 failed, retains every one of the 94 pre-existing assertions in rejecting and accepting form, and adds the DEFECT A, B and C groups.
+- [x] `CR_LIFECYCLE.md §8` records the receipt requirement and no longer implies that no fingerprint of any kind is stored; §9 records the expected-versus-observed rule.
+- [x] `ENGINEERING_METHOD.md §4` states that `-Finish` executes the database protocol rather than listing it as `LOCAL_NOT_EXECUTED`.
+- [x] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
+- [x] No file outside this Change Request's Write Scope is created, modified or deleted, and `git diff --check` is clean.
 
 ## Execution Log
 
@@ -177,20 +177,35 @@ Evidence: `scripts/test_agent_continuity.ps1` 117 passed, 0 failed; `scripts/che
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-11 — reviewing agent
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live repository, and the three repairs were attacked independently of the suite that asserts them. The adversarial pass ran inside a throwaway clone, never against the working tree, and against committed state only.
+
+Six attacks, each rejected for its own exact reason. A completion with every Acceptance Criterion and Review Gate item ticked, `Blocker: None`, `Resume Step: DONE` and a hand-written `Verdict: Confirmed Complete`, but no `-Finish`, was refused as `COMPLETION_PREREQUISITE:no local certification receipt`. A genuine receipt followed by an edit to a scoped implementation file was refused as `stale certification receipt`. A receipt whose Change Request identity was forged to `SPEC-999` and one whose profiles were narrowed to `REPOSITORY` were each refused by name. With the receipt restored untouched, the same completion was accepted as `MODE: VERIFY` — the control that proves the rejections measure the receipt and not merely the presence of a completion.
+
+DEFECT C was proven against real GitHub data rather than a stub. On the pushed SHA `5e32ad6`, which genuinely has `Agent Control` and `Repository Consistency` green, a receipt additionally expecting `Migration CI` produced `REMOTE_CERTIFY: FAILED — REQUIRED_WORKFLOW_MISSING: Migration CI produced no run on this SHA`. That is exactly the old defect: two observed green runs, nothing to fail, and the old logic would have reported READY. The genuine expected set on the same SHA reported READY, and no receipt at all failed closed.
+
+The DATABASE doors were proven live on a contract scoped to `supabase/config.toml`: `DATABASE_CAPABILITY_NOT_DECLARED:supabase-local`, then with the capability declared, `DATABASE_HTTP_SUITE_NOT_NAMED`. That file was ordinary to local certification before this change and database-sensitive to Migration CI, so the same probe also confirms the surfaces now agree.
+
+The receipt `-Finish` writes on this repository records `cr: SPEC-164`, `profiles: [CONTROL, REPOSITORY]` and `expected: [Agent Control, Repository Consistency]` — derived from the workflow files' own `push:` triggers, correctly excluding `Migration CI`, whose path filter no written path matches, and the two review-only workflows, which declare no `push:` trigger at all.
+
+What this does NOT prove, stated because a guard must not claim more than it measures: the receipt is written and read by the same process, so it resists omission, staleness and forgetting, not a deliberate forgery by an agent that decides to write one. It is untracked, so CI cannot re-check it; CI instead re-executes the certification, and case 32 asserts that a range completion still passes without one, which is what keeps the receipt from becoming an unsatisfiable CI precondition.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
