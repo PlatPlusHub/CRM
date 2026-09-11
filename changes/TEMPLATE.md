@@ -11,6 +11,17 @@
 Allowed values are exactly these five. Do not use any other status word (for example
 "Ready", "Implemented", or "Rejected") anywhere in a Change Request.
 
+**This document's sections are mechanically enforced (`CR_LIFECYCLE.md §8`).** Once a Change
+Request is Approved, `Objective`, `Business Reason`, `Risks`, `Supersedes / Depends On`,
+`Write Scope`, `Out of Scope`, `Required Reading`, `Required Capabilities`,
+`Additional Verification` and `Implementation Steps` are FROZEN — the Gate compares each one
+against its Git baseline and rejects any difference, so an executing agent cannot widen its own
+authority. Only `Status` (along the §4 transition matrix), `Runtime Checkpoint`, the checkbox
+state of `Acceptance Criteria` and `Review Gate`, and appends to `Execution Log` and
+`Verification Notes` may change. Every section below must be present, and the section set is
+required only of the *governing* Change Request — historical Change Requests keep their own
+original format and are never retrofitted.
+
 ---
 
 ## Objective

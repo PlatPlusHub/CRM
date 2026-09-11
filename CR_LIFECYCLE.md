@@ -35,6 +35,19 @@ No other status word is used. In particular, "Review" is not a Status value — 
 
 Completed and cancelled Change Requests are terminal historical artifacts. The control Gate rejects their later modification, deletion, or rename; every correction requires a new Change Request. The 2026-09-11 Agent Control Plane identity correction is a one-time owner-authorized correction performed before this immutable-history guard was installed and is documented by `SPEC-1001`.
 
+Because every Change Request that reaches a terminal state can never be reopened, and because only the *governing* Change Request is ever parsed against the contract schema, the schema may be strengthened without retroactively invalidating history. No contract-format version field is therefore carried: terminality is the format boundary.
+
+### SPEC identity allocation
+
+A SPEC identity is a repository-wide engineering identity, not a `changes/` filename. One identity names one unit of engineering work and may materialize as a Change Request file, a migration, a pgTAP test, a master-plan entry, or any combination — `SPEC-147` and `SPEC-155` through `SPEC-159` exist as real work with no Change Request file of their own, and sub-identities such as `SPEC-154-A` and `SPEC-159-A` attach to their parent.
+
+Two distinct rules govern identity, and conflating them is exactly what produced the `SPEC-1000` jump:
+
+- **Allocation** — a new identity is the next integer above the highest identity in the *real* engineering sequence. The synthetic band reserved for control-test fixtures by `scripts/test_agent_continuity.ps1` (currently `SPEC-404`, `SPEC-800`–`SPEC-802`, `SPEC-899`–`SPEC-901`) and illustrative non-existent identifiers used in historical reports (`SPEC-999`) are never real work and are excluded from that maximum.
+- **Collision validation** — enforced mechanically by the Gate across the entire repository *including* the synthetic band: a newly added Change Request may never reuse an identifier that already appears in tracked filenames or tracked text (`SPEC_ID_ALREADY_USED`), and two newly added Change Requests may never introduce the same identifier in one diff (`DUPLICATE_NEW_SPEC_ID`).
+
+Allocation decides which number to take; collision validation decides whether taking it is legal. A repository-wide textual maximum is the wrong allocator precisely because it observes fixtures — and the collision check is right to observe them.
+
 ## 5. Responsibility Of Each Transition
 
 | Transition | Responsible party |
@@ -64,7 +77,11 @@ REVIEW is independent verification of a Change Request's execution against the l
 
 A Change Request is a living repository artifact and the authoritative semantic state record of its work. Its declared Write Scope governs engineering artifacts; its own workflow-state sections are implicitly writable for synchronization and never a Write Scope violation.
 
-Synchronization means updating only a Change Request's workflow-state sections — `Status` (only transitions permitted by §4), `Runtime Checkpoint`, `Acceptance Criteria`, `Review Gate`, `Execution Log`, and `Verification Notes`. Synchronization never authorizes modifying `Objective`, `Business Reason`, `Risks`, `Write Scope`, `Out of Scope`, `Required Reading`, `Required Capabilities`, `Additional Verification`, or `Implementation Steps` after approval. Reading is repository-wide; only Write Scope grants create/modify/delete authority. Historical CRs retain their former `Scope` and `Minimum Reading List` headings. Execution Log and Verification Notes remain append-only.
+Synchronization means updating only a Change Request's workflow-state sections — `Status` (only transitions permitted by §4), `Runtime Checkpoint`, `Acceptance Criteria`, `Review Gate`, `Execution Log`, and `Verification Notes`. Synchronization never authorizes modifying `Objective`, `Business Reason`, `Risks`, `Supersedes / Depends On`, `Write Scope`, `Out of Scope`, `Required Reading`, `Required Capabilities`, `Additional Verification`, or `Implementation Steps` after approval. Reading is repository-wide; only Write Scope grants create/modify/delete authority. Historical CRs retain their former `Scope` and `Minimum Reading List` headings. Execution Log and Verification Notes remain append-only.
+
+**This partition is mechanically enforced, not merely declared (2026-09-11, `SPEC-160`).** The governing Change Request is exempt from ordinary Write Scope checking so that synchronization is possible at all; that exemption is safe only because every frozen field is compared against its Git baseline on every Gate. Specifically: a frozen field that differs from its baseline is rejected as `FROZEN_AUTHORITY_MUTATED`; `Execution Log` and `Verification Notes` must remain exact prefixes of their baseline (`EVIDENCE_NOT_APPEND_ONLY`), so a prior entry cannot be edited, deleted, reordered or truncated while appending stays legal; Acceptance Criteria and Review Gate wording and item count are fixed with only unchecked-to-checked permitted (`ACCEPTANCE_TEXT_MUTATED`, `REVIEW_GATE_TEXT_MUTATED`); Status changes are restricted to the §4 matrix (`ILLEGAL_STATUS_TRANSITION`); and a transition to `Complete` additionally requires every Acceptance Criterion and Review Gate item checked, `Blocker: None`, `Resume Step: DONE`, and a `Verdict: Confirmed Complete` entry (`COMPLETION_PREREQUISITE`). A Change Request that is `Approved` or `In Progress` while the manifest names no active pointer is rejected as `ORPHANED_APPROVED_CR`.
+
+The baseline is Git itself — `HEAD` locally, the supplied range base in CI. The pre-commit hook runs the Gate, so a mutation of frozen authority cannot be committed at all, and the CI range check re-proves it across everything pushed. No contract fingerprint is stored, because a hash recomputed by the same agent it constrains proves nothing that the Git baseline does not already prove.
 
 ## 9. Command Vocabulary
 

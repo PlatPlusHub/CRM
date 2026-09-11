@@ -25,7 +25,7 @@ Current state only. `Last Completed` names the single most recent capability —
 
 Current Phase: **Phase 8 (Offline Conversion) — IN PROGRESS**. Execution order 7→9→8→10 (`32`). Phases 2–7 + 9 COMPLETE. Supabase-native backend (ADR-0014); transport ADR-0023. **Phase 10 is NOT ready** — evidence in `32` under Phase 10; blocker is Phase 8's unbuilt n8n workflow, gated behind the Foundation Completion Programme.
 
-Current Module: Agent Control Plane corrective repair complete; product execution returns to Phase-8 offline-conversion / Foundation Completion Programme Batch 6. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
+Current Module: **Agent Control Plane final reconciliation (`SPEC-160`)** — the control plane is being made to enforce the contract partition it already declares. Product execution returns to Phase-8 offline-conversion / Foundation Completion Programme Batch 6 on completion. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
 
 Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` deploys to **Primary `vrvtsxexkiiiivlkdxzp` only**. Secondary `brplkqmbzffpxqgkkdzo` is the `Shehabhub/ORVION` environment and is never a CRM target; differences between the two are expected and valid. Detail: `MASTER_INTEGRATION_CATALOG.md §0/§4`.
 
@@ -41,13 +41,11 @@ Last Completed: **SPEC-1001 Agent Control Plane corrective repair, Complete (202
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md`
 
-Current session blocker: **None.** The 2026-09-09 Windows/Docker port blocker is RESOLVED -- local rebuilt from repository migrations and parity re-proven against live Primary reads at 211 migrations.
+Current session blocker: **None.**
 
-Next capability: **Decision-closure complete. Start Batch 6 Slice 12 on quotations in a NEW session.** Slice 12 was not started here; Batch 6 remains 12/77. `MASTER_EXECUTION_PLAN.md` owns subsequent programme order.
+Other open work is owned elsewhere and is never restated as the next action: `MASTER_EXECUTION_PLAN.md` owns Batch 6 order, the Phase-10 Meta-ecosystem Learn-Before-Designing research and the communications-domain Design Challenge; `MASTER_INTEGRATION_CATALOG.md §2/§2a` owns the preserved n8n workflow build steps.
 
-The workflow build steps remain preserved and unchanged in `MASTER_INTEGRATION_CATALOG.md §2/§2a`.
-
-Also open and autonomous: the Phase-10 Meta-ecosystem Learn-Before-Designing research + communications-domain Design Challenge.
+Next capability: **Batch 6 Slice 12 — the quotations surface audit.**
 
 ---
 

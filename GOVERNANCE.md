@@ -161,7 +161,7 @@ Normal CR execution and routine checkpoints do not require a session report. CR 
 | `CR_LIFECYCLE.md` | CR state machine | Living | CR states/transitions/vocabulary | owner-authorized |
 | `CODING_STANDARDS.md` | code/SQL/API/security standards | Living | standards | as standards evolve |
 | `PROJECT_CONTEXT.md` | identity/vision/boundaries | Living | product identity | owner |
-| `CLAUDE/GEMINI/.cursor/.github`, `llms.txt` | tool / AI-convention entry pointers | Living | nothing — thin pointers to `README.md` → `AGENTS.md §4`; restate nothing (cannot drift) | keep thin |
+| `CLAUDE/GEMINI/.cursor/.github`, `llms.txt` | tool / AI-convention entry pointers | Living | nothing — thin pointers to `README.md` that also name the executable Boot entry and restate nothing else (cannot drift). Check 3 asserts every one of them actually reaches that entry, and that none offers a competing start instruction | keep thin |
 | `WORKSTATION.md` | engineering-environment rebuild entry | Living | how to rebuild the workstation (points to `.workstation/`) | when env reproducibility changes |
 | `.workstation/manifest.md` | SSOT of tools/extensions/MCPs/plugins + Earn-It rationale | Living | what the workstation contains | when a tool earns/loses its place |
 | `.workstation/*.ps1` | recover (`prepare`) · verify (`doctor`) · `update` · `cleanup` · `decommission` | Living | reproducible environment scripts (the real logic) | with the manifest |

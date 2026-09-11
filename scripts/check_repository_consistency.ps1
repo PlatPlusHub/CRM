@@ -578,6 +578,30 @@ if ((Get-Content (Join-Path $RepoRoot 'AGENTS.md') -Raw) -notmatch 'single autho
     Write-Host "  BOOT AUTHORITY WEAKENED: AGENTS.md §4 no longer declares itself the single authoritative boot sequence" -ForegroundColor Yellow
     $issues++
 }
+# GUARD-DESIGN FIX (2026-09-11, SPEC-160): everything above asserts only that a
+# router file MENTIONS a filename, which is a far weaker property than its own
+# description claims. Both live defects passed it: README.md ended with a second,
+# competing "Start at AGENTS.md" instruction contradicting its own Start-here
+# Boot command, and .cursor/rules/orvion.mdc routed to prose while naming no
+# executable entry at all. A router is intact only if it REACHES the one
+# executable Boot entry, and only if it does not offer a rival start.
+$bootEntry = 'check_agent_continuity.ps1 -Boot'
+$bootSurfaces = @('README.md','llms.txt','AGENTS.md','CLAUDE.md','GEMINI.md','.github/copilot-instructions.md','.cursor/rules/orvion.mdc')
+foreach ($surface in $bootSurfaces) {
+    $sp = Join-Path $RepoRoot $surface
+    if (-not (Test-Path $sp)) { continue }   # not every tool's file exists in every checkout
+    $text = Get-Content $sp -Raw
+    if ($text -notmatch [regex]::Escape($bootEntry)) {
+        Write-Host "  ROUTE NOT EXECUTABLE: $surface never reaches '$bootEntry' - a fresh session cannot derive runtime state from it" -ForegroundColor Yellow
+        $issues++
+    }
+    foreach ($m in [regex]::Matches($text, 'Start at `(?<t>[^`]+)`')) {
+        if ($m.Groups['t'].Value -ne 'README.md') {
+            Write-Host "  COMPETING START ROUTE: $surface instructs 'Start at $($m.Groups['t'].Value)' - the only start instructions are README.md and the Boot command" -ForegroundColor Yellow
+            $issues++
+        }
+    }
+}
 # Anti-duplicate-authority: AI pointer files must stay THIN and keep routing to the boot chain.
 # Precedent: llms.txt had grown into a restated SSOT matrix and drifted (2026-07-15). A pointer
 # that accretes content is becoming a second authority — catch it by size + routing.
@@ -1969,6 +1993,16 @@ Write-Host ""
 # owns whether a report declares itself at all.
 # =====================================================================================================
 Write-Host "== Check 23: session reports carry their HANDOFF block (HANDOFF-1) ==" -ForegroundColor Cyan
+# HANDOFF-2 (2026-09-11, SPEC-160): this check enforced the HANDOFF rule while
+# the rule's stated authority had been deleted from AGENTS.md by the Agent
+# Control refactor -- discoverable only by grepping, and uncompliable by a fresh
+# agent who reads the authorities and finds no such rule. A guard must never
+# outlive the document that states what it measures. Asserted here, beside the
+# compliance check, so the pair cannot drift apart again.
+if ((Get-Content (Join-Path $RepoRoot 'AGENTS.md') -Raw) -notmatch '(?s)INHERITED.{0,200}\bPROVEN\b.{0,200}UNPROVEN.{0,200}CHANGED.{0,200}REMAINING.{0,200}DO NOT TOUCH.{0,200}NEXT') {
+    Write-Host "  HANDOFF AUTHORITY MISSING: AGENTS.md no longer states the seven-field HANDOFF block that this check enforces" -ForegroundColor Yellow
+    $issues++
+}
 $handoffRuleDate = [datetime]'2026-09-05'
 $handoffFields = @('INHERITED', 'PROVEN', 'UNPROVEN', 'CHANGED', 'REMAINING', 'DO NOT TOUCH', 'NEXT')
 $historyDir = Join-Path $RepoRoot 'reports/history'

@@ -34,6 +34,8 @@ Never invent policy, expose/request secrets, force-push, use `--no-verify`, rewr
 
 The active capability must finish on every relevant axis before another begins: implement, verify, Review-Gate, synchronize, commit, push, clean tree, no known in-unit debt. A checkpoint records progress; it is not a routine permission pause.
 
+**Durable checkpoint test (owner-ratified continuity authority, restored 2026-09-11).** A meaningful engineering boundary is not checkpointed until the repository itself can carry it forward. Apply one question: *if this agent disappears permanently right now, can a completely fresh agent resume correctly from repository evidence alone?* If not, synchronize the Runtime Checkpoint to the exact next step, append the Execution Log entry, and commit the coherent boundary before stopping. Compact semantic state plus a durable Git checkpoint is the whole mechanism — this never requires a session report, and a knowingly inconsistent half-migration is never committed merely because a session is ending.
+
 ## 3. Runtime workflow
 
 Run from the repository root:
@@ -162,7 +164,9 @@ Governance changes follow `GOVERNANCE.md §15` and owner authorization. Protecte
 
 Reports are durable only when they own evidence not better represented in CR/Git/tests/Canon/ADR: forensic/audit work, substantial research, architectural decisions, phase/capability boundaries, or a failure investigation that cannot be encoded more strongly. Historical reports are immutable. Ordinary checkpoints do not require a new report.
 
-Delegation is not default. Use the fewest non-overlapping specialists only when work is genuinely parallel, requires distinct expertise/evidence, and improves total quality/time; independently verify returned evidence. A task may forbid delegation.
+**HANDOFF rule (owner-ratified 2026-09-05, authority restored 2026-09-11).** When a session report *is* written, it opens with a HANDOFF block carrying all seven fields — INHERITED · PROVEN · UNPROVEN · CHANGED · REMAINING · DO NOT TOUCH · NEXT — so a fresh session with no conversational memory inherits from the repository rather than from chat. Check 23 of `scripts/check_repository_consistency.ps1` enforces this forward-only; history is immutable and is never retrofitted. This rule was enforced by that check while this statement of it was absent, which is the defect class a guard must never be left in.
+
+Delegation is not default and must earn its cost. Use the fewest non-overlapping specialists, only when work is genuinely parallel, requires distinct expertise/evidence, and improves total quality/time; choose the smallest model capable of the required quality; independently verify returned evidence rather than trusting the report that accompanies it; the governing agent retains final responsibility for everything it accepts. A task may forbid delegation.
 
 ## 8. Definition of done and maintenance
 

@@ -26,4 +26,4 @@ ORVION is the working repository for a travel CRM / operations / revenue platfor
 | Rationale, findings, ADRs, deferred backlog | `reports/` (index: `reports/README.md`) |
 | Full document registry (what each file owns) | `GOVERNANCE.md §5` |
 
-**Repository policy:** the repository is self-describing and has no chat-history prerequisite. `AGENTS.md` governs execution conduct and the boot process; `GOVERNANCE.md` governs knowledge authority and placement; the boot process routes each question to the current authoritative document and ground truth. Start at `AGENTS.md`.
+**Repository policy:** the repository is self-describing and has no chat-history prerequisite. `AGENTS.md` governs execution conduct and the boot process; `GOVERNANCE.md` governs knowledge authority and placement; the boot process routes each question to the current authoritative document and ground truth. There is exactly one start instruction, and it is the Boot command above.

@@ -4,10 +4,11 @@
   how local HEAD stands against origin.
 
 .DESCRIPTION
-  AGENTS.md §4 Stage B step 8: "Nothing in this repository compares local `main`
-  against `origin/main`; that is your job before you start." RECOVER-1 was four
-  migrations that sat on origin/main for a day while every guard printed CLEAN,
-  because two sessions had diverged from one base without fetching.
+  AGENTS.md §4 requires fetching before work and forbids automatic merge/rebase/
+  reset when local and upstream diverge both ways. RECOVER-1 was four migrations
+  that sat on origin/main for a day while every guard printed CLEAN, because two
+  sessions had diverged from one base without fetching. Boot reports the same
+  fact, but only once it is run; this hook reports it before anything is run.
 
   This hook is not a guard and asserts nothing — it reports ahead/behind and
   working-tree state so a session cannot begin blind to divergence. It never
