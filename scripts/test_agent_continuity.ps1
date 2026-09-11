@@ -79,6 +79,7 @@ function Stub([string]$Name){
     if($IsLinux-or$IsMacOS){& chmod +x (Join-Path $stubBin $Name)}
 }
 function StubLog{if(Test-Path -LiteralPath $stubLog){(Get-Content -Raw -LiteralPath $stubLog)}else{''}}
+function StubGhLog{if(Test-Path -LiteralPath (Join-Path $sandbox 'gh.log')){(Get-Content -Raw -LiteralPath (Join-Path $sandbox 'gh.log'))}else{''}}
 function Receipt($Object){[IO.File]::WriteAllText($receipt,(ConvertTo-Json $Object -Depth 5),(New-Object Text.UTF8Encoding($false)))}
 function ReceiptJson{if(Test-Path -LiteralPath $receipt){Get-Content -Raw -LiteralPath $receipt|ConvertFrom-Json}else{$null}}
 function Run([string]$Mode='Boot'){
@@ -116,6 +117,13 @@ try{
     Put 'scripts/check_primary_ledger.ps1' 'exit 0'
     Put 'node_modules/.bin/supabase.cmd' 'rem project-local CLI fixture'
     Put 'node_modules/.bin/supabase' 'exit 0'
+    # Workflow fixtures for expected-set derivation: one that always runs on push, one
+    # filtered to Markdown, one filtered to migrations, and one with no push trigger at
+    # all. Real trigger shapes, so the reader is exercised the way the repository uses it.
+    Put '.github/workflows/always.yml' "name: Always`non:`n  push:`n  pull_request:`n"
+    Put '.github/workflows/docs.yml' "name: Docs`non:`n  push:`n    paths:`n      - `"**/*.md`"`n  pull_request:`n    paths:`n      - `"**/*.md`"`n"
+    Put '.github/workflows/db.yml' "name: Db`non:`n  push:`n    paths:`n      - `"supabase/migrations/**`"`n      - `"supabase/config.toml`"`n"
+    Put '.github/workflows/review-only.yml' "name: Review Only`non:`n  pull_request:`n    types: [opened]`n"
     Put 'scripts/check_agent_continuity.ps1' (Get-Content -Raw $control)
     Put 'scripts/check_repository_consistency.ps1' "Write-Output 'REPOSITORY CONSISTENCY: CLEAN'; if(Test-Path env:ORVION_GUARD_MARKER){Set-Content -LiteralPath `$env:ORVION_GUARD_MARKER -Value ran}; exit 0"
     foreach($s in @('test_agent_continuity.ps1','test_cold_start_state_guard.ps1','test_status_contradiction_guard.ps1','test_primary_ledger_guard.ps1','test_future_date_guard.ps1')){Put "scripts/$s" "exit 0"}
@@ -453,9 +461,70 @@ try{
 
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt' -Capabilities 'supabase-primary');$r=Run Finish
     Assert '103c MUST-ACCEPT: valid recorded Primary evidence certifies, and is never called a live read' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_primary_ledger\.ps1'-and$r.Text-match'CAPABILITY: supabase-primary EXTERNAL_EVIDENCE'-and$r.Text-match'recorded'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
+
+    # ---- DEFECT C: -Certify must prove REQUIRED runs, not merely observed ones (SPEC-164) ----
+    # The old logic asked only "did anything fail?". A required workflow that silently
+    # stopped triggering produced no run at all, so there was nothing to fail, and the
+    # remaining green workflow certified the push on its own.
+    #
+    # `gh` is stubbed as a PowerShell script keyed BY COMMIT SHA, so "successful on a
+    # different SHA" is modelled exactly rather than asserted about the implementation.
+    $ghDir=Join-Path $sandbox 'gh';[IO.Directory]::CreateDirectory($ghDir)|Out-Null
+    $ghLog=Join-Path $sandbox 'gh.log'
+    $env:ORVION_STUB_GH=$ghDir;$env:ORVION_STUB_GH_LOG=$ghLog
+    [IO.File]::WriteAllText((Join-Path $stubBin 'gh.ps1'),@'
+$i=[array]::IndexOf($args,'--commit');$sha=if($i-ge0){$args[$i+1]}else{''}
+Add-Content -LiteralPath $env:ORVION_STUB_GH_LOG -Value "gh $($args -join ' ')"
+$f=Join-Path $env:ORVION_STUB_GH "$sha.json"
+if(Test-Path -LiteralPath $f){Get-Content -Raw -LiteralPath $f}else{'[]'}
+exit 0
+'@)
+    function RunCertify{$o=& pwsh -NoProfile -File $control -Certify -Root $root 2>&1;[pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}}
+    function Run1([string]$Name,[string]$Status='completed',[string]$Conclusion='success'){@{workflowName=$Name;status=$Status;conclusion=$Conclusion}}
+    # The previous case's payload is cleared, not overwritten: two cases share one HEAD
+    # SHA, so a leftover file silently answered the query for a case that meant to model
+    # "this SHA has no runs".
+    function GhRuns([object[]]$Runs,[string]$Sha){Get-ChildItem -LiteralPath $ghDir -File|Remove-Item -Force;[IO.File]::WriteAllText((Join-Path $ghDir "$Sha.json"),(ConvertTo-Json @($Runs) -Depth 4 -AsArray))}
+    function ExpectBoth{Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';expected=@('Agent Control','Repository Consistency')}}
+
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control')) $sha;$r=RunCertify
+    Assert '104 one successful workflow does not certify a SHA whose other required run is missing' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match'REQUIRED_WORKFLOW_MISSING'-and$r.Text-match'Repository Consistency'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
+
+    # Green on some other commit certifies nothing about this one.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    Remove-Item -LiteralPath $ghLog -Force -ErrorAction SilentlyContinue
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) '0000000000000000000000000000000000000000';$r=RunCertify
+    Assert '105 a required workflow green only on another SHA never satisfies this one' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and(StubGhLog)-match"--commit $sha") "$($r.Text)`n$(StubGhLog)"
+
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency' 'in_progress' $null)) $sha;$r=RunCertify
+    Assert '106 a required workflow still in progress is PENDING, never READY' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: PENDING'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
+
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency' 'completed' 'timed_out')) $sha;$r=RunCertify
+    Assert '107 a required workflow concluding anything but success is FAILED' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match'Repository Consistency'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
+
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
+    Assert '108 MUST-ACCEPT: every expected workflow observed and successful on the exact SHA is READY' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match"SHA: $sha") $r.Text
+
+    # Fail closed: with no receipt there is no expected set, so nothing can be proven.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
+    Assert '108b remote certification fails closed when no local certification receipt exists' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'receipt') $r.Text
+
+    # The expected set is DERIVED from the workflow files' own push triggers, never
+    # hardcoded — a fixed list would fail a change that legitimately triggers less.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt');$null=Run Finish;$j=ReceiptJson
+    Assert '109 an unfiltered push workflow is expected and a non-matching filtered one is not' ((@($j.expected)-contains'Always')-and(@($j.expected)-notcontains'Docs')-and(@($j.expected)-notcontains'Db')-and(@($j.expected)-notcontains'Review Only')) ($j|ConvertTo-Json -Depth 5)
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'supabase/migrations/20260101_fixture.sql' -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1');$null=Run Finish;$j=ReceiptJson
+    Assert '110 a path-filtered workflow becomes expected exactly when a written path matches it' ((@($j.expected)-contains'Db')-and(@($j.expected)-contains'Always')-and(@($j.expected)-notcontains'Docs')) ($j|ConvertTo-Json -Depth 5)
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
+    Remove-Item Env:ORVION_STUB_GH -ErrorAction SilentlyContinue
+    Remove-Item Env:ORVION_STUB_GH_LOG -ErrorAction SilentlyContinue
     if(Test-Path $sandbox){Remove-Item -LiteralPath $sandbox -Recurse -Force}
 }
 Write-Host "AGENT CONTROL TESTS: $($script:pass) passed, $($script:fail) failed"

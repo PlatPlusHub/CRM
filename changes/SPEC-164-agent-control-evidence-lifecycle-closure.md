@@ -61,7 +61,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 11
+Resume Step: 14
 Blocker: None
 Recovery Attempt: 0
 
@@ -147,6 +147,20 @@ Step results:
 - Step 10: Applied — the DATABASE-sensitive surface gained `supabase/tests/` and `supabase/config.toml`, which Migration CI already treated as database-sensitive.
 
 Evidence: `scripts/test_agent_continuity.ps1` 108 passed, 0 failed.
+
+### 2026-09-11 — implementation agent
+
+Outcome: In Progress
+
+Step results:
+- Step 11: Applied — DEFECT C mutation group added as cases 104-108b plus derivation cases 109 and 110. Proven failing against the unmodified control script: 111 passed, 3 failed. `gh` is stubbed as a PowerShell script keyed BY COMMIT SHA, so "green only on another SHA" is modelled rather than asserted about the implementation. Cases 106, 107 and 108 passed before the repair and are kept as regression coverage of behaviour the old logic already got right.
+- Step 12: Applied — `Workflow-Expectations` reads each workflow's own `name:` and `push:` trigger block; an unfiltered `push:` is always expected, a filtered one only when a written path matches, and a workflow with no `push:` trigger is never expected. The set is derived once, at Finish, and recorded in the receipt.
+- Step 13: Applied — `Certify-Remote` compares EXPECTED against OBSERVED on the exact HEAD SHA before judging conclusions, and fails closed when no receipt or no expected set is readable.
+
+One fixture defect found and fixed during this step: two cases shared one HEAD SHA, so the previous case's stubbed payload silently answered the query for a case that meant to model "this SHA has no runs". `GhRuns` now clears the directory rather than overwriting one file.
+
+Evidence: `scripts/test_agent_continuity.ps1` 116 passed, 0 failed.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log

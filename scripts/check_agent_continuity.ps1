@@ -341,11 +341,49 @@ function Implementation-Fingerprint($Contract,[string]$Rel){
     ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($acc.ToString())))-replace'-','').ToLowerInvariant()
 }
 
+# Which workflows MUST have run for this change, derived from the workflow files
+# themselves so no second authority for CI expectations is created. A workflow that
+# declares `push:` with no `paths:` filter always runs; one with a filter runs only
+# when a written path matches it. A workflow with no `push:` trigger at all is never
+# expected from a push, which is what keeps review-only workflows out of the set.
+#
+# The glob translation handles exactly the three forms this repository uses - an exact
+# path, a `prefix/**` subtree and a `**/*.ext` suffix. That is deliberate: a general
+# path-expression engine would be a new mechanism with its own failure modes, and an
+# unrecognized form is better caught by a false expectation than by a silent miss.
+function Glob-Regex([string]$Pattern){
+    '^'+([regex]::Escape($Pattern)-replace'\\\*\\\*/','(?:.*/)?'-replace'\\\*\\\*','.*'-replace'\\\*','[^/]*')+'$'
+}
+function Workflow-Expectations([string[]]$Paths){
+    $dir=Join-Path $Root '.github/workflows'
+    if(!(Test-Path -LiteralPath $dir)){return @()}
+    $names=@()
+    foreach($f in @(Get-ChildItem -LiteralPath $dir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
+        $text=[IO.File]::ReadAllText($f.FullName)
+        $name=[regex]::Match($text,'(?m)^name:\s*(?<v>.+?)\s*$');if(!$name.Success){continue}
+        # The `push:` block is everything indented deeper than it, so the sibling
+        # `pull_request:` trigger at the same indent ends the capture. Reading the whole
+        # file instead is how a guard once reported CLEAN on two lists that disagreed.
+        $push=[regex]::Match($text,'(?ms)^  push:[ \t]*\r?\n(?<b>(?:[ \t]{4,}.*\r?\n|[ \t]*\r?\n)*)')
+        if(!$push.Success){continue}
+        $globs=@([regex]::Matches($push.Groups['b'].Value,'(?m)^\s*-\s*"?(?<v>[^"\r\n]+?)"?\s*$')|%{$_.Groups['v'].Value})
+        if(!$globs.Count){$names+=$name.Groups['v'].Value;continue}
+        foreach($g in $globs){
+            $rx=Glob-Regex $g
+            if(@($Paths|Where-Object{$_-match$rx}).Count){$names+=$name.Groups['v'].Value;break}
+        }
+    }
+    @($names|Sort-Object -Unique)
+}
+
 function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
     $receipt=[ordered]@{
         cr=$Contract.Id
         profiles=@($Profiles|Sort-Object)
         fingerprint=(Implementation-Fingerprint $Contract $Rel)
+        # Derived ONCE, here, and read back by -Certify. Re-deriving it after the push
+        # would make the completed task's own surface a second authority.
+        expected=@(Workflow-Expectations @($Contract.Scope|%{$_-replace'\\','/'}))
         result='READY'
         at=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
@@ -682,9 +720,32 @@ function Finish-Checks($c,[string[]]$profiles,[string]$rel){
 # Complete while CI was red. The claim therefore belongs here - made after the
 # push, by machine, against the SHA that actually exists - and never in a
 # checkbox that Complete depends on.
+# EXPECTED is compared against OBSERVED before any conclusion is judged (SPEC-164).
+# Asking only "did anything fail?" cannot see a required workflow that stopped
+# triggering: it produces no run, so there is nothing to fail, and the remaining green
+# workflow certifies the push on its own. The expected set comes from the receipt, so
+# this function derives nothing and adds no second authority.
 function Certify-Remote {
     $sha=(git -C $Root rev-parse HEAD).Trim()
     Write-Output "SHA: $sha"
+    $path=Receipt-Path
+    if(!(Test-Path -LiteralPath $path)){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: no local certification receipt — the expected workflow set is unknown, so nothing can be proven. Run -Finish, then push, then certify.'
+        exit 1
+    }
+    try{$receipt=Get-Content -Raw -LiteralPath $path|ConvertFrom-Json}catch{
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: the local certification receipt is unreadable'
+        exit 1
+    }
+    $expected=@($receipt.expected|Where-Object{$_})
+    if(!$expected.Count){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: the local certification receipt records no expected workflow set'
+        exit 1
+    }
+    Write-Output "EXPECTED: $((@($expected)|Sort-Object)-join', ')"
     $raw=gh run list --commit $sha --json workflowName,conclusion,status 2>$null
     if($LASTEXITCODE-ne0-or!$raw){
         Write-Output 'REMOTE_CERTIFY: FAILED'
@@ -698,7 +759,22 @@ function Certify-Remote {
         exit 1
     }
     foreach($r in $runs){Write-Output "RUN: $($r.workflowName) $($r.status)/$($r.conclusion)"}
+    $observed=@($runs|ForEach-Object{$_.workflowName}|Sort-Object -Unique)
+    $missing=@($expected|Where-Object{$observed-notcontains$_}|Sort-Object)
     $running=@($runs|Where-Object{$_.status-ne'completed'})
+    # A required workflow that has not appeared YET is PENDING while anything is still
+    # settling, and FAILED once every observed run has completed without it. Both are
+    # NOT READY; the distinction only tells the reader whether waiting can still help.
+    if($missing.Count-and$running.Count){
+        Write-Output 'REMOTE_CERTIFY: PENDING'
+        Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING so far: $($missing-join', ') — $($running.Count) run(s) on this SHA have not completed"
+        exit 1
+    }
+    if($missing.Count){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING: $($missing-join', ') produced no run on this SHA. Success on any other SHA proves nothing about this one."
+        exit 1
+    }
     if($running.Count){
         Write-Output 'REMOTE_CERTIFY: PENDING'
         Write-Output "EVIDENCE: $($running.Count) run(s) still in progress on this SHA"
