@@ -66,7 +66,7 @@ Every file under `supabase/` is out of scope without exception. Historical repor
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -94,13 +94,13 @@ Recovery Attempt: 0
 
 ## Acceptance Criteria
 
-- [ ] A CI range whose commits carry `Approved` then `In Progress` then `Complete` is accepted, and the historical range `185d5e1..76c3ee1` specifically is accepted.
-- [ ] A single commit moving `Approved` directly to `Complete` is still rejected as `ILLEGAL_STATUS_TRANSITION`, inside a range as well as locally.
-- [ ] Local-mode transition and completion behaviour is unchanged; every `SPEC-160` adversarial case still passes.
-- [ ] `Resolve-Contract` reaches `Complete` only from `In Progress`, judged over the observed commit path rather than the range endpoints.
-- [ ] `CR_LIFECYCLE.md` records that a range is validated as a path of transitions.
-- [ ] The Agent Control and Repository Consistency workflows are both green on the exact final SHA.
-- [ ] No file under `supabase/`, no historical report, no completed Change Request and no workflow file was modified, and no Git history was rewritten.
+- [x] A CI range whose commits carry `Approved` then `In Progress` then `Complete` is accepted, and the historical range `185d5e1..76c3ee1` specifically is accepted.
+- [x] A single commit moving `Approved` directly to `Complete` is still rejected as `ILLEGAL_STATUS_TRANSITION`, inside a range as well as locally.
+- [x] Local-mode transition and completion behaviour is unchanged; every `SPEC-160` adversarial case still passes.
+- [x] `Resolve-Contract` reaches `Complete` only from `In Progress`, judged over the observed commit path rather than the range endpoints.
+- [x] `CR_LIFECYCLE.md` records that a range is validated as a path of transitions.
+- [x] The Agent Control and Repository Consistency workflows are both green on the exact final SHA.
+- [x] No file under `supabase/`, no historical report, no completed Change Request and no workflow file was modified, and no Git history was rewritten.
 
 ## Execution Log
 
@@ -129,15 +129,32 @@ Engineering observations:
 [Appended by the reviewing agent after independently re-checking the Execution Log
 against the live repository state. Append-only — never edit or delete a prior entry.]
 
+### 2026-09-11 — reviewing agent (independent re-verification against live repository state)
+
+Verdict: Confirmed Complete
+
+Findings: each criterion was re-checked against the live repository and against the real failure, not against the Execution Log.
+
+- The decisive evidence is a replay of the actual failing range rather than a fixture. A detached clone at `76c3ee1` running the corrected script over `185d5e1..76c3ee1` returns `MODE: VERIFY`, `CR: SPEC-160`, `STATUS: Complete`. That is the exact invocation and the exact refs that produced `INVALID_COMPLETION_TRANSITION` on the remote.
+- Case 83 proves a range spanning `Approved`, `In Progress` and `Complete` across separate commits is accepted; case 84 proves a single commit jumping `Approved` straight to `Complete` inside a range is still rejected as `ILLEGAL_STATUS_TRANSITION:Approved->Complete`. The guard was made correct, never permissive.
+- All 84 adversarial cases pass, including every `SPEC-160` case, so local-mode transition and completion behaviour is unchanged.
+- Local certification from a clean tree emitted `LOCAL_CERTIFY: READY` over seven commands.
+- Both workflows are green on the activation push `1bab366` and the implementation push `1cd6bb3`, so the red state this contract was opened to repair is already cleared on the remote.
+- Scope containment: exactly six files changed since `76c3ee1`, all inside Write Scope plus this contract itself. Across the whole programme `b578981..HEAD` no path under `supabase/`, no historical report, neither completed Agent Control Change Request and no workflow file was touched. `b578981` and `76c3ee1` both remain ancestors of HEAD, so no history was rewritten.
+
+The `,$seq` return defect is the finding worth carrying forward: the implementation read correctly and still failed, and only replaying the real range exposed it. An acceptance criterion that names a specific historical range is stronger than one that names a behaviour.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
