@@ -2,7 +2,7 @@
 
 Governed by `GOVERNANCE.md` (§7). This folder holds analysis, findings, evidence, and history — **never** authoritative business/schema canon (that is `_ORVION_CANONICAL/**`).
 
-> **Latest session report:** `history/session-2026-09-09-ten-decision-closure.md` — ten-decision package verified/deployed; Batch 6 remains 12/77 and Slice 12 was not started.
+> **Latest session report:** `history/agent-control-plane-corrective-repair-2026-09-11.md` — SPEC-1001 corrected the Agent Control Plane identity, restored owner-ratified authority, and repaired deterministic enforcement without changing product or database behavior.
 >
 > Previously: **Latest session report:** `history/session-2026-09-09-cold-start-synchronization.md` — COLD-2b, GOV-23, GOV-24, CI-1b and SYNC-2 repaired; cold-start state now resolves to exactly one live pointer.
 >

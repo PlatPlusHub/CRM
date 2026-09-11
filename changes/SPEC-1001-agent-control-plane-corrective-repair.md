@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 Owner authorization: the 2026-09-11 owner directive titled “ORVION — OWNER-DIRECTED CORRECTIVE REPAIR” authorizes this exact Change Request.
@@ -115,16 +115,16 @@ Recovery Attempt: 0
 
 ## Acceptance Criteria
 
-- [ ] The Agent Control Plane CR is uniquely identified as SPEC-1000 and the pre-existing product SPEC-155 lineage remains unchanged.
-- [ ] The directed owner-ratified execution, architecture-decision, and measurement-integrity authority is restored at the referenced AGENTS sections.
-- [ ] No numeric AGENTS byte ceiling or repository-guard bypass remains.
-- [ ] CR identity, global new-ID uniqueness, terminal-history immutability, fresh local Git, range mode, Boot scope, multiline action, deterministic capabilities, recovery exhaustion, and executable Finish are behaviorally enforced as directed.
-- [ ] Additional Verification is executable-command-only for new CRs and remains additive.
-- [ ] Agent Control CI runs the control suite before Gate and uses the actual push/PR range without upstream or asserted capabilities.
-- [ ] All required behavioral and structural policy-anchor tests pass with their evidence classes stated honestly.
-- [ ] Local Finish actually executes required checks and ends with `LOCAL_CERTIFY: READY`.
-- [ ] Both required workflows succeed on the In-Progress SHA and final completion SHA.
-- [ ] Only exact Write Scope paths differ from starting HEAD; all forbidden product, database, Canon-domain, roadmap, Master, evidence, existing-history, workstation, MCP, and dependency surfaces remain unchanged.
+- [x] The Agent Control Plane CR is uniquely identified as SPEC-1000 and the pre-existing product SPEC-155 lineage remains unchanged.
+- [x] The directed owner-ratified execution, architecture-decision, and measurement-integrity authority is restored at the referenced AGENTS sections.
+- [x] No numeric AGENTS byte ceiling or repository-guard bypass remains.
+- [x] CR identity, global new-ID uniqueness, terminal-history immutability, fresh local Git, range mode, Boot scope, multiline action, deterministic capabilities, recovery exhaustion, and executable Finish are behaviorally enforced as directed.
+- [x] Additional Verification is executable-command-only for new CRs and remains additive.
+- [x] Agent Control CI runs the control suite before Gate and uses the actual push/PR range without upstream or asserted capabilities.
+- [x] All required behavioral and structural policy-anchor tests pass with their evidence classes stated honestly.
+- [x] Local Finish actually executes required checks and ends with `LOCAL_CERTIFY: READY`.
+- [x] Both required workflows succeed on the In-Progress SHA and final completion SHA.
+- [x] Only exact Write Scope paths differ from starting HEAD; all forbidden product, database, Canon-domain, roadmap, Master, evidence, existing-history, workstation, MCP, and dependency surfaces remain unchanged.
 
 ## Execution Log
 
@@ -157,19 +157,35 @@ Step results:
 
 Commits: `e2b975a` and the pending evidence-synchronization commit.
 
+### 2026-09-11 — Codex completion
+
+Outcome: Complete
+
+Step results:
+- Step 7: Applied — evidence-synchronization commit `7b2749aa3aee186100c91d697d9aa9d67e84afbf` produced successful Agent Control and Repository Consistency runs for the exact In-Progress SHA.
+- Step 8: Applied — independent live-state review confirmed every correction and the write-scope/forbidden-path boundaries; completion state, earned history report, report pointer, and generated routing were synchronized.
+
+Commits: the completion commit containing this entry.
+
 ## Verification Notes
 
-None.
+### 2026-09-11 10:46 +03:00 — Codex independent live-state review
+
+Verdict: Confirmed Complete
+
+Findings: Re-read every required final authority and inspected the complete diff from `6fdc4af5e9930f81d6ff54fc1c4db15808559c62`. The product SPEC-155 lineage remains present (23 scoped matches) while the former control-plane collision phrase has zero matches; SPEC-1000 owns the corrected control-plane CR and SPEC-1001 owns this repair. The restored §3 and §6 authority is present; active control surfaces contain no 16-KiB failure and the production script has no `SkipRepositoryGuard` parameter. A completion-draft Gate exposed that local mode did not recognize the legal HEAD `In Progress` to working-tree `Complete` transition; the in-scope repair now validates HEAD as the local base, and case 32 attacks both local and detached CI completion paths. The full corrected `-Finish` rerun returned `LOCAL_CERTIFY: READY`: 45/45 control, 34/34 cold-start, 33/33 status, 13/13 ledger, 5/5 date, and Repository Consistency CLEAN. Cases 1–43 are behavioral; cases 44–45 are explicitly structural policy-anchor tests. Agent Control and Repository Consistency both succeeded for exact In-Progress SHA `7b2749aa3aee186100c91d697d9aa9d67e84afbf`. Changed-path comparison found only authorized Write Scope paths and no forbidden product, database, Canon-domain, roadmap, Master, evidence, existing-history, workstation, MCP, or dependency change.
+
+Recommendation to human: Set Status to Complete.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

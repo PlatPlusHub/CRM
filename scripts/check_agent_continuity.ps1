@@ -88,7 +88,7 @@ function Resolve-Contract($m,[object[]]$Records){
     $changed=@($Records|?{$_.Path-match'^changes/SPEC-[0-9]+-.*\.md$'}|%{$_.Path}|select -Unique);$c=@()
     foreach($p in $changed){if(Test-Path(Join-Path $Root $p)){try{$x=Contract(Join-Path $Root $p);if($x.Status-eq'Complete'){$c+=$p}}catch{}}}
     if(!$BaseRef-and!$c.Count){return $null};if(!$c.Count){throw 'NO_GOVERNING_CR'};if($c.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
-    $old=Read-GitFile $BaseRef $c[0];if($null-eq$old-or(Status-FromText $old)-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"};$c[0]
+    $base=if($BaseRef){$BaseRef}else{'HEAD'};$old=Read-GitFile $base $c[0];if($null-eq$old-or(Status-FromText $old)-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"};$c[0]
 }
 function Profiles($scope){
     $h=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase);[void]$h.Add('REPOSITORY')
@@ -120,8 +120,8 @@ try{
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'};Validate-HistoryAndIds $records $base
     $m=Manifest;$rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State;if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
     if(!$rel){$bad=@($records|?{if($_.Path-notmatch'^changes/SPEC-[0-9]+-.*\.md$'){return $true};try{$draft=Contract(Join-Path $Root $_.Path);return $draft.Status-notin@('Draft','Approved')}catch{return $true}});if($bad.Count){throw "NO_GOVERNING_CR:$((@($bad|%{$_.Path})|sort -Unique)-join',')"};Write-Output 'ORVION: READY';Write-Output 'MODE: PLAN';Write-Output 'ACTIVE_CR: none';Write-Output "NEXT_CAPABILITY: $($m.Next)";Write-Output 'WRITE_AUTHORITY: none (Draft CR authoring only)';Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";exit 0}
-    $c=Contract(Join-Path $Root $rel);$rangeCompletion=(-not$m.Active-and[bool]$BaseRef)
-    $mode=switch($c.Status){'Draft'{'READY_FOR_APPROVAL'} {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){if($c.Attempt-eq3){throw 'RECOVERY_EXHAUSTED'};'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}} 'Complete'{if($rangeCompletion){'VERIFY'}else{'BLOCKED'}} default{'BLOCKED'}}
+    $c=Contract(Join-Path $Root $rel);$completionTransition=(-not$m.Active)
+    $mode=switch($c.Status){'Draft'{'READY_FOR_APPROVAL'} {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){if($c.Attempt-eq3){throw 'RECOVERY_EXHAUSTED'};'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}} 'Complete'{if($completionTransition){'VERIFY'}else{'BLOCKED'}} default{'BLOCKED'}}
     if($mode-eq'BLOCKED'){throw "RUNTIME_BLOCKED:$($c.Blocker)"};if(!$BaseRef){Test-Capabilities $c}
     $scope=@($c.Scope|%{$_-replace'\\','/'});foreach($r in $records){foreach($p in @($r.Path,$r.Old)|?{$_}){if($p-ne($rel-replace'\\','/')-and$scope-notcontains$p){throw "OUT_OF_SCOPE_WRITE:$p"}}}
     $profiles=Profiles $c.Scope;if($Finish-and$mode-ne'VERIFY'){throw "FINISH_NOT_READY:$mode"}
