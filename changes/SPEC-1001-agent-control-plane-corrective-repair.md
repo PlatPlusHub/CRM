@@ -84,7 +84,7 @@ Depends on the completed Agent Control Plane Change Request originally committed
 
 ## Runtime Checkpoint
 
-Resume Step: 7
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -146,6 +146,16 @@ Step results:
 - Steps 3–6: Applied — directed AGENTS authority, parser/Gate/Finish controls, lifecycle/template contract, 45-case mutation suite, and CI range workflow repaired.
 
 Commits: `66eaea6`, `dfcb44a`, and the pending enforcement-repair commit.
+
+### 2026-09-11 — Codex remote CI correction
+
+Outcome: Complete
+
+Step results:
+- Step 7: Initial push `5d78aacd5335278c5b03edb0b3f969bd86e6b9c4` produced Repository Consistency success and Agent Control failure because the disposable test hook lacked the Unix working-file executable bit.
+- Step 7: Applied the authorized cross-platform fixture correction, reran `-Finish` to `LOCAL_CERTIFY: READY`, and pushed `e2b975ac98d5619a550a48db79437194370b4636`; Agent Control succeeded. Repository Consistency was not triggered by that one-file path-filtered push, so a synchronized CR evidence commit will obtain both exact-SHA results before review.
+
+Commits: `e2b975a` and the pending evidence-synchronization commit.
 
 ## Verification Notes
 
