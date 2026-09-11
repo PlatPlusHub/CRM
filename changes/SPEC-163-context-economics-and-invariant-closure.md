@@ -178,6 +178,19 @@ Verification: `scripts/check_repository_consistency.ps1` CLEAN with Checks 26 an
 
 Commits: this entry's commit.
 
+### 2026-09-11 — Claude Opus 5
+
+Outcome: Complete
+
+Step results:
+- Step 13: Applied — cases 85 to 91 and 93 cover the new invariants; case 13's fixture now names a capability the registry genuinely lacks.
+- Step 14: Applied — case 92 fixes the identity rule, and `CR_LIFECYCLE.md §4` records that reserving on a prose mention is a decision, not a defect.
+
+Engineering Observation 5: CI rejected `52295ba` and was right to. Three cases failed on the runner while passing on this workstation. Cases 44 and 45 still asserted the relocated anchors in `AGENTS.md`; they now assert the rule in `ENGINEERING_METHOD.md` AND the kernel's route to it, because either half alone permits the authority to become implicitly remembered. Case 89 asserted that the `github` probe PASSES, which asserts an environment rather than a behaviour — a bare runner has `gh` installed and unauthenticated. It now asserts what must hold everywhere, that a registered capability is never treated as unknown, and checks the outcome against what is actually true on the machine running it. Both branches are proven: 93 of 93 with `gh` authenticated, and 93 of 93 with `GH_CONFIG_DIR` pointed at an empty directory so `gh auth status` fails.
+
+The direct cause was mine: after redoing the relocation I re-ran the repository guard but not the control suite. The remote check earned its place by catching it.
+
+Commits: this entry's commit.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log against the live repository state.]

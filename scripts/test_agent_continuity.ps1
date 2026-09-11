@@ -160,8 +160,13 @@ try{
     $collisionNeedle='SPEC-155 Agent'+' Control Plane';$collision=@(git -C $sourceRoot grep -n -F $collisionNeedle -- . 2>$null);$product=@(git -C $sourceRoot grep -n -F 'SPEC-155' -- 'supabase/migrations/*' 'reports/master/MASTER_EXECUTION_PLAN.md' 2>$null)
     Assert '43 control-plane identifier collision absent and product SPEC-155 remains' ($collision.Count-eq0-and$product.Count-gt0) "collision=$($collision.Count) product=$($product.Count)"
     $kernel=Get-Content -Raw (Join-Path $sourceRoot AGENTS.md)
-    Assert '44 STRUCTURAL POLICY-ANCHOR: §3 restored authority exists' ($kernel-match'Governing meta-principle — Earn-It'-and$kernel-match'Fundamental Domain Structure vs Feature Implementation'-and$kernel-match'Learn-Before-Designing'-and$kernel-match'Phase-transition checkpoint') '§3 anchors missing'
-    Assert '45 STRUCTURAL POLICY-ANCHOR: §6 measurement integrity authority exists' ($kernel-match'Measurement integrity — restored compatibility authority'-and$kernel-match'No vacuous security tests'-and$kernel-match'A green guard proves only'-and$kernel-match'External credentials never pass through the agent') '§6 anchors missing'
+    # These anchors moved to their owning authority with SPEC-163; the assertion did
+    # not weaken, it follows the rule. The kernel must still ROUTE to that owner, and
+    # the owner must still HOLD the rule - both halves are asserted, because either
+    # one alone permits the authority to become implicitly remembered.
+    $method=if(Test-Path (Join-Path $sourceRoot ENGINEERING_METHOD.md)){Get-Content -Raw (Join-Path $sourceRoot ENGINEERING_METHOD.md)}else{''}
+    Assert '44 STRUCTURAL POLICY-ANCHOR: decision and architecture authority exists and is routed' ($method-match'Governing meta-principle — Earn-It'-and$method-match'Fundamental Domain Structure vs Feature Implementation'-and$method-match'Learn-Before-Designing'-and$method-match'Phase-transition checkpoint'-and$kernel-match'ENGINEERING_METHOD\.md §2') '§2 anchors missing from ENGINEERING_METHOD.md, or AGENTS.md no longer routes there'
+    Assert '45 STRUCTURAL POLICY-ANCHOR: measurement integrity authority exists and is routed' ($method-match'No vacuous security tests'-and$method-match'A green guard proves only'-and$method-match'Attack every new detector with a counterexample'-and$method-match'External credentials never pass through the agent'-and$kernel-match'ENGINEERING_METHOD\.md §3') '§3 anchors missing from ENGINEERING_METHOD.md, or AGENTS.md no longer routes there'
 
     # ---- TRUST KERNEL: the agent may update state, never rewrite its own authority ----
     # The headline attack: redirect my own Write Scope at a new path, then write it.
@@ -285,8 +290,17 @@ try{
     Assert '88 MUST-ACCEPT: a Draft alongside the active contract needs no pointer' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
 
     # ---- Capability routing: probe what is local, declare what is not ----
+    # A LOCAL_PROBE is PROBED, and the probe tells the truth about this machine. A
+    # bare CI runner has `gh` installed but unauthenticated, so asserting that the
+    # github probe always PASSES would assert an environment, not a behaviour - which
+    # is exactly how this case failed in CI while passing on an authenticated
+    # workstation. What must hold everywhere is that a registered capability is never
+    # treated as unknown; the outcome is then checked against what is actually true here.
+    gh auth status *>$null;$ghAuthed=($LASTEXITCODE-eq0)
     Reset-Fixture;Rebase (ContractText -Capabilities github);$r=Run
-    Assert '89 MUST-ACCEPT: a LOCAL_PROBE capability is actually probed and passes' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE'-and$r.Text-notmatch'CAPABILITY: github') $r.Text
+    $probed=($r.Text-notmatch'NO_DETERMINISTIC_CAPABILITY_PROBE')-and($r.Text-notmatch'CAPABILITY: github')
+    $honest=if($ghAuthed){$r.Code-eq0-and$r.Text-match'MODE: EXECUTE'}else{$r.Code-ne0-and$r.Text-match'MISSING_REQUIRED_CAPABILITY:github'}
+    Assert "89 MUST-ACCEPT: a LOCAL_PROBE capability is probed and reports honestly (gh authenticated: $ghAuthed)" ($probed-and$honest) $r.Text
     Reset-Fixture;Rebase (ContractText -Capabilities n8n);$r=Run
     Assert '90 an EXTERNAL_EVIDENCE capability is declared, never claimed proven' ($r.Code-eq0-and$r.Text-match'CAPABILITY: n8n EXTERNAL_EVIDENCE'-and$r.Text-notmatch'MISSING_REQUIRED_CAPABILITY') $r.Text
 
