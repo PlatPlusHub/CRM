@@ -35,7 +35,7 @@ Fixture risk statement.
 ## Supersedes / Depends On
 None
 ## Write Scope
-$(if($Scope-eq'None'){'None'}else{"- ``$Scope``"})
+$(if($Scope-eq'None'){'None'}else{(@($Scope-split';')|%{"- ``$_``"})-join"`n"})
 ## Out of Scope
 - ``$OutOfScope``
 ## Required Reading
@@ -62,7 +62,13 @@ $Notes
 }
 function Put([string]$Rel,[string]$Text){$p=Join-Path $root $Rel;$d=Split-Path $p -Parent;if(!(Test-Path $d)){[IO.Directory]::CreateDirectory($d)|Out-Null};[IO.File]::WriteAllText($p,$Text,(New-Object Text.UTF8Encoding($false)))}
 function ManifestText([string]$Active='changes/SPEC-900-fixture.md'){"Active Change Request: $Active`nNext capability: Batch 6 Slice 12 on quotations.`n---`n"}
-function Reset-Fixture{git -C $root checkout main --quiet 2>$null;git -C $root branch --set-upstream-to origin/main main --quiet 2>$null;git -C $root reset --hard origin/main --quiet;git -C $root clean -fdq}
+# The local certification receipt is gitignored, and `git clean -fd` deliberately
+# leaves ignored files alone, so it would otherwise survive every reset and let one
+# case certify the next one's fixture. It is removed explicitly.
+$receipt=Join-Path $root '.orvion-local-certification.json'
+function Reset-Fixture{git -C $root checkout main --quiet 2>$null;git -C $root branch --set-upstream-to origin/main main --quiet 2>$null;git -C $root reset --hard origin/main --quiet;git -C $root clean -fdq;Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue}
+function Receipt($Object){[IO.File]::WriteAllText($receipt,(ConvertTo-Json $Object -Depth 5),(New-Object Text.UTF8Encoding($false)))}
+function ReceiptJson{if(Test-Path -LiteralPath $receipt){Get-Content -Raw -LiteralPath $receipt|ConvertFrom-Json}else{$null}}
 function Run([string]$Mode='Boot'){
     $o=& pwsh -NoProfile -File $control "-$Mode" -Root $root 2>&1;$code=$LASTEXITCODE
     [pscustomobject]@{Text=($o|Out-String);Code=$code;Lines=@($o).Count}
@@ -87,6 +93,7 @@ try{
     Put 'changes/SPEC-900-fixture.md' (ContractText)
     Put 'changes/SPEC-800-complete.md' (ContractText -Id SPEC-800 -Status Complete -Resume DONE)
     Put 'changes/SPEC-801-cancelled.md' (ContractText -Id SPEC-801 -Status Cancelled -Resume DONE)
+    Put '.gitignore' ".orvion-local-certification.json`n"
     Put 'scripts/check_agent_continuity.ps1' (Get-Content -Raw $control)
     Put 'scripts/check_repository_consistency.ps1' "Write-Output 'REPOSITORY CONSISTENCY: CLEAN'; if(Test-Path env:ORVION_GUARD_MARKER){Set-Content -LiteralPath `$env:ORVION_GUARD_MARKER -Value ran}; exit 0"
     foreach($s in @('test_agent_continuity.ps1','test_cold_start_state_guard.ps1','test_status_contradiction_guard.ps1','test_primary_ledger_guard.ps1','test_future_date_guard.ps1')){Put "scripts/$s" "exit 0"}
@@ -138,7 +145,12 @@ try{
     Reset-Fixture;Put '.githooks/pre-commit' "#!/bin/sh`nexec pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Gate`n";git -C $root add .githooks/pre-commit;git -C $root update-index --chmod=+x .githooks/pre-commit;if($IsLinux-or$IsMacOS){& chmod +x (Join-Path $root '.githooks/pre-commit')};git -C $root commit -m hook --quiet;git -C $root config core.hooksPath .githooks;Put outside.txt injected;git -C $root add outside.txt;$before=git -C $root rev-parse HEAD;$out=(git -C $root commit -m injected 2>&1|Out-String);$code=$LASTEXITCODE;$after=git -C $root rev-parse HEAD;Assert '30 pre-commit rejects a real out-of-scope write' ($code-ne0-and$before-eq$after-and$out-match'OUT_OF_SCOPE_WRITE') $out
 
     Reset-Fixture;git -C $root config --unset core.hooksPath 2>$null;Put allowed.txt range;Commit active-range;$r=RunRange 'HEAD~1';Assert '31 active CI range resolves' ($r.Code-eq0-and$r.Text-match'CR: SPEC-900') $r.Text
-    Reset-Fixture;Rebase (ContractText -Scope '_ORVION_CANONICAL/manifest.md');Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$local=Run Gate;Commit completion-range;$r=RunRange 'HEAD~1';Assert '32 local and CI completion resolve only from nonterminal BASE' ($local.Code-eq0-and$local.Text-match'MODE: VERIFY'-and$r.Code-eq0-and$r.Text-match'MODE: VERIFY') "$($local.Text)`n$($r.Text)"
+    # A LOCAL completion now additionally requires the certification receipt that
+    # `-Finish` mints (SPEC-164), so this case earns one first. The range half is
+    # deliberately NOT given a receipt: CI holds no local artifact and re-executes
+    # the certification itself, and asserting both halves here is what proves the
+    # receipt never became an unsatisfiable CI precondition.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md');$null=Run Finish;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$local=Run Gate;Commit completion-range;Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue;$r=RunRange 'HEAD~1';Assert '32 local and CI completion resolve only from nonterminal BASE' ($local.Code-eq0-and$local.Text-match'MODE: VERIFY'-and$r.Code-eq0-and$r.Text-match'MODE: VERIFY') "$($local.Text)`n$($r.Text)"
     # Deliberately NOT pushed. The range only needs local commits, and publishing a
     # second In-Progress contract to the sandbox origin left every later test
     # inheriting a genuine orphan through Reset-Fixture.
@@ -228,7 +240,11 @@ try{
     Assert '69 Complete while blocked is rejected' ($r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:Blocker TEST_BLOCKER') $r.Text
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume 1 -Closeable);$r=Run Gate
     Assert '70 Complete with an unfinished Resume Step is rejected' ($r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:Resume Step 1') $r.Text
-    Reset-Fixture;Rebase (ContractText -Scope '_ORVION_CANONICAL/manifest.md');Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    # "Fully satisfied" now includes the local certification receipt (SPEC-164): the
+    # textual prerequisites above are all writable by hand, so on their own they
+    # never proved that verification ran. The case still asserts acceptance, against
+    # a strictly stronger precondition.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md');$null=Run Finish;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
     Assert '71 MUST-ACCEPT: a fully satisfied completion passes' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 
     # ---- Identity and pointer agreement ----
@@ -324,6 +340,43 @@ try{
     # exit code while also writing its result, so the code joined the output stream
     # and the run fell through into the whole Boot pipeline after reporting.
     Assert '94 remote certification never reports READY without reading a real run' ($code-ne0-and$t-match'REMOTE_CERTIFY: (FAILED|PENDING)'-and$t-notmatch'REMOTE_CERTIFY: READY'-and$t-notmatch'ORVION:') $t
+
+    # ---- DEFECT A: Complete must PROVE that Finish succeeded (SPEC-164) ----
+    # Every textual completion prerequisite could be satisfied by writing prose. An
+    # agent that ticked the boxes, wrote `Verdict: Confirmed Complete` and set
+    # `Resume Step: DONE` reached Complete without ever obtaining LOCAL_CERTIFY:
+    # READY. The receipt is the anti-omission and anti-staleness control: it exists
+    # only because Finish actually ran, and it is bound to the implementation state
+    # it certified, so it cannot be carried forward past an edit.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md')
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '95 Complete with every box checked but no local certification receipt is rejected' ($r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:no local certification receipt') $r.Text
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md')
+    Receipt @{cr='SPEC-899';profiles=@('REPOSITORY');fingerprint='0';result='READY'}
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '96 a certification receipt naming a different Change Request is rejected' ($r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:certification receipt names SPEC-899') $r.Text
+
+    # The profiles are recorded so a receipt cannot be reused across a Write Scope
+    # that derives DIFFERENT mandatory verification. Certifying REPOSITORY alone
+    # proves nothing about a scope that also derives CONTROL or DATABASE.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md')
+    Receipt @{cr='SPEC-900';profiles=@('CONTROL','REPOSITORY');fingerprint='0';result='READY'}
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '97 a certification receipt whose verification profiles differ is rejected' ($r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:certification profiles') $r.Text
+
+    # The staleness attack, and the reason a boolean `FINISH_PASSED: true` would not
+    # do: certify, then edit an implementation file, then complete.
+    $closeScope='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $closeScope);$f=Run Finish
+    Put 'allowed.txt' 'edited after certification'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '98 a certification receipt from an older implementation state is rejected' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:stale certification receipt') "$($f.Text)`n$($r.Text)"
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $closeScope);$f=Run Finish;$j=ReceiptJson
+    Assert '98b MUST-ACCEPT: a successful Finish writes a receipt bound to this state' ($f.Code-eq0-and$f.Text-match'LOCAL_CERTIFY: READY'-and$null-ne$j-and$j.cr-eq'SPEC-900'-and$j.result-eq'READY'-and$j.fingerprint-and(@($j.profiles)-contains'REPOSITORY')) "$($f.Text)`n$($j|ConvertTo-Json -Depth 5)"
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '98c MUST-ACCEPT: a fresh matching receipt permits the completion' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     if(Test-Path $sandbox){Remove-Item -LiteralPath $sandbox -Recurse -Force}

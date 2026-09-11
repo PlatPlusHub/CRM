@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -61,7 +61,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -120,10 +120,19 @@ None
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-11 — implementation agent
+
+Outcome: In Progress
+
+Step results:
+- Step 1: Applied — DEFECT A mutation group added as cases 95, 96, 97, 98, 98b, 98c. Proven failing against the unmodified control script: 94 passed, 6 failed. The fixture builder gained multi-path Write Scope support (`;`-separated) because the staleness attack needs both a real implementation file and the manifest in one scope.
+- Step 2: Applied — `Implementation-Fingerprint`, `Write-Certification` and the `.orvion-local-certification.json` receipt path added. The fingerprint covers Write Scope file content and skips exactly the governing contract and the manifest, the two files the completion act itself rewrites.
+- Step 3: Applied — `Validate-Certification` called after `Validate-ManifestCrState`, local runs only, with a distinct `COMPLETION_PREREQUISITE:` subject per failure mode. A stale receipt from a failed Finish is impossible: `Finish-Checks` deletes any prior receipt before running anything.
+- Step 4: Applied — `.gitignore` excludes the receipt.
+
+Cases 32 and 71 were updated, not weakened: both assert a LOCAL completion that must now also be certified, so each earns a receipt via `-Finish` first. Case 32 additionally deletes the receipt before its range half, which is what proves the receipt never became an unsatisfiable CI precondition.
+
+Evidence: `scripts/test_agent_continuity.ps1` 100 passed, 0 failed.
 
 ## Verification Notes
 

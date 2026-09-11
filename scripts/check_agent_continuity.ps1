@@ -296,6 +296,73 @@ function Validate-StatusPath([string[]]$Sequence){
     }
 }
 
+# ---------------------------------------------------------------------------
+# LOCAL certification receipt (SPEC-164).
+#
+# `AGENTS.md` says only a successful Finish permits Review/Complete, but every
+# completion prerequisite below is TEXT an agent writes about itself: tick the
+# boxes, write `Verdict: Confirmed Complete`, set `Resume Step: DONE`, flip the
+# Status. None of that requires `-Finish` to have run, so work could reach
+# Complete having never obtained `LOCAL_CERTIFY: READY`.
+#
+# The smallest mechanism that closes it is a receipt Finish writes only on its
+# success path, bound to the implementation state it certified. A boolean would
+# not do: it survives an edit made after certification, which is precisely the
+# stale-evidence case. The fingerprint therefore covers the Write Scope's file
+# CONTENT, and skips exactly the two files the completion act itself rewrites -
+# the governing contract and the manifest pointer - because including them would
+# make every receipt stale the instant completion began.
+#
+# WHAT THIS PROVES, AND WHAT IT DOES NOT. It is an anti-omission and
+# anti-staleness control, not a trust boundary: the same process writes and
+# reads it, so it resists forgetting and drift, never a deliberate forgery. It
+# is untracked and gitignored, because it is an observation about one working
+# tree at one moment, not repository truth - and CI, which holds no receipt,
+# re-executes the certification itself rather than trusting a recorded one.
+# ---------------------------------------------------------------------------
+$script:ReceiptName='.orvion-local-certification.json'
+function Receipt-Path{Join-Path $Root $script:ReceiptName}
+
+function Implementation-Fingerprint($Contract,[string]$Rel){
+    $skip=@($Rel,'_ORVION_CANONICAL/manifest.md')
+    $sha=[Security.Cryptography.SHA256]::Create()
+    $acc=[Text.StringBuilder]::new()
+    foreach($p in @($Contract.Scope|%{$_-replace'\\','/'}|Sort-Object)){
+        if($skip-contains$p){continue}
+        $full=Join-Path $Root $p
+        # `absent` is recorded rather than skipped, so creating or deleting a
+        # scoped file after certification is itself a fingerprint change.
+        $h='absent'
+        if(Test-Path -LiteralPath $full -PathType Leaf){
+            $h=([BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($full)))-replace'-','').ToLowerInvariant()
+        }
+        [void]$acc.Append("$p $h`n")
+    }
+    ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($acc.ToString())))-replace'-','').ToLowerInvariant()
+}
+
+function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
+    $receipt=[ordered]@{
+        cr=$Contract.Id
+        profiles=@($Profiles|Sort-Object)
+        fingerprint=(Implementation-Fingerprint $Contract $Rel)
+        result='READY'
+        at=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+    }
+    [IO.File]::WriteAllText((Receipt-Path),(ConvertTo-Json $receipt -Depth 4),(New-Object Text.UTF8Encoding($false)))
+}
+
+function Validate-Certification($Contract,[string]$Rel,[string[]]$Profiles){
+    $path=Receipt-Path
+    if(!(Test-Path -LiteralPath $path)){throw 'COMPLETION_PREREQUISITE:no local certification receipt - run -Finish and earn LOCAL_CERTIFY: READY first'}
+    try{$receipt=Get-Content -Raw -LiteralPath $path|ConvertFrom-Json}catch{throw 'COMPLETION_PREREQUISITE:unreadable local certification receipt'}
+    if($receipt.result-ne'READY'){throw "COMPLETION_PREREQUISITE:certification result $($receipt.result)"}
+    if($receipt.cr-ne$Contract.Id){throw "COMPLETION_PREREQUISITE:certification receipt names $($receipt.cr), not $($Contract.Id)"}
+    $certified=(@($receipt.profiles|Sort-Object)-join',');$derived=(@($Profiles|Sort-Object)-join',')
+    if($certified-ne$derived){throw "COMPLETION_PREREQUISITE:certification profiles $certified do not match the derived $derived"}
+    if($receipt.fingerprint-ne(Implementation-Fingerprint $Contract $Rel)){throw 'COMPLETION_PREREQUISITE:stale certification receipt - the implementation changed after it was certified'}
+}
+
 function Validate-CompletionPrerequisites($Contract){
     $unchecked=@($Contract.Acceptance|?{-not$_.Checked})
     if(-not$Contract.Acceptance.Count){throw 'COMPLETION_PREREQUISITE:no Acceptance Criteria'}
@@ -521,7 +588,10 @@ function Invoke-Verification([string]$Command,[switch]$Additional){
     throw "MANDATORY_VERIFICATION_FAILED:$Command"
 }
 
-function Finish-Checks($c,[string[]]$profiles){
+function Finish-Checks($c,[string[]]$profiles,[string]$rel){
+    # A previous receipt is destroyed FIRST. A Finish that fails must never leave a
+    # READY receipt behind for the completion Gate to find.
+    Remove-Item -LiteralPath (Receipt-Path) -Force -ErrorAction SilentlyContinue
     $mandatory=@();$deferred=@()
     foreach($p in $profiles){
         $e=Get-ProfileEvidence $p
@@ -544,6 +614,7 @@ function Finish-Checks($c,[string[]]$profiles){
     if($notExecuted.Count){
         Write-Output "LOCAL_CERTIFY: INCOMPLETE — $((@($notExecuted|Select-Object -Unique))-join', ') local evidence was not executed by this process"
     }else{
+        Write-Certification $c $rel $profiles
         Write-Output 'LOCAL_CERTIFY: READY'
     }
 }
@@ -654,6 +725,15 @@ try{
     # never reach the line that prints its Write Scope.
     Validate-ManifestCrState $m
 
+    # The completion act's own LOCAL evidence (SPEC-164). Judged AFTER the contract's
+    # legality and the pointer invariant, because a receipt is evidence about work
+    # whose authority those two establish first - and still before any output, so an
+    # uncertified completion never prints a mode. A range run is exempt: CI holds no
+    # local artifact and re-executes the certification itself.
+    if(!$BaseRef-and$null-ne$baselineText-and$baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){
+        Validate-Certification $c ($rel-replace'\\','/') (Profiles $c.Scope)
+    }
+
     # `Draft` has no arm: Validate-ManifestCrState rejects a Draft the manifest
     # names, so the state the retired approval-pending mode described can no
     # longer be reached. PLAN is where a Draft is authored, and it correctly
@@ -686,7 +766,7 @@ try{
     # and a capability line that looked like a probe result would be a false green.
     foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — declared by the contract, unprovable by this process"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
-    if($Finish){Finish-Checks $c $profiles}
+    if($Finish){Finish-Checks $c $profiles ($rel-replace'\\','/')}
 }catch{
     if($Finish){Write-Output 'CERTIFY: FAILED'}
     Block $_.Exception.Message

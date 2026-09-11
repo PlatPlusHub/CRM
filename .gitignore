@@ -38,3 +38,10 @@ backup/
 
 # Editor/vault state -- local tooling, never part of the repository's truth.
 .obsidian/
+
+# Local certification receipt written by `check_agent_continuity.ps1 -Finish` (SPEC-164).
+# It records that LOCAL verification actually ran against one working tree at one moment,
+# and the completion Gate refuses a Complete transition without a fresh matching one. It is
+# an observation about a machine, never repository truth: CI holds no receipt and re-executes
+# the certification instead. Committing it would publish a claim nobody can re-derive.
+.orvion-local-certification.json
