@@ -25,7 +25,7 @@ Current state only. `Last Completed` names the single most recent capability —
 
 Current Phase: **Phase 8 (Offline Conversion) — IN PROGRESS**. Execution order 7→9→8→10 (`32`). Phases 2–7 + 9 COMPLETE. Supabase-native backend (ADR-0014); transport ADR-0023. **Phase 10 is NOT ready** — evidence in `32` under Phase 10; blocker is Phase 8's unbuilt n8n workflow, gated behind the Foundation Completion Programme.
 
-Current Module: **Agent Control Plane final reconciliation (`SPEC-160`)** — the control plane is being made to enforce the contract partition it already declares. Product execution returns to Phase-8 offline-conversion / Foundation Completion Programme Batch 6 on completion. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
+Current Module: Phase-8 offline-conversion / Foundation Completion Programme Batch 6. The Agent Control Plane is closed: the contract partition `CR_LIFECYCLE.md §8` declares is now mechanically enforced against the Git baseline. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
 
 Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` deploys to **Primary `vrvtsxexkiiiivlkdxzp` only**. Secondary `brplkqmbzffpxqgkkdzo` is the `Shehabhub/ORVION` environment and is never a CRM target; differences between the two are expected and valid. Detail: `MASTER_INTEGRATION_CATALOG.md §0/§4`.
 
@@ -33,13 +33,13 @@ Live state: Last fully verified 2026-09-09. **repository, local stack and Primar
 
 Batch 6 surface coverage: **12 of 77 surfaces have a recorded audit disposition**, all twelve at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary last recorded **zero business rows** (2026-09-08; not re-read this session).
 
-Active Change Request: `changes/SPEC-160-agent-control-plane-final-reconciliation.md`
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-1001 Agent Control Plane corrective repair, Complete (2026-09-11).** The SPEC identity collision, lost owner-ratified authority, mechanical control defects, and evidence-class claims were corrected and independently verified. Product work was not changed.
+Last Completed: **SPEC-160 Agent Control Plane final reconciliation, Complete (2026-09-11).** Frozen contract authority, append-only evidence, the full transition matrix, completion prerequisites and honest evidence classes are now enforced rather than declared; two guards that measured less than they claimed were repaired. Product work was not changed.
 
-Narrative: `agent-control-plane-corrective-repair-2026-09-11.md`
+Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
 Current session blocker: **None.**
 
