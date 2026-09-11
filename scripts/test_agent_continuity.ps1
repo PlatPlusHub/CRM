@@ -528,6 +528,37 @@ exit 0
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')
     $f=Run Finish;$r=Run Gate
     Assert '110b MUST-ACCEPT: Finish certifies a completion state it is not asked to already hold' ($f.Code-eq0-and$f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-eq0-and$r.Text-match'MODE: VERIFY') "$($f.Text)`n$($r.Text)"
+
+    # ---- A contract may be born and die inside one pushed range (SPEC-165) ----
+    # The whole lifecycle of a small Change Request fits in one push, and CI rejected
+    # exactly that as INVALID_COMPLETION_TRANSITION because the contract did not exist
+    # at the range base. Every completion fixture above reaches Complete from a contract
+    # the sandbox baseline already held, so the suite tested the TRANSITION and never the
+    # contract's AGE. The rejecting cases are asserted beside the accepting one, because
+    # the guard that was removed must be proven redundant, not merely absent.
+    # The outgoing fixture contract is retired in a commit BEFORE the range begins.
+    # Retiring it inside the range makes it an out-of-scope write against the new
+    # contract's Write Scope, which would reject these cases for an unrelated reason.
+    $rangeScope='_ORVION_CANONICAL/manifest.md'
+    function Pre-Range{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit pre-range}
+
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-approved
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope $rangeScope);Commit born-inprogress
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-complete
+    $r=RunRange 'HEAD~3'
+    Assert '111 MUST-ACCEPT: a contract created and completed inside one range is a legal history' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match'CR: SPEC-902') $r.Text
+
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-complete-outright
+    $r=RunRange 'HEAD~1'
+    Assert '112 a contract created already marked Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-902-born\.md') $r.Text
+
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Draft -Scope $rangeScope);Commit born-draft
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-draft-to-complete
+    $r=RunRange 'HEAD~2'
+    Assert '113 a newly created contract taken from Draft straight to Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-902-born\.md') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

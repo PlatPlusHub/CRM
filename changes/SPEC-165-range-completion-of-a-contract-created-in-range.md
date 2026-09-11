@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -52,7 +52,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -83,10 +83,21 @@ None
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-12 — implementation agent
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — cases 111, 112 and 113 added. Against the unmodified control script the accepting case failed and both rejecting cases already held: 119 passed, 1 failed. That split is the evidence that matters, because it shows the removed guard was redundant rather than protective.
+- Step 2: Applied — the `Read-GitFile $base $c[0]` base-existence test removed from `Resolve-Contract`, leaving `Status-Path` as the sole arbiter, with the reasoning recorded in place.
+- Step 3: Applied — `CR_LIFECYCLE.md §8` now covers a contract created inside the range it completes in, as part of the paragraph that already owns "a CI range is a sequence of transitions, never one transition".
+- Step 4: Already Applied — the manifest named this Change Request and `ai-map.json` was regenerated at approval.
+
+Two fixture defects of my own, found and fixed before the implementation was trusted. The first three attempts retired the outgoing fixture contract INSIDE the range, which makes it an out-of-scope write against the new contract's Write Scope and would have rejected all three cases for an unrelated reason; the retirement now happens in a commit before the range begins. The second was a contaminated reproduction: running the repaired Gate against the real range from the working tree resolved the governing contract through the CURRENT manifest pointer, which by then named `SPEC-165`, so the range's files were judged against the wrong Write Scope. The faithful reproduction uses a clone checked out at the rejected SHA.
+
+Evidence: the exact range CI rejected, `5e32ad6..3f5a1be`, run against a clone at that commit — the script as CI ran it reports `INVALID_COMPLETION_TRANSITION`, the repaired script reports `MODE: VERIFY / CR: SPEC-164 / STATUS: Complete`. `scripts/test_agent_continuity.ps1` 120 passed, 0 failed.
+
+Also corrected here without a step of its own, because `Complete` rewrites the field wholesale as `CR_LIFECYCLE.md §9` requires: the manifest's `Last Completed` entry written at `SPEC-164` completion had `SPEC-163`'s description still attached to it, so it credited `SPEC-164` with work `SPEC-163` did. That is the changelog-chaining the manifest's own instruction forbids.
 
 ## Verification Notes
 

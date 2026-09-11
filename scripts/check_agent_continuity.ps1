@@ -423,7 +423,15 @@ function Resolve-Contract($m,[object[]]$Records){
     if(!$c.Count){throw 'NO_GOVERNING_CR'}
     if($c.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
     $base=if($BaseRef){$BaseRef}else{'HEAD'}
-    if($null-eq(Read-GitFile $base $c[0])){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
+    # A contract may be BORN AND DIE inside one pushed range, which is the ordinary
+    # shape of a small Change Request (SPEC-165). Requiring it to exist at the range
+    # base refused that legal history - the `SPEC-164` push carried create, Approve,
+    # implement, Review and Complete together and CI rejected it. The test was
+    # redundant, not protective: the path below already rejects a single commit that
+    # creates a contract as Complete (a one-element path) and a `Draft -> Complete`
+    # pair (Draft immediately before Complete). Same defect class as SPEC-162, one
+    # layer down - judge the transitions that occurred, never the range's endpoints.
+    #
     # Complete is reachable only from In Progress, judged over the path actually
     # committed rather than over the two ends of the range.
     $seq=@(Status-Path $c[0] $base 'Complete')
