@@ -73,13 +73,13 @@ None
 
 ## Acceptance Criteria
 
-- [ ] A CI range carrying a contract's creation as `Approved`, its move to `In Progress` and its `Complete` transition is accepted and reports `MODE: VERIFY`.
-- [ ] A range whose single commit creates a contract already marked `Complete` is still rejected as `INVALID_COMPLETION_TRANSITION`.
-- [ ] A range whose commits take a newly created contract from `Draft` straight to `Complete` is still rejected.
-- [ ] `scripts/check_agent_continuity.ps1 -Gate -BaseRef 5e32ad66a810d07882f02b831fef9d1ce06ceb9d -HeadRef` the `SPEC-164` completion commit reports `MODE: VERIFY`, reproducing the exact range CI rejected.
-- [ ] `scripts/test_agent_continuity.ps1` reports 0 failed and retains every pre-existing assertion.
-- [ ] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
-- [ ] No file outside this Change Request's Write Scope is created, modified or deleted, and `git diff --check` is clean.
+- [x] A CI range carrying a contract's creation as `Approved`, its move to `In Progress` and its `Complete` transition is accepted and reports `MODE: VERIFY`.
+- [x] A range whose single commit creates a contract already marked `Complete` is still rejected as `INVALID_COMPLETION_TRANSITION`.
+- [x] A range whose commits take a newly created contract from `Draft` straight to `Complete` is still rejected.
+- [x] `scripts/check_agent_continuity.ps1 -Gate -BaseRef 5e32ad66a810d07882f02b831fef9d1ce06ceb9d -HeadRef` the `SPEC-164` completion commit reports `MODE: VERIFY`, reproducing the exact range CI rejected.
+- [x] `scripts/test_agent_continuity.ps1` reports 0 failed and retains every pre-existing assertion.
+- [x] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
+- [x] No file outside this Change Request's Write Scope is created, modified or deleted, and `git diff --check` is clean.
 
 ## Execution Log
 
@@ -101,20 +101,29 @@ Also corrected here without a step of its own, because `Complete` rewrites the f
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-12 — reviewing agent
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live repository. The decisive evidence is a differential, not a green: the same range, `5e32ad6..3f5a1be`, run against a clone checked out at that exact commit, is rejected as `INVALID_COMPLETION_TRANSITION` by the script as CI actually ran it and accepted as `MODE: VERIFY / CR: SPEC-164 / STATUS: Complete` by the repaired one. That is the production failure reproduced and closed, not a proxy for it.
+
+The removed guard is proven redundant rather than merely absent. Cases 112 and 113 passed against the UNMODIFIED script and still pass after the removal: a single commit creating a contract already marked `Complete`, and a newly created contract taken from `Draft` straight to `Complete`, are both still rejected by name. Only the accepting case changed behaviour. A guard whose removal changes exactly one outcome, in the direction a legal history requires, was not carrying the protection it appeared to carry.
+
+Worth recording why the `SPEC-164` suite missed this, since that suite was written to attack this exact area: every completion fixture in it reached `Complete` from a contract the sandbox baseline already held. The suite tested the transition thoroughly and never tested the contract's age, so the defect sat in a dimension none of the 117 assertions varied. CI found it because CI is the only place a contract is routinely born and completed inside one range.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
