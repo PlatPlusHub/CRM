@@ -191,6 +191,11 @@ Engineering Observation 5: CI rejected `52295ba` and was right to. Three cases f
 The direct cause was mine: after redoing the relocation I re-ran the repository guard but not the control suite. The remote check earned its place by catching it.
 
 Commits: this entry's commit.
+### 2026-09-11 — Claude Opus 5 (pull-request path probe)
+
+Outcome: Complete
+
+This entry exists only on `spec-163-pr-path` to exercise the `pull_request` trigger, merge-base derivation and detached-head range execution of both workflows. The branch is never merged.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log against the live repository state.]
