@@ -178,6 +178,11 @@ Verification: `scripts/check_repository_consistency.ps1` CLEAN with Checks 26 an
 
 Commits: this entry's commit.
 
+### 2026-09-11 — Claude Opus 5 (pull-request path probe)
+
+Outcome: Complete
+
+This entry exists only on `spec-163-pr-path-proof` to exercise the `pull_request` trigger, merge-base derivation and detached-head range execution of both workflows. The branch is never merged.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log against the live repository state.]
