@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 Owner authorization: the owner directive titled "ORVION AGENT CONTROL PLANE — FINAL RECONCILIATION, HARDENING & CONTINUITY PROGRAM" requires the Agent Control workflow to be green on the exact final SHA. It is not, and this Change Request is the lifecycle-correct correction because `SPEC-160` is terminal.
