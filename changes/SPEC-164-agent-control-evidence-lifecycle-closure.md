@@ -61,7 +61,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: 11
 Blocker: None
 Recovery Attempt: 0
 
@@ -134,6 +134,19 @@ Cases 32 and 71 were updated, not weakened: both assert a LOCAL completion that 
 
 Evidence: `scripts/test_agent_continuity.ps1` 100 passed, 0 failed.
 
+### 2026-09-11 — implementation agent
+
+Outcome: In Progress
+
+Step results:
+- Step 5: Applied — DEFECT B mutation group added as cases 99, 100, 101, 102, 103, 103b, 103c, and case 78 rewritten. Proven failing against the unmodified control script: 100 passed, 8 failed. `npx` and `docker` are stubbed on `PATH` from a directory outside the work tree, and case 00 asserts the prepend actually shadowed the real executables before any DATABASE case runs — without that precondition this suite would invoke a real `supabase db reset`.
+- Step 6: Applied — the DATABASE profile's `LOCAL_NOT_EXECUTED` list replaced by the `ENGINEERING_METHOD.md §4` protocol as mandatory local commands. The smoke step is a PowerShell pipeline because `<` input redirection is reserved and not valid PowerShell, so the documented bash form could never have executed here.
+- Step 7: Applied — deduplication is now per-profile. The flat `Select-Object -Unique` would have deleted pgTAP Pass B, the only pass that can catch an HTTP suite corrupting state.
+- Step 8: Applied — `DATABASE_CAPABILITY_NOT_DECLARED` and `DATABASE_HTTP_SUITE_NOT_NAMED`, both raised at Boot, before anything destructive runs.
+- Step 9: Applied — `supabase-primary` carries an `Evidence` command pointing at the existing `scripts/check_primary_ledger.ps1`, so declaring the connector costs a mandatory validation. Its Boot line states recorded, attributable evidence and explicitly not a live read.
+- Step 10: Applied — the DATABASE-sensitive surface gained `supabase/tests/` and `supabase/config.toml`, which Migration CI already treated as database-sensitive.
+
+Evidence: `scripts/test_agent_continuity.ps1` 108 passed, 0 failed.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log

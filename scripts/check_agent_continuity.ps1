@@ -467,7 +467,12 @@ function Profiles($scope){
         if(Test-ControlPath $p){[void]$h.Add('CONTROL')}
         if($p-match'^\.github/workflows/'){[void]$h.Add('CI')}
         if($p-match'^\.workstation/'){[void]$h.Add('WORKSTATION')}
-        if($p-match'^(supabase/migrations/|scripts/verify_database\.sql|reports/master/MASTER_DATABASE_)'){[void]$h.Add('DATABASE')}
+        # This surface must not disagree with `.github/workflows/migration-ci.yml`.
+        # It omitted `supabase/tests/` and `supabase/config.toml`, so a change to a
+        # pgTAP test or to the stack's configuration was database-sensitive to remote
+        # CI and ordinary to local certification - two authorities answering the same
+        # question differently, which is how one of them ends up trusted wrongly.
+        if($p-match'^(supabase/migrations/|supabase/tests/|supabase/config\.toml$|scripts/verify_database\.sql|reports/master/MASTER_DATABASE_)'){[void]$h.Add('DATABASE')}
     }
     @($h|sort)
 }
@@ -479,6 +484,12 @@ function Profiles($scope){
 # `LOCAL_CERTIFY: READY` may assert the LOCAL class and nothing else. Previously
 # CI, WORKSTATION and DATABASE were derived, printed, executed nothing, and the
 # run still ended in READY - stating evidence that had never been observed.
+#
+# The one step of the DATABASE protocol no rule can derive. "Relevant HTTP suites"
+# is a judgement about which surfaces this change touches, so the contract makes it
+# in `Additional Verification` and this slot marks where the answer belongs in the
+# order. Silence is refused rather than read as "none apply".
+$script:HttpSuiteSlot='<HTTP SUITES NAMED IN ADDITIONAL VERIFICATION>'
 function Get-ProfileEvidence([string]$Profile){
     switch($Profile){
         'REPOSITORY'{[pscustomobject]@{Local=@(
@@ -499,17 +510,27 @@ function Get-ProfileEvidence([string]$Profile){
         'WORKSTATION'{[pscustomobject]@{Local=@(
             'pwsh -NoProfile -File .workstation/doctor.ps1');Deferred=@(
             'LOCAL_NOT_EXECUTED: bootstrap idempotence — run `.workstation/prepare.ps1` twice and compare; mutating, never automatic')}}
-        # Every DATABASE command is destructive, slow, or needs a running stack, so
-        # none may run inside a Gate. They are listed in execution order instead of
-        # summarized, because "could not execute" must never become green and the
-        # next action must still be deterministic.
-        'DATABASE'{[pscustomobject]@{Local=@();Deferred=@(
-            'LOCAL_NOT_EXECUTED: 1 `npx supabase db reset` (clean)',
-            'LOCAL_NOT_EXECUTED: 2 pgTAP Pass A',
-            'LOCAL_NOT_EXECUTED: 3 relevant `scripts/verify_*` HTTP suites',
-            'LOCAL_NOT_EXECUTED: 4 pgTAP Pass B, no reset',
-            'LOCAL_NOT_EXECUTED: 5 smoke — `docker exec -i supabase_db_ORVION psql -U postgres -d postgres -f - < scripts/verify_database.sql`',
-            'LOCAL_NOT_EXECUTED: 6 `pwsh -NoProfile -File scripts/check_database_parity.ps1`',
+        # The `ENGINEERING_METHOD.md §4` protocol, EXECUTED in its documented order.
+        #
+        # These commands are destructive and slow, which is why they never run inside a
+        # Gate - `Finish-Checks` is reached only under `-Finish`. Listing them without
+        # running them was truthful and useless: the profile could only ever withhold
+        # certification, so a weaker agent's options were permanent incompleteness or
+        # completing without it. "Could not execute" still never becomes green; it now
+        # becomes a named failure with an exit code instead of a standing excuse.
+        #
+        # pgTAP appears TWICE on purpose: Pass A proves the migrations' own invariants
+        # on a clean database, and Pass B re-proves them after the HTTP suites have
+        # written through the API. Only Pass B can catch a suite that corrupts state.
+        'DATABASE'{[pscustomobject]@{Local=@(
+            'npx supabase db reset',
+            'npx supabase test db',
+            $script:HttpSuiteSlot,
+            'npx supabase test db',
+            # Expressed as a PowerShell pipeline: `<` input redirection is reserved and
+            # not valid PowerShell, so the shell form documented for bash cannot run here.
+            'Get-Content -Raw scripts/verify_database.sql | docker exec -i supabase_db_ORVION psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f -',
+            'pwsh -NoProfile -File scripts/check_database_parity.ps1');Deferred=@(
             'EXTERNAL: Primary ledger, function-surface and structural-surface hashes read from Primary')}}
         default{[pscustomobject]@{Local=@();Deferred=@()}}
     }
@@ -535,10 +556,28 @@ $script:Capabilities=@{
         if(!(Test-Path -LiteralPath (Join-Path $Root 'node_modules/.bin/supabase.cmd'))-and
            !(Test-Path -LiteralPath (Join-Path $Root 'node_modules/.bin/supabase'))){
             throw 'MISSING_REQUIRED_CAPABILITY:supabase-local:project_cli_missing'}}}
-    'supabase-primary'=@{Class='EXTERNAL_EVIDENCE'}
-    'postgres-local'  =@{Class='EXTERNAL_EVIDENCE'}
-    'n8n'             =@{Class='EXTERNAL_EVIDENCE'}
-    'context7'        =@{Class='EXTERNAL_EVIDENCE'}
+    # An EXTERNAL_EVIDENCE capability may carry an `Evidence` command: the repository's
+    # own validator for the RECORDED evidence that connector left behind. Declaring
+    # `supabase-primary` therefore makes `check_primary_ledger.ps1` mandatory under
+    # Finish, which is what separates DECLARED from PROVEN. What it proves is bounded
+    # and stated: the recorded ledger is internally self-consistent, attributable to
+    # this history, and equal to the repository's migration set. It is not a live read,
+    # and the Note says so rather than letting the green imply one.
+    'supabase-primary'=@{Class='EXTERNAL_EVIDENCE'
+                         Note='recorded Primary evidence, validated by `scripts/check_primary_ledger.ps1` — attributable and current, never a live read'
+                         Evidence='pwsh -NoProfile -File scripts/check_primary_ledger.ps1'}
+    'postgres-local'  =@{Class='EXTERNAL_EVIDENCE';Note='declared by the contract, unprovable by this process'}
+    'n8n'             =@{Class='EXTERNAL_EVIDENCE';Note='declared by the contract, unprovable by this process'}
+    'context7'        =@{Class='EXTERNAL_EVIDENCE';Note='declared by the contract, unprovable by this process'}
+}
+
+# A contract whose derived profiles include DATABASE must say the two things the
+# protocol cannot derive, and must say them before anything runs. Both fail at Boot
+# with a precise code rather than halfway through a destructive reset.
+function Validate-DatabaseContract($c,[string[]]$profiles){
+    if($profiles-notcontains'DATABASE'){return}
+    if($c.RequiredCapabilities-notcontains'supabase-local'){throw 'DATABASE_CAPABILITY_NOT_DECLARED:supabase-local'}
+    if(-not @($c.AdditionalVerification|Where-Object{$_-match'scripts/verify_'}).Count){throw 'DATABASE_HTTP_SUITE_NOT_NAMED:no scripts/verify_* suite named in Additional Verification'}
 }
 function Test-Capabilities($c){
     $declared=@()
@@ -592,13 +631,29 @@ function Finish-Checks($c,[string[]]$profiles,[string]$rel){
     # A previous receipt is destroyed FIRST. A Finish that fails must never leave a
     # READY receipt behind for the completion Gate to find.
     Remove-Item -LiteralPath (Receipt-Path) -Force -ErrorAction SilentlyContinue
-    $mandatory=@();$deferred=@()
+    $mandatory=@();$deferred=@();$seen=@{}
     foreach($p in $profiles){
         $e=Get-ProfileEvidence $p
-        $mandatory+=$e.Local
+        foreach($command in $e.Local){
+            $expanded=if($command-eq$script:HttpSuiteSlot){@($c.AdditionalVerification|Where-Object{$_-match'scripts/verify_'})}else{@($command)}
+            foreach($one in $expanded){
+                # Deduplicated ACROSS profiles only. A command one profile lists twice is
+                # listed twice deliberately - pgTAP runs after the reset and again after
+                # the HTTP suites - and a flat unique filter silently deleted Pass B,
+                # which is the only pass that can catch a suite corrupting state.
+                if($seen.ContainsKey($one)-and$seen[$one]-ne$p){continue}
+                $seen[$one]=$p;$mandatory+=$one
+            }
+        }
         foreach($d in $e.Deferred){$deferred+=,([pscustomobject]@{Profile=$p;Note=$d})}
     }
-    $mandatory=@($mandatory|Select-Object -Unique)
+    # A declared EXTERNAL_EVIDENCE capability that has a repository-local validator for
+    # its RECORDED evidence runs that validator here. Declaring a connector must cost
+    # something, or "declared" silently reads as "proven".
+    foreach($name in $c.RequiredCapabilities){
+        $entry=$script:Capabilities[$name]
+        if($entry-and$entry.Evidence-and$mandatory-notcontains$entry.Evidence){$mandatory+=$entry.Evidence}
+    }
     # A command derived as mandatory and repeated verbatim in Additional
     # Verification is one piece of evidence, not two. Deduplicate the execution;
     # Additional Verification remains strictly additive.
@@ -702,7 +757,7 @@ try{
         exit 0
     }
 
-    $c=Contract(Join-Path $Root $rel);$completionTransition=(-not$m.Active)
+    $c=Contract(Join-Path $Root $rel);$completionTransition=(-not$m.Active);$profiles=Profiles $c.Scope
 
     # The authority that governs this run must be exactly the authority that was
     # approved. A Change Request absent from the baseline is newly created and
@@ -730,8 +785,9 @@ try{
     # whose authority those two establish first - and still before any output, so an
     # uncertified completion never prints a mode. A range run is exempt: CI holds no
     # local artifact and re-executes the certification itself.
+    Validate-DatabaseContract $c $profiles
     if(!$BaseRef-and$null-ne$baselineText-and$baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){
-        Validate-Certification $c ($rel-replace'\\','/') (Profiles $c.Scope)
+        Validate-Certification $c ($rel-replace'\\','/') $profiles
     }
 
     # `Draft` has no arm: Validate-ManifestCrState rejects a Draft the manifest
@@ -753,7 +809,6 @@ try{
         }
     }
 
-    $profiles=Profiles $c.Scope
     if($Finish-and$mode-ne'VERIFY'){throw "FINISH_NOT_READY:$mode"}
 
     Write-Output 'ORVION: READY';Write-Output "MODE: $mode";Write-Output "CR: $($c.Id)";Write-Output "STATUS: $($c.Status)"
@@ -764,7 +819,7 @@ try{
     Write-Output "VERIFICATION: $((@($profiles)+@($c.AdditionalVerification))-join', ')"
     # Named as declared, never as proven: this process cannot see these connectors,
     # and a capability line that looked like a probe result would be a false green.
-    foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — declared by the contract, unprovable by this process"}
+    foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — $($script:Capabilities[$name].Note)"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
     if($Finish){Finish-Checks $c $profiles ($rel-replace'\\','/')}
 }catch{

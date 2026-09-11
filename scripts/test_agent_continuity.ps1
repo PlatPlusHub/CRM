@@ -67,6 +67,18 @@ function ManifestText([string]$Active='changes/SPEC-900-fixture.md'){"Active Cha
 # case certify the next one's fixture. It is removed explicitly.
 $receipt=Join-Path $root '.orvion-local-certification.json'
 function Reset-Fixture{git -C $root checkout main --quiet 2>$null;git -C $root branch --set-upstream-to origin/main main --quiet 2>$null;git -C $root reset --hard origin/main --quiet;git -C $root clean -fdq;Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue}
+# `npx` and `docker` stubs, deliberately OUTSIDE the work tree so `git clean` cannot
+# remove them. Prepending them to PATH is what keeps this suite from running a real
+# `supabase db reset` against a developer's stack; the DATABASE cases assert that the
+# prepend actually took effect before they run anything.
+$stubBin=Join-Path $sandbox 'bin'
+$stubLog=Join-Path $sandbox 'stub.log'
+function Stub([string]$Name){
+    [IO.File]::WriteAllText((Join-Path $stubBin "$Name.cmd"),"@echo off`r`n>>`"%ORVION_STUB_LOG%`" echo $Name %*`r`nexit /b 0`r`n")
+    [IO.File]::WriteAllText((Join-Path $stubBin $Name),"#!/bin/sh`necho `"$Name `$@`" >> `"`$ORVION_STUB_LOG`"`nexit 0`n")
+    if($IsLinux-or$IsMacOS){& chmod +x (Join-Path $stubBin $Name)}
+}
+function StubLog{if(Test-Path -LiteralPath $stubLog){(Get-Content -Raw -LiteralPath $stubLog)}else{''}}
 function Receipt($Object){[IO.File]::WriteAllText($receipt,(ConvertTo-Json $Object -Depth 5),(New-Object Text.UTF8Encoding($false)))}
 function ReceiptJson{if(Test-Path -LiteralPath $receipt){Get-Content -Raw -LiteralPath $receipt|ConvertFrom-Json}else{$null}}
 function Run([string]$Mode='Boot'){
@@ -94,10 +106,27 @@ try{
     Put 'changes/SPEC-800-complete.md' (ContractText -Id SPEC-800 -Status Complete -Resume DONE)
     Put 'changes/SPEC-801-cancelled.md' (ContractText -Id SPEC-801 -Status Cancelled -Resume DONE)
     Put '.gitignore' ".orvion-local-certification.json`n"
+    # DATABASE fixtures. The protocol is now EXECUTED rather than listed, so the
+    # sandbox needs every file it reads and a project-local CLI for the
+    # `supabase-local` probe. Real Supabase and Docker are replaced by stubs below.
+    Put 'supabase/migrations/20260101_fixture.sql' 'select 1;'
+    Put 'scripts/verify_database.sql' 'select 1;'
+    Put 'scripts/verify_fixture.ps1' 'Add-Content -LiteralPath $env:ORVION_STUB_LOG -Value "verify_fixture ran";exit 0'
+    Put 'scripts/check_database_parity.ps1' 'exit 0'
+    Put 'scripts/check_primary_ledger.ps1' 'exit 0'
+    Put 'node_modules/.bin/supabase.cmd' 'rem project-local CLI fixture'
+    Put 'node_modules/.bin/supabase' 'exit 0'
     Put 'scripts/check_agent_continuity.ps1' (Get-Content -Raw $control)
     Put 'scripts/check_repository_consistency.ps1' "Write-Output 'REPOSITORY CONSISTENCY: CLEAN'; if(Test-Path env:ORVION_GUARD_MARKER){Set-Content -LiteralPath `$env:ORVION_GUARD_MARKER -Value ran}; exit 0"
     foreach($s in @('test_agent_continuity.ps1','test_cold_start_state_guard.ps1','test_status_contradiction_guard.ps1','test_primary_ledger_guard.ps1','test_future_date_guard.ps1')){Put "scripts/$s" "exit 0"}
     git -C $root add .;git -C $root commit -m baseline --quiet;git -C $root branch -M main;git -C $root push -u origin main --quiet
+
+    [IO.Directory]::CreateDirectory($stubBin)|Out-Null
+    Stub npx;Stub docker
+    $env:PATH="$stubBin$([IO.Path]::PathSeparator)$env:PATH";$env:ORVION_STUB_LOG=$stubLog
+    # Load-bearing precondition, asserted rather than assumed: if the prepend did not
+    # take, the DATABASE cases would invoke a REAL `supabase db reset`.
+    Assert '00 PRECONDITION: the npx and docker stubs shadow any real executable' ((Get-Command npx -ErrorAction SilentlyContinue).Source-like"$stubBin*"-and(Get-Command docker -ErrorAction SilentlyContinue).Source-like"$stubBin*") "npx=$((Get-Command npx -ErrorAction SilentlyContinue).Source) docker=$((Get-Command docker -ErrorAction SilentlyContinue).Source)"
 
     $r=Run;Assert '01 valid active CR routes to EXECUTE' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE'-and$r.Text-match'Exact fixture action') $r.Text
 
@@ -262,8 +291,20 @@ try{
     Assert '76 failed verification keeps command, exit code and diagnostic evidence' ($r.Code-ne0-and$r.Text-match'FAILED: .*test_agent_continuity\.ps1 \(exit 9\)'-and$r.Text-match'DIAG_TAIL_SENTINEL'-and$r.Text-match'full log:') $r.Text
     Reset-Fixture;Rebase (ContractText -Resume DONE -Additional 'git diff --check');$r=Run Finish
     Assert '77 a command that is both mandatory and additional executes once' ($r.Code-eq0-and(([regex]::Matches($r.Text,'PASS: git diff --check')).Count-eq1)) $r.Text
-    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'supabase/migrations/20260101_fixture.sql');$r=Run Finish
-    Assert '78 DATABASE local evidence that did not run withholds LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'LOCAL_CERTIFY: INCOMPLETE'-and$r.Text-match'EVIDENCE: DATABASE EXTERNAL:'-and$r.Text-notmatch'LOCAL_CERTIFY: READY') $r.Text
+    # The old assertion here read "DATABASE local evidence that did not run withholds
+    # LOCAL_CERTIFY READY". That expectation encoded a weaker contract: nothing ran, so
+    # nothing could ever pass, and a weaker agent was left choosing between permanent
+    # incompleteness and completing without certification (SPEC-164 DEFECT B). The
+    # protocol is now EXECUTED, so the assertion is replaced by a stricter one - the
+    # ENGINEERING_METHOD.md §4 order is actually performed, with pgTAP run on BOTH sides
+    # of the HTTP suites - while Primary remains EXTERNAL and is still never claimed
+    # locally. Rejection coverage for DATABASE moved to cases 99-103c below.
+    Reset-Fixture;Remove-Item -LiteralPath $stubLog -Force -ErrorAction SilentlyContinue
+    Rebase (ContractText -Resume DONE -Scope 'supabase/migrations/20260101_fixture.sql' -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1');$r=Run Finish
+    $order=StubLog
+    $reset=$order.IndexOf('npx supabase db reset');$passA=$order.IndexOf('npx supabase test db')
+    $http=$order.IndexOf('verify_fixture ran');$passB=$order.LastIndexOf('npx supabase test db');$smoke=$order.IndexOf('docker exec')
+    Assert '78 MUST-ACCEPT: the DATABASE protocol executes in its documented order' ($r.Code-eq0-and$reset-ge0-and$passA-gt$reset-and$http-gt$passA-and$passB-gt$http-and$smoke-gt$passB-and$r.Text-match'EVIDENCE: DATABASE EXTERNAL:'-and$r.Text-match'LOCAL_CERTIFY: READY') "$($r.Text)`n--- stub log ---`n$order"
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope '.github/workflows/agent-control.yml');$r=Run Finish
     Assert '79 CI evidence is named as POST_PUSH and never implied locally' ($r.Code-eq0-and$r.Text-match'EVIDENCE: CI POST_PUSH: workflow conclusions on the exact pushed SHA'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
     Reset-Fixture;Rebase (ContractText -Scope GOVERNANCE.md);$r=Run
@@ -377,8 +418,44 @@ try{
     Assert '98b MUST-ACCEPT: a successful Finish writes a receipt bound to this state' ($f.Code-eq0-and$f.Text-match'LOCAL_CERTIFY: READY'-and$null-ne$j-and$j.cr-eq'SPEC-900'-and$j.result-eq'READY'-and$j.fingerprint-and(@($j.profiles)-contains'REPOSITORY')) "$($f.Text)`n$($j|ConvertTo-Json -Depth 5)"
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
     Assert '98c MUST-ACCEPT: a fresh matching receipt permits the completion' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
+
+    # ---- DEFECT B: DATABASE needs a success path, not only a failure path (SPEC-164) ----
+    # `LOCAL_NOT_EXECUTED` was truthful and useless: no sequence of correct actions
+    # could turn it green, so the profile could only ever withhold certification.
+    $dbScope='supabase/migrations/20260101_fixture.sql'
+    $dbAdditional='pwsh -NoProfile -File scripts/verify_fixture.ps1'
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Additional $dbAdditional);$r=Run
+    Assert '99 a DATABASE change that does not declare supabase-local is rejected' ($r.Code-ne0-and$r.Text-match'DATABASE_CAPABILITY_NOT_DECLARED') $r.Text
+
+    # "Relevant HTTP suites" is the one step of the protocol no rule can derive, so the
+    # contract must name them. Silence is refused rather than read as "none apply".
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Capabilities 'supabase-local');$r=Run
+    Assert '100 a DATABASE change naming no HTTP suite in Additional Verification is rejected' ($r.Code-ne0-and$r.Text-match'DATABASE_HTTP_SUITE_NOT_NAMED') $r.Text
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope "$dbScope;scripts/check_database_parity.ps1" -Capabilities 'supabase-local' -Additional $dbAdditional)
+    Put 'scripts/check_database_parity.ps1' "Write-Output 'DB_DIAG_SENTINEL';exit 9";$r=Run Finish
+    Assert '101 a failing mandatory DATABASE command keeps command, exit code and evidence' ($r.Code-ne0-and$r.Text-match'FAILED: .*check_database_parity\.ps1 \(exit 9\)'-and$r.Text-match'DB_DIAG_SENTINEL'-and$r.Text-notmatch'LOCAL_CERTIFY: READY') $r.Text
+
+    # Stale DATABASE evidence: certify, then change a migration, then complete.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope "$dbScope;_ORVION_CANONICAL/manifest.md" -Capabilities 'supabase-local' -Additional $dbAdditional);$f=Run Finish
+    Put $dbScope 'select 2;'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope "$dbScope;_ORVION_CANONICAL/manifest.md" -Capabilities 'supabase-local' -Additional $dbAdditional -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '102 stale DATABASE certification cannot complete a later migration state' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:stale certification receipt') "$($f.Text)`n$($r.Text)"
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Capabilities 'supabase-local' -Additional $dbAdditional);$r=Run Finish
+    Assert '103 MUST-ACCEPT: a DATABASE change whose whole protocol succeeds reaches LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'PASS: npx supabase db reset'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_database_parity\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$null-ne(ReceiptJson)) $r.Text
+
+    # ---- Primary evidence: reuse the existing validator, claim only what it proves ----
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt;scripts/check_primary_ledger.ps1' -Capabilities 'supabase-primary')
+    Put 'scripts/check_primary_ledger.ps1' "Write-Output 'UNATTRIBUTABLE: evidence belongs to another history';exit 1";$r=Run Finish
+    Assert '103b a declared supabase-primary with stale or unattributable evidence is not certified' ($r.Code-ne0-and$r.Text-match'FAILED: .*check_primary_ledger\.ps1'-and$r.Text-notmatch'LOCAL_CERTIFY: READY') $r.Text
+
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt' -Capabilities 'supabase-primary');$r=Run Finish
+    Assert '103c MUST-ACCEPT: valid recorded Primary evidence certifies, and is never called a live read' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_primary_ledger\.ps1'-and$r.Text-match'CAPABILITY: supabase-primary EXTERNAL_EVIDENCE'-and$r.Text-match'recorded'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
+    Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
     if(Test-Path $sandbox){Remove-Item -LiteralPath $sandbox -Recurse -Force}
 }
 Write-Host "AGENT CONTROL TESTS: $($script:pass) passed, $($script:fail) failed"
