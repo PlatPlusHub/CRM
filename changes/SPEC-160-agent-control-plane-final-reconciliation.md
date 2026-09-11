@@ -78,7 +78,7 @@ Write Scope above is exhaustive for engineering artifacts. Every file under `sup
 
 ## Runtime Checkpoint
 
-Resume Step: 15
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -128,22 +128,22 @@ Every step below is applied to the control plane only. Each step states its own 
 
 ## Acceptance Criteria
 
-- [ ] The governing Change Request is parsed against the canonical section set of `changes/TEMPLATE.md`, and no historical Change Request is retroactively validated.
-- [ ] Mutating any frozen field of the active Change Request is rejected as `FROZEN_AUTHORITY_MUTATED`, and widening its own Write Scope is therefore impossible.
-- [ ] Editing, deleting, reordering or truncating a prior Execution Log or Verification Notes entry is rejected as `EVIDENCE_NOT_APPEND_ONLY`; appending is accepted.
-- [ ] Changing Acceptance Criteria or Review Gate item text or count is rejected; checking an unchecked box is accepted.
-- [ ] Every state transition outside `CR_LIFECYCLE.md §4` is rejected as `ILLEGAL_STATUS_TRANSITION`, including every transition out of a terminal state.
-- [ ] A transition to `Complete` is rejected unless every Acceptance Criterion is checked, every Review Gate item is checked, `Blocker` is `None`, `Resume Step` is `DONE`, and a `Confirmed Complete` verdict exists.
-- [ ] An `Approved` or `In Progress` Change Request with no manifest active pointer is rejected as `ORPHANED_APPROVED_CR`.
-- [ ] Two newly added Change Request files sharing one identifier in a single diff are rejected as `DUPLICATE_NEW_SPEC_ID`, and the SPEC allocation rule is recorded in `CR_LIFECYCLE.md`.
-- [ ] `LOCAL_CERTIFY: READY` is emitted only when every applicable LOCAL command actually ran and succeeded, and POST_PUSH and EXTERNAL evidence is named as outstanding rather than implied.
-- [ ] One authoritative control-surface definition drives CONTROL profile derivation and includes `GOVERNANCE.md` and the client adapters; successful verification prints one PASS line per command; an identical mandatory and additional command executes once.
-- [ ] Every live client adapter and router reaches the executable Boot entry, `README.md` contains no competing start instruction, and Check 3 rejects a deliberately stale adapter.
-- [ ] `_ORVION_CANONICAL/manifest.md` `Next capability` names exactly one immediate action, holds current state only, and passes Check 5.
-- [ ] `AGENTS.md` carries the durable-checkpoint self-test and the delegation economy, with no mandatory session report reintroduced.
-- [ ] Live authorities describe the enforced system, `MASTER_REPOSITORY_HEALTH.md` is remeasured from the live repository, and `ai-map.json` is regenerated rather than hand-edited.
-- [ ] The adversarial suite proves every added detector in both directions, full local certification passes from a clean state, and the Agent Control and Repository Consistency workflows are green on the exact final SHA.
-- [ ] No file under `supabase/`, no historical report and no completed Change Request was modified, and no Git history was rewritten.
+- [x] The governing Change Request is parsed against the canonical section set of `changes/TEMPLATE.md`, and no historical Change Request is retroactively validated.
+- [x] Mutating any frozen field of the active Change Request is rejected as `FROZEN_AUTHORITY_MUTATED`, and widening its own Write Scope is therefore impossible.
+- [x] Editing, deleting, reordering or truncating a prior Execution Log or Verification Notes entry is rejected as `EVIDENCE_NOT_APPEND_ONLY`; appending is accepted.
+- [x] Changing Acceptance Criteria or Review Gate item text or count is rejected; checking an unchecked box is accepted.
+- [x] Every state transition outside `CR_LIFECYCLE.md §4` is rejected as `ILLEGAL_STATUS_TRANSITION`, including every transition out of a terminal state.
+- [x] A transition to `Complete` is rejected unless every Acceptance Criterion is checked, every Review Gate item is checked, `Blocker` is `None`, `Resume Step` is `DONE`, and a `Confirmed Complete` verdict exists.
+- [x] An `Approved` or `In Progress` Change Request with no manifest active pointer is rejected as `ORPHANED_APPROVED_CR`.
+- [x] Two newly added Change Request files sharing one identifier in a single diff are rejected as `DUPLICATE_NEW_SPEC_ID`, and the SPEC allocation rule is recorded in `CR_LIFECYCLE.md`.
+- [x] `LOCAL_CERTIFY: READY` is emitted only when every applicable LOCAL command actually ran and succeeded, and POST_PUSH and EXTERNAL evidence is named as outstanding rather than implied.
+- [x] One authoritative control-surface definition drives CONTROL profile derivation and includes `GOVERNANCE.md` and the client adapters; successful verification prints one PASS line per command; an identical mandatory and additional command executes once.
+- [x] Every live client adapter and router reaches the executable Boot entry, `README.md` contains no competing start instruction, and Check 3 rejects a deliberately stale adapter.
+- [x] `_ORVION_CANONICAL/manifest.md` `Next capability` names exactly one immediate action, holds current state only, and passes Check 5.
+- [x] `AGENTS.md` carries the durable-checkpoint self-test and the delegation economy, with no mandatory session report reintroduced.
+- [x] Live authorities describe the enforced system, `MASTER_REPOSITORY_HEALTH.md` is remeasured from the live repository, and `ai-map.json` is regenerated rather than hand-edited.
+- [x] The adversarial suite proves every added detector in both directions, full local certification passes from a clean state, and the Agent Control and Repository Consistency workflows are green on the exact final SHA.
+- [x] No file under `supabase/`, no historical report and no completed Change Request was modified, and no Git history was rewritten.
 
 ## Execution Log
 
@@ -183,15 +183,33 @@ Engineering observations, recorded rather than silently absorbed:
 [Appended by the reviewing agent after independently re-checking the Execution Log
 against the live repository state. Append-only — never edit or delete a prior entry.]
 
+### 2026-09-11 — reviewing agent (independent re-verification against live repository state)
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live repository, not against the Execution Log's self-report.
+
+- Frozen authority was attacked on this contract itself rather than only on fixtures. Adding `PROJECT_CONTEXT.md` to SPEC-160's own Write Scope and then writing that file was rejected as `FROZEN_AUTHORITY_MUTATED:Write Scope`; the identical tree without that edit returned `MODE: EXECUTE`. The exemption that lets a Change Request synchronize itself is therefore bounded by the comparison, exactly as intended.
+- The adversarial suite reports 82 passed, 0 failed. Every detector added here carries both a case it must reject and a case it must accept — the MUST-ACCEPT cases exist so that no guard can appear healthy by refusing everything.
+- Local certification from a clean tree emitted `LOCAL_CERTIFY: READY` after seven commands, each reported as a single PASS line with no streamed child output. All three Additional Verification commands were identical to derived mandatory ones and executed exactly once, so deduplication was observed rather than asserted.
+- Evidence-class honesty was verified in the direction that matters. With a `supabase/migrations/` path in Write Scope the run withholds READY, emits `LOCAL_CERTIFY: INCOMPLETE` and names the outstanding EXTERNAL Primary evidence; CI evidence is named POST_PUSH and never implied locally.
+- Check 3 and the new HANDOFF authority assertion were each attacked live in both directions, and the repository returned to CLEAN afterwards.
+- Manifest `Next capability` resolves to exactly one immediate action. Check 5 passes at 62 lines and 5,721 characters against the 70-line and 7,000-character budgets, so no semantic state was deleted to fit a budget.
+- Scope containment proven across the whole branch `b578981..HEAD`: no path under `supabase/`, no file under `reports/history/`, neither completed Agent Control Change Request, and no workflow file appears in the diff. `b578981` remains an ancestor of HEAD, so no history was rewritten.
+
+Two defects were found inside the repair by its own tests and fixed before this verdict: baseline blobs were being decoded with the console OEM code page, and `pwsh -Command` was collapsing child exit codes to 1. No discrepancy remains outstanding.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
