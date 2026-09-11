@@ -64,7 +64,7 @@ Before completion run:
 pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish
 ```
 
-Only a successful Finish permits Review/Complete. CR transitions, immutable contract sections, synchronization, and command vocabulary live in `CR_LIFECYCLE.md`.
+Only a successful Finish permits Review/Complete, and that is now enforced rather than asked for: Finish writes a local certification receipt bound to the implementation state it certified, and the Gate refuses a Complete transition without a fresh matching one. CR transitions, immutable contract sections, synchronization, and command vocabulary live in `CR_LIFECYCLE.md`.
 
 ### Decision and architecture discipline
 
@@ -107,7 +107,7 @@ Mandatory verification is derived from Write Scope and cannot be removed; `Addit
 
 ### 5a. Database verification protocol
 
-Owned by `ENGINEERING_METHOD.md §4 "Database verification protocol"`, unchanged and never narrowed. Read it when the `DATABASE` profile applies; `-Finish` also prints its commands in execution order as `LOCAL_NOT_EXECUTED` evidence and withholds `LOCAL_CERTIFY: READY` until they are run.
+Owned by `ENGINEERING_METHOD.md §4 "Database verification protocol"`, unchanged and never narrowed. Read it when the `DATABASE` profile applies; `-Finish` executes that protocol in order, so the contract must declare the `supabase-local` capability and name its relevant `scripts/verify_*` HTTP suites in Additional Verification.
 
 ### 5b. Cross-path impact protocol
 

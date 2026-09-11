@@ -862,7 +862,12 @@ try{
     # uncertified completion never prints a mode. A range run is exempt: CI holds no
     # local artifact and re-executes the certification itself.
     Validate-DatabaseContract $c $profiles
-    if(!$BaseRef-and$null-ne$baselineText-and$baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){
+    # `-Finish` is exempt because it IS the certification: it re-runs every local
+    # command against the state in front of it and mints the receipt at the end.
+    # Without this the completion act would be unreachable - it necessarily rewrites
+    # the manifest and the generated `ai-map.json` mirror, which certifying earlier
+    # cannot have covered. Certify the state you are about to commit, then commit it.
+    if(!$BaseRef-and-not$Finish-and$null-ne$baselineText-and$baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){
         Validate-Certification $c ($rel-replace'\\','/') $profiles
     }
 

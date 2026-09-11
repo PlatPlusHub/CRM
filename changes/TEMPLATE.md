@@ -148,7 +148,11 @@ broad criteria — this makes partial completion and partial failure both indivi
 Assert LOCAL evidence ONLY (`CR_LIFECYCLE.md §8`). A criterion naming remote workflow results on
 the completion commit's own SHA cannot be true when it is ticked, because that commit does not
 exist yet. POST_PUSH evidence belongs to `check_agent_continuity.ps1 -Certify` after the push, and
-EXTERNAL evidence is declared, never self-asserted.]
+EXTERNAL evidence is declared, never self-asserted.
+
+Do not write a criterion asserting that local verification ran. That is proven by the certification
+receipt `-Finish` writes, which the Gate checks directly; a checkbox claiming it would be the very
+self-assertion the receipt exists to replace. Assert what the work produced, not that you checked it.]
 
 - [ ]
 

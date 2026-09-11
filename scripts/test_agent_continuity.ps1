@@ -520,6 +520,14 @@ exit 0
     Assert '109 an unfiltered push workflow is expected and a non-matching filtered one is not' ((@($j.expected)-contains'Always')-and(@($j.expected)-notcontains'Docs')-and(@($j.expected)-notcontains'Db')-and(@($j.expected)-notcontains'Review Only')) ($j|ConvertTo-Json -Depth 5)
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'supabase/migrations/20260101_fixture.sql' -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1');$null=Run Finish;$j=ReceiptJson
     Assert '110 a path-filtered workflow becomes expected exactly when a written path matches it' ((@($j.expected)-contains'Db')-and(@($j.expected)-contains'Always')-and(@($j.expected)-notcontains'Docs')) ($j|ConvertTo-Json -Depth 5)
+
+    # `-Finish` IS the certification, so it may not demand a receipt of itself. Without
+    # this the completion act would be unreachable: it necessarily rewrites the manifest
+    # and its generated mirror, which any earlier certification cannot have covered.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $closeScope)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')
+    $f=Run Finish;$r=Run Gate
+    Assert '110b MUST-ACCEPT: Finish certifies a completion state it is not asked to already hold' ($f.Code-eq0-and$f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-eq0-and$r.Text-match'MODE: VERIFY') "$($f.Text)`n$($r.Text)"
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

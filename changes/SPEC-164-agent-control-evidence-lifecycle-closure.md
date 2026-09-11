@@ -61,7 +61,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 14
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -160,6 +160,20 @@ Step results:
 One fixture defect found and fixed during this step: two cases shared one HEAD SHA, so the previous case's stubbed payload silently answered the query for a case that meant to model "this SHA has no runs". `GhRuns` now clears the directory rather than overwriting one file.
 
 Evidence: `scripts/test_agent_continuity.ps1` 116 passed, 0 failed.
+
+### 2026-09-11 — implementation agent
+
+Outcome: Complete
+
+Step results:
+- Step 14: Applied — `CR_LIFECYCLE.md §8` records the receipt requirement, and the sentence stating that no fingerprint is stored now distinguishes the two objects rather than contradicting the repair: no fingerprint of the CONTRACT is stored because Git already proves frozen authority, while the receipt fingerprints the WORKING TREE, which is not a commit and about which Git can say nothing. §9 records the expected-versus-observed rule and the executed DATABASE protocol.
+- Step 15: Applied — `ENGINEERING_METHOD.md §4` replaced its `LOCAL_NOT_EXECUTED` paragraph with the current behaviour, including why pgTAP runs on both sides of the HTTP suites and the two declarations the protocol cannot derive.
+- Step 16: Applied — `changes/TEMPLATE.md` now forbids an Acceptance Criterion that merely asserts local verification ran, since that is the self-assertion the receipt replaces. `AGENTS.md` corrected in two places: the completion sentence now says the rule is enforced, and the DATABASE routing line no longer describes commands as listed but unexecuted.
+- Step 17: Already Applied — the manifest named this Change Request and `ai-map.json` was regenerated at approval.
+
+One defect discovered while implementing this step and repaired: the completion act necessarily rewrites the manifest and its generated `ai-map.json` mirror, so no earlier certification could cover the state actually being committed, and the receipt made completion unreachable. `-Finish` is now exempt from the receipt check, because `-Finish` IS the certification: it re-runs every local command against the state in front of it and mints the receipt at the end. Case 110b asserts this in both directions.
+
+Evidence: `scripts/test_agent_continuity.ps1` 117 passed, 0 failed; `scripts/check_repository_consistency.ps1` REPOSITORY CONSISTENCY: CLEAN.
 
 ## Verification Notes
 
