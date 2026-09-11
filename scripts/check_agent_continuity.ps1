@@ -911,6 +911,16 @@ try{
     foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — $($script:Capabilities[$name].Note)"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
     if($Finish){Finish-Checks $c $profiles ($rel-replace'\\','/')}
+    # A successful run states its OWN status (SPEC-166). Falling off the end leaves
+    # whatever the last native command set, and `Read-GitFile` deliberately runs a
+    # `git show` that FAILS whenever a path is absent at a ref - it leaves 128 behind
+    # and treats that as "absent", which is correct. The range path then ends on
+    # cmdlets, so nothing resets it, and GitHub's pwsh shell appends
+    # `exit $LASTEXITCODE` to every step. The Gate therefore printed ORVION: READY,
+    # MODE: VERIFY and BLOCKER: none, and the CI step failed with no error to read -
+    # on the first push of a new Change Request, which is when the governing contract
+    # is absent at the range base. Success is an assertion, not a leftover.
+    exit 0
 }catch{
     if($Finish){Write-Output 'CERTIFY: FAILED'}
     Block $_.Exception.Message

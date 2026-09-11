@@ -86,8 +86,17 @@ function Run([string]$Mode='Boot'){
     $o=& pwsh -NoProfile -File $control "-$Mode" -Root $root 2>&1;$code=$LASTEXITCODE
     [pscustomobject]@{Text=($o|Out-String);Code=$code;Lines=@($o).Count}
 }
+# Invoked the way `.github/workflows/agent-control.yml` invokes it, NOT the way the
+# local hook does: dot-sourced under `pwsh -Command` with the `exit $LASTEXITCODE`
+# appendix GitHub's pwsh shell appends to every step. This is load-bearing. `pwsh
+# -File` DISCARDS a script's trailing $LASTEXITCODE, so a Gate that printed a clean
+# report and left 128 behind from a deliberately-failing `git show` was exit 0 here
+# and exit 128 in CI. The suite was not wrong about the Gate's behaviour; it was
+# blind to the one output CI treats as the whole verdict. `Run` below keeps
+# `pwsh -File` for the same reason in reverse — that is how the pre-commit hook runs.
 function RunRange([string]$Base,[string]$Head='HEAD'){
-    $o=& pwsh -NoProfile -File $control -Gate -Root $root -BaseRef $Base -HeadRef $Head 2>&1;$code=$LASTEXITCODE
+    $cmd=". '$control' -Gate -Root '$root' -BaseRef '$Base' -HeadRef '$Head'; if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit `$LASTEXITCODE }"
+    $o=& pwsh -NoProfile -Command $cmd 2>&1;$code=$LASTEXITCODE
     [pscustomobject]@{Text=($o|Out-String);Code=$code}
 }
 function Commit([string]$Message){git -C $root add .;git -C $root commit -m $Message --quiet}
@@ -559,6 +568,20 @@ exit 0
     Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-draft-to-complete
     $r=RunRange 'HEAD~2'
     Assert '113 a newly created contract taken from Draft straight to Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-902-born\.md') $r.Text
+
+    # ---- A successful Gate must SAY it succeeded (SPEC-166) ----
+    # Production symptom: the Gate printed ORVION: READY, MODE: VERIFY and BLOCKER:
+    # none, and the CI step failed with no error to read. `Read-GitFile` runs
+    # `git show` and treats failure as "absent" - correct, deliberate, and it leaves
+    # $LASTEXITCODE at 128. The range path then ends on cmdlets, nothing resets it,
+    # and GitHub appends `exit $LASTEXITCODE`. It fires exactly when the governing
+    # contract is absent at the range base, which is the FIRST push of every new
+    # Change Request. The report is asserted alongside the code, because a guard that
+    # exits 0 while reporting a failure would be the same defect facing the other way.
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-first-push
+    $r=RunRange 'HEAD~1'
+    Assert '114 a Gate that reports success exits 0, even when the contract is new to the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY'-and$r.Text-match'CR: SPEC-902'-and$r.Text-notmatch'BLOCKED') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
