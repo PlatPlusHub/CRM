@@ -26,7 +26,7 @@ try {
         $a, $b = ($counts -split '\s+')
         # Stated as a fact, not as an instruction: hook output framed as an out-of-band command can
         # trip prompt-injection defences, and the rule it refers to already lives in AGENTS.md.
-        $note = if ([int]$b -gt 0) { '  (local is behind origin; AGENTS.md §4 step 8 applies)' } else { '' }
+        $note = if ([int]$b -gt 0) { '  (local is behind origin; AGENTS.md §4 applies)' } else { '' }
         Write-Output "ORVION git: branch $branch | ahead $a / behind $b vs upstream | working tree $tree$note"
     } else {
         Write-Output "ORVION git: branch $branch | no upstream tracked | working tree $tree"

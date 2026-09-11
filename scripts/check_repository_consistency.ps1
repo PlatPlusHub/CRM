@@ -756,8 +756,8 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
     # burned by stayed unguarded while the check's name ("ai-map freshness") promised the block.
     #
     # This is the load-bearing field of the cold-start handoff, not an incidental one: `AGENTS.md
-    # §4` step 4 branches the ENTIRE boot sequence on it (not `None` -> open that SPEC and let its
-    # Minimum Reading List take over; `None` -> fall through to the roadmap), and `AGENTS.md §6`
+    # §4` branches the ENTIRE boot sequence on it (not `None` -> open that SPEC and let its
+    # Minimum Reading List take over; `None` -> fall through to the roadmap), and `AGENTS.md §4`
     # plus `CR_LIFECYCLE.md §9` make it the only handoff channel between sessions. It is written by
     # `Approve SPEC-NNN` and cleared by `Complete SPEC-NNN`, and that clear has been FORGOTTEN
     # twice already (SPEC-024, SPEC-027 -- `reports/future-backlog.md` still carries the safeguard
@@ -1510,7 +1510,7 @@ Write-Host "== Check 18: the manifest's Active Change Request is a real, still-o
 # `[x] Complete` -- and ai-map regenerated to match, the guard printed CLEAN at exit 0. So did a
 # manifest pointing at `changes/SPEC-999-never-created.md`, a file that has never existed: Check 1
 # deliberately excludes the `SPEC-NNN.md` placeholder shape from reference linting, so nothing in the
-# repository had ever resolved this path. A cold-start agent takes `AGENTS.md §4` Stage A step 4 on
+# repository had ever resolved this path. A cold-start agent takes `AGENTS.md §4` on
 # this field -- it reads that CR and hands over to its Minimum Reading List -- so a stale pointer
 # either hands it finished work as its assignment or sends it to a file that is not there.
 #
@@ -1978,7 +1978,7 @@ Write-Host ""
 # =====================================================================================================
 # Check 23: HANDOFF-1 -- a session report written under the HANDOFF rule must actually carry one.
 #
-# `AGENTS.md §6` requires every session report to open with a HANDOFF block answering seven questions
+# `AGENTS.md §7` requires every session report to open with a HANDOFF block answering seven questions
 # -- INHERITED, PROVEN, UNPROVEN, CHANGED, REMAINING, DO NOT TOUCH, NEXT -- because that block is the
 # whole LLM-agnostic continuity mechanism: a fresh session with no conversational memory reads
 # `reports/README.md`'s pointer, opens the named report, and inherits from those seven lines. The rule
@@ -2034,7 +2034,7 @@ if (Test-Path $historyDir) {
     }
 }
 if ($handoffIssues -gt 0) {
-    Write-Host "  The seven fields are AGENTS.md §6's, and DO NOT TOUCH is the one this repository lacked:" -ForegroundColor DarkGray
+    Write-Host "  The seven fields are AGENTS.md §7's, and DO NOT TOUCH is the one this repository lacked:" -ForegroundColor DarkGray
     Write-Host "  a boundary stated by the session that found it, so the next agent does not reopen a settled question." -ForegroundColor DarkGray
     $issues += $handoffIssues
 } else {
@@ -2208,6 +2208,139 @@ if (-not $decisionLine) {
     } else {
         $liveDecisions = @($registerState.Keys | Where-Object { $registerState[$_].Decider -and -not $registerState[$_].Settled })
         Write-Host "  all $($liveDecisions.Count) register entr(ies) awaiting a decider are named on the manifest's boot line (of $($registerState.Count) findings read across table rows and detail blocks)" -ForegroundColor Green
+    }
+}
+
+Write-Host ""
+Write-Host "== Check 26: every cross-document section pointer resolves, and titled ones agree ==" -ForegroundColor Cyan
+# POINTER-1 (2026-09-11, SPEC-163). A section number is a reference that silently rots. Sections
+# get renumbered and the citing prose keeps its old number, which now points at a DIFFERENT rule --
+# syntactically valid and semantically wrong, so nothing ever caught it. Five live instances were
+# found in one pass, and two of them were inside THIS guard: Check 23 cited `AGENTS.md §6` for the
+# HANDOFF rule whose authority lives in §7, and Check 18 cited an `AGENTS.md §4` step numbering that
+# no longer exists. A weaker agent following one of those reads the wrong authority and complies
+# with the wrong rule.
+#
+# MEASUREMENT, stated honestly because that is this repository's rule about guards: existence is
+# fully mechanical -- a reference to a section that does not exist is always wrong. Meaning is NOT
+# mechanically decidable from a bare number, so it is decidable only where the author OPTS IN by
+# quoting the target's heading, as `AGENTS.md §2 "Permanent principles"`, and there it is checked
+# exactly. This guard therefore CANNOT catch "right number, wrong meaning" on an unquoted
+# reference; quoting the heading is what makes a pointer verifiable, and the load-bearing ones do.
+#
+# The quoted form is deliberately opt-in rather than inferred from a parenthetical. The first
+# version read `(...)` as a title claim and immediately failed the manifest's accurate prose
+# "`AGENTS.md §4` (the single, mandatory boot sequence)" -- a description, not a heading. A guard
+# that fires on correct writing is worse than no guard, so parentheses stay free prose.
+$pointerIssues = 0
+$pointerTargets = @{}
+foreach ($doc in @('AGENTS.md', 'GOVERNANCE.md', 'CR_LIFECYCLE.md', 'CODING_STANDARDS.md', 'ENGINEERING_METHOD.md')) {
+    $docPath = Join-Path $RepoRoot $doc
+    if (-not (Test-Path $docPath)) { continue }
+    $headings = @{}
+    foreach ($h in [regex]::Matches([IO.File]::ReadAllText($docPath), '(?m)^#{2,3}\s+(?<n>\d+[a-z]?)\.\s+(?<t>\S[^\r\n]*)')) {
+        $headings[$h.Groups['n'].Value] = $h.Groups['t'].Value.Trim()
+    }
+    $pointerTargets[$doc] = $headings
+}
+$pointerScan = @('AGENTS.md', 'GOVERNANCE.md', 'CR_LIFECYCLE.md', 'CODING_STANDARDS.md', 'ENGINEERING_METHOD.md',
+                 'README.md', 'llms.txt', 'global-rules.md', 'PROTOCOL.md', 'changes/TEMPLATE.md',
+                 '_ORVION_CANONICAL/manifest.md', 'scripts/check_agent_continuity.ps1',
+                 'scripts/check_repository_consistency.ps1', '.claude/hooks/session-state.ps1')
+$pointerRefs = 0
+$pointerTitled = 0
+foreach ($rel in $pointerScan) {
+    $srcPath = Join-Path $RepoRoot $rel
+    if (-not (Test-Path $srcPath)) { continue }
+    $src = [IO.File]::ReadAllText($srcPath)
+    # `§4–§5` ranges and `§5a` sub-sections both occur; capture the number plus an optional
+    # QUOTED heading title immediately following it.
+    foreach ($m in [regex]::Matches($src, '(?<doc>[A-Z_]+\.md)\s*§\s*(?<n>\d+[a-z]?)(?:\s*"(?<t>[^"\r\n]{3,90})")?')) {
+        $doc = $m.Groups['doc'].Value
+        if (-not $pointerTargets.ContainsKey($doc)) { continue }
+        $pointerRefs++
+        $n = $m.Groups['n'].Value
+        if (-not $pointerTargets[$doc].ContainsKey($n)) {
+            Write-Host "  BROKEN SECTION POINTER: $rel cites '$doc §$n', which has no such section" -ForegroundColor Yellow
+            $pointerIssues++
+            continue
+        }
+        if ($m.Groups['t'].Success) {
+            $pointerTitled++
+            $claimed = $m.Groups['t'].Value.Trim()
+            $actual = $pointerTargets[$doc][$n]
+            # Compared case- and punctuation-insensitively: the citing prose may legitimately
+            # shorten a heading, but it may not name a different concept.
+            $norm = { param($s) (($s -replace '[^A-Za-z0-9 ]', ' ') -replace '\s+', ' ').Trim().ToLowerInvariant() }
+            if ((& $norm $actual) -notlike "*$(& $norm $claimed)*") {
+                Write-Host "  SECTION POINTER MISMATCH: $rel cites '$doc §$n ($claimed)' but that section is '$actual'" -ForegroundColor Yellow
+                $pointerIssues++
+            }
+        }
+    }
+}
+if ($pointerIssues -gt 0) {
+    Write-Host "  Remedy: repoint the reference at the section that actually owns the rule. Renumbering a" -ForegroundColor DarkGray
+    Write-Host "  document means repointing everything that cites it -- the number is not the authority." -ForegroundColor DarkGray
+    $issues += $pointerIssues
+} else {
+    Write-Host "  all $pointerRefs cross-document section pointers resolve ($pointerTitled carry a title and agree with it)" -ForegroundColor Green
+}
+
+Write-Host ""
+Write-Host "== Check 27: relocated owner-ratified rules still exist in their declared owner ==" -ForegroundColor Cyan
+# RELOCATE-1 (2026-09-11, SPEC-163). 16,604 bytes of owner-ratified methodology moved out of
+# `AGENTS.md` into `ENGINEERING_METHOD.md` so that routine execution stops reading it. Relocation is
+# only safe if the rule is genuinely OWNED somewhere else rather than implicitly remembered, so each
+# anchor below is a phrase from a rule the owner ratified. If one disappears, the rule was deleted
+# rather than moved, and this fails.
+#
+# This is the same shape as the HANDOFF-2 defect repaired in SPEC-160, inverted: there, a guard
+# enforced a rule whose authority had been deleted. Here, the authority is asserted to exist.
+$methodPath = Join-Path $RepoRoot 'ENGINEERING_METHOD.md'
+$anchorIssues = 0
+if (-not (Test-Path $methodPath)) {
+    Write-Host "  RELOCATED AUTHORITY MISSING: ENGINEERING_METHOD.md does not exist, so every rule moved out of AGENTS.md is now unowned" -ForegroundColor Red
+    $issues++
+} else {
+    $methodRaw = [IO.File]::ReadAllText($methodPath)
+    $anchors = @(
+        'Standing execution directive (owner-ratified 2026-07-17)',
+        'Governing meta-principle — Earn-It',
+        'Fundamental Domain Structure vs Feature Implementation',
+        'Technical Advisory Board (owner-ratified 2026-07-17)',
+        'Every proposal — including the owner''s — is evaluated',
+        'Permanent Engineering Review Board',
+        'Learn-Before-Designing',
+        'Design Challenge',
+        'Phase-transition checkpoint',
+        'No vacuous security tests (owner-ratified 2026-08-27)',
+        'A green guard proves only the property it actually measures',
+        'Attack every new detector with a counterexample before trusting it',
+        'Static analysis is a lead, never a verdict',
+        'Test both doors',
+        'Every discovered finding ends in exactly one declared state',
+        'External credentials never pass through the agent',
+        'npx supabase db reset',
+        'scripts/impact.ps1 -Target'
+    )
+    foreach ($a in $anchors) {
+        if (-not $methodRaw.Contains($a)) {
+            Write-Host "  RELOCATED RULE LOST: ENGINEERING_METHOD.md no longer contains '$a'" -ForegroundColor Red
+            $anchorIssues++
+        }
+    }
+    $kernelRaw = [IO.File]::ReadAllText((Join-Path $RepoRoot 'AGENTS.md'))
+    if (-not $kernelRaw.Contains('ENGINEERING_METHOD.md')) {
+        Write-Host "  ROUTE LOST: AGENTS.md no longer points at ENGINEERING_METHOD.md, so nothing routes an agent to the relocated rules" -ForegroundColor Red
+        $anchorIssues++
+    }
+    if ($anchorIssues -gt 0) {
+        Write-Host "  Remedy: restore the rule in ENGINEERING_METHOD.md. A relocated owner-ratified rule is never" -ForegroundColor DarkGray
+        Write-Host "  deleted as a side effect of trimming the kernel -- token cost never authorizes semantic loss." -ForegroundColor DarkGray
+        $issues += $anchorIssues
+    } else {
+        Write-Host "  all $($anchors.Count) relocated owner-ratified rules are present in ENGINEERING_METHOD.md, and AGENTS.md routes to it" -ForegroundColor Green
     }
 }
 

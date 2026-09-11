@@ -65,7 +65,7 @@ Depends on `changes/SPEC-160-agent-control-plane-final-reconciliation.md` and `c
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: 13
 Blocker: None
 Recovery Attempt: 0
 
@@ -152,6 +152,29 @@ Engineering Observations, both inside the approved objective and repaired within
 Five suite fixtures modelled states the stronger invariant correctly rejects, and were repaired rather than exempted: case 02 and 38 cleared the pointer while the contract was still In Progress; case 27 moved the pointer while leaving the old contract executable; case 33 published a second In-Progress contract to the sandbox origin, so every later case inherited a genuine orphan through `Reset-Fixture`; case 13's unknown-capability fixture named `n8n`, which the registry now knows, so it was changed to a name the registry genuinely lacks.
 
 Suite: 84 → 93 assertions, all passing.
+
+Commits: this entry's commit.
+
+### 2026-09-11 — Claude Opus 5
+
+Outcome: Complete
+
+Step results:
+- Step 6: Applied — `CR_LIFECYCLE.md §8` and `changes/TEMPLATE.md` now state that Acceptance Criteria and Review Gate assert LOCAL evidence only; the template's over-claim about the optional `Notes` section is corrected.
+- Step 7: Applied — five confirmed pointer drifts repaired: `global-rules.md` pointed three conduct rules at `AGENTS.md §6`, which is now Blocked recovery; `.claude/hooks/session-state.ps1` cited a `§4 step 8` that no longer exists; and this repository's own consistency guard cited `AGENTS.md §6` for the HANDOFF rule that lives in §7 and a `§4 Stage A step 4` structure that is gone.
+- Step 8: Applied — Check 26 resolves every cross-document section pointer and compares quoted headings.
+- Step 9: Applied — `ENGINEERING_METHOD.md` created, carrying five relocated blocks verbatim.
+- Step 10: Applied — `AGENTS.md` reduced to the kernel plus five routed pointers.
+- Step 11: Applied — Check 27 asserts all eighteen relocated owner-ratified anchors and the kernel's route to them.
+- Step 12: Applied — the new authority is registered in `GOVERNANCE.md §5`, `README.md` and the `AGENTS.md §4` routing table.
+
+Engineering Observations:
+
+3. Check 26's first version read any parenthetical after a section number as a claim about that section's heading, and immediately failed the manifest's accurate prose "`AGENTS.md §4` (the single, mandatory boot sequence)" — a description, not a title. A guard that fires on correct writing is worse than no guard, so the titled form is now opt-in and explicit: a quoted heading. Parentheses remain free prose, and the limitation is recorded in the check itself rather than implied by its name.
+
+4. A defect-injection probe used `git checkout -- <file>` to undo each injection. That reverts to the last commit, not to the probe's starting point, so it destroyed the uncommitted relocation of `AGENTS.md` and the `global-rules.md` repair. No committed history was touched and nothing was lost permanently; both edits were redone and re-verified. The lesson is recorded because it is a real hazard for any agent attacking a guard: injection probes must run against committed state, or the "undo" is a deletion.
+
+Verification: `scripts/check_repository_consistency.ps1` CLEAN with Checks 26 and 27 present.
 
 Commits: this entry's commit.
 

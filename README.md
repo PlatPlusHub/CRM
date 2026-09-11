@@ -15,7 +15,8 @@ ORVION is the working repository for a travel CRM / operations / revenue platfor
 | You want… | Go to |
 |---|---|
 | Runtime mode / exact next action | `scripts/check_agent_continuity.ps1 -Boot` + `AGENTS.md §3–§4` |
-| How work is done — conduct, standing authorities, decision tiers | `AGENTS.md` |
+| How work is done — conduct, execution boundary, standing authorities | `AGENTS.md` |
+| Engineering method — decision tiers, design challenge, measurement integrity, verification protocols | `ENGINEERING_METHOD.md` |
 | Where every fact lives — SSOT matrix, decision & document lifecycles, write-permissions | `GOVERNANCE.md` |
 | Change Request state machine & command vocabulary | `CR_LIFECYCLE.md` |
 | Current phase, module, and Active Change Request (live state) | `_ORVION_CANONICAL/manifest.md` |

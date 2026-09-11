@@ -154,10 +154,11 @@ Normal CR execution and routine checkpoints do not require a session report. CR 
 | Document | Purpose | Class | Authoritative for | Updated by |
 |---|---|---|---|---|
 | `GOVERNANCE.md` (this) | knowledge/decision OS | Living | §2 SSOT, lifecycles | governance review |
-| `AGENTS.md` | execution operating model | Living (protected) | conduct, boot, authorities | owner-authorized only |
+| `AGENTS.md` | execution operating kernel | Living (protected) | conduct, boot, authorities | owner-authorized only |
+| `ENGINEERING_METHOD.md` | engineering method | Living (protected) | decision tiers, design challenge, measurement integrity, database + cross-path verification protocols — relocated verbatim from `AGENTS.md` (2026-09-11, `SPEC-163`) so routine execution stops paying for methodology it does not use; Check 27 fails if any relocated rule stops existing here | owner-authorized only |
 | `README.md` | one-hop entry router | Living (protected) | routing to authorities (the boot sequence itself lives in `AGENTS.md §4`) | owner-authorized only |
 | `PROTOCOL.md` | **RETIRED** → tombstone pointer (session 10) | Historical | nothing — content owned by AGENTS/GOVERNANCE | frozen |
-| `global-rules.md` | **RETIRED** → tombstone pointer (session 10) | Historical | nothing — content owned by AGENTS §6 | frozen |
+| `global-rules.md` | **RETIRED** → tombstone pointer (session 10) | Historical | nothing — content owned by `AGENTS.md` and `ENGINEERING_METHOD.md` | frozen |
 | `CR_LIFECYCLE.md` | CR state machine | Living | CR states/transitions/vocabulary | owner-authorized |
 | `CODING_STANDARDS.md` | code/SQL/API/security standards | Living | standards | as standards evolve |
 | `PROJECT_CONTEXT.md` | identity/vision/boundaries | Living | product identity | owner |

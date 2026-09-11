@@ -18,9 +18,9 @@ Request is Approved, `Objective`, `Business Reason`, `Risks`, `Supersedes / Depe
 against its Git baseline and rejects any difference, so an executing agent cannot widen its own
 authority. Only `Status` (along the §4 transition matrix), `Runtime Checkpoint`, the checkbox
 state of `Acceptance Criteria` and `Review Gate`, and appends to `Execution Log` and
-`Verification Notes` may change. Every section below must be present, and the section set is
-required only of the *governing* Change Request — historical Change Requests keep their own
-original format and are never retrofitted.
+`Verification Notes` may change. Every section below except the optional `Notes` must be present,
+and the section set is required only of the *governing* Change Request — historical Change Requests
+keep their own original format and are never retrofitted.
 
 ---
 
@@ -143,7 +143,12 @@ is correct.]
 
 [Binary. Every item must be verifiable by reading the repository after the task completes.
 No subjective criteria. Prefer one criterion per Implementation Step over a small number of
-broad criteria — this makes partial completion and partial failure both individually visible.]
+broad criteria — this makes partial completion and partial failure both individually visible.
+
+Assert LOCAL evidence ONLY (`CR_LIFECYCLE.md §8`). A criterion naming remote workflow results on
+the completion commit's own SHA cannot be true when it is ticked, because that commit does not
+exist yet. POST_PUSH evidence belongs to `check_agent_continuity.ps1 -Certify` after the push, and
+EXTERNAL evidence is declared, never self-asserted.]
 
 - [ ]
 
