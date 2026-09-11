@@ -3,6 +3,7 @@ param(
     [Parameter(ParameterSetName='Boot',Mandatory=$true)][switch]$Boot,
     [Parameter(ParameterSetName='Gate',Mandatory=$true)][switch]$Gate,
     [Parameter(ParameterSetName='Finish',Mandatory=$true)][switch]$Finish,
+    [Parameter(ParameterSetName='Certify',Mandatory=$true)][switch]$Certify,
     [string]$Root=(Split-Path $PSScriptRoot -Parent),
     [string]$BaseRef,
     [string]$HeadRef='HEAD'
@@ -325,14 +326,48 @@ function Resolve-Contract($m,[object[]]$Records){
     $c[0]
 }
 
-# Change Request state and the manifest active pointer are ONE invariant. An
-# executable Change Request with no pointer naming it is unreachable at cold
-# start, which is the failure this rejects.
-function Validate-ManifestSync([object[]]$Records,[string]$Ref){
-    foreach($p in @($Records|?{$_.Path-match'^changes/SPEC-[0-9]+-.*\.md$'}|%{$_.Path}|select -Unique)){
-        if(!(Test-Path(Join-Path $Root $p))){continue}
-        try{$x=Contract(Join-Path $Root $p)}catch{continue}
-        if($x.Status-in@('Approved','In Progress')){throw "ORPHANED_APPROVED_CR:$p"}
+# Change Request state and the manifest active pointer are ONE invariant, and it
+# holds in BOTH directions over every contract on disk - not merely over those in
+# the current diff, which could never see an orphan that already existed before
+# this change began.
+#
+#   Approved / In Progress  -> executable. At most one may exist, and the manifest
+#                              must name exactly it. An unpointed executable
+#                              contract is unreachable at cold start.
+#   Draft / Complete / Cancelled -> the manifest must never name it. A Draft named
+#                              as active made Boot print that contract's full
+#                              Write Scope on its WRITE: line, which contradicts
+#                              AGENTS.md 1 - only Approved or In Progress grants
+#                              write authority. A weaker agent reading WRITE: as
+#                              its permission would write files nobody approved.
+#
+# Status is READ from each contract's own Status section and never copied
+# anywhere, so the manifest remains the sole holder of the pointer and no second
+# source of truth for Change Request state is created.
+function Contract-Statuses {
+    $dir=Join-Path $Root 'changes'
+    $map=@{}
+    if(!(Test-Path -LiteralPath $dir)){return $map}
+    foreach($f in @(Get-ChildItem -LiteralPath $dir -Filter 'SPEC-*.md' -File)){
+        # A historical contract predating the current Status vocabulary cannot be
+        # classified; it is terminal by definition and is skipped rather than
+        # guessed at.
+        try{$map['changes/'+$f.Name]=Status-FromText ([IO.File]::ReadAllText($f.FullName))}catch{}
+    }
+    $map
+}
+function Validate-ManifestCrState($m){
+    $statuses=Contract-Statuses
+    $active=if($m.Active){$m.Active-replace'\\','/'}else{$null}
+    # A pointer naming no readable contract is diagnosed precisely by Contract()
+    # as STALE_ACTIVE_CR. Returning here keeps that specific message instead of
+    # pre-empting it with an orphan report about some unrelated file.
+    if($active-and-not$statuses.ContainsKey($active)){return}
+    if($active-and$statuses[$active]-notin@('Approved','In Progress')){
+        throw "MANIFEST_CR_CONTRADICTION:$($statuses[$active]):$active"
+    }
+    foreach($p in @($statuses.Keys|Where-Object{$statuses[$_]-in@('Approved','In Progress')}|Sort-Object)){
+        if($p-ne$active){throw "ORPHANED_APPROVED_CR:$p"}
     }
 }
 
@@ -390,21 +425,64 @@ function Get-ProfileEvidence([string]$Profile){
             'pwsh -NoProfile -File scripts/test_future_date_guard.ps1');Deferred=@()}}
         'CI'{[pscustomobject]@{Local=@();Deferred=@(
             'POST_PUSH: workflow conclusions on the exact pushed SHA')}}
-        'WORKSTATION'{[pscustomobject]@{Local=@();Deferred=@(
-            'LOCAL_NOT_EXECUTED: workstation doctor and bootstrap idempotence (AGENTS.md §5)')}}
+        # The doctor is read-only and deterministic, so it is EXECUTED rather than
+        # deferred. Bootstrap idempotence mutates the workstation and is therefore
+        # never run automatically - but its exact command is named, so a weaker
+        # agent does not have to re-derive it.
+        'WORKSTATION'{[pscustomobject]@{Local=@(
+            'pwsh -NoProfile -File .workstation/doctor.ps1');Deferred=@(
+            'LOCAL_NOT_EXECUTED: bootstrap idempotence — run `.workstation/prepare.ps1` twice and compare; mutating, never automatic')}}
+        # Every DATABASE command is destructive, slow, or needs a running stack, so
+        # none may run inside a Gate. They are listed in execution order instead of
+        # summarized, because "could not execute" must never become green and the
+        # next action must still be deterministic.
         'DATABASE'{[pscustomobject]@{Local=@();Deferred=@(
-            'LOCAL_NOT_EXECUTED: clean db reset, pgTAP Pass A and B, HTTP suites, smoke (AGENTS.md §5a)',
+            'LOCAL_NOT_EXECUTED: 1 `npx supabase db reset` (clean)',
+            'LOCAL_NOT_EXECUTED: 2 pgTAP Pass A',
+            'LOCAL_NOT_EXECUTED: 3 relevant `scripts/verify_*` HTTP suites',
+            'LOCAL_NOT_EXECUTED: 4 pgTAP Pass B, no reset',
+            'LOCAL_NOT_EXECUTED: 5 smoke — `docker exec -i supabase_db_ORVION psql -U postgres -d postgres -f - < scripts/verify_database.sql`',
+            'LOCAL_NOT_EXECUTED: 6 `pwsh -NoProfile -File scripts/check_database_parity.ps1`',
             'EXTERNAL: Primary ledger, function-surface and structural-surface hashes read from Primary')}}
         default{[pscustomobject]@{Local=@();Deferred=@()}}
     }
 }
 
-function Test-Capabilities($c){
-    foreach($name in $c.RequiredCapabilities){
-        if($name-ne'github'){throw "NO_DETERMINISTIC_CAPABILITY_PROBE:$name"}
+# Capability registry. Two honest classes and one closed door:
+#   LOCAL_PROBE       - this process can prove it here and now, so it does.
+#   EXTERNAL_EVIDENCE - a connector reachable only from the agent's own runtime.
+#                       It is DECLARED and reported as unproven. PowerShell must
+#                       never manufacture a green for a connector it cannot see.
+# A name absent from this table still fails closed, because an unknown capability
+# is never assumed present. Only capabilities ORVION actually uses are listed:
+# the three local ones are real commands, and the four external ones are exactly
+# the MCP servers `.workstation/doctor.ps1` verifies in `.mcp.json`.
+$script:Capabilities=@{
+    'github'          =@{Class='LOCAL_PROBE';Probe={
         gh auth status *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:github:gh_auth_status'}
-        git -C $Root ls-remote origin HEAD *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:github:git_ls_remote'}
+        git -C $Root ls-remote origin HEAD *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:github:git_ls_remote'}}}
+    'docker'          =@{Class='LOCAL_PROBE';Probe={
+        docker info *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:docker:docker_info'}}}
+    'supabase-local'  =@{Class='LOCAL_PROBE';Probe={
+        docker info *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:supabase-local:docker_info'}
+        if(!(Test-Path -LiteralPath (Join-Path $Root 'node_modules/.bin/supabase.cmd'))-and
+           !(Test-Path -LiteralPath (Join-Path $Root 'node_modules/.bin/supabase'))){
+            throw 'MISSING_REQUIRED_CAPABILITY:supabase-local:project_cli_missing'}}}
+    'supabase-primary'=@{Class='EXTERNAL_EVIDENCE'}
+    'postgres-local'  =@{Class='EXTERNAL_EVIDENCE'}
+    'n8n'             =@{Class='EXTERNAL_EVIDENCE'}
+    'context7'        =@{Class='EXTERNAL_EVIDENCE'}
+}
+function Test-Capabilities($c){
+    $declared=@()
+    foreach($name in $c.RequiredCapabilities){
+        if(-not $script:Capabilities.ContainsKey($name)){throw "NO_DETERMINISTIC_CAPABILITY_PROBE:$name"}
+        $entry=$script:Capabilities[$name]
+        if($entry.Class-eq'LOCAL_PROBE'){& $entry.Probe}else{$declared+=$name}
     }
+    # Returned unwrapped: the call site wraps in @(), where the `,$declared`
+    # idiom would arrive as ONE element holding the whole array.
+    $declared
 }
 
 function Repo-Guard {
@@ -470,6 +548,49 @@ function Finish-Checks($c,[string[]]$profiles){
     }
 }
 
+# POST_PUSH evidence has exactly ONE honest owner, and it is this.
+#
+# An Acceptance Criterion reading "the workflows are green on the exact final SHA"
+# cannot be true when it is ticked: the commit that CREATES that SHA has not been
+# made, let alone pushed. That circularity is why a Change Request once reached
+# Complete while CI was red. The claim therefore belongs here - made after the
+# push, by machine, against the SHA that actually exists - and never in a
+# checkbox that Complete depends on.
+function Certify-Remote {
+    $sha=(git -C $Root rev-parse HEAD).Trim()
+    Write-Output "SHA: $sha"
+    $raw=gh run list --commit $sha --json workflowName,conclusion,status 2>$null
+    if($LASTEXITCODE-ne0-or!$raw){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: gh could not read workflow runs for this SHA'
+        exit 1
+    }
+    $runs=@($raw|ConvertFrom-Json)
+    if(!$runs.Count){
+        Write-Output 'REMOTE_CERTIFY: PENDING'
+        Write-Output 'EVIDENCE: no workflow run exists for this SHA yet — push it, or wait for the run to start'
+        exit 1
+    }
+    foreach($r in $runs){Write-Output "RUN: $($r.workflowName) $($r.status)/$($r.conclusion)"}
+    $running=@($runs|Where-Object{$_.status-ne'completed'})
+    if($running.Count){
+        Write-Output 'REMOTE_CERTIFY: PENDING'
+        Write-Output "EVIDENCE: $($running.Count) run(s) still in progress on this SHA"
+        exit 1
+    }
+    $bad=@($runs|Where-Object{$_.conclusion-ne'success'})
+    if($bad.Count){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output "EVIDENCE: $((@($bad|ForEach-Object{$_.workflowName})|Sort-Object -Unique)-join', ')"
+        exit 1
+    }
+    Write-Output 'REMOTE_CERTIFY: READY'
+    # Exits directly rather than returning a code: this function WRITES its
+    # result, so a returned value would join that output stream and the caller
+    # would fall through into the Boot pipeline instead of stopping.
+    exit 0
+}
+
 function Block($message){
     if($message-eq'RECOVERY_EXHAUSTED'){Write-Output 'HARD_BLOCKED: RECOVERY_EXHAUSTED';return}
     $p=$message-split':',2
@@ -483,18 +604,24 @@ function Block($message){
 try{
     Set-Location $Root
     if(!(Test-Path(Join-Path $Root 'AGENTS.md'))){throw 'AGENTS_MISSING'}
+    if($Certify){Certify-Remote}
     if($BaseRef){Assert-Ref $BaseRef;Assert-Ref $HeadRef}
 
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'}
     Validate-HistoryAndIds $records $base
-    $m=Manifest;$rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
+    $m=Manifest
+    $rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
     if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
 
     if(!$rel){
-        Validate-ManifestSync $records $base
+        Validate-ManifestCrState $m
+        # PLAN permits authoring a Draft and nothing else. `Approved` is not listed
+        # because Validate-ManifestCrState already rejects an approved contract the
+        # manifest does not name, so allowing it here would describe a state the
+        # control plane refuses one step earlier.
         $bad=@($records|?{
             if($_.Path-notmatch'^changes/SPEC-[0-9]+-.*\.md$'){return $true}
-            try{$draft=Contract(Join-Path $Root $_.Path);return $draft.Status-notin@('Draft','Approved')}catch{return $true}
+            try{$draft=Contract(Join-Path $Root $_.Path);return $draft.Status-ne'Draft'}catch{return $true}
         })
         if($bad.Count){throw "NO_GOVERNING_CR:$((@($bad|%{$_.Path})|sort -Unique)-join',')"}
         Write-Output 'ORVION: READY';Write-Output 'MODE: PLAN';Write-Output 'ACTIVE_CR: none'
@@ -520,14 +647,24 @@ try{
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
     }
 
+    # Deliberately AFTER the contract's own legality. An agent that jumps a status
+    # illegally usually also forgets to move the pointer, and the illegal
+    # transition is the deeper defect; reporting the pointer first would name the
+    # symptom. This still runs before any output, so a Draft named as active can
+    # never reach the line that prints its Write Scope.
+    Validate-ManifestCrState $m
+
+    # `Draft` has no arm: Validate-ManifestCrState rejects a Draft the manifest
+    # names, so the state the retired READY_FOR_APPROVAL mode described can no
+    # longer be reached. PLAN is where a Draft is authored, and it correctly
+    # reports no write authority.
     $mode=switch($c.Status){
-        'Draft'{'READY_FOR_APPROVAL'}
         {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){if($c.Attempt-eq3){throw 'RECOVERY_EXHAUSTED'};'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}}
         'Complete'{if($completionTransition){'VERIFY'}else{'BLOCKED'}}
         default{'BLOCKED'}
     }
     if($mode-eq'BLOCKED'){throw "RUNTIME_BLOCKED:$($c.Blocker)"}
-    if(!$BaseRef){Test-Capabilities $c}
+    $declaredCapabilities=@();if(!$BaseRef){$declaredCapabilities=@(Test-Capabilities $c)}
 
     $scope=@($c.Scope|%{$_-replace'\\','/'})
     foreach($r in $records){
@@ -545,6 +682,9 @@ try{
     Write-Output "WRITE: $($c.Scope-join', ')"
     Write-Output "START_CONTEXT: $($c.Reading-join', ')"
     Write-Output "VERIFICATION: $((@($profiles)+@($c.AdditionalVerification))-join', ')"
+    # Named as declared, never as proven: this process cannot see these connectors,
+    # and a capability line that looked like a probe result would be a false green.
+    foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — declared by the contract, unprovable by this process"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
     if($Finish){Finish-Checks $c $profiles}
 }catch{

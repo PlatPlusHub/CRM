@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -65,7 +65,7 @@ Depends on `changes/SPEC-160-agent-control-plane-final-reconciliation.md` and `c
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -133,7 +133,27 @@ None
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request.]
+### 2026-09-11 — Claude Opus 5
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `Validate-ManifestCrState` now reads every contract on disk and enforces the pointer invariant in both directions.
+- Step 2: Applied — the `READY_FOR_APPROVAL` switch arm is removed; the state it named is now a rejected contradiction.
+- Step 3: Applied — `$script:Capabilities` registers three `LOCAL_PROBE` and four `EXTERNAL_EVIDENCE` capabilities; unknown names still fail closed.
+- Step 4: Applied — `WORKSTATION` executes `.workstation/doctor.ps1`; `DATABASE` lists its six commands in execution order.
+- Step 5: Applied — `-Certify` reads workflow conclusions for the exact `HEAD` SHA.
+
+Engineering Observations, both inside the approved objective and repaired within Write Scope:
+
+1. Ordering. The pointer invariant initially ran before contract validation, so an illegal Status jump was reported as a pointer contradiction — the symptom rather than the defect. It now runs after the contract's own legality and still before any output, so a `Draft` named as active can never reach the line that prints its Write Scope.
+2. `Certify-Remote` first returned its exit code while also writing its result, so the code joined the output stream and the run fell through into the whole Boot pipeline after reporting. It now exits directly, and case 93 asserts the absence of Boot output so the fall-through cannot return.
+
+Five suite fixtures modelled states the stronger invariant correctly rejects, and were repaired rather than exempted: case 02 and 38 cleared the pointer while the contract was still In Progress; case 27 moved the pointer while leaving the old contract executable; case 33 published a second In-Progress contract to the sandbox origin, so every later case inherited a genuine orphan through `Reset-Fixture`; case 13's unknown-capability fixture named `n8n`, which the registry now knows, so it was changed to a name the registry genuinely lacks.
+
+Suite: 84 → 93 assertions, all passing.
+
+Commits: this entry's commit.
 
 ## Verification Notes
 
