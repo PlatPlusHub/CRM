@@ -262,9 +262,37 @@ function Validate-Checklist([object[]]$Was,[object[]]$Now,[string]$Code){
     }
 }
 
-function Validate-Transition([string]$From,[string]$To){
-    if(-not $script:LegalTransitions.ContainsKey($From)){throw "ILLEGAL_STATUS_TRANSITION:${From}->${To}"}
-    if($script:LegalTransitions[$From]-notcontains$To){throw "ILLEGAL_STATUS_TRANSITION:${From}->${To}"}
+# A CI range is a SEQUENCE of transitions, never one transition. Comparing only
+# the range endpoints rejects a legal history: `Approved -> In Progress ->
+# Complete` is three legal steps whose endpoints are not a legal pair, which is
+# exactly how a push carrying both the Execute and the Complete commit failed.
+# Walk the statuses that ACTUALLY occurred in commits and validate each step;
+# reachability through states nobody committed is never inferred.
+function Status-Path([string]$Path,[string]$Base,[string]$Current){
+    $seq=@()
+    $old=Read-GitFile $Base $Path
+    if($null-ne$old){$seq+=(Status-FromText $old)}
+    if($BaseRef){
+        foreach($commit in @(git -C $Root rev-list --reverse "$BaseRef..$HeadRef" -- $Path)){
+            $text=Read-GitFile $commit $Path
+            if($null-eq$text){continue}
+            $status=Status-FromText $text
+            if(!$seq.Count-or$seq[-1]-ne$status){$seq+=$status}
+        }
+    }
+    if($Current-and(!$seq.Count-or$seq[-1]-ne$Current)){$seq+=$Current}
+    # Returned unwrapped on purpose: every call site wraps in @(), and the
+    # `,$seq` idiom would arrive there as ONE element holding the whole array.
+    $seq
+}
+
+function Validate-StatusPath([string[]]$Sequence){
+    for($i=1;$i-lt$Sequence.Count;$i++){
+        $from=$Sequence[$i-1];$to=$Sequence[$i]
+        if(-not $script:LegalTransitions.ContainsKey($from)-or$script:LegalTransitions[$from]-notcontains$to){
+            throw "ILLEGAL_STATUS_TRANSITION:${from}->${to}"
+        }
+    }
 }
 
 function Validate-CompletionPrerequisites($Contract){
@@ -288,8 +316,12 @@ function Resolve-Contract($m,[object[]]$Records){
     if(!$BaseRef-and!$c.Count){return $null}
     if(!$c.Count){throw 'NO_GOVERNING_CR'}
     if($c.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
-    $base=if($BaseRef){$BaseRef}else{'HEAD'};$old=Read-GitFile $base $c[0]
-    if($null-eq$old-or(Status-FromText $old)-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
+    $base=if($BaseRef){$BaseRef}else{'HEAD'}
+    if($null-eq(Read-GitFile $base $c[0])){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
+    # Complete is reachable only from In Progress, judged over the path actually
+    # committed rather than over the two ends of the range.
+    $seq=@(Status-Path $c[0] $base 'Complete')
+    if($seq.Count-lt2-or$seq[$seq.Count-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
     $c[0]
 }
 
@@ -484,7 +516,7 @@ try{
         Validate-EvidenceAppendOnly $baselineText $c
         Validate-Checklist (ChecklistItems (Section $baselineText 'Acceptance Criteria' -Optional)) $c.Acceptance 'ACCEPTANCE_TEXT_MUTATED'
         Validate-Checklist (ChecklistItems (Section $baselineText 'Review Gate' -Optional)) $c.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
-        Validate-Transition $baselineStatus $c.Status
+        Validate-StatusPath @(Status-Path ($rel-replace'\\','/') $base $c.Status)
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
     }
 

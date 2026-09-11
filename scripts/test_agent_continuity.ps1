@@ -239,6 +239,22 @@ try{
     Assert '81 a thin client adapter is inside the control surface' ($r.Code-eq0-and$r.Text-match'VERIFICATION: CONTROL, REPOSITORY') $r.Text
     Reset-Fixture;Rebase (ContractText -Scope 'allowed.txt');$r=Run
     Assert '82 MUST-ACCEPT: an ordinary path derives REPOSITORY only' ($r.Code-eq0-and$r.Text-match'VERIFICATION: REPOSITORY'-and$r.Text-notmatch'CONTROL') $r.Text
+
+    # ---- A CI range is a PATH of transitions, not one transition (SPEC-162) ----
+    # Regression: the range 185d5e1..76c3ee1 carried Approved -> In Progress ->
+    # Complete. Every step legal, endpoints not a legal pair, and comparing the
+    # endpoints failed a legal history on the real repository.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope '_ORVION_CANONICAL/manifest.md');Commit path-approved
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope '_ORVION_CANONICAL/manifest.md');Commit path-inprogress
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit path-complete
+    $r=RunRange 'HEAD~2'
+    Assert '83 MUST-ACCEPT: a range spanning Approved, In Progress and Complete is legal' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope '_ORVION_CANONICAL/manifest.md');Commit jump-approved
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable);Commit jump-complete
+    $r=RunRange 'HEAD~1'
+    Assert '84 a single commit jumping Approved straight to Complete is still rejected inside a range' ($r.Code-ne0-and$r.Text-match'ILLEGAL_STATUS_TRANSITION:Approved->Complete') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     if(Test-Path $sandbox){Remove-Item -LiteralPath $sandbox -Recurse -Force}

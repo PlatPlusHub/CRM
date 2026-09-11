@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -66,7 +66,7 @@ Every file under `supabase/` is out of scope without exception. Historical repor
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -106,6 +106,23 @@ Recovery Attempt: 0
 
 [Appended by the executing agent after each run against this Change Request.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+
+### 2026-09-11 — executing agent
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `Status-Path` returns the ordered distinct Status values across the baseline, every commit in `BaseRef..HeadRef` that touched the contract, and the current contract. In local mode the sequence is baseline then current, so local behaviour is byte-for-byte unchanged.
+- Step 2: Applied — `Validate-StatusPath` rejects the first consecutive pair outside the §4 matrix, naming that exact pair. Endpoint comparison is gone.
+- Step 3: Applied — `Resolve-Contract` now requires the sequence to reach `Complete` from `In Progress`, judged over the committed path.
+- Step 4: Applied — cases 83 and 84: a range spanning `Approved`, `In Progress` and `Complete` across separate commits is accepted; a single commit jumping `Approved` straight to `Complete` inside a range is still rejected.
+- Step 5: Applied — recorded in `CR_LIFECYCLE.md §8`.
+- Step 6: Applied — certification, staged pushes and remote observation.
+
+Engineering observations:
+- The defect predates `SPEC-160`. The endpoint read in `Resolve-Contract` was original; `SPEC-160` extended the same endpoint assumption into its new transition matrix without noticing, because every local test drives exactly one transition and every earlier programme happened to push after each one.
+- A second defect was found in this repair by the acceptance criterion that demanded the real range be replayed rather than trusted. `Status-Path` first returned `,$seq`; wrapped in `@()` at the call site that arrives as ONE element holding the whole array, so the path collapsed to the single string `Approved In Progress Complete` and the check still failed. Returning the array unwrapped fixed it. Replaying the actual failing range in a detached clone is what caught this; the unit-level reasoning had looked correct.
+- Identity: `SPEC-161` was proposed by the allocation rule and refused by the collision check, because `SPEC-160`'s record discusses `SPEC-161` as the identity normalization would have used. Allocation proposes, collision validation disposes; the guard was obeyed rather than weakened, and `SPEC-162` was taken.
 
 ## Verification Notes
 
