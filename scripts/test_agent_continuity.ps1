@@ -282,12 +282,16 @@ try{
     Assert '85 a manifest naming a Draft contract is a contradiction, not a mode' ($r.Code-ne0-and$r.Text-match'MANIFEST_CR_CONTRADICTION:Draft'-and$r.Text-notmatch'WRITE: allowed\.txt') $r.Text
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Closeable);$r=Run Gate
     Assert '86 a manifest naming a Complete contract is a contradiction' ($r.Code-ne0-and$r.Text-match'MANIFEST_CR_CONTRADICTION:Complete') $r.Text
+    # Cancelled is the other terminal state and shares the rejection branch, so it is
+    # asserted rather than assumed to follow from Complete.
+    Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Cancelled);$r=Run Gate
+    Assert '87 a manifest naming a Cancelled contract is a contradiction' ($r.Code-ne0-and$r.Text-match'MANIFEST_CR_CONTRADICTION:Cancelled') $r.Text
     # The orphan scan reads every contract on disk. Scanning only the diff could
     # never see an executable contract committed before the current change began.
     Reset-Fixture;Put 'changes/SPEC-902-orphan.md' (ContractText -Id SPEC-902 -Status Approved);Commit orphan-committed;$r=Run
-    Assert '87 an executable contract absent from the diff is still detected as orphaned' ($r.Code-ne0-and$r.Text-match'ORPHANED_APPROVED_CR:changes/SPEC-902-orphan\.md') $r.Text
+    Assert '88 an executable contract absent from the diff is still detected as orphaned' ($r.Code-ne0-and$r.Text-match'ORPHANED_APPROVED_CR:changes/SPEC-902-orphan\.md') $r.Text
     Reset-Fixture;Put 'changes/SPEC-902-draft.md' (ContractText -Id SPEC-902 -Status Draft);Commit draft-coexists;$r=Run
-    Assert '88 MUST-ACCEPT: a Draft alongside the active contract needs no pointer' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Assert '89 MUST-ACCEPT: a Draft alongside the active contract needs no pointer' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
 
     # ---- Capability routing: probe what is local, declare what is not ----
     # A LOCAL_PROBE is PROBED, and the probe tells the truth about this machine. A
@@ -300,26 +304,26 @@ try{
     Reset-Fixture;Rebase (ContractText -Capabilities github);$r=Run
     $probed=($r.Text-notmatch'NO_DETERMINISTIC_CAPABILITY_PROBE')-and($r.Text-notmatch'CAPABILITY: github')
     $honest=if($ghAuthed){$r.Code-eq0-and$r.Text-match'MODE: EXECUTE'}else{$r.Code-ne0-and$r.Text-match'MISSING_REQUIRED_CAPABILITY:github'}
-    Assert "89 MUST-ACCEPT: a LOCAL_PROBE capability is probed and reports honestly (gh authenticated: $ghAuthed)" ($probed-and$honest) $r.Text
+    Assert "90 MUST-ACCEPT: a LOCAL_PROBE capability is probed and reports honestly (gh authenticated: $ghAuthed)" ($probed-and$honest) $r.Text
     Reset-Fixture;Rebase (ContractText -Capabilities n8n);$r=Run
-    Assert '90 an EXTERNAL_EVIDENCE capability is declared, never claimed proven' ($r.Code-eq0-and$r.Text-match'CAPABILITY: n8n EXTERNAL_EVIDENCE'-and$r.Text-notmatch'MISSING_REQUIRED_CAPABILITY') $r.Text
+    Assert '91 an EXTERNAL_EVIDENCE capability is declared, never claimed proven' ($r.Code-eq0-and$r.Text-match'CAPABILITY: n8n EXTERNAL_EVIDENCE'-and$r.Text-notmatch'MISSING_REQUIRED_CAPABILITY') $r.Text
 
     # ---- WORKSTATION evidence is executed, not merely deferred ----
     Reset-Fixture;Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_RAN';exit 0";Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish
-    Assert '91 WORKSTATION local evidence runs the doctor instead of deferring it' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File \.workstation/doctor\.ps1'-and$r.Text-match'LOCAL_CERTIFY: INCOMPLETE'-and$r.Text-match'bootstrap idempotence') $r.Text
+    Assert '92 WORKSTATION local evidence runs the doctor instead of deferring it' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File \.workstation/doctor\.ps1'-and$r.Text-match'LOCAL_CERTIFY: INCOMPLETE'-and$r.Text-match'bootstrap idempotence') $r.Text
 
     # ---- Identity: a textual mention reserves, by decision (CR_LIFECYCLE.md §4) ----
     # Conservative on purpose. An unused identifier costs nothing; a reused identity
     # is unrecoverable. This fixes the rule so a later agent cannot "fix" it silently.
     Reset-Fixture;Put 'design-notes.txt' 'A future SPEC-903 could handle this.';Commit prose-mention;Put 'changes/SPEC-903-new.md' (ContractText -Id SPEC-903);$r=Run Gate
-    Assert '92 an identifier mentioned only in prose is refused for a new contract' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED:SPEC-903') $r.Text
+    Assert '93 an identifier mentioned only in prose is refused for a new contract' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED:SPEC-903') $r.Text
 
     # ---- POST_PUSH evidence is never asserted without observing it ----
     $o=& pwsh -NoProfile -File $control -Certify -Root $root 2>&1;$code=$LASTEXITCODE;$t=($o|Out-String)
     # `-notmatch 'ORVION:'` is load-bearing. The first implementation RETURNED its
     # exit code while also writing its result, so the code joined the output stream
     # and the run fell through into the whole Boot pipeline after reporting.
-    Assert '93 remote certification never reports READY without reading a real run' ($code-ne0-and$t-match'REMOTE_CERTIFY: (FAILED|PENDING)'-and$t-notmatch'REMOTE_CERTIFY: READY'-and$t-notmatch'ORVION:') $t
+    Assert '94 remote certification never reports READY without reading a real run' ($code-ne0-and$t-match'REMOTE_CERTIFY: (FAILED|PENDING)'-and$t-notmatch'REMOTE_CERTIFY: READY'-and$t-notmatch'ORVION:') $t
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     if(Test-Path $sandbox){Remove-Item -LiteralPath $sandbox -Recurse -Force}

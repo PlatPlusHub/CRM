@@ -65,7 +65,7 @@ Depends on `changes/SPEC-160-agent-control-plane-final-reconciliation.md` and `c
 
 ## Runtime Checkpoint
 
-Resume Step: 13
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -113,23 +113,23 @@ None
 
 ## Acceptance Criteria
 
-- [ ] A manifest naming a `Draft` Change Request is rejected as `MANIFEST_CR_CONTRADICTION` rather than routed to a mode that prints its Write Scope.
-- [ ] A manifest naming a `Complete` or `Cancelled` Change Request is rejected as `MANIFEST_CR_CONTRADICTION`.
-- [ ] An `Approved` Change Request that is absent from the current diff and unnamed by the manifest is rejected as `ORPHANED_APPROVED_CR`.
-- [ ] A correctly paired active Change Request still routes to `EXECUTE`, proving the invariant does not over-fire.
-- [ ] `READY_FOR_APPROVAL` appears in no control script, `AGENTS.md` or `CR_LIFECYCLE.md`.
-- [ ] A `LOCAL_PROBE` capability is probed, an `EXTERNAL_EVIDENCE` capability is declared and never claimed proven, and an unregistered capability still fails closed.
-- [ ] `WORKSTATION` local evidence executes `.workstation/doctor.ps1` instead of reporting `LOCAL_NOT_EXECUTED`, and `DATABASE` deferred evidence names exact commands.
-- [ ] `-Certify` reports `READY`, `PENDING` or `FAILED` against the exact current `HEAD` SHA.
-- [ ] `CR_LIFECYCLE.md` and `changes/TEMPLATE.md` both state that Acceptance Criteria assert `LOCAL` evidence only.
-- [ ] No `AGENTS.md §N` reference in any living document or control script points at a section that does not exist or whose heading contradicts the citing text.
-- [ ] `ENGINEERING_METHOD.md` exists and contains every owner-ratified rule relocated from `AGENTS.md`, with its dates and wording intact.
-- [ ] `AGENTS.md` points to `ENGINEERING_METHOD.md` for each relocated block and retains every kernel rule.
-- [ ] `AGENTS.md` is smaller than 16,000 bytes, and no relocated rule is absent from its new owner.
-- [ ] `scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN` with Checks 26 and 27 present and passing.
-- [ ] The full adversarial suite passes with every new invariant covered by both a rejecting and an accepting case.
-- [ ] `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` emits `LOCAL_CERTIFY: READY`.
-- [ ] `git diff --check` is clean and no file outside Write Scope was modified.
+- [x] A manifest naming a `Draft` Change Request is rejected as `MANIFEST_CR_CONTRADICTION` rather than routed to a mode that prints its Write Scope.
+- [x] A manifest naming a `Complete` or `Cancelled` Change Request is rejected as `MANIFEST_CR_CONTRADICTION`.
+- [x] An `Approved` Change Request that is absent from the current diff and unnamed by the manifest is rejected as `ORPHANED_APPROVED_CR`.
+- [x] A correctly paired active Change Request still routes to `EXECUTE`, proving the invariant does not over-fire.
+- [x] `READY_FOR_APPROVAL` appears in no control script, `AGENTS.md` or `CR_LIFECYCLE.md`.
+- [x] A `LOCAL_PROBE` capability is probed, an `EXTERNAL_EVIDENCE` capability is declared and never claimed proven, and an unregistered capability still fails closed.
+- [x] `WORKSTATION` local evidence executes `.workstation/doctor.ps1` instead of reporting `LOCAL_NOT_EXECUTED`, and `DATABASE` deferred evidence names exact commands.
+- [x] `-Certify` reports `READY`, `PENDING` or `FAILED` against the exact current `HEAD` SHA.
+- [x] `CR_LIFECYCLE.md` and `changes/TEMPLATE.md` both state that Acceptance Criteria assert `LOCAL` evidence only.
+- [x] No `AGENTS.md §N` reference in any living document or control script points at a section that does not exist or whose heading contradicts the citing text.
+- [x] `ENGINEERING_METHOD.md` exists and contains every owner-ratified rule relocated from `AGENTS.md`, with its dates and wording intact.
+- [x] `AGENTS.md` points to `ENGINEERING_METHOD.md` for each relocated block and retains every kernel rule.
+- [x] `AGENTS.md` is smaller than 16,000 bytes, and no relocated rule is absent from its new owner.
+- [x] `scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN` with Checks 26 and 27 present and passing.
+- [x] The full adversarial suite passes with every new invariant covered by both a rejecting and an accepting case.
+- [x] `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` emits `LOCAL_CERTIFY: READY`.
+- [x] `git diff --check` is clean and no file outside Write Scope was modified.
 
 ## Execution Log
 
@@ -191,19 +191,54 @@ Engineering Observation 5: CI rejected `52295ba` and was right to. Three cases f
 The direct cause was mine: after redoing the relocation I re-ran the repository guard but not the control suite. The remote check earned its place by catching it.
 
 Commits: this entry's commit.
+### 2026-09-11 — Claude Opus 5
+
+Outcome: Complete
+
+Step results:
+- Step 15: Applied — pull request #2 exercised the `pull_request` path; both control workflows concluded success and the branch was closed and deleted without merging.
+- Step 16: Applied — manifest synchronized and `ai-map.json` regenerated.
+
+Pull-request path, proven rather than assumed: the `pull_request` trigger fired for `Agent Control` and `Repository Consistency`, the workflow derived `BASE_SHA=70751fb4a004ad285282b59b1de28b4ea4a01f2f` as the merge base against head `ae790db8463cc21f92ab08d71de4616eb9ab5183`, the Gate ran in range mode on the detached merge ref, and both concluded `success`. This repository had never opened a pull request, so that path had been unproven since the workflows were written.
+
+Engineering Observations 6 and 7, both recorded rather than repaired, because repairing either is outside this objective:
+
+6. The local Gate refuses the first commit on a new branch with `GIT_UPSTREAM_MISSING`, since no upstream exists until the branch is pushed. The workaround is to push the empty branch first. The guard is right for trunk work — it exists because `RECOVER-1` was four migrations stranded on a diverged branch — so it was not weakened; branch-aware handling belongs to whatever Change Request adopts pull requests as the normal workflow.
+
+7. Append-only evidence and branch merging are structurally incompatible on one Execution Log. Merging `main` into a probe branch was refused as `EVIDENCE_NOT_APPEND_ONLY`, correctly: from the branch's baseline, `main`'s later entry is an insertion, not an append. The answer was a fresh branch cut from current `main`, never a history rewrite or a force push. Any future pull-request workflow must keep one contract's evidence on one line of development.
+
+Server-side enforcement, earned and minimal: ruleset `main integrity` (id 22950574) is active on the default branch with `non_fast_forward` and `deletion`, read back from `repos/PlatPlusHub/CRM/rules/branches/main`. It carries no bypass, so it binds an agent holding owner credentials, which is the point. Required status checks and required pull requests were evaluated and NOT enabled: this repository works trunk-based, a required check on a direct push can never pass because the check runs after the push, and both frictions in observations 6 and 7 are unresolved. Owner admin access is retained, so the ruleset is reversible from the GitHub UI.
+
+Commits: this entry's commit and the completion commit.
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log against the live repository state.]
+### 2026-09-11 — Claude Opus 5
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live repository rather than against the Execution Log.
+
+The manifest/contract invariant was re-observed by mutation, not by reading code: a manifest naming a Draft, a Complete and a Cancelled contract are each rejected as `MANIFEST_CR_CONTRADICTION`, an executable contract absent from the diff is still reported as `ORPHANED_APPROVED_CR`, and a correctly paired contract still routes to `EXECUTE`. `READY_FOR_APPROVAL` appears in no control script, `AGENTS.md` or `CR_LIFECYCLE.md`; the retired term is recorded here, in the Change Request that retired it, so the living authorities carry the rule and not the obsolete vocabulary.
+
+Capability routing was checked in both environments it must survive: with `gh` authenticated and with `GH_CONFIG_DIR` pointed at an empty directory so the probe genuinely fails. A registered local capability is probed either way, an external one is declared and never claimed proven, and an unregistered name still fails closed.
+
+Both new repository checks were attacked before being trusted. A pointer at a nonexistent section, a quoted pointer naming the wrong concept, a relocated rule deleted from its owner, and the kernel's route removed are each DETECTED; the unmodified tree stays CLEAN. Check 26's measurement limit is recorded in the check itself: a bare section number cannot be validated for meaning, only a quoted heading can.
+
+Byte measurements, taken from Git blobs rather than the working tree so line-ending normalization cannot flatter them: `AGENTS.md` 29,766 to 15,739. Routine PLAN mandatory context 38,392 to 24,842. A Change Request that genuinely needs the full method reads more than before, and that is reported as it is rather than presented as a saving.
+
+No product, migration, or database-contract file was modified: `git diff 14be2ae HEAD` over `supabase/`, `reports/history/`, `PROJECT_CONTEXT.md`, `CODING_STANDARDS.md`, `.github/` and the roadmap returns zero paths. All fourteen touched files are inside the approved Write Scope.
+
+Recommendation to human: Set Status to Complete.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] No product, migration, or database-contract file was touched.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] No product, migration, or database-contract file was touched.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

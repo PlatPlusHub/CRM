@@ -655,7 +655,7 @@ try{
     Validate-ManifestCrState $m
 
     # `Draft` has no arm: Validate-ManifestCrState rejects a Draft the manifest
-    # names, so the state the retired READY_FOR_APPROVAL mode described can no
+    # names, so the state the retired approval-pending mode described can no
     # longer be reached. PLAN is where a Draft is authored, and it correctly
     # reports no write authority.
     $mode=switch($c.Status){

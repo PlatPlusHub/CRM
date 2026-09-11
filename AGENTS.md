@@ -68,7 +68,7 @@ Only a successful Finish permits Review/Complete. CR transitions, immutable cont
 
 ### Decision and architecture discipline
 
-Owned by `ENGINEERING_METHOD.md §2 "Decision and architecture discipline"`: the Earn-It meta-principle, Fundamental Domain Structure vs Feature Implementation, the Routine / Significant / Owner-Decision tiers with the Technical Advisory Board and Engineering Review Board, independent evaluation of every proposal including the owner's, and the eight workflow stages from phase-fit through Learn-Before-Designing, Design Review, Design Challenge, Excellence Check and the phase-transition checkpoint.
+Owned by `ENGINEERING_METHOD.md §2 "Decision and architecture discipline"`: Earn-It, Fundamental Domain Structure, the Routine / Significant / Owner-Decision tiers, independent evaluation of every proposal, and the eight workflow stages.
 
 Read it when classifying a capability or making an architectural or owner-facing decision. Routine execution inside an approved contract does not need it. Nothing was weakened in the move — Check 27 of `scripts/check_repository_consistency.ps1` fails if any of those rules stops existing there.
 
@@ -129,7 +129,7 @@ After recovery ask whether the failure class recurs. If executable, add one guar
 
 ### Measurement integrity
 
-Owned by `ENGINEERING_METHOD.md §3 "Measurement integrity"`: no vacuous security tests, a green guard proving only what it measures, attacking every new detector with a counterexample in both directions and proving enforcers by defect injection, static analysis as a lead rather than a verdict, testing both doors, distinguishing an infrastructure failure from a finding, never manufacturing an exemption or raising a budget to fit, the four declared states every finding must reach, and external credentials never passing through the agent.
+Owned by `ENGINEERING_METHOD.md §3 "Measurement integrity"`: no vacuous security tests, a green guard proving only what it measures, attacking every detector in both directions, testing both doors, never manufacturing an exemption, the four states a finding must reach, and external credentials never passing through the agent.
 
 Read it before writing or quoting any test, guard, or measurement. The kernel keeps the principle it rests on — Test Before Trust, §2 — and the detail lives with the method.
 
