@@ -582,6 +582,94 @@ exit 0
     Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-first-push
     $r=RunRange 'HEAD~1'
     Assert '114 a Gate that reports success exits 0, even when the contract is new to the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY'-and$r.Text-match'CR: SPEC-902'-and$r.Text-notmatch'BLOCKED') $r.Text
+
+    # ---- A range hides nothing behind a later revert (SPEC-167) ----
+    # `SPEC-162` and `SPEC-165` established that a range is a SEQUENCE of committed
+    # transitions, and applied it to Status alone. Everything else still judged the
+    # two ENDPOINTS, because `Diff-Records` computes a net `BaseRef..HeadRef` diff.
+    # A commit that violates an invariant and a later commit that undoes it therefore
+    # cancel out, and the violation reaches `main` having been committed and never
+    # seen. The invariants below are HISTORY-SENSITIVE: they forbid a state from ever
+    # having been committed, not merely from surviving to HEAD. This is deliberately
+    # NOT generalised into "every intermediate commit must independently be
+    # releasable" - a work-in-progress commit is legal, and only these four classes
+    # are defined as forbidden to have occurred.
+    function Unput([string]$Rel){Remove-Item -LiteralPath (Join-Path $root $Rel) -Force -ErrorAction SilentlyContinue}
+
+    # F. An out-of-scope write is forbidden to COMMIT, not merely forbidden at HEAD.
+    Reset-Fixture
+    Put 'allowed.txt' 'in-scope edit';Put 'outside.txt' 'transient violation';Commit transient-write
+    Unput 'outside.txt';Commit transient-restore
+    $r=RunRange 'HEAD~2'
+    Assert '115 an out-of-scope write reverted later in the same range is still rejected' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+
+    # G. Widening Write Scope and restoring it is net-identical, so the endpoint
+    # comparison saw nothing - and the writes the widened scope authorised were
+    # invisible for the very same reason. Frozen authority is checked per commit
+    # BEFORE scope, so the cause is reported rather than its consequence.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Scope 'allowed.txt;secret.txt');Put 'secret.txt' 'written under widened scope';Commit scope-widened
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Scope 'allowed.txt');Unput 'secret.txt';Commit scope-restored
+    $r=RunRange 'HEAD~2'
+    Assert '116 a Write Scope widened and restored inside one range is still rejected' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED:Write Scope') $r.Text
+
+    # A non-governing contract must ALREADY EXIST at the range base for these cases to
+    # measure what they claim. Naming a brand-new contract in the governing Write Scope
+    # puts its identifier into the baseline text, and collision validation then rejects
+    # the range as SPEC_ID_ALREADY_USED - a real and deliberate rule (CR_LIFECYCLE.md
+    # §4) that would make every assertion below pass without the history check ever
+    # running. `Second` therefore commits the contract and the scope that names it into
+    # the BASE, so the range itself carries only the transitions under test.
+    function Second([string]$Status){
+        Rebase (ContractText -Id SPEC-902 -Status $Status) 'changes/SPEC-902-other.md'
+        Rebase (ContractText -Scope 'allowed.txt;changes/SPEC-902-other.md')
+    }
+
+    # D. A valid corrective Change Request must never launder an invalid earlier one.
+    # `Status-Path` was walked for the RESOLVED GOVERNING contract only, so a second
+    # contract's illegal lifecycle was never judged at all.
+    Reset-Fixture;Second Draft
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Approved);Commit other-approved
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Closeable);Commit other-complete
+    $r=RunRange 'HEAD~2'
+    Assert '117 an illegal transition in a NON-governing contract is rejected' ($r.Code-ne0-and$r.Text-match'ILLEGAL_STATUS_TRANSITION:Approved->Complete') $r.Text
+
+    # E. Terminality was read at the range BASE only, so a contract that became
+    # terminal INSIDE the range was not yet historical and could still be edited.
+    Reset-Fixture;Second 'In Progress'
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Closeable);Commit other-closed
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Closeable -Log 'MUTATED AFTER TERMINAL');Commit other-mutated
+    $r=RunRange 'HEAD~2'
+    Assert '118 a contract that became terminal inside the range cannot be modified later in it' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION:changes/SPEC-902-other\.md') $r.Text
+
+    # H. Reopening a terminal contract, then CLOSING IT AGAIN before the range ends.
+    # Leaving it reopened at HEAD is already rejected, but by ORPHANED_APPROVED_CR - a
+    # FINAL-STATE mechanism, because a non-governing contract left executable is always
+    # an orphan. Asserting that shape would measure the pointer invariant and claim
+    # credit for terminality. Re-closing it removes the orphan, so what remains is only
+    # the forbidden intermediate state, and the assertion names a code rather than
+    # trusting a bare non-zero exit.
+    Reset-Fixture;Second 'In Progress'
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Closeable);Commit reopen-closed
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status 'In Progress');Commit reopen-reopened
+    Put 'changes/SPEC-902-other.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Closeable);Commit reopen-reclosed
+    $r=RunRange 'HEAD~3'
+    Assert '119 a terminal contract reopened and re-closed inside one range is rejected' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION|ILLEGAL_STATUS_TRANSITION:Complete->In Progress') $r.Text
+
+    # MUST-ACCEPT. The over-strictness this repair could introduce is rejecting a
+    # legal history. Cases 83 and 111 already pin the plain lifecycles; what is new
+    # here is a contract BORN in the range - which has no text at the base and whose
+    # frozen baseline must therefore fall back to its first appearance - while writing
+    # several in-scope files across several commits. Getting the fallback wrong
+    # re-breaks `SPEC-165`, so it is asserted rather than assumed.
+    Reset-Fixture;Pre-Range
+    $bornScope='_ORVION_CANONICAL/manifest.md;allowed.txt;context.txt'
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $bornScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-a
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope $bornScope);Put 'allowed.txt' 'step one';Commit born-b
+    Put 'context.txt' 'step two';Commit born-c
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $bornScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-d
+    $r=RunRange 'HEAD~4'
+    Assert '120 MUST-ACCEPT: a contract born in range writing in-scope files across commits is legal' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

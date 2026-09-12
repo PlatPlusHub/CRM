@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -90,7 +90,7 @@ None. Extends the range semantics established by `SPEC-162` and `SPEC-165`.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -163,50 +163,133 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all seven cases
+- [x] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all seven cases
       named in Step 1, and the whole suite passes.
-- [ ] `scripts/check_agent_continuity.ps1` defines `Validate-CommittedRange`, and it is invoked only
+- [x] `scripts/check_agent_continuity.ps1` defines `Validate-CommittedRange`, and it is invoked only
       when `$BaseRef` is set.
-- [ ] A range whose commits write a file outside Write Scope and then restore it is rejected as
+- [x] A range whose commits write a file outside Write Scope and then restore it is rejected as
       `OUT_OF_SCOPE_WRITE` naming that file.
-- [ ] A range whose commits widen the governing contract's `Write Scope` and then restore it is
+- [x] A range whose commits widen the governing contract's `Write Scope` and then restore it is
       rejected as `FROZEN_AUTHORITY_MUTATED:Write Scope`.
-- [ ] A range carrying an illegal Status transition in a contract that is not the governing contract
+- [x] A range carrying an illegal Status transition in a contract that is not the governing contract
       is rejected as `ILLEGAL_STATUS_TRANSITION`.
-- [ ] A range in which a contract becomes terminal and is then modified by a later commit in the
+- [x] A range in which a contract becomes terminal and is then modified by a later commit in the
       same range is rejected as `HISTORICAL_CR_MUTATION`.
-- [ ] The legal three-commit `Approved -> In Progress -> Complete` lifecycle and the `SPEC-165`
+- [x] The legal three-commit `Approved -> In Progress -> Complete` lifecycle and the `SPEC-165`
       born-and-completed-in-range shape are both still accepted.
-- [ ] `Validate-CommittedRange` introduces no error code that did not already exist in
+- [x] `Validate-CommittedRange` introduces no error code that did not already exist in
       `scripts/check_agent_continuity.ps1` before this Change Request.
-- [ ] `CR_LIFECYCLE.md` §8 records that range checks judge committed states rather than range
+- [x] `CR_LIFECYCLE.md` §8 records that range checks judge committed states rather than range
       endpoints, and names the four violation classes closed.
-- [ ] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while
+- [x] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while
       it is in progress, and `ai-map.json` is regenerated from the current tree.
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-12 — Claude Opus 5 (agent execution run)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — adversarial group added as assertions 115–120. See the PRECHECK table below.
+- Step 2: Applied — `Validate-CommittedRange` added after `Validate-StatusPath`, invoked from the
+  `try` block under `if($BaseRef)` after `Resolve-Contract`, before `Validate-ManifestCrState`.
+- Step 3: Applied — `$FrozenBaseline` resolves to the contract at `$BaseRef`, falling back to its
+  first appearance in the range.
+- Step 4: Applied — `$scopeAt` is read from the frozen baseline, never from the commit's own text.
+- Step 5: Applied — `$touched` collects every contract touched per commit; each gets
+  `Validate-StatusPath`.
+- Step 6: Applied — `$terminal` records terminality after each commit's own checks.
+- Step 7: Applied — `CR_LIFECYCLE.md` §8 paragraph added ahead of the `SPEC-163` LOCAL-evidence rule.
+- Step 8: Already Applied — the manifest pointer was set by the Approve commit; `ai-map.json`
+  regenerated.
+
+PRECHECK, against the unmodified control script. Every case was ACCEPTED (`ORVION: READY`), which is
+the defect:
+
+| Case | Assertion | Before | After |
+| --- | --- | --- | --- |
+| F transient out-of-scope write | 115 | READY | `OUT_OF_SCOPE_WRITE:outside.txt` |
+| G transient Write Scope widening | 116 | READY | `FROZEN_AUTHORITY_MUTATED:Write Scope` |
+| D illegal transition, non-governing CR | 117 | READY | `ILLEGAL_STATUS_TRANSITION:Approved->Complete` |
+| E mutation after terminal in range | 118 | READY | `HISTORICAL_CR_MUTATION:changes/SPEC-902-other.md` |
+| H reopened and re-closed in range | 119 | READY | `HISTORICAL_CR_MUTATION` |
+| legal born-in-range, multi-file | 120 | READY | READY (unchanged) |
+
+Cases A, B and C were confirmed `ALREADY PROTECTED` by assertions 83 and 111 and were not touched.
+
+Suite: 122 passed / 5 failed before the repair, 127 passed / 0 failed after.
+
+Engineering Observations (none repaired here; none widens this contract's scope):
+
+1. **Step 1's verification check was stale when it was written.** `Assert '113` was already present
+   from the `SPEC-165` group, so a literal reading marks Step 1 Already Applied while the adversarial
+   group demonstrably did not exist. The check was authored from a miscounted assertion total; the
+   suite ends at 114. Recorded rather than silently reinterpreted. The step's intent, its own body
+   and every Acceptance Criterion agree on what the work must produce, and the live owner instruction
+   of 2026-09-12 ("Execute Phase A test-first exactly as scoped. Reproduce the identified F/G/D/E-H
+   historical-range failures before modifying the implementation") resolved it; the group was added
+   at 115–120. A future contract must derive such a check from the file, not from a remembered count.
+2. **Two draft fixtures measured the wrong thing and were corrected before the repair.** Cases 117
+   and 118 first failed with `SPEC_ID_ALREADY_USED`, because naming a *new* contract in the governing
+   Write Scope puts its identifier into the baseline text and collision validation then reserves it
+   (`CR_LIFECYCLE.md` §4, deliberate). The `Second` helper now commits the second contract into the
+   range BASE so the range carries only the transitions under test. Case 119 first asserted a bare
+   non-zero exit and passed on `ORPHANED_APPROVED_CR` — a FINAL-STATE mechanism, since a non-governing
+   contract left executable at `HEAD` is always an orphan. It was reframed to reopen *and re-close*
+   inside the range, which removes the orphan and leaves only the forbidden intermediate state, and
+   it now asserts a named code. Both were vacuous tests in the `ENGINEERING_METHOD.md §3` sense.
+3. **`.github/workflows/migration-ci.yml` pins the Supabase CLI at `2.109.1` via
+   `supabase/setup-cli@v3` while `package-lock.json` resolves `2.109.0`.** A genuine second version
+   authority, not a range-integrity defect. Deferred to its own Change Request.
+
+Commits: recorded by the Complete commit that carries this entry.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-12 — Claude Opus 5 (review)
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live tree rather than against the
+Execution Log's self-report.
+
+- `Validate-CommittedRange` is defined at `scripts/check_agent_continuity.ps1:329` and invoked at
+  line 957 as `if($BaseRef){Validate-CommittedRange $rel}` — the only call site, and guarded, so
+  local working-tree mode is provably unaffected.
+- Assertions 115–120 are present and each names a specific failure code. This was checked because
+  case 119 originally passed on a bare non-zero exit produced by `ORPHANED_APPROVED_CR`, a
+  final-state mechanism; a bare-exit assertion would have satisfied the criterion while proving
+  nothing about terminality.
+- The no-new-error-code criterion was verified mechanically rather than by inspection: every code
+  thrown inside the new function was extracted and counted against
+  `git show 8be2abd:scripts/check_agent_continuity.ps1`. `HISTORICAL_CR_MUTATION` (2 occurrences)
+  and `OUT_OF_SCOPE_WRITE` (1) both pre-existed; `FROZEN_AUTHORITY_MUTATED` and
+  `ILLEGAL_STATUS_TRANSITION` are raised by the reused validators, not by new code.
+- The four rejection criteria and the two must-accept criteria are proven by the suite, which
+  `-Finish` executed rather than this review asserting: 127 passed, 0 failed. Assertions 83 and 111
+  (the pre-existing legal lifecycles) remain green, which is the over-strictness guard.
+- `-Finish` emitted `LOCAL_CERTIFY: READY` with all five guard suites, the consistency guard and
+  `git diff --check` passing.
+- `CR_LIFECYCLE.md` §8 carries the new paragraph; the manifest and `ai-map.json` both name this
+  Change Request.
+
+No discrepancy found between the Execution Log and the live repository state. Scope was not widened:
+the Supabase CLI dual-authority finding was recorded and deferred rather than repaired here.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

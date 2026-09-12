@@ -297,6 +297,99 @@ function Validate-StatusPath([string[]]$Sequence){
 }
 
 # ---------------------------------------------------------------------------
+# HISTORY-SENSITIVE invariants, judged over the commits a range actually
+# contains (SPEC-167).
+#
+# `Diff-Records` computes a NET `BaseRef..HeadRef` diff, so every check built on
+# its records judges the range's two ENDPOINTS. `Status-Path` was the single
+# exception, and even it was walked for the resolved GOVERNING contract alone.
+# A commit that violates an invariant plus a later commit that undoes it are
+# therefore invisible: the violation was committed, is part of the history being
+# admitted, and nothing looks at it.
+#
+# Four classes are defined as forbidden to have OCCURRED, not merely forbidden
+# to survive to HEAD:
+#
+#   - a write outside the approved Write Scope;
+#   - a widening of frozen authority (the widened scope would also authorise
+#     that commit's own writes, so scope is read from the baseline, never from
+#     the contract as it stood at the offending commit);
+#   - a modification to a contract after it became terminal inside this range;
+#   - an illegal Status transition in a contract that is not the governing one.
+#
+# This is deliberately NOT "every intermediate commit must independently be
+# releasable". A work-in-progress commit is legal, and FINAL-STATE properties -
+# the manifest pointer, completion prerequisites, certification - are correctly
+# judged at HEAD alone and are not re-checked per commit. Only the invariants
+# the repository defines as history-sensitive are audited here.
+#
+# ORVION history is linear (`main` carries non-fast-forward protection and the
+# acceptance model forbids merge-generated SHAs), so each commit is compared
+# against its first parent without special merge handling.
+function Validate-CommittedRange([string]$Rel){
+    $commits=@(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")
+    if(!$commits.Count){return}
+    $governing=$Rel-replace'\\','/'
+
+    # The effective frozen baseline is the governing contract AS APPROVED: its
+    # text at the range base when it exists there, otherwise at its first
+    # appearance inside the range. The fallback is what keeps a contract that is
+    # born and completed in one push legal (SPEC-165) - demanding a base version
+    # would refuse exactly that history.
+    $FrozenBaseline=Read-GitFile $BaseRef $governing
+
+    $terminal=@{};$touched=@{}
+
+    foreach($commit in $commits){
+        $short=$commit.Substring(0,7)
+        $paths=@()
+        foreach($line in @(git -C $Root diff --name-status -M "$commit^" $commit --)){
+            $parts=$line-split"`t"
+            if($parts[0].Substring(0,1)-eq'R'){$paths+=($parts[1]-replace'\\','/');$paths+=($parts[2]-replace'\\','/')}
+            else{$paths+=($parts[1]-replace'\\','/')}
+        }
+        $paths=@($paths|Sort-Object -Unique)
+
+        # A contract that was terminal at an EARLIER commit in this range is
+        # historical from that point on. Validate-HistoryAndIds already rejects
+        # touching one that was terminal BEFORE the range; this is the same rule
+        # for one that closed inside it.
+        foreach($p in $paths){
+            if($terminal.ContainsKey($p)){throw "HISTORICAL_CR_MUTATION:${p}@$short"}
+            if($p-match'^changes/SPEC-[0-9]+-.*\.md$'){$touched[$p]=$true}
+        }
+
+        if($null-eq$FrozenBaseline-and$paths-contains$governing){$FrozenBaseline=Read-GitFile $commit $governing}
+
+        if($null-ne$FrozenBaseline){
+            $text=Read-GitFile $commit $governing
+            if($null-ne$text){
+                try{Validate-FrozenAuthority $FrozenBaseline $text}catch{throw "$($_.Exception.Message)@$short"}
+            }
+            # Scope comes from the frozen baseline on purpose: a commit that
+            # widened its own Write Scope must not thereby authorise its own writes.
+            $scopeAt=@(Bullets (Section $FrozenBaseline 'Write Scope') 'WRITE_SCOPE'|%{$_-replace'\\','/'})
+            foreach($p in $paths){
+                if($p-ne$governing-and$scopeAt-notcontains$p){throw "OUT_OF_SCOPE_WRITE:${p}@$short"}
+            }
+        }
+
+        # Recorded AFTER this commit's own checks, so the commit that CLOSES a
+        # contract is itself legal and only later ones are refused.
+        foreach($p in $paths){
+            if($p-notmatch'^changes/SPEC-[0-9]+-.*\.md$'){continue}
+            $t=Read-GitFile $commit $p
+            if($null-ne$t){try{if((Status-FromText $t)-in@('Complete','Cancelled')){$terminal[$p]=$true}}catch{}}
+        }
+    }
+
+    # Every contract the range touched is judged by the same transition matrix as
+    # the governing one. Walking only the governing contract let a valid
+    # corrective Change Request carry an invalid earlier one through.
+    foreach($p in @($touched.Keys|Sort-Object)){Validate-StatusPath @(Status-Path $p $BaseRef $null)}
+}
+
+# ---------------------------------------------------------------------------
 # LOCAL certification receipt (SPEC-164).
 #
 # `AGENTS.md` says only a successful Finish permits Review/Complete, but every
@@ -856,6 +949,12 @@ try{
         Validate-StatusPath @(Status-Path ($rel-replace'\\','/') $base $c.Status)
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
     }
+
+    # The endpoint view above proves what the range LANDED ON. This proves what it
+    # PASSED THROUGH, which a net diff cannot see. It runs before the pointer
+    # invariant because a forbidden committed state is the deeper defect, and the
+    # pointer is a final-state property that would otherwise report the symptom.
+    if($BaseRef){Validate-CommittedRange $rel}
 
     # Deliberately AFTER the contract's own legality. An agent that jumps a status
     # illegally usually also forgets to move the pointer, and the illegal
