@@ -696,6 +696,54 @@ exit 0
     Assert '123 MUST-ACCEPT: a branches filter naming the checked-out branch is expected' ($exp-contains'Branch Main') $ev
     Assert '124 a matching branches filter with a non-matching paths filter is not expected' ($exp-notcontains'Branch Main Paths') $ev
     Assert '125 MUST-ACCEPT: unfiltered and path-filtered derivation is unchanged' (($exp-contains'Always')-and($exp-notcontains'Docs')-and($exp-notcontains'Review Only')) $ev
+
+    # ---- Cancelled is a terminal state the control plane can EXECUTE (SPEC-170) ----
+    # `CR_LIFECYCLE.md` §4 and `$script:LegalTransitions` both permit Draft/Approved/
+    # In Progress -> Cancelled, but `Resolve-Contract` accepted only `Complete` as a
+    # terminal GOVERNING status. Cancelling forces the manifest pointer to be cleared
+    # (a manifest naming a Cancelled contract is MANIFEST_CR_CONTRADICTION), which then
+    # left no governing contract at all, so control fell to the PLAN arm - which rejects
+    # the manifest.md and ai-map.json a cancellation must write. The authority permitted
+    # a transition the mechanism refused, and the only escapes a weaker agent can see are
+    # --no-verify and rewriting history, both forbidden by AGENTS.md §1.
+    # Closing a contract WRITES the manifest pointer, so a contract that closes itself
+    # must declare `_ORVION_CANONICAL/manifest.md` in its own Write Scope - exactly as
+    # the completion fixtures above already do. That requirement is deliberate and is
+    # not relaxed for cancellation: the manifest carries Current Phase, Live state and
+    # much more than the pointer, so an implicit closure-time write permission would
+    # let any contract silently rewrite all of it.
+    Reset-Fixture;Rebase (ContractText -Status Approved -Scope $rangeScope)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Cancelled -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')
+    $r=Run Gate
+    Assert '126 MUST-ACCEPT: an Approved contract can be cancelled with the pointer cleared' ($r.Code-eq0-and$r.Text-notmatch'NO_GOVERNING_CR') $r.Text
+
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $rangeScope);Commit cancel-approved
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Cancelled -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit cancel-done
+    $r=RunRange 'HEAD~1'
+    Assert '127 MUST-ACCEPT: the same cancellation is legal as a committed range' ($r.Code-eq0-and$r.Text-notmatch'NO_GOVERNING_CR') $r.Text
+
+    # Terminal means terminal in BOTH directions: a closed contract is not cancellable.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit closed-first
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Cancelled);Commit then-cancelled
+    $r=RunRange 'HEAD~1'
+    Assert '128 a Complete contract cannot later be Cancelled' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION|ILLEGAL_STATUS_TRANSITION') $r.Text
+
+    # Admitting Cancelled as governing must not create a second way to be ambiguous.
+    Reset-Fixture;Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899);Commit add-second-terminal
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Closeable)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Status Cancelled)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit two-terminal
+    $r=RunRange 'HEAD~1'
+    Assert '129 one Complete and one Cancelled in a diff is still ambiguous' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+
+    # Regression: Complete keeps the STRICTER rule and must not inherit the Cancelled path.
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit strict-approved
+    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit strict-complete
+    $r=RunRange 'HEAD~2'
+    Assert '130 Complete still requires In Progress immediately before it' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION|ILLEGAL_STATUS_TRANSITION') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

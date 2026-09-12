@@ -48,6 +48,9 @@ $script:LegalTransitions=@{
     'Complete'    = @('Complete')
     'Cancelled'   = @('Cancelled')
 }
+# The two closed states. Both are terminal, both forbid being the manifest's active
+# pointer, and both may therefore govern the run that closes a contract.
+$script:TerminalStatuses=@('Complete','Cancelled')
 
 function Normalize([string]$Text){
     if($null-eq$Text){return ''}
@@ -546,9 +549,18 @@ function Validate-CompletionPrerequisites($Contract){
 
 function Resolve-Contract($m,[object[]]$Records){
     if($m.Active){return $m.Active}
-    $changed=@($Records|?{$_.Path-match'^changes/SPEC-[0-9]+-.*\.md$'}|%{$_.Path}|select -Unique);$c=@()
+    $changed=@($Records|?{$_.Path-match'^changes/SPEC-[0-9]+-.*\.md$'}|%{$_.Path}|select -Unique);$c=@();$finals=@{}
     foreach($p in $changed){
-        if(Test-Path(Join-Path $Root $p)){try{$x=Contract(Join-Path $Root $p);if($x.Status-eq'Complete'){$c+=$p}}catch{}}
+        # BOTH terminal statuses may govern the run that closes a contract (SPEC-170).
+        # Admitting only `Complete` made `Cancelled` unreachable: closing a contract
+        # forces the manifest pointer to be cleared, because a manifest naming a
+        # terminal contract is MANIFEST_CR_CONTRADICTION - and with no pointer and no
+        # governing contract, control fell to the PLAN arm, which rejects the
+        # manifest.md and ai-map.json a closure must write. `CR_LIFECYCLE.md` §4 and
+        # $script:LegalTransitions both permit Draft/Approved/In Progress -> Cancelled,
+        # so the authority allowed a transition the mechanism refused, leaving a
+        # contract approved on a false premise with no legal way forward at all.
+        if(Test-Path(Join-Path $Root $p)){try{$x=Contract(Join-Path $Root $p);if($x.Status-in$script:TerminalStatuses){$c+=$p;$finals[$p]=$x.Status}}catch{}}
     }
     if(!$BaseRef-and!$c.Count){return $null}
     if(!$c.Count){throw 'NO_GOVERNING_CR'}
@@ -563,10 +575,18 @@ function Resolve-Contract($m,[object[]]$Records){
     # pair (Draft immediately before Complete). Same defect class as SPEC-162, one
     # layer down - judge the transitions that occurred, never the range's endpoints.
     #
-    # Complete is reachable only from In Progress, judged over the path actually
-    # committed rather than over the two ends of the range.
-    $seq=@(Status-Path $c[0] $base 'Complete')
-    if($seq.Count-lt2-or$seq[$seq.Count-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
+    # Judged against the contract's OWN final status, never a hardcoded one. `Complete`
+    # keeps the stricter rule - reachable only from `In Progress` - while `Cancelled` is
+    # reachable from every non-terminal state and is therefore judged by the same
+    # transition matrix as everything else, which still rejects `Complete -> Cancelled`.
+    # Widening which terminal status may GOVERN never widens what a status may DO.
+    $final=$finals[$c[0]]
+    $seq=@(Status-Path $c[0] $base $final)
+    if($final-eq'Complete'){
+        if($seq.Count-lt2-or$seq[$seq.Count-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($c[0])"}
+    }else{
+        Validate-StatusPath $seq
+    }
     $c[0]
 }
 
@@ -1022,7 +1042,12 @@ try{
     # reports no write authority.
     $mode=switch($c.Status){
         {$_-in@('Approved','In Progress')}{if($c.Blocker-ne'None'){if($c.Attempt-eq3){throw 'RECOVERY_EXHAUSTED'};'BLOCKED'}elseif($c.Resume-eq'DONE'){'VERIFY'}else{'EXECUTE'}}
-        'Complete'{if($completionTransition){'VERIFY'}else{'BLOCKED'}}
+        # Both closed states route the same way: the run that CLOSES a contract verifies
+        # it, and a closed contract encountered outside that act is a blocked state, not
+        # a mode. Without the `Cancelled` arm a cancelled governing contract fell to
+        # `default` and reported RUNTIME_BLOCKED, so admitting it into Resolve-Contract
+        # alone would have moved the refusal rather than removed it.
+        {$_-in$script:TerminalStatuses}{if($completionTransition){'VERIFY'}else{'BLOCKED'}}
         default{'BLOCKED'}
     }
     if($mode-eq'BLOCKED'){throw "RUNTIME_BLOCKED:$($c.Blocker)"}

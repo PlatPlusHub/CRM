@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -91,7 +91,7 @@ for the per-commit range semantics that judge a non-governing contract's transit
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -129,32 +129,104 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all five cases named
+- [x] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all five cases named
       in Step 1, and the whole suite passes.
-- [ ] `Resolve-Contract` admits a contract whose Status is `Cancelled` as the governing contract.
-- [ ] A local Gate run over an `Approved -> Cancelled` transition with the manifest pointer cleared
+- [x] `Resolve-Contract` admits a contract whose Status is `Cancelled` as the governing contract.
+- [x] A local Gate run over an `Approved -> Cancelled` transition with the manifest pointer cleared
       succeeds instead of reporting `NO_GOVERNING_CR`.
-- [ ] A `Complete -> Cancelled` transition is rejected.
-- [ ] A range reaching `Complete` without `In Progress` immediately before it is still rejected as
+- [x] A `Complete -> Cancelled` transition is rejected.
+- [x] A range reaching `Complete` without `In Progress` immediately before it is still rejected as
       `INVALID_COMPLETION_TRANSITION`.
-- [ ] `Resolve-Contract` raises no error code that did not already exist before this Change Request.
-- [ ] `changes/SPEC-169-agent-control-skips-the-preflight-ref.md` has Status `Cancelled`, and its
+- [x] `Resolve-Contract` raises no error code that did not already exist before this Change Request.
+- [x] `changes/SPEC-169-agent-control-skips-the-preflight-ref.md` has Status `Cancelled`, and its
       Objective, Business Reason, Write Scope, Implementation Steps and Execution Log are byte-identical
       to their state before this Change Request.
-- [ ] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
+- [x] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
       is in progress, and `ai-map.json` is regenerated from the current tree.
 
 ## Execution Log
+### 2026-09-12 — Claude Opus 5 (agent execution run)
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — adversarial group added as assertions 126–130.
+- Step 2: Applied — `$script:TerminalStatuses` added beside `$script:LegalTransitions`;
+  `Resolve-Contract` admits either terminal status and judges the committed path against the
+  contract's own final Status.
+- Step 3: Applied — `SPEC-169` Status `Approved -> Cancelled`, nothing else in that file touched.
+- Step 4: Applied — manifest pointer set to this contract; `ai-map.json` regenerated.
+
+PRECHECK, against the unmodified control script:
+
+| Assertion | Before | After |
+| --- | --- | --- |
+| 126 local `Approved -> Cancelled`, pointer cleared | FAIL `NO_GOVERNING_CR` | ACCEPTED |
+| 127 same shape as a committed range | FAIL `NO_GOVERNING_CR` | ACCEPTED |
+| 128 `Complete -> Cancelled` rejected | already held | still rejected |
+| 129 one `Complete` + one `Cancelled` is ambiguous | FAIL (only `Complete` was collected) | `AMBIGUOUS_GOVERNING_CR` |
+| 130 `Complete` still needs `In Progress` before it | already held | still rejected |
+
+Suite: 134 passed / 3 failed before the repair, 137 passed / 0 failed after.
+
+Engineering Observations:
+
+1. **The runtime-mode switch needed a `Cancelled` arm, which Step 2 does not name.** Admitting
+   `Cancelled` into `Resolve-Contract` alone resolved the contract and then fell to the `default`
+   arm, reporting `RUNTIME_BLOCKED` — the refusal would have moved rather than been removed. The
+   repair stays inside this contract under `CR_LIFECYCLE.md` §11: it is inside the declared Write
+   Scope, squarely inside the stated Objective ("executable by the control plane"), reuses the
+   existing `Complete` arm's shape, and required no new judgment. Recorded rather than silently
+   folded into the step.
+2. **Closure still requires the contract to declare `_ORVION_CANONICAL/manifest.md` in its own Write
+   Scope, and this contract does not remove that.** Assertions 126 and 127 first failed with
+   `OUT_OF_SCOPE_WRITE:_ORVION_CANONICAL/manifest.md` because the fixture contract's scope was
+   `allowed.txt`. The implementation was right and the fixtures were wrong; they now declare the
+   manifest exactly as the pre-existing completion fixtures do. Making the manifest implicitly
+   writable at closure was considered and rejected — the manifest carries Current Phase, Live state
+   and far more than the pointer, so an implicit permission would hand every contract silent write
+   access to all of it. A contract that omits the manifest from its Write Scope therefore still
+   cannot close itself, by either route. `SPEC-169` declared it, which is why its cancellation
+   succeeded.
+3. **A Draft cannot be authored while another contract is `Approved`.** Creating
+   `changes/SPEC-170-*.md` while `SPEC-169` held the pointer was itself
+   `OUT_OF_SCOPE_WRITE:changes/SPEC-170-cancellation-is-executable.md`, because the stuck contract
+   was the governing one and its Write Scope did not name the new file. This contract was therefore
+   born `Approved` in the same commit that cancelled `SPEC-169` — a shape assertion 114 already
+   pins as legal. Step 2 removes the need for any future cancellation to be carried this way.
+
+Commits: recorded by the Complete commit that carries this entry.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-12 — Claude Opus 5 (review)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live tree and the Git baseline, not against the Execution Log.
+
+- `$script:TerminalStatuses` is defined once at `scripts/check_agent_continuity.ps1:53` and consumed
+  at exactly two sites: `Resolve-Contract` (`:563`) and the runtime-mode switch (`:1050`). One
+  definition, no second list to drift.
+- The no-new-error-code criterion was verified mechanically rather than by inspection. Every `throw`
+  inside `Resolve-Contract` was extracted — `NO_GOVERNING_CR`, `AMBIGUOUS_GOVERNING_CR`,
+  `INVALID_COMPLETION_TRANSITION` — and each was counted in
+  `git show ff7b9a5:scripts/check_agent_continuity.ps1`. All three pre-existed.
+- `changes/SPEC-169-agent-control-skips-the-preflight-ref.md` diffed against `2e978a5` yields exactly
+  four changed lines, all of them the Status checkboxes. Its Objective, Business Reason — including
+  the refuted "permanently red" claim — Write Scope, Implementation Steps and evidence sections are
+  byte-identical. The incorrect conclusion is preserved, as required.
+- Both directions are covered. 126 and 127 prove cancellation is now accepted; 128 proves a closed
+  contract still cannot be cancelled; 129 proves admitting a second terminal status did not create a
+  second way to be ambiguous; 130 proves `Complete` did not inherit the looser rule. 126, 127 and 129
+  each failed before the repair, so none of them is vacuous.
+- Suite: 137 passed, 0 failed.
+
+Two limitations are recorded in the Execution Log rather than repaired here: closure still requires a
+contract to declare the manifest in its own Write Scope, and a Draft still cannot be authored while
+another contract is `Approved`. Neither is widened by this change and neither blocks Phase C.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
