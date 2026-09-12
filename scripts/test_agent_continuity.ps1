@@ -946,19 +946,18 @@ exit 0
     # it. `ubuntu-latest` migrates OS generation and a tag can be repointed.
     Assert '153 STRUCTURAL: the admission boundary is frozen at the proven runner and checkout commit' ($ab-match'(?m)^    runs-on:[ \t]*ubuntu-24\.04[ \t]*$'-and$acceptRaw-match'uses:[ \t]*actions/checkout@[0-9a-f]{40}') $ab
     # A required check that never concludes blocks every promotion, and GitHub's default
-    # job timeout is 360 minutes, which is not a bound. The VALUE is a measured operational
-    # setting (25, from runs of 506s and 513s) and will be retuned as evidence accumulates,
-    # so what is asserted is that a job-level bound EXISTS inside a range that is still
-    # honest: never below 10 - the next whole minute above the slowest observed successful
-    # run, so the bound cannot kill a job already proven healthy - and never above 60, since
-    # an hour is already 7x that run and a bound an order of magnitude above measured
-    # behaviour has stopped bounding anything. Asserting `== 25` would fossilize a
-    # provisional threshold and make a legitimate retune indistinguishable from a defect.
-    # Job-level like 152: `^    key:` is the job's own, anything deeper belongs to a step,
-    # and a step-level timeout would leave the JOB unbounded.
-    $tmo=[regex]::Match($ab,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
-    $tmv=if($tmo.Success){[int]$tmo.Groups['m'].Value}else{0}
-    Assert '155 STRUCTURAL: the required admission job declares a bounded job-level timeout' ($tmo.Success-and$tmv-ge10-and$tmv-le60) "timeout-minutes=$(if($tmo.Success){$tmv}else{'<absent at job level>'})"
+    # job timeout is 360 minutes, which is not a bound. This pins the EXACT approved value
+    # rather than a range, because a range refuses only one failure direction: a weaker
+    # agent setting 5 minutes would keep this suite GREEN while making every healthy
+    # candidate unadmittable, and that direction is invisible to a test even though a human
+    # would notice it. 30 is the current repository contract, not an architectural constant
+    # - retuning it is a future evidence-backed Change Request that moves the workflow value
+    # and this expectation together, which is controlled evolution rather than fossilization.
+    # Job-level like 152: `^    key:` is the job's own and anything deeper belongs to a step,
+    # so a step-level timeout leaves the JOB unbounded. The keys are COUNTED rather than
+    # matched once, so a second contradicting job-level key is refused too.
+    $tmo=[regex]::Matches($ab,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
+    Assert '155 STRUCTURAL: the required admission job declares exactly one job-level timeout, at the approved 30' ($tmo.Count-eq1-and[int]$tmo[0].Groups['m'].Value-eq30) "job-level timeout-minutes keys=$($tmo.Count) value(s)=$(if($tmo.Count){(@($tmo|ForEach-Object{$_.Groups['m'].Value})-join',')}else{'<none at job level>'})"
 
     # The QUERY is asserted separately from the revalidation, because the two are
     # redundant for correctness and therefore cannot catch each other's removal: with

@@ -27,22 +27,14 @@ jobs:
     # run reported `Image: ubuntu-24.04`. This is a FAMILY, not an individual image build,
     # so normal image updates still arrive.
     runs-on: ubuntu-24.04
-    # Derived from measurement, not from a round number. The two successful runs took
-    # 506s and 513s; per-step maxima compose to 522s, and bounding each step class by its
-    # own failure mechanism - deterministic pwsh x2 for runner contention, network x5
-    # because registry `toomanyrequests` throttling has already been observed here,
-    # database x2 - envelopes at 23.6 min.
-    #
-    # This is now the REQUIRED admission check for `main`, so a job that never concludes
-    # is a repository that can never be promoted to, and GitHub's 360-minute default is
-    # not a bound. A timeout cancels the job, `cancelled` is not `success`, so the Ruleset
-    # refuses the push and `-Certify` reports FAILED: the bound fails closed.
-    #
-    # The VALUE is a measured operational setting and will be retuned as runs accumulate.
-    # Assertion 155 therefore asserts that a job-level bound EXISTS inside an accepted
-    # range, never that it equals 25 - fossilizing a provisional number would make a
-    # legitimate retune look like a guard failure.
-    timeout-minutes: 25
+    # The current measured operational bound. This is the REQUIRED admission check for
+    # `main`, so a job that never concludes is a repository nothing can be promoted to,
+    # and GitHub's 360-minute default is not a bound. A timeout cancels the job, and
+    # `cancelled` is not `success`, so the Ruleset refuses the push and `-Certify` reports
+    # FAILED: it fails closed. Assertion 155 pins this exact value and the measurement
+    # behind it lives in `changes/SPEC-175-required-acceptance-carries-an-exact-bound.md`;
+    # retuning it requires fresh evidence and a Change Request that moves both together.
+    timeout-minutes: 30
     steps:
       # Pinned to the exact commit the proven run resolved `@v6` to, because a full-length
       # commit SHA is the only immutable Action reference - a tag can be moved. This is a
