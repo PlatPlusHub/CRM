@@ -469,7 +469,17 @@ function Trigger-List([string]$Body,[string]$Key){
     $items
 }
 
-function Workflow-Expectations([string[]]$Paths){
+# The branch this work is destined for, derived ONCE. Two mechanisms need it - the
+# expectation deriver, to know which workflows can run there, and remote certification,
+# to know which runs on a SHA belong to the promotion. Deriving it twice would let the
+# two disagree about the same fact, and the certification defect this closes came from
+# one of them not knowing the fact at all.
+function Target-Branch{
+    $b=(git -C $Root rev-parse --abbrev-ref HEAD 2>$null)
+    if($LASTEXITCODE-eq0){("$b").Trim()}else{''}
+}
+
+function Workflow-Expectations([string[]]$Paths,[string]$Branch){
     $dir=Join-Path $Root '.github/workflows'
     if(!(Test-Path -LiteralPath $dir)){return @()}
     # A workflow is expected only on a branch it can actually RUN on. Without this the
@@ -480,8 +490,10 @@ function Workflow-Expectations([string[]]$Paths){
     # which yields the right answer only because branch names rarely look like paths.
     # `-Certify` fails closed on an expected workflow that produced no run, so the first
     # case turns every later push red on a workflow that was never going to trigger.
-    $branch=(git -C $Root rev-parse --abbrev-ref HEAD 2>$null)
-    $branch=if($LASTEXITCODE-eq0){("$branch").Trim()}else{''}
+    # The branch arrives as a parameter (SPEC-173): the caller owns that fact and writes
+    # the SAME value into the receipt, so what decided the expectations and what judges
+    # the runs can never be two different branches.
+    $branch=$Branch
     $names=@()
     foreach($f in @(Get-ChildItem -LiteralPath $dir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
         $text=[IO.File]::ReadAllText($f.FullName)
@@ -511,13 +523,19 @@ function Workflow-Expectations([string[]]$Paths){
 }
 
 function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
+    $target=Target-Branch
     $receipt=[ordered]@{
         cr=$Contract.Id
         profiles=@($Profiles|Sort-Object)
         fingerprint=(Implementation-Fingerprint $Contract $Rel)
+        # The branch this candidate is destined for, recorded so -Certify never has to
+        # guess it. A run on another ref is evidence about another question: one SHA is
+        # pushed twice in this model - once to qualify it, once to promote it - and the
+        # two pushes legitimately reach different conclusions.
+        target=$target
         # Derived ONCE, here, and read back by -Certify. Re-deriving it after the push
         # would make the completed task's own surface a second authority.
-        expected=@(Workflow-Expectations @($Contract.Scope|%{$_-replace'\\','/'}))
+        expected=@(Workflow-Expectations @($Contract.Scope|%{$_-replace'\\','/'}) $target)
         result='READY'
         at=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
@@ -917,20 +935,64 @@ function Certify-Remote {
         Write-Output 'EVIDENCE: the local certification receipt records no expected workflow set'
         exit 1
     }
+    # The branch is READ, never re-derived. A receipt written before this field existed
+    # cannot be interpreted by guessing a default, because guessing the branch is the
+    # whole defect: it is exactly how a preflight qualification run came to be judged as
+    # though it were evidence about the promotion.
+    $target=("$($receipt.target)").Trim()
+    if(!$target){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: the local certification receipt records no target branch — it predates context-aware certification. Run -Finish again.'
+        exit 1
+    }
+    Write-Output "TARGET: $target"
     Write-Output "EXPECTED: $((@($expected)|Sort-Object)-join', ')"
-    $raw=gh run list --commit $sha --json workflowName,conclusion,status 2>$null
+    # --limit is explicit: inheriting the CLI default would let a busy SHA silently
+    # present a truncated view, and a missing row reads as REQUIRED_WORKFLOW_MISSING.
+    # `attempt` is requested as evidence only. Measured against a real rerun in this
+    # repository, `gh run list` returns ONE row per run carrying the CURRENT attempt's
+    # conclusion, so an old success cannot hide a current failure and an old failure
+    # cannot poison a current success. No attempt-selection logic is therefore written.
+    # The field list is quoted so it stays ONE token however `gh` resolves: in argument
+    # mode a bare `a,b,c` reaches a native executable as a single string but becomes an
+    # ARRAY when the resolved command is a PowerShell script.
+    $raw=gh run list --commit $sha --branch $target --event push --limit 100 --json 'attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName' 2>$null
     if($LASTEXITCODE-ne0-or!$raw){
         Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: gh could not read workflow runs for this SHA'
         exit 1
     }
-    $runs=@($raw|ConvertFrom-Json)
-    if(!$runs.Count){
-        Write-Output 'REMOTE_CERTIFY: PENDING'
-        Write-Output 'EVIDENCE: no workflow run exists for this SHA yet — push it, or wait for the run to start'
+    # ASSIGN, then wrap. `ConvertFrom-Json` emits a JSON array as ONE pipeline item, so
+    # `@($raw|ConvertFrom-Json)` yields a single element that IS the array - one iteration
+    # holding every run at once. Assigning first unrolls it, and `@()` then normalises the
+    # one-object and empty-array cases. The previous code carried the same shape harmlessly
+    # because it only ever read members across the collection, which PowerShell flattens;
+    # it becomes a real defect the moment individual rows are inspected.
+    try{$parsed=$raw|ConvertFrom-Json}catch{
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output 'EVIDENCE: gh returned evidence this command cannot parse'
         exit 1
     }
-    foreach($r in $runs){Write-Output "RUN: $($r.workflowName) $($r.status)/$($r.conclusion)"}
+    $all=@($parsed)
+    # The filter is asked for AND the answer is checked. Trusting the query alone would
+    # make this function believe whatever the CLI handed back; a row that contradicts the
+    # question it answers is discarded, and a discarded row leaves its workflow MISSING,
+    # which fails closed. Nothing is dropped silently - each is named.
+    $runs=@();$ignored=@()
+    foreach($r in $all){
+        $why=@()
+        if(("$($r.headSha)").Trim()-ne$sha){$why+="headSha=$($r.headSha)"}
+        if(("$($r.headBranch)").Trim()-ne$target){$why+="headBranch=$($r.headBranch)"}
+        if(("$($r.event)").Trim()-ne'push'){$why+="event=$($r.event)"}
+        if($why.Count){$ignored+="$($r.workflowName) [$($why-join' ')]"}else{$runs+=$r}
+    }
+    foreach($i in $ignored){Write-Output "IGNORED: $i — not this SHA on $target by push"}
+    if(!$runs.Count){
+        Write-Output 'REMOTE_CERTIFY: PENDING'
+        Write-Output "EVIDENCE: no workflow run exists for this SHA on $target yet — push it, or wait for the run to start"
+        exit 1
+    }
+    foreach($r in $runs){Write-Output "RUN: $($r.workflowName) attempt $($r.attempt) $($r.status)/$($r.conclusion)"}
     $observed=@($runs|ForEach-Object{$_.workflowName}|Sort-Object -Unique)
     $missing=@($expected|Where-Object{$observed-notcontains$_}|Sort-Object)
     $running=@($runs|Where-Object{$_.status-ne'completed'})
@@ -956,6 +1018,23 @@ function Certify-Remote {
     if($bad.Count){
         Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: $((@($bad|ForEach-Object{$_.workflowName})|Sort-Object -Unique)-join', ')"
+        exit 1
+    }
+    # Green evidence about a SHA the target ref has already moved past certifies nothing
+    # anyone can act on: the claim being made is "the branch stands at a proven revision",
+    # and that is a statement about NOW, not about the moment the runs finished. Read the
+    # remote, never a local cache, and refuse rather than assume when it cannot be read.
+    git -C $Root fetch origin $target --quiet 2>$null|Out-Null
+    if($LASTEXITCODE-ne0){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output "EVIDENCE: TARGET_REF_UNREADABLE:$target — the remote target ref could not be read, so it cannot be proven to stand at this SHA"
+        exit 1
+    }
+    $remote=(git -C $Root rev-parse "refs/remotes/origin/$target" 2>$null)
+    $remote=if($LASTEXITCODE-eq0){("$remote").Trim()}else{''}
+    if($remote-ne$sha){
+        Write-Output 'REMOTE_CERTIFY: FAILED'
+        Write-Output "EVIDENCE: TARGET_REF_MOVED:$target is at $remote, not the certified $sha"
         exit 1
     }
     Write-Output 'REMOTE_CERTIFY: READY'

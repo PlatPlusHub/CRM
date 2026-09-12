@@ -490,20 +490,51 @@ try{
     $ghDir=Join-Path $sandbox 'gh';[IO.Directory]::CreateDirectory($ghDir)|Out-Null
     $ghLog=Join-Path $sandbox 'gh.log'
     $env:ORVION_STUB_GH=$ghDir;$env:ORVION_STUB_GH_LOG=$ghLog
+    # The stub HONOURS --branch and --event, so removing either flag from the real command
+    # changes what comes back and a test can notice. ORVION_STUB_GH_PERMISSIVE models the
+    # opposite world - a GitHub that ignores the filters it was given - which is the only
+    # way to prove the implementation's OWN revalidation is load-bearing rather than
+    # riding on the query. Without both modes, "filter" and "revalidate" are untestable
+    # apart, and a mutant that deletes one would be caught by the other's protection.
     [IO.File]::WriteAllText((Join-Path $stubBin 'gh.ps1'),@'
-$i=[array]::IndexOf($args,'--commit');$sha=if($i-ge0){$args[$i+1]}else{''}
-Add-Content -LiteralPath $env:ORVION_STUB_GH_LOG -Value "gh $($args -join ' ')"
+$a=$args
+function Arg([string]$n){$i=[array]::IndexOf($a,$n);if($i-ge0){$a[$i+1]}else{''}}
+$sha=Arg '--commit';$branch=Arg '--branch';$evt=Arg '--event'
+Add-Content -LiteralPath $env:ORVION_STUB_GH_LOG -Value "gh $($a -join ' ')"
 $f=Join-Path $env:ORVION_STUB_GH "$sha.json"
-if(Test-Path -LiteralPath $f){Get-Content -Raw -LiteralPath $f}else{'[]'}
+if(!(Test-Path -LiteralPath $f)){'[]';exit 0}
+# Assign before wrapping: ConvertFrom-Json emits a JSON array as ONE pipeline item, so
+# @(...) around the pipeline yields a single element that IS the array and the re-encode
+# below would nest it another level deep.
+$parsed=Get-Content -Raw -LiteralPath $f|ConvertFrom-Json
+$rows=@($parsed)
+if(!$env:ORVION_STUB_GH_PERMISSIVE){
+    if($branch){$rows=@($rows|Where-Object{$_.headBranch-eq$branch})}
+    if($evt){$rows=@($rows|Where-Object{$_.event-eq$evt})}
+}
+ConvertTo-Json @($rows) -Depth 6 -AsArray
 exit 0
 '@)
     function RunCertify{$o=& pwsh -NoProfile -File $control -Certify -Root $root 2>&1;[pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}}
-    function Run1([string]$Name,[string]$Status='completed',[string]$Conclusion='success'){@{workflowName=$Name;status=$Status;conclusion=$Conclusion}}
+    # A run now carries the context GitHub actually reports. The defaults describe the
+    # ordinary promotion - this SHA, on the target branch, by push - so every pre-existing
+    # case keeps meaning exactly what it meant, and a case that wants a DIFFERENT context
+    # has to say so explicitly rather than inherit it by accident.
+    function Run1([string]$Name,[string]$Status='completed',[string]$Conclusion='success',[string]$Branch='main',[string]$Evt='push',[string]$HeadSha=''){
+        @{workflowName=$Name;status=$Status;conclusion=$Conclusion;headBranch=$Branch;event=$Evt;headSha=$HeadSha;attempt=1;databaseId=1}
+    }
     # The previous case's payload is cleared, not overwritten: two cases share one HEAD
     # SHA, so a leftover file silently answered the query for a case that meant to model
     # "this SHA has no runs".
-    function GhRuns([object[]]$Runs,[string]$Sha){Get-ChildItem -LiteralPath $ghDir -File|Remove-Item -Force;[IO.File]::WriteAllText((Join-Path $ghDir "$Sha.json"),(ConvertTo-Json @($Runs) -Depth 4 -AsArray))}
-    function ExpectBoth{Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';expected=@('Agent Control','Repository Consistency')}}
+    # `headSha` is backfilled from the SHA the payload is keyed to unless a case set it
+    # deliberately, so the ordinary cases describe a self-consistent GitHub and only a
+    # case that MEANS to model a contradictory row has to produce one.
+    function GhRuns([object[]]$Runs,[string]$Sha){
+        Get-ChildItem -LiteralPath $ghDir -File|Remove-Item -Force
+        $rows=@($Runs|ForEach-Object{if(!$_.headSha){$_.headSha=$Sha};$_})
+        [IO.File]::WriteAllText((Join-Path $ghDir "$Sha.json"),(ConvertTo-Json @($rows) -Depth 6 -AsArray))
+    }
+    function ExpectBoth([string]$Target='main'){Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';target=$Target;expected=@('Agent Control','Repository Consistency')}}
 
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
     GhRuns @((Run1 'Agent Control')) $sha;$r=RunCertify
@@ -531,6 +562,58 @@ exit 0
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
     GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
     Assert '108b remote certification fails closed when no local certification receipt exists' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'receipt') $r.Text
+
+    # ---- Certified evidence must name its context, not merely its SHA (SPEC-173) ----
+    # One SHA is pushed TWICE in this model - to `orvion-preflight` to qualify it, then to
+    # `main` to promote it - so a single SHA legitimately carries two runs of each legacy
+    # workflow over different ranges, reaching different conclusions. This exact shape was
+    # measured on `18abbea`: every run belonging to the promotion was green while the
+    # preflight run failed correctly on its own range, and SHA-only certification called
+    # the promotion FAILED. The accepting case comes FIRST, because a narrowing that only
+    # ever rejects would satisfy the rejecting cases alone.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency'),(Run1 'Agent Control' 'completed' 'failure' 'orvion-preflight')) $sha;$r=RunCertify
+    Assert '144 MUST-ACCEPT: a preflight failure beside a main success certifies READY for target main' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match'TARGET: main') $r.Text
+
+    # The same shape inverted. If the branch were being ignored rather than USED, this
+    # would pass on the strength of the preflight row - so 144 and 145 together pin the
+    # direction, not merely the existence, of the filtering.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control' 'completed' 'failure'),(Run1 'Repository Consistency'),(Run1 'Agent Control' 'completed' 'success' 'orvion-preflight')) $sha;$r=RunCertify
+    Assert '145 a main failure is FAILED even when the same workflow succeeded on preflight' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match'Agent Control'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
+
+    # PERMISSIVE GITHUB. The stub is told to ignore the --branch/--event it was given, so
+    # the query provides no protection at all and only the implementation's own
+    # revalidation of the returned headBranch can catch this. Without this case, deleting
+    # that revalidation would still pass 144 and 145.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    $env:ORVION_STUB_GH_PERMISSIVE='1'
+    GhRuns @((Run1 'Agent Control' 'completed' 'success' 'orvion-preflight'),(Run1 'Repository Consistency' 'completed' 'success' 'orvion-preflight')) $sha;$r=RunCertify
+    Assert '146 success only on another branch never certifies the target branch' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'IGNORED:') $r.Text
+
+    # Same permissive world, wrong EVENT. A workflow_dispatch or schedule run says nothing
+    # about the push path this evidence is meant to describe.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control' 'completed' 'success' 'main' 'workflow_dispatch'),(Run1 'Repository Consistency' 'completed' 'success' 'main' 'schedule')) $sha;$r=RunCertify
+    Remove-Item Env:ORVION_STUB_GH_PERMISSIVE -ErrorAction SilentlyContinue
+    Assert '147 success only under another event never certifies the push path' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'IGNORED:') $r.Text
+
+    # A receipt written before the target branch existed cannot be rescued by guessing a
+    # default, because guessing the branch IS the defect.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
+    Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';expected=@('Agent Control','Repository Consistency')}
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
+    Assert '148 a receipt recording no target branch fails closed and names -Finish' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'target branch'-and$r.Text-match'-Finish') $r.Text
+
+    # Green evidence about a SHA the branch has already moved past certifies nothing
+    # anyone can act on. The remote is advanced by one commit while the receipt and the
+    # runs still describe the previous SHA.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha
+    Put 'allowed.txt' 'moved on';Commit moved-target;git -C $root push origin main --quiet 2>$null
+    git -C $root reset --hard $sha --quiet;$r=RunCertify
+    Assert '149 a target ref that moved past the certified SHA is FAILED, never READY' ($r.Code-ne0-and$r.Text-match'TARGET_REF_MOVED'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
+    git -C $root push origin +"$sha`:refs/heads/main" --quiet 2>$null
 
     # The expected set is DERIVED from the workflow files' own push triggers, never
     # hardcoded — a fixed list would fail a change that legitimately triggers less.
@@ -821,6 +904,60 @@ exit 0
     $cleanup=[regex]::Match($accept,'(?ms)^      - name: Stop local Supabase stack\r?\n(?<b>.*?)(?=\r?\n      - name:|\z)')
     $cb=$cleanup.Groups['b'].Value
     Assert '143 STRUCTURAL: the always-run cleanup invokes only a CLI the lockfile installed' ($cleanup.Success-and$cb-match'if:\s*always\(\)'-and$cb-match'-x\s+node_modules/\.bin/supabase'-and$cb-notmatch'\bnpx\b') $cleanup.Value
+
+    # ---- STRUCTURAL: the required admission boundary cannot be bypassed (SPEC-173) ----
+    # These properties all hold today. They are asserted because they become load-bearing
+    # the moment a Ruleset makes `orvion-acceptance` required: from then on, a skipped or
+    # duplicated admission job is indistinguishable from a passed one to the Ruleset, and
+    # the failure is silent. Each is parsed from job STRUCTURE rather than grepped for a
+    # token, because the cleanup step's `if: always()` is legitimate and a crude ban on
+    # the word `if:` would forbid it while proving nothing about job-level bypass.
+    $wfDir=Join-Path $sourceRoot '.github/workflows'
+    $emitters=@()
+    foreach($wf in @(Get-ChildItem -LiteralPath $wfDir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
+        $txt=[IO.File]::ReadAllText($wf.FullName)
+        $jobsBlock=[regex]::Match($txt,'(?ms)^jobs:[ \t]*\r?\n(?<b>.*)$')
+        if(!$jobsBlock.Success){continue}
+        $body=$jobsBlock.Groups['b'].Value
+        foreach($jm in [regex]::Matches($body,'(?m)^  (?<id>[A-Za-z0-9_-]+):[ \t]*$')){
+            $rest=$body.Substring($jm.Index+$jm.Length)
+            $end=[regex]::Match($rest,'(?m)^  [A-Za-z0-9_-]+:[ \t]*$')
+            $jobBody=if($end.Success){$rest.Substring(0,$end.Index)}else{$rest}
+            $dn=[regex]::Match($jobBody,'(?m)^    name:[ \t]*(?<v>.+?)[ \t]*$')
+            $ctx=if($dn.Success){$dn.Groups['v'].Value}else{$jm.Groups['id'].Value}
+            $emitters+=[pscustomobject]@{File=$wf.Name;Job=$jm.Groups['id'].Value;Context=$ctx;Body=$jobBody}
+        }
+    }
+    $admission=@($emitters|Where-Object{$_.Context-eq'orvion-acceptance'})
+    # Binding the Ruleset to the GitHub Actions App stops another PROVIDER satisfying the
+    # context; it does nothing about a second Actions job claiming the same name. Only
+    # this assertion covers that.
+    Assert '150 STRUCTURAL: exactly one active job in the repository can emit orvion-acceptance' ($admission.Count-eq1) (($emitters|ForEach-Object{"$($_.File):$($_.Job) -> $($_.Context)"})-join'; ')
+    # A path-filtered required check produces NO run for a non-matching push, and a
+    # required check that never runs is a permanently pending admission.
+    $acceptOn=[regex]::Match($acceptRaw,'(?ms)^on:[ \t]*\r?\n(?<b>(?:[ \t]+.*\r?\n|[ \t]*\r?\n)*)')
+    Assert '151 STRUCTURAL: the required acceptance workflow has no trigger path filter' ($acceptOn.Success-and$acceptOn.Groups['b'].Value-notmatch'(?m)^\s*paths(-ignore)?:') $acceptOn.Value
+    # Job-level keys only: `^    key:` are the job's own, everything deeper belongs to a
+    # step. A job-level `if:` can skip the whole admission, and GitHub reports a skipped
+    # required job in a way that does not block - which is the entire attack.
+    $ab=if($admission.Count-eq1){$admission[0].Body}else{''}
+    Assert '152 STRUCTURAL: the admission job carries no job-level condition and no continue-on-error' ($ab-and$ab-notmatch'(?m)^    if:'-and$ab-notmatch'(?m)^    continue-on-error:'-and$ab-match'(?m)^    steps:') $ab
+    # The environment the first full shadow proof executed, not a moving description of
+    # it. `ubuntu-latest` migrates OS generation and a tag can be repointed.
+    Assert '153 STRUCTURAL: the admission boundary is frozen at the proven runner and checkout commit' ($ab-match'(?m)^    runs-on:[ \t]*ubuntu-24\.04[ \t]*$'-and$acceptRaw-match'uses:[ \t]*actions/checkout@[0-9a-f]{40}') $ab
+
+    # The QUERY is asserted separately from the revalidation, because the two are
+    # redundant for correctness and therefore cannot catch each other's removal: with
+    # revalidation in place, deleting `--branch` still yields the right verdict, just from
+    # a wider result set. What the filters actually buy is a bounded, relevant result set —
+    # and `--limit` only bounds honestly if the query is narrow, so a SHA that accumulates
+    # runs cannot push required evidence out of the window and read as MISSING. Nothing
+    # else in this suite would notice if the query silently widened.
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+    Remove-Item -LiteralPath $ghLog -Force -ErrorAction SilentlyContinue
+    GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$null=RunCertify
+    $q=StubGhLog
+    Assert '154 remote certification asks GitHub for the exact SHA on the target branch by push, bounded' ($q-match"--commit $sha"-and$q-match'--branch main'-and$q-match'--event push'-and$q-match'--limit \d+') $q
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

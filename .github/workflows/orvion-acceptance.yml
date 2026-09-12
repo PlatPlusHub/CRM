@@ -20,9 +20,18 @@ permissions:
 jobs:
   acceptance:
     name: orvion-acceptance
-    runs-on: ubuntu-latest
+    # The environment the first full shadow proof actually executed, frozen rather than
+    # described. `ubuntu-latest` migrates to a newer OS generation on GitHub's schedule,
+    # and this job is about to become the one required admission check - the boundary
+    # should not change OS family underneath the evidence that earned it. The successful
+    # run reported `Image: ubuntu-24.04`. This is a FAMILY, not an individual image build,
+    # so normal image updates still arrive.
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
+      # Pinned to the exact commit the proven run resolved `@v6` to, because a full-length
+      # commit SHA is the only immutable Action reference - a tag can be moved. This is a
+      # freeze, not an upgrade: `v6` pointed here when the shadow passed. Bump deliberately.
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           fetch-depth: 0
 
