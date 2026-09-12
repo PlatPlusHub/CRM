@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -104,7 +104,7 @@ established the acceptance boundary and froze its environment. Neither is modifi
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -134,44 +134,116 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `.github/workflows/orvion-acceptance.yml` declares `timeout-minutes: 25` as a job-level key of
+- [x] `.github/workflows/orvion-acceptance.yml` declares `timeout-minutes: 25` as a job-level key of
       the `acceptance` job, at the same indentation as `runs-on:`, not inside any step.
-- [ ] The workflow's step list is unchanged in count, order and content, and the runner family and
+- [x] The workflow's step list is unchanged in count, order and content, and the runner family and
       the 40-character `actions/checkout` commit pin are byte-identical to their previous values.
-- [ ] `scripts/test_agent_continuity.ps1` contains an assertion 155 that fails when the admission job
+- [x] `scripts/test_agent_continuity.ps1` contains an assertion 155 that fails when the admission job
       declares no job-level `timeout-minutes`.
-- [ ] Assertion 155 passes for any job-level timeout inside the accepted range and is not satisfied by
+- [x] Assertion 155 passes for any job-level timeout inside the accepted range and is not satisfied by
       a step-level key, proving it asserts the bound rather than the literal number 25.
-- [ ] Deleting the `timeout-minutes` line kills assertion 155 and changes the verdict of no other
+- [x] Deleting the `timeout-minutes` line kills assertion 155 and changes the verdict of no other
       assertion.
-- [ ] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` passes with zero failures.
-- [ ] Assertions 141 to 143 and 150 to 154 still exist and still pass.
-- [ ] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
+- [x] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` passes with zero failures.
+- [x] Assertions 141 to 143 and 150 to 154 still exist and still pass.
+- [x] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
       is in progress, and `ai-map.json` is regenerated from the current tree.
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-13 — Claude Opus 5 (agent execution run)
+
+Outcome: Complete
+
+PRECHECK — every step's verification check, before any edit:
+
+```text
+timeout-minutes in orvion-acceptance.yml   ABSENT   -> Step 1 applies
+Assert '155 in test_agent_continuity.ps1   ABSENT   -> Step 2 applies
+manifest names SPEC-174 as Active CR       PRESENT  -> Step 3 Already Applied
+```
+
+Step results:
+- Step 1: Applied — job-level `timeout-minutes: 25` added beside `runs-on:` in the `acceptance` job,
+  with the derivation recorded in comment. Step count, order and content unchanged; `ubuntu-24.04` and
+  the `actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803` pin untouched.
+- Step 2: Applied — assertion 155 parses the admission job body already extracted for 152 and 153 and
+  requires a job-level `timeout-minutes:` whose integer value is 10 to 60 inclusive.
+- Step 3: Already Applied — the manifest pointer and `ai-map.json` were set in the Approve commit,
+  because the pre-commit hook refuses an `ORPHANED_APPROVED_CR`.
+
+MEASUREMENT — every `ORVION Acceptance` run that exists, read live from GitHub:
+
+```text
+34715562635  c3d3c63  attempt 1  success  506 s  ubuntu-24.04 (frozen)
+34705700442  18abbea  attempt 1  success  513 s  ubuntu-latest
+34697041323  d0bba10  attempt 1  failure  148 s  ubuntu-latest (Gate failed fast, six steps skipped)
+```
+
+Per-step maxima across the two successful runs: mutation suite 175 s, guard attack 124 s, Supabase
+start 120 s, db reset 37 s, pgTAP 27 s, stop 22 s, all others <= 5 s; composite 522 s. Largest relative
+variance was Supabase start at +10.1 %, the registry-dependent step. Degraded envelope 1,416 s =
+23.6 min; bound chosen 25.
+
+MUTATION ANALYSIS — sequential, foreground, each bounded, workflow restored from a source copy before
+each result was read:
+
+```text
+M1  delete the job-level timeout          154 passed / 1 failed   killed 155 only   328 s
+M2  move the bound to STEP level          154 passed / 1 failed   killed 155 only   323 s
+M3  MUST-ACCEPT retune 25 -> 20           155 passed / 0 failed   killed nothing    339 s
+M4  out-of-range 600                      154 passed / 1 failed   killed 155 only   335 s
+```
+
+M3 is the assertion-design proof the owner required: the invariant is an explicit positive bounded
+timeout inside an accepted range, not equality to 25, so retuning from later evidence is legal while
+deletion, step-level relocation and an unbounding value are each refused. M2 matters because a
+step-level key looks like a bound and leaves the JOB governed by GitHub's 360-minute default.
+
+ENGINEERING OBSERVATIONS:
+
+1. The fail-closed chain needed no new mechanism. A timeout cancels the job; `cancelled` is not
+   `success`, so the Phase C Ruleset refuses the push and `-Certify` already reports FAILED through its
+   existing `conclusion -ne 'success'` judgement, with pending handled separately as PENDING. This was
+   verified by reading both paths rather than by inducing a timeout.
+2. The accepted range's floor is load-bearing in the opposite direction from the ceiling. Below the
+   slowest observed successful run a bound would reject healthy work, turning a safety device into an
+   admission blocker; the guard refuses such a value rather than trusting a future editor's judgement.
+3. `_ORVION_CANONICAL/manifest.md` had 6 characters of headroom against the 7,000-character Check 5
+   budget. The stale `Next capability` line still described Phase C as a pending owner review, so
+   correcting it to current state freed the room the Active CR pointer needed. The budget was not
+   raised.
+
+Commits: `20b70a4` (draft), `d1a4a56` (Approve), this commit (implementation).
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-13 — Claude Opus 5 (review)
+
+Verdict: Confirmed Complete
+
+Findings: re-read the two changed files against the Implementation Steps. `.github/workflows/orvion-acceptance.yml`
+gains exactly one functional line, `timeout-minutes: 25`, at four-space job-level indentation beside
+`runs-on: ubuntu-24.04`; `git diff` reports insertions only, no deletions, in both files, so no step was
+altered, reordered or removed and neither the runner family nor the checkout pin moved. Assertion 155
+reuses the `$ab` job body already parsed for 152 and 153, so it cannot be satisfied by a step-level key.
+The suite reports 155 passed, 0 failed; assertions 141 to 143 and 150 to 154 are all present and
+passing. The four mutants each produced the intended verdict with zero collateral, including the
+MUST-ACCEPT retune. No file outside Write Scope was touched, and the Phase C Ruleset was not modified.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

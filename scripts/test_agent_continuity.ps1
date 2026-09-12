@@ -945,6 +945,20 @@ exit 0
     # The environment the first full shadow proof executed, not a moving description of
     # it. `ubuntu-latest` migrates OS generation and a tag can be repointed.
     Assert '153 STRUCTURAL: the admission boundary is frozen at the proven runner and checkout commit' ($ab-match'(?m)^    runs-on:[ \t]*ubuntu-24\.04[ \t]*$'-and$acceptRaw-match'uses:[ \t]*actions/checkout@[0-9a-f]{40}') $ab
+    # A required check that never concludes blocks every promotion, and GitHub's default
+    # job timeout is 360 minutes, which is not a bound. The VALUE is a measured operational
+    # setting (25, from runs of 506s and 513s) and will be retuned as evidence accumulates,
+    # so what is asserted is that a job-level bound EXISTS inside a range that is still
+    # honest: never below 10 - the next whole minute above the slowest observed successful
+    # run, so the bound cannot kill a job already proven healthy - and never above 60, since
+    # an hour is already 7x that run and a bound an order of magnitude above measured
+    # behaviour has stopped bounding anything. Asserting `== 25` would fossilize a
+    # provisional threshold and make a legitimate retune indistinguishable from a defect.
+    # Job-level like 152: `^    key:` is the job's own, anything deeper belongs to a step,
+    # and a step-level timeout would leave the JOB unbounded.
+    $tmo=[regex]::Match($ab,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
+    $tmv=if($tmo.Success){[int]$tmo.Groups['m'].Value}else{0}
+    Assert '155 STRUCTURAL: the required admission job declares a bounded job-level timeout' ($tmo.Success-and$tmv-ge10-and$tmv-le60) "timeout-minutes=$(if($tmo.Success){$tmv}else{'<absent at job level>'})"
 
     # The QUERY is asserted separately from the revalidation, because the two are
     # redundant for correctness and therefore cannot catch each other's removal: with
