@@ -58,24 +58,66 @@ jobs:
         shell: pwsh
         run: ./scripts/check_agent_continuity.ps1 -Gate -BaseRef $env:BASE_SHA -HeadRef $env:HEAD_SHA
 
+      # AUD-01a's evidence layer, which `Repository Consistency` has and this job did
+      # not. These are not a second run of the consistency guard the Gate already
+      # invokes - they attack the DETECTORS, and a detector regression is invisible
+      # until it produces a false verdict in front of someone. A required check that
+      # carries less evidence than the union it replaces makes the repository weaker
+      # the day it becomes required.
+      #
+      # Before `npm ci` deliberately: seconds of pwsh with no database, so the cheap
+      # evidence fails first. Each suite's exit code is checked individually, because
+      # `shell: pwsh` gates the step on the LAST command only and four bare calls would
+      # let a failing first suite pass silently - the vacuous-guard class these suites
+      # exist to close.
+      - name: Attack the guards themselves
+        shell: pwsh
+        run: |
+          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard') {
+            pwsh -File "scripts/$suite.ps1"
+            if ($LASTEXITCODE -ne 0) { throw "$suite FAILED (exit $LASTEXITCODE)" }
+          }
+
       # The Supabase CLI version is the lockfile's, obtained through `npm ci`. Pinning
       # it again in a `uses:` would create a second version authority that can silently
       # disagree with the one developers actually run locally.
       - name: Install pinned toolchain
         run: npm ci
 
+      # `npx` and not the local executable is how the lockfile stopped being the
+      # authority: `npx` resolves from the network when `node_modules` has no match,
+      # so every `npx supabase` line is a place the boundary can silently run software
+      # this repository never chose. Calling `node_modules/.bin/supabase` cannot do
+      # that - it either exists because `npm ci` put it there, or it fails.
       - name: Start local Supabase stack
-        run: npx supabase start
+        run: node_modules/.bin/supabase start
 
       - name: Apply all migrations on a clean database
-        run: npx supabase db reset
+        run: node_modules/.bin/supabase db reset
 
       - name: Run pgTAP invariant tests
-        run: npx supabase test db
+        run: node_modules/.bin/supabase test db
 
       - name: Run database smoke-test (verify_database.sql)
         run: docker exec -i supabase_db_ORVION psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f - < scripts/verify_database.sql
 
+      # THE FAILURE PATH OBEYS THE SAME AUTHORITY AS THE HAPPY PATH. This step ran as
+      # `npx supabase stop || true` and, on a run that failed before `npm ci`, `npx`
+      # fetched supabase 2.117.0 from the network against a lockfile pinning 2.109.0
+      # and reported SUCCESS. A boundary whose cleanup installs software the repository
+      # did not choose is not a boundary, and `|| true` meant nothing ever said so.
+      #
+      # The existence test is the whole mechanism: if `npm ci` never ran, or ran and
+      # failed, there is no locked CLI here and the honest answer is that there is
+      # nothing safe to invoke - not to go and get one. A stack cannot have been started
+      # by a CLI that was never installed, so this skips nothing real, and the runner is
+      # destroyed after the job regardless.
       - name: Stop local Supabase stack
         if: always()
-        run: npx supabase stop || true
+        shell: bash
+        run: |
+          if [ -x node_modules/.bin/supabase ]; then
+            node_modules/.bin/supabase stop || true
+          else
+            echo "no lockfile-installed Supabase CLI present - nothing safe to invoke"
+          fi

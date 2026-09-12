@@ -791,6 +791,36 @@ exit 0
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit leak-attempt
     $r=RunRange 'HEAD~1'
     Assert '133 a cancelled contract confers no write authority on the range' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:secret\.txt') $r.Text
+
+    # ---- STRUCTURAL: the acceptance boundary carries the evidence it replaces (SPEC-172) ----
+    # Read from the repository, not the sandbox: these are properties of the real
+    # admission workflow. Both were measured FALSE on the workflow as shipped, which is
+    # the only reason they are asserted - `orvion-acceptance` is the single external
+    # check a Ruleset will require, and nothing noticed that its cleanup installed an
+    # unpinned CLI or that it ran none of the guard calibration.
+    #
+    # Comment lines are stripped first, deliberately: every word forbidden below also
+    # appears in the workflow's own commentary explaining why it must not appear in a
+    # command, and an assertion that cannot tell a prohibition from its explanation
+    # would fire on the document that records it.
+    $acceptRaw=Get-Content -Raw (Join-Path $sourceRoot '.github/workflows/orvion-acceptance.yml')
+    $accept=(@($acceptRaw-split'\r?\n')|?{$_-notmatch'^\s*#'})-join"`n"
+    # `npm ci` is the one installation authority. `npx` resolves from the network when
+    # `node_modules` has no match, and `setup-cli` would be a second version authority
+    # that can silently disagree with the lockfile developers actually run.
+    Assert '141 STRUCTURAL: the acceptance workflow resolves no package from the network' (($accept-notmatch'\bnpx\b')-and($accept-notmatch'setup-cli')) $accept
+    # Guard-of-the-guard evidence, not a second run of the guard the Gate already
+    # invokes. The per-suite exit check matters as much as the suites: `shell: pwsh`
+    # gates a step on its LAST command, so four bare calls would let a failing first
+    # suite pass silently.
+    $suites=@('test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard')
+    Assert '142 STRUCTURAL: acceptance runs every guard-calibration suite with its own exit check' ((@($suites|?{$accept-match([regex]::Escape($_))}).Count-eq4)-and($accept-match'LASTEXITCODE')) $accept
+    # The step that runs after everything else has already failed is the one that
+    # reached for the network, so it is asserted on its own rather than inferred from
+    # the file-wide rule above.
+    $cleanup=[regex]::Match($accept,'(?ms)^      - name: Stop local Supabase stack\r?\n(?<b>.*?)(?=\r?\n      - name:|\z)')
+    $cb=$cleanup.Groups['b'].Value
+    Assert '143 STRUCTURAL: the always-run cleanup invokes only a CLI the lockfile installed' ($cleanup.Success-and$cb-match'if:\s*always\(\)'-and$cb-match'-x\s+node_modules/\.bin/supabase'-and$cb-notmatch'\bnpx\b') $cleanup.Value
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
