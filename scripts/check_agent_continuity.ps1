@@ -564,7 +564,20 @@ function Resolve-Contract($m,[object[]]$Records){
     }
     if(!$BaseRef-and!$c.Count){return $null}
     if(!$c.Count){throw 'NO_GOVERNING_CR'}
-    if($c.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
+    # A CANCELLATION IS NOT A GOVERNING ACT (SPEC-171). Cancelling a contract requires
+    # carrying it inside ANOTHER contract's Write Scope, so one Complete beside one
+    # Cancelled is the ordinary shape of every cancellation rather than a conflict - and
+    # rejecting it is what left `main` red on cde4f06. The abandoned contract authorised
+    # nothing in the range; the completed one authorised every file, the cancelled
+    # contract's own included. Genuine ambiguity is two contracts that both claim to have
+    # DONE the work, or two that both abandoned it: neither names one authority. Write
+    # Scope still comes from the resolved contract alone, so preferring `Complete` grants
+    # no authority that was not already granted.
+    if($c.Count-gt1){
+        $done=@($c|?{$finals[$_]-eq'Complete'})
+        if($done.Count-ne1){throw 'AMBIGUOUS_GOVERNING_CR'}
+        $c=$done
+    }
     $base=if($BaseRef){$BaseRef}else{'HEAD'}
     # A contract may be BORN AND DIE inside one pushed range, which is the ordinary
     # shape of a small Change Request (SPEC-165). Requiring it to exist at the range

@@ -730,13 +730,26 @@ exit 0
     $r=RunRange 'HEAD~1'
     Assert '128 a Complete contract cannot later be Cancelled' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION|ILLEGAL_STATUS_TRANSITION') $r.Text
 
-    # Admitting Cancelled as governing must not create a second way to be ambiguous.
-    Reset-Fixture;Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899);Commit add-second-terminal
-    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Closeable)
+    # A CANCELLATION IS NOT A GOVERNING ACT (SPEC-171). This case originally asserted
+    # ambiguity, and that expectation was wrong: cancelling a contract requires carrying
+    # it inside ANOTHER contract's Write Scope, so "one Complete plus one Cancelled" is
+    # the ordinary shape of every cancellation - the shape SPEC-170's own push produced,
+    # which then failed on main as AMBIGUOUS_GOVERNING_CR. The abandoned contract held
+    # no write authority over anything in the range; the completed one authorised every
+    # file, including the cancelled contract's own. The test agreed with the code
+    # because both came from one unexamined conclusion, which is exactly how a green
+    # suite certifies a broken rule.
+    # Write Scope is frozen against the range BASE, so the governing contract must
+    # already carry this scope at the baseline commit - it names the second contract's
+    # file because closing that contract is a write like any other.
+    $twoScope='_ORVION_CANONICAL/manifest.md;changes/SPEC-899-other.md'
+    Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Scope $twoScope)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899);Commit add-second-terminal
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $twoScope -Closeable)
     Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Status Cancelled)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit two-terminal
     $r=RunRange 'HEAD~1'
-    Assert '129 one Complete and one Cancelled in a diff is still ambiguous' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+    Assert '129 MUST-ACCEPT: one Complete and one Cancelled resolves to the Complete one' ($r.Code-eq0-and$r.Text-match'CR: SPEC-900'-and$r.Text-notmatch'AMBIGUOUS_GOVERNING_CR') $r.Text
 
     # Regression: Complete keeps the STRICTER rule and must not inherit the Cancelled path.
     Reset-Fixture;Pre-Range
@@ -744,6 +757,40 @@ exit 0
     Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit strict-complete
     $r=RunRange 'HEAD~2'
     Assert '130 Complete still requires In Progress immediately before it' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION|ILLEGAL_STATUS_TRANSITION') $r.Text
+
+    # The preference must not swallow GENUINE ambiguity. Two contracts that both claim
+    # to have done the work is unresolvable, and so is two that both abandoned it -
+    # neither case names a single authority whose Write Scope governed the range.
+    Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Scope $twoScope)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899);Commit add-two-complete
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $twoScope -Closeable)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Status Complete -Resume DONE -Closeable)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit both-complete
+    $r=RunRange 'HEAD~1'
+    Assert '131 two Complete contracts are still ambiguous' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+
+    Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Scope $twoScope)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899);Commit add-two-cancelled
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Cancelled -Scope $twoScope)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Status Cancelled)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit both-cancelled
+    $r=RunRange 'HEAD~1'
+    Assert '132 two Cancelled contracts are ambiguous' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+
+    # THE LOAD-BEARING SAFETY PROPERTY, not the SPEC-169/SPEC-170 example. Preferring
+    # the Complete contract is only safe because Write Scope still comes from the
+    # RESOLVED contract alone. Here the cancelled contract names `secret.txt` and the
+    # completed one does not: if the preference ever leaked the loser's authority, or
+    # if a future reader "simplified" it into taking whichever contract is convenient,
+    # that write would be admitted. An abandoned contract authorises nothing.
+    Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Scope $twoScope)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Scope 'secret.txt');Commit add-scoped-cancel
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $twoScope -Closeable)
+    Put 'changes/SPEC-899-other.md' (ContractText -Id SPEC-899 -Status Cancelled -Scope 'secret.txt')
+    Put 'secret.txt' 'written under the cancelled contract scope'
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit leak-attempt
+    $r=RunRange 'HEAD~1'
+    Assert '133 a cancelled contract confers no write authority on the range' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:secret\.txt') $r.Text
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
