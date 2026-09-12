@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -215,6 +215,39 @@ ENGINEERING OBSERVATIONS:
    raised.
 
 Commits: `20b70a4` (draft), `d1a4a56` (Approve), this commit (implementation).
+
+### 2026-09-13 — Claude Opus 5 (owner-authorized cancellation)
+
+Outcome: Failed
+
+The entry above records what actually happened and remains true: the implementation was applied and
+locally verified, and the implementation commit is `ce07859`. It is preserved rather than rewritten
+because `Execution Log` is append-only, and because the work did occur legally under this contract's
+authority. Nothing here was published — `origin/main` stayed at `c3d3c63` and nothing reached
+`orvion-preflight`.
+
+Cancellation reason: the owner changed the required timeout contract before publication. The approved
+`SPEC-174` frozen authority encoded 25 minutes plus range-based assertion semantics that contradict the
+new owner-approved exact-current-contract design. Frozen-authority enforcement correctly prevented
+amendment. The implementation was never published to `origin/main` or `orvion-preflight`. A successor
+Change Request will carry the corrected contract.
+
+The amendment was refused by experiment, not by inspection: changing step 1's `25` to `30` in the
+working tree and running the Gate produced `FROZEN_AUTHORITY_MUTATED:Implementation Steps`, and the
+contract was then restored byte-for-byte. `CR_LIFECYCLE.md §4` admits no `Approved -> Draft` or
+`In Progress -> Approved` transition, so no legal amendment path exists and a correction is made
+through a new Change Request. Rewriting the three unpushed commits was considered and rejected by the
+owner: retaining the identifier does not earn an exception to the no-history-rewrite discipline.
+
+Adversarial note on why the owner's replacement is stronger, recorded because this contract's own
+reasoning was wrong: a range guard treats a too-low bound as self-correcting on the theory that a false
+timeout is visible. It is visible to a human, but a weaker agent setting `timeout-minutes: 5` keeps the
+suite GREEN while making healthy candidates unadmittable. An exact expected value refuses both failure
+directions and makes a retune an explicit, evidence-backed CR rather than a silent edit.
+
+Blocker: contract superseded by an owner decision before publication. No verification check produced an
+unanticipated result; the Gate behaved correctly throughout, and this Change Request is closed as
+Cancelled rather than repaired.
 
 ## Verification Notes
 
