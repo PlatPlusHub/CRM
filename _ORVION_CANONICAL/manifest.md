@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-09-09. **repository, local stack and Primar
 
 Batch 6 surface coverage: **12 of 77 surfaces have a recorded audit disposition**, all twelve at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary last recorded **zero business rows** (2026-09-08; not re-read this session).
 
-Active Change Request: `changes/SPEC-170-cancellation-is-executable.md`
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-168 shadow acceptance workflow, Complete (2026-09-12).** `orvion-acceptance.yml` produces the admission evidence: one job, one check identity, `push:` to `orvion-preflight` only, no path filters, base from `origin/main` with a fail-closed ancestry test, the Gate over the candidate range, Supabase from the lockfile via `npm ci`. Prerequisite repaired in the same change: `Workflow-Expectations` read every item under `push:` as a path glob, so an inline `branches: [x]` left a workflow expected on every push — `-Certify` would then fail closed forever on a run that can never happen. `Trigger-List` parses both YAML styles; branch filters settle before path filters. Ref created at `e99324e`. Suite 127 → 132 assertions.
+Last Completed: **SPEC-170 cancellation is executable, Complete (2026-09-12).** `Cancelled` was a legal state the Gate could never commit: closing forces the manifest pointer to be cleared, leaving no governing contract, dropping control to the PLAN arm, which rejects the files a closure must write. A contract approved on a false premise had no legal exit. `$script:TerminalStatuses` is now the single list of closed states and the committed path is judged against the contract's own final status, so `Complete` keeps the stricter rule. No new error code. `SPEC-169` cancelled with it, its refuted premise preserved. Suite 132 → 137 assertions.
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
@@ -45,7 +45,7 @@ Current session blocker: **None.**
 
 Other open work is owned elsewhere and is never restated as the next action: `MASTER_EXECUTION_PLAN.md` owns Batch 6 order, the Phase-10 Meta-ecosystem Learn-Before-Designing research and the communications-domain Design Challenge; `MASTER_INTEGRATION_CATALOG.md §2/§2a` owns the preserved n8n workflow build steps.
 
-Next capability: **ORVION Simple Acceptance Phase C — require `orvion-acceptance` on `main`** (owner-authorized 2026-09-12 as one capability flow). Gated on POST_PUSH evidence observed first: that check succeeding against an exact SHA on `orvion-preflight`, from the GitHub Actions App. Only then add it as the one required status check on Ruleset `main integrity` (`22950574`), preserving deletion, non-fast-forward and no-bypass, adding nothing else. Steady state is `orvion-preflight == main`. Batch 6 Slice 12 resumes when the programme closes.
+Next capability: **Simple Acceptance — corrective CR for the two proven Phase C blockers.** (1) acceptance cleanup ran `npx supabase stop` without `npm ci` and silently installed `supabase@2.117.0` against a lockfile pinning `2.109.0`, reporting success; (2) `orvion-acceptance` runs none of the four guard-calibration suites `Repository Consistency` runs, so the intended single required check is weaker than what it replaces. Also make branch assertions 122–124 non-vacuous. **Phase C forbidden until an exact-SHA shadow success path is proven.** Batch 6 Slice 12 resumes after.
 
 ---
 
