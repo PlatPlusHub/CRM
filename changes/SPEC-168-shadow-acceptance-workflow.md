@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -254,15 +254,15 @@ Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
