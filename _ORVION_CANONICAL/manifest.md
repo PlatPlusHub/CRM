@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-09-09. **repository, local stack and Primar
 
 Batch 6 surface coverage: **12 of 77 surfaces have a recorded audit disposition**, all twelve at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary last recorded **zero business rows** (2026-09-08; not re-read this session).
 
-Active Change Request: `changes/SPEC-167-range-integrity-over-committed-intermediate-states.md`
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-166 the Gate states its own exit status, Complete (2026-09-12).** A successful run now asserts `exit 0` instead of inheriting the 128 `Read-GitFile` leaves behind by design, which made CI fail a Gate that had printed `ORVION: READY` — on the first push of every new Change Request. `RunRange` now invokes as the workflow does, because `pwsh -File` discards the exit status CI treats as the verdict. With `SPEC-164` (Complete bound to a `-Finish` certification receipt, `DATABASE` executing its protocol, `-Certify` proving EXPECTED workflows on the exact SHA) and `SPEC-165` (a contract may be created and completed in one range), control suite 94 → 121 assertions. Product and schema untouched.
+Last Completed: **SPEC-167 range integrity over committed intermediate states, Complete (2026-09-12).** Every range check now judges the commits a push contains, not its `BASE..HEAD` endpoints: a violation plus a later revert cancelled out and was admitted unexamined. `Validate-CommittedRange` walks each commit and enforces four history-sensitive classes — out-of-scope write, widened frozen authority (scope read from the baseline, so a commit cannot authorise its own writes), mutation after a contract turned terminal in-range, and an illegal transition in a non-governing contract. Not "every intermediate commit must be releasable": final-state properties stay judged at `HEAD`. No new error code. Suite 121 → 127 assertions; all five attacks were accepted before the repair.
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
@@ -45,7 +45,7 @@ Current session blocker: **None.**
 
 Other open work is owned elsewhere and is never restated as the next action: `MASTER_EXECUTION_PLAN.md` owns Batch 6 order, the Phase-10 Meta-ecosystem Learn-Before-Designing research and the communications-domain Design Challenge; `MASTER_INTEGRATION_CATALOG.md §2/§2a` owns the preserved n8n workflow build steps.
 
-Next capability: **Batch 6 Slice 12 — the quotations surface audit.**
+Next capability: **ORVION Simple Acceptance Phase B — the `orvion-preflight` ref and one `orvion-acceptance` admission check** (owner-authorized 2026-09-12 as one capability flow; `main` accepts only an exact SHA that already passed acceptance; `SPEC-167` closed the range-integrity prerequisite). Batch 6 Slice 12 — the quotations surface audit — resumes when the programme closes.
 
 ---
 
