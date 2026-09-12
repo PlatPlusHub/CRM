@@ -1,0 +1,81 @@
+name: ORVION Acceptance
+
+# The admission boundary. A candidate SHA earns its evidence HERE, on a ref that is
+# not `main`, and only then may `main` move to that exact SHA. One workflow, one job,
+# one external check identity - `orvion-acceptance` - so there is exactly one contract
+# for a Ruleset to require and nothing to aggregate.
+#
+# No `paths:` and no `paths-ignore:` on purpose. A path-filtered required check
+# produces no run for a non-matching push, and a required check that never runs is a
+# permanently pending admission. Deterministic compute is cheaper than the classifier
+# that would be needed to decide when it is safe to skip.
+on:
+  push:
+    branches:
+      - orvion-preflight
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    name: orvion-acceptance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # BASE is current `origin/main`, never `github.event.before`. The question this
+      # job answers is "may main move to this SHA", so the range under test is every
+      # commit not yet in main - not merely what this push added to the branch.
+      - name: Resolve candidate range against main
+        shell: pwsh
+        run: |
+          git fetch origin main --quiet
+          $base = (git rev-parse origin/main).Trim()
+          $head = '${{ github.sha }}'
+          # Fail closed on a divergent candidate rather than reinterpreting it through
+          # merge-base. A candidate that does not descend from main is not a candidate
+          # for a fast-forward promotion, and silently testing a merge-base range would
+          # certify a history that is not the one anybody would push.
+          git merge-base --is-ancestor $base $head
+          if ($LASTEXITCODE -ne 0) {
+            throw "MAIN_NOT_ANCESTOR: origin/main $base does not precede candidate $head"
+          }
+          "BASE_SHA=$base" >> $env:GITHUB_ENV
+          "HEAD_SHA=$head" >> $env:GITHUB_ENV
+          Write-Output "candidate range $base..$head"
+
+      - name: Agent Control mutation suite
+        shell: pwsh
+        run: ./scripts/test_agent_continuity.ps1
+
+      # Repository Consistency is deliberately NOT a separate step: the Gate already
+      # invokes it through Repo-Guard, and running it twice would buy a second report
+      # of the same evidence rather than a second trust boundary.
+      - name: Agent Control Gate over the candidate range
+        shell: pwsh
+        run: ./scripts/check_agent_continuity.ps1 -Gate -BaseRef $env:BASE_SHA -HeadRef $env:HEAD_SHA
+
+      # The Supabase CLI version is the lockfile's, obtained through `npm ci`. Pinning
+      # it again in a `uses:` would create a second version authority that can silently
+      # disagree with the one developers actually run locally.
+      - name: Install pinned toolchain
+        run: npm ci
+
+      - name: Start local Supabase stack
+        run: npx supabase start
+
+      - name: Apply all migrations on a clean database
+        run: npx supabase db reset
+
+      - name: Run pgTAP invariant tests
+        run: npx supabase test db
+
+      - name: Run database smoke-test (verify_database.sql)
+        run: docker exec -i supabase_db_ORVION psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f - < scripts/verify_database.sql
+
+      - name: Stop local Supabase stack
+        if: always()
+        run: npx supabase stop || true

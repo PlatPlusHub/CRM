@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -94,7 +94,7 @@ range-integrity property this workflow's Gate invocation relies on.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -145,37 +145,112 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all five branch
+- [x] `scripts/test_agent_continuity.ps1` contains an adversarial group covering all five branch
       filter cases named in Step 1, and the whole suite passes.
-- [ ] A workflow whose `push:` declares `branches:` in flow style naming a branch other than the
+- [x] A workflow whose `push:` declares `branches:` in flow style naming a branch other than the
       checked-out one is absent from the derived expected set.
-- [ ] The same declaration in block style is absent from the derived expected set.
-- [ ] A workflow whose `branches:` names the checked-out branch is present in the derived expected
+- [x] The same declaration in block style is absent from the derived expected set.
+- [x] A workflow whose `branches:` names the checked-out branch is present in the derived expected
       set, and adding a non-matching `paths:` filter removes it again.
-- [ ] An unfiltered `push:` workflow is still expected and a non-matching path-filtered one is still
+- [x] An unfiltered `push:` workflow is still expected and a non-matching path-filtered one is still
       not, unchanged from before this Change Request.
-- [ ] `.github/workflows/orvion-acceptance.yml` exists, declares exactly one job named
+- [x] `.github/workflows/orvion-acceptance.yml` exists, declares exactly one job named
       `orvion-acceptance`, triggers only on `push:` to `orvion-preflight`, and contains no `paths:`,
       no `paths-ignore:`, no `pull_request:` and no `workflow_run:` key.
-- [ ] That workflow derives its base from `origin/main` and fails closed when the base is not an
+- [x] That workflow derives its base from `origin/main` and fails closed when the base is not an
       ancestor of the pushed SHA.
-- [ ] That workflow obtains the Supabase CLI through `npm ci` and `npx`, and contains no reference to
+- [x] That workflow obtains the Supabase CLI through `npm ci` and `npx`, and contains no reference to
       `supabase/setup-cli`.
-- [ ] The remote ref `orvion-preflight` exists and `main` is unchanged by this Change Request.
-- [ ] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
+- [x] The remote ref `orvion-preflight` exists and `main` is unchanged by this Change Request.
+- [x] `_ORVION_CANONICAL/manifest.md` names this Change Request as the Active Change Request while it
       is in progress, and `ai-map.json` is regenerated from the current tree.
 
 ## Execution Log
+### 2026-09-12 — Claude Opus 5 (agent execution run)
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — adversarial group added as assertions 121–125, with four branch-filtered
+  workflow fixtures added to the sandbox baseline beside the existing trigger fixtures.
+- Step 2: Applied — `Trigger-List` added and `Workflow-Expectations` now settles branch filters
+  before path filters.
+- Step 3: Applied — `.github/workflows/orvion-acceptance.yml` created.
+- Step 4: Applied — `git ls-remote --heads origin orvion-preflight` returned empty, so the ref was
+  created at exactly `e99324ee2423f5dd6640d655eef34687b906a716`, the then-current `origin/main`.
+  `main` was re-read afterwards and was unchanged at that same SHA.
+- Step 5: Applied — manifest pointer set; `ai-map.json` regenerated.
+
+PRECHECK, against the unmodified deriver. This is the honest result and it is more interesting than
+a clean sweep of failures:
+
+| Assertion | Before | Why |
+| --- | --- | --- |
+| 121 flow-style other branch | **FAIL** | inline `[release]` yields no `- item` lines, so the workflow read as UNFILTERED and was expected on every push |
+| 122 block-style other branch | pass, vacuously | `- release` was read as a PATH glob; no written path looks like `release`, so it fell out by coincidence |
+| 123 matching branch expected | pass, vacuously | expected because it read as unfiltered, not because the branch matched |
+| 124 matching branch, non-matching paths | pass, vacuously | the `paths:` bullets were read; the branch filter played no part |
+| 125 unfiltered / path-filtered unchanged | pass | genuine — this is the regression guard |
+
+Only 121 was a live failure; 122–124 asserted the right outcomes for the wrong reasons, which
+`ENGINEERING_METHOD.md §3` treats as unproven rather than passing. They are retained because after
+the repair they hold for the right reason, and they are what would catch a future reader that
+re-collapses branch and path handling.
+
+Suite: 131 passed / 1 failed before the repair, 132 passed / 0 failed after. Assertions 109 and 110,
+which pin the pre-existing path-based derivation, remain green — that is the over-strictness guard,
+since narrowing the deriver incorrectly would re-open the `SPEC-164` blindness.
+
+Engineering Observations:
+
+1. **The dual Supabase CLI authority recorded by `SPEC-167` is retired for the acceptance path, not
+   repaired in place.** `orvion-acceptance.yml` takes the CLI from `package-lock.json` through
+   `npm ci`, so the lockfile is the single version authority for this workflow.
+   `.github/workflows/migration-ci.yml` still pins `2.109.1` through `supabase/setup-cli@v3` against
+   the lockfile's `2.109.0`; it is out of scope here and is a candidate for deletion in the
+   simplification phase once this gate has proven itself, which is the cheaper resolution than
+   editing a file that may not survive.
+2. **The `orvion-acceptance` check has not yet been observed.** That is POST_PUSH evidence by
+   `CR_LIFECYCLE.md` §8 and is deliberately absent from the Acceptance Criteria. It is proven after
+   this Change Request publishes, and it gates the Phase C Ruleset cutover rather than this
+   completion.
+
+Commits: recorded by the Complete commit that carries this entry.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-12 — Claude Opus 5 (review)
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-checked against the live tree and the live remote rather
+than against the Execution Log's self-report.
+
+- `.github/workflows/orvion-acceptance.yml` declares one job, `acceptance`, whose `name:` is
+  `orvion-acceptance` — that name, not the job id, is the external check context a Ruleset will
+  require. Its only trigger is `push:` with `branches:` naming `orvion-preflight`. A negative grep
+  for `paths:`, `paths-ignore:`, `pull_request:` and `workflow_run:` returned nothing, which is the
+  criterion stated as a forbidden-key search rather than an eyeball read.
+- The base is `git rev-parse origin/main`, not `github.event.before`, and
+  `git merge-base --is-ancestor` gates the run with an explicit `MAIN_NOT_ANCESTOR` throw. A
+  divergent candidate therefore fails closed rather than being reinterpreted through a merge-base
+  range that nobody would push.
+- The workflow contains zero occurrences of `setup-cli`; the CLI arrives via `npm ci` and every
+  Supabase invocation is `npx supabase`. The lockfile is the single version authority for this path.
+- `git ls-remote` shows `refs/heads/orvion-preflight` and `refs/heads/main` at the identical SHA
+  `e99324ee2423f5dd6640d655eef34687b906a716`, which is both the steady-state invariant the design
+  requires and proof that creating the ref did not move `main`.
+- The suite is 132 passed / 0 failed. Assertions 109 and 110 remain green, which is the check that
+  matters most here: the deriver was narrowed, and narrowing it too far would re-open the `SPEC-164`
+  blindness rather than close anything.
+- The PRECHECK distinction is recorded honestly in the Execution Log: only assertion 121 failed
+  before the repair, and 122 through 124 passed for reasons unrelated to the property they name.
+  Three vacuous passes were reported as vacuous rather than counted as coverage.
+
+No discrepancy found. Scope was not widened: `migration-ci.yml` still carries the competing
+`setup-cli` pin and was left untouched.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 

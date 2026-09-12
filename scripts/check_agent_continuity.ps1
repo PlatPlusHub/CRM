@@ -447,9 +447,38 @@ function Implementation-Fingerprint($Contract,[string]$Rel){
 function Glob-Regex([string]$Pattern){
     '^'+([regex]::Escape($Pattern)-replace'\\\*\\\*/','(?:.*/)?'-replace'\\\*\\\*','.*'-replace'\\\*','[^/]*')+'$'
 }
+# One trigger sub-key's values, in EITHER YAML style: an inline flow sequence
+# (`branches: [a, b]`) or `- item` bullets beneath the key. Both styles are legal
+# GitHub syntax and a reader that knows only one of them is silently wrong about
+# the other. The key is matched exactly, so `paths:` never also swallows
+# `paths-ignore:`.
+function Trigger-List([string]$Body,[string]$Key){
+    $m=[regex]::Match($Body,"(?m)^[ \t]*$([regex]::Escape($Key)):[ \t]*(?<inline>\[[^\]\r\n]*\])?[ \t]*\r?\n?")
+    if(!$m.Success){return @()}
+    if($m.Groups['inline'].Success){
+        return @($m.Groups['inline'].Value.Trim('[',']')-split','|%{$_.Trim().Trim('"').Trim("'")}|?{$_})
+    }
+    $items=@()
+    foreach($line in @($Body.Substring($m.Index+$m.Length)-split'\r?\n')){
+        if($line-match'^\s*-\s*"?(?<v>[^"\r\n]+?)"?\s*$'){$items+=$Matches['v'].Trim()}
+        elseif($line.Trim()){break}
+    }
+    $items
+}
+
 function Workflow-Expectations([string[]]$Paths){
     $dir=Join-Path $Root '.github/workflows'
     if(!(Test-Path -LiteralPath $dir)){return @()}
+    # A workflow is expected only on a branch it can actually RUN on. Without this the
+    # deriver read every list item under `push:` as a path glob, so a `branches:` filter
+    # either vanished entirely - inline flow style produces no `- item` lines, leaving the
+    # workflow looking unfiltered and therefore expected on every branch it can never run
+    # on - or was compared against written file paths as though a branch name were one,
+    # which yields the right answer only because branch names rarely look like paths.
+    # `-Certify` fails closed on an expected workflow that produced no run, so the first
+    # case turns every later push red on a workflow that was never going to trigger.
+    $branch=(git -C $Root rev-parse --abbrev-ref HEAD 2>$null)
+    $branch=if($LASTEXITCODE-eq0){("$branch").Trim()}else{''}
     $names=@()
     foreach($f in @(Get-ChildItem -LiteralPath $dir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
         $text=[IO.File]::ReadAllText($f.FullName)
@@ -459,7 +488,16 @@ function Workflow-Expectations([string[]]$Paths){
         # file instead is how a guard once reported CLEAN on two lists that disagreed.
         $push=[regex]::Match($text,'(?ms)^  push:[ \t]*\r?\n(?<b>(?:[ \t]{4,}.*\r?\n|[ \t]*\r?\n)*)')
         if(!$push.Success){continue}
-        $globs=@([regex]::Matches($push.Groups['b'].Value,'(?m)^\s*-\s*"?(?<v>[^"\r\n]+?)"?\s*$')|%{$_.Groups['v'].Value})
+        $body=$push.Groups['b'].Value
+        # Branch filters decide WHETHER this workflow runs here at all, so they are
+        # settled before path filters, which only decide whether a run that could
+        # happen actually does. Branch names may themselves be globs (`release/**`),
+        # so the same matcher serves both.
+        $branchList=@(Trigger-List $body 'branches')
+        if($branchList.Count-and-not@($branchList|?{$branch-match(Glob-Regex $_)}).Count){continue}
+        $branchIgnore=@(Trigger-List $body 'branches-ignore')
+        if($branchIgnore.Count-and@($branchIgnore|?{$branch-match(Glob-Regex $_)}).Count){continue}
+        $globs=@(Trigger-List $body 'paths')
         if(!$globs.Count){$names+=$name.Groups['v'].Value;continue}
         foreach($g in $globs){
             $rx=Glob-Regex $g

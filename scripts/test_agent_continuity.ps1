@@ -133,6 +133,15 @@ try{
     Put '.github/workflows/docs.yml' "name: Docs`non:`n  push:`n    paths:`n      - `"**/*.md`"`n  pull_request:`n    paths:`n      - `"**/*.md`"`n"
     Put '.github/workflows/db.yml' "name: Db`non:`n  push:`n    paths:`n      - `"supabase/migrations/**`"`n      - `"supabase/config.toml`"`n"
     Put '.github/workflows/review-only.yml' "name: Review Only`non:`n  pull_request:`n    types: [opened]`n"
+    # Branch-filtered triggers, in BOTH YAML styles. The flow style is load-bearing:
+    # a `branches:` list written inline produces no `- item` lines at all, so a reader
+    # that only looks for bullets sees NO filter and calls the workflow unconditionally
+    # expected - on every branch it can never run on. The sandbox is checked out on
+    # `main`, so `release` is the "some other branch" case.
+    Put '.github/workflows/branch-other-flow.yml' "name: Branch Other Flow`non:`n  push:`n    branches: [release]`n"
+    Put '.github/workflows/branch-other-block.yml' "name: Branch Other Block`non:`n  push:`n    branches:`n      - release`n"
+    Put '.github/workflows/branch-main.yml' "name: Branch Main`non:`n  push:`n    branches: [main]`n"
+    Put '.github/workflows/branch-main-paths.yml' "name: Branch Main Paths`non:`n  push:`n    branches: [main]`n    paths:`n      - `"supabase/migrations/**`"`n"
     Put 'scripts/check_agent_continuity.ps1' (Get-Content -Raw $control)
     Put 'scripts/check_repository_consistency.ps1' "Write-Output 'REPOSITORY CONSISTENCY: CLEAN'; if(Test-Path env:ORVION_GUARD_MARKER){Set-Content -LiteralPath `$env:ORVION_GUARD_MARKER -Value ran}; exit 0"
     foreach($s in @('test_agent_continuity.ps1','test_cold_start_state_guard.ps1','test_status_contradiction_guard.ps1','test_primary_ledger_guard.ps1','test_future_date_guard.ps1')){Put "scripts/$s" "exit 0"}
@@ -670,6 +679,23 @@ exit 0
     Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $bornScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-d
     $r=RunRange 'HEAD~4'
     Assert '120 MUST-ACCEPT: a contract born in range writing in-scope files across commits is legal' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
+
+    # ---- A workflow is expected only on branches it can actually run on (SPEC-168) ----
+    # `Workflow-Expectations` derives the EXPECTED set from the `push:` triggers the
+    # workflow files declare, and treated every list item under `push:` as a PATH glob.
+    # A `branches:` filter therefore either vanished (flow style produces no bullets, so
+    # the workflow read as unfiltered and was expected on every push) or was compared
+    # against written file paths as though a branch name were one - which happens to
+    # yield the right answer only because branch names rarely look like paths.
+    # `-Certify` fails closed on a required workflow that produced no run, so the flow
+    # case would have failed every future push on a workflow that can never run there.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt');$null=Run Finish;$j=ReceiptJson;$exp=@($j.expected)
+    $ev=($j|ConvertTo-Json -Depth 5)
+    Assert '121 a flow-style branches filter naming another branch is not expected' ($exp-notcontains'Branch Other Flow') $ev
+    Assert '122 a block-style branches filter naming another branch is not expected' ($exp-notcontains'Branch Other Block') $ev
+    Assert '123 MUST-ACCEPT: a branches filter naming the checked-out branch is expected' ($exp-contains'Branch Main') $ev
+    Assert '124 a matching branches filter with a non-matching paths filter is not expected' ($exp-notcontains'Branch Main Paths') $ev
+    Assert '125 MUST-ACCEPT: unfiltered and path-filtered derivation is unchanged' (($exp-contains'Always')-and($exp-notcontains'Docs')-and($exp-notcontains'Review Only')) $ev
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
