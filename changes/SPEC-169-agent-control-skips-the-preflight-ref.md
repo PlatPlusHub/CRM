@@ -3,11 +3,10 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
 [ ] Complete
-[ ] Cancelled
-
+[x] Cancelled
 ## Objective
 
 Stop `Agent Control` triggering on the `orvion-preflight` ref, where it fails on branch creation and
