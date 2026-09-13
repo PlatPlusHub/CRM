@@ -912,27 +912,64 @@ exit 0
     # the failure is silent. Each is parsed from job STRUCTURE rather than grepped for a
     # token, because the cleanup step's `if: always()` is legitimate and a crude ban on
     # the word `if:` would forbid it while proving nothing about job-level bypass.
-    $wfDir=Join-Path $sourceRoot '.github/workflows'
-    $emitters=@()
-    foreach($wf in @(Get-ChildItem -LiteralPath $wfDir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
-        $txt=[IO.File]::ReadAllText($wf.FullName)
-        $jobsBlock=[regex]::Match($txt,'(?ms)^jobs:[ \t]*\r?\n(?<b>.*)$')
-        if(!$jobsBlock.Success){continue}
-        $body=$jobsBlock.Groups['b'].Value
-        foreach($jm in [regex]::Matches($body,'(?m)^  (?<id>[A-Za-z0-9_-]+):[ \t]*$')){
-            $rest=$body.Substring($jm.Index+$jm.Length)
-            $end=[regex]::Match($rest,'(?m)^  [A-Za-z0-9_-]+:[ \t]*$')
-            $jobBody=if($end.Success){$rest.Substring(0,$end.Index)}else{$rest}
-            $dn=[regex]::Match($jobBody,'(?m)^    name:[ \t]*(?<v>.+?)[ \t]*$')
-            $ctx=if($dn.Success){$dn.Groups['v'].Value}else{$jm.Groups['id'].Value}
-            $emitters+=[pscustomobject]@{File=$wf.Name;Job=$jm.Groups['id'].Value;Context=$ctx;Body=$jobBody}
+    # NEWLINE INVARIANCE (SPEC-177). This is the file's ONE workflow-structure parsing
+    # authority, and normalizing CRLF to LF is the first thing it does. That single line is
+    # the whole newline policy. The structural matchers below are line-anchored and end
+    # `[ \t]*$`, which cannot consume a `\r`: under a CRLF checkout every job header missed,
+    # this list came back EMPTY, and 150/152/153/155 failed together while the workflow they
+    # guard was entirely correct. Proven by A/B at one SHA with line endings as the only
+    # variable -- the six workflow files normalized to identical SHA256, nothing else
+    # differed, and the suite went 155/0 on LF versus 151/4 on CRLF.
+    #
+    # The fix is HERE and not a `\r?` added to each regex, because per-regex newline policy
+    # is an omission surface rather than a rule: the `jobs:` matcher below already carried
+    # `\r?\n` and its immediate neighbours did not, and that asymmetry IS the defect. One
+    # boundary cannot be half-applied.
+    function Get-WorkflowEmitters($Sources){
+        $found=@()
+        foreach($s in $Sources){
+            $txt=$s.Text.Replace("`r`n","`n")
+            $jobsBlock=[regex]::Match($txt,'(?ms)^jobs:[ \t]*\r?\n(?<b>.*)$')
+            if(!$jobsBlock.Success){continue}
+            $body=$jobsBlock.Groups['b'].Value
+            foreach($jm in [regex]::Matches($body,'(?m)^  (?<id>[A-Za-z0-9_-]+):[ \t]*$')){
+                $rest=$body.Substring($jm.Index+$jm.Length)
+                $end=[regex]::Match($rest,'(?m)^  [A-Za-z0-9_-]+:[ \t]*$')
+                $jobBody=if($end.Success){$rest.Substring(0,$end.Index)}else{$rest}
+                $dn=[regex]::Match($jobBody,'(?m)^    name:[ \t]*(?<v>.+?)[ \t]*$')
+                $ctx=if($dn.Success){$dn.Groups['v'].Value}else{$jm.Groups['id'].Value}
+                $found+=[pscustomobject]@{File=$s.Name;Job=$jm.Groups['id'].Value;Context=$ctx;Body=$jobBody}
+            }
         }
+        $found
     }
-    $admission=@($emitters|Where-Object{$_.Context-eq'orvion-acceptance'})
+    # BOTH representations are DERIVED, in memory, from one canonical form of the same file.
+    # Reading the checkout twice would prove nothing: on a machine that checks out CRLF both
+    # arms would be CRLF, and on GitHub's LF runners both would be LF, so the proof would
+    # only ever exercise whatever `core.autocrlf` happened to produce. Deriving them means
+    # the CRLF arm is genuinely CRLF even on an LF runner, which is where a regression in the
+    # normalization above has to be caught. This canonicalization is fixture construction;
+    # the one inside the parser is the parsing-time policy.
+    $wfDir=Join-Path $sourceRoot '.github/workflows'
+    $wfLf=@();$wfCrlf=@()
+    foreach($wf in @(Get-ChildItem -LiteralPath $wfDir -File|Where-Object{$_.Extension-in @('.yml','.yaml')})){
+        $canon=[IO.File]::ReadAllText($wf.FullName).Replace("`r`n","`n")
+        $wfLf+=[pscustomobject]@{Name=$wf.Name;Text=$canon}
+        $wfCrlf+=[pscustomobject]@{Name=$wf.Name;Text=$canon.Replace("`n","`r`n")}
+    }
+    $reps=@()
+    foreach($rep in @([pscustomobject]@{Name='LF';Src=$wfLf},[pscustomobject]@{Name='CRLF';Src=$wfCrlf})){
+        $em=@(Get-WorkflowEmitters $rep.Src)
+        $ad=@($em|Where-Object{$_.Context-eq'orvion-acceptance'})
+        $bd=if($ad.Count-eq1){$ad[0].Body}else{''}
+        $reps+=[pscustomobject]@{Rep=$rep.Name;Emitters=$em;Admission=$ad;Body=$bd;Tmo=[regex]::Matches($bd,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')}
+    }
     # Binding the Ruleset to the GitHub Actions App stops another PROVIDER satisfying the
     # context; it does nothing about a second Actions job claiming the same name. Only
     # this assertion covers that.
-    Assert '150 STRUCTURAL: exactly one active job in the repository can emit orvion-acceptance' ($admission.Count-eq1) (($emitters|ForEach-Object{"$($_.File):$($_.Job) -> $($_.Context)"})-join'; ')
+    # Required of BOTH representations (SPEC-177): the same YAML must yield the same one
+    # admission job whether the checkout materialized it as LF or CRLF.
+    Assert '150 STRUCTURAL: exactly one active job in the repository can emit orvion-acceptance' (@($reps|Where-Object{$_.Admission.Count-ne1}).Count-eq0) (($reps|ForEach-Object{"[$($_.Rep)] "+(($_.Emitters|ForEach-Object{"$($_.File):$($_.Job) -> $($_.Context)"})-join'; ')})-join' || ')
     # A path-filtered required check produces NO run for a non-matching push, and a
     # required check that never runs is a permanently pending admission.
     $acceptOn=[regex]::Match($acceptRaw,'(?ms)^on:[ \t]*\r?\n(?<b>(?:[ \t]+.*\r?\n|[ \t]*\r?\n)*)')
@@ -940,11 +977,10 @@ exit 0
     # Job-level keys only: `^    key:` are the job's own, everything deeper belongs to a
     # step. A job-level `if:` can skip the whole admission, and GitHub reports a skipped
     # required job in a way that does not block - which is the entire attack.
-    $ab=if($admission.Count-eq1){$admission[0].Body}else{''}
-    Assert '152 STRUCTURAL: the admission job carries no job-level condition and no continue-on-error' ($ab-and$ab-notmatch'(?m)^    if:'-and$ab-notmatch'(?m)^    continue-on-error:'-and$ab-match'(?m)^    steps:') $ab
+    Assert '152 STRUCTURAL: the admission job carries no job-level condition and no continue-on-error' (@($reps|Where-Object{-not($_.Body-and$_.Body-notmatch'(?m)^    if:'-and$_.Body-notmatch'(?m)^    continue-on-error:'-and$_.Body-match'(?m)^    steps:')}).Count-eq0) (($reps|ForEach-Object{"[$($_.Rep)] $($_.Body)"})-join' || ')
     # The environment the first full shadow proof executed, not a moving description of
     # it. `ubuntu-latest` migrates OS generation and a tag can be repointed.
-    Assert '153 STRUCTURAL: the admission boundary is frozen at the proven runner and checkout commit' ($ab-match'(?m)^    runs-on:[ \t]*ubuntu-24\.04[ \t]*$'-and$acceptRaw-match'uses:[ \t]*actions/checkout@[0-9a-f]{40}') $ab
+    Assert '153 STRUCTURAL: the admission boundary is frozen at the proven runner and checkout commit' ((@($reps|Where-Object{$_.Body-notmatch'(?m)^    runs-on:[ \t]*ubuntu-24\.04[ \t]*$'}).Count-eq0)-and$acceptRaw-match'uses:[ \t]*actions/checkout@[0-9a-f]{40}') (($reps|ForEach-Object{"[$($_.Rep)] $($_.Body)"})-join' || ')
     # A required check that never concludes blocks every promotion, and GitHub's default
     # job timeout is 360 minutes, which is not a bound. This pins the EXACT approved value
     # rather than a range, because a range refuses only one failure direction: a weaker
@@ -956,8 +992,7 @@ exit 0
     # Job-level like 152: `^    key:` is the job's own and anything deeper belongs to a step,
     # so a step-level timeout leaves the JOB unbounded. The keys are COUNTED rather than
     # matched once, so a second contradicting job-level key is refused too.
-    $tmo=[regex]::Matches($ab,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
-    Assert '155 STRUCTURAL: the required admission job declares exactly one job-level timeout, at the approved 30' ($tmo.Count-eq1-and[int]$tmo[0].Groups['m'].Value-eq30) "job-level timeout-minutes keys=$($tmo.Count) value(s)=$(if($tmo.Count){(@($tmo|ForEach-Object{$_.Groups['m'].Value})-join',')}else{'<none at job level>'})"
+    Assert '155 STRUCTURAL: the required admission job declares exactly one job-level timeout, at the approved 30' (@($reps|Where-Object{$_.Tmo.Count-ne1-or[int]$_.Tmo[0].Groups['m'].Value-ne30}).Count-eq0) (($reps|ForEach-Object{"[$($_.Rep)] job-level timeout-minutes keys=$($_.Tmo.Count) value(s)=$(if($_.Tmo.Count){(@($_.Tmo|ForEach-Object{$_.Groups['m'].Value})-join',')}else{'<none at job level>'})"})-join' || ')
 
     # The QUERY is asserted separately from the revalidation, because the two are
     # redundant for correctness and therefore cannot catch each other's removal: with

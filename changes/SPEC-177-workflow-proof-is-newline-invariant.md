@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -83,7 +83,7 @@ Also out of scope as SUBJECTS, not merely as files: the culture-date repair carr
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -121,7 +121,41 @@ None
 
 ## Execution Log
 
-None.
+### 2026-09-13 21:07 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — the inline workflow scan became one local `Get-WorkflowEmitters` function taking name/text pairs and returning the same `File`/`Job`/`Context`/`Body` objects. No regex, job-end rule, `name:` fallback or emitter shape changed. No new file, module, dependency or YAML parser.
+- Step 2: Applied — the function normalizes CRLF to LF as its first act, one site, at the defect-bearing boundary. No `\r?` was added to any downstream regex and the already-tolerant `jobs:` matcher was left exactly as written.
+- Step 3: Applied — both representations are derived in memory from one canonical form of the same file, so the CRLF arm is genuinely CRLF even on an LF runner. Both traverse the single parser; no fixture files are written and no second parser exists.
+- Step 4: Applied — 150, 152, 153 and 155 keep their numbers, names and conditions and now require them of both representations, with the representation labelled in each failure detail. 151 and 154 untouched. Suite remains 155 assertions; no manifest suite figure changed.
+- Step 5: Applied — proof obligation discharged below.
+
+RED is the already-established causal A/B and was deliberately not re-run: two clones of the canonical repository at `cd92cb23`, both `core.autocrlf false`, differing only in workflow line endings, with every transformed file normalizing to the control's SHA256 and no other changed path. LF gave 155 passed / 0 failed, exit 0; CRLF gave 151 passed / 4 failed, exit 1, on 150, 152, 153 and 155.
+
+GREEN: the candidate suite run from an LF checkout (0 CRLF pairs on disk) returned 155 passed, 0 failed, exit 0, with 150, 152, 153 and 155 each passing for both the LF and the CRLF representation.
+
+Mutation, in a disposable copy, against the extracted candidate parser verbatim rather than a reimplementation, feeding one semantic workflow as LF (0 CRLF pairs) and CRLF (140 CRLF pairs) that normalize to identical content:
+
+```text
+1. candidate parser, LF text          emitters=1 admission=1 timeouts=1  PASS
+2. candidate parser, CRLF text        emitters=1 admission=1 timeouts=1  PASS
+3. MUTANT (no normalize), LF text     emitters=1 admission=1 timeouts=1  PASS
+4. MUTANT (no normalize), CRLF text   emitters=0 admission=0 timeouts=0  FAIL
+5. restored candidate, CRLF text      emitters=1 admission=1 timeouts=1  PASS
+```
+
+The mutant is killed by row 4, and row 3 is the control that makes the kill meaningful: with the normalization removed the LF arm stays healthy, so the failure is specifically the CRLF path and the regression would be caught on GitHub's LF checkout rather than only where Windows happens to produce CRLF. Row 5 proves exact restoration; the candidate source on disk was verified unchanged by the harness.
+
+EARN IT: the targeted parser harness replaced a planned candidate/mutant/restore battery of three further full 155-assertion suite runs. It exercises the same parser source and yields the same causal conclusion, so the additional full-suite executions were redundant verification waste and were not run. One full-suite execution remains, inside the mandatory `-Finish`.
+
+Commits: recorded by the implementation commit carrying this entry.
+
+Lineage note (rebuild). This contract's first published attempt reached `orvion-preflight` as `0ddda0a` and was refused by the committed-range Gate with `INVALID_COMPLETION_TRANSITION`: the Execute transition was performed in the working tree but never committed, so the committed path ran `Draft -> Approved -> Complete`. A second defect rode along -- the Complete bookkeeping expanded `manifest.md` to 7020 characters against Check 5's 7000 budget. Neither was an implementation fault: GitHub's LF runner ran this exact implementation and reported 155 passed, 0 failed, before the Gate judged the history.
+
+This lineage is rebuilt from `main` so the committed path is legal. The approved contract is restored byte-identically from the originally approved blob `ad6fc92`, and the implementation from the already-proven blob `d2ce56e`, so every causal proof above still holds over the same bytes and none of it was re-run. The commit Gate that owns both refused invariants was invoked manually at each commit boundary of this rebuild.
 
 ## Verification Notes
 
