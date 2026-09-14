@@ -112,6 +112,20 @@ $allFiles = Get-ChildItem -Path $RepoRoot -Recurse -File |
 $fileNames = @{}
 foreach ($f in $allFiles) { $fileNames[$f.Name.ToLower()] = $true }
 
+# --- The repository's machine-readable date contract ----------------------------------------
+# AUD-01b (2026-09-13, SPEC-176). Every date this file reads out of a tracked document is ASCII
+# Gregorian `yyyy-MM-dd` -- a repository contract, not a locale preference. Checks 12, 21 and 23
+# used to parse them with a $null format provider, which .NET resolves to CurrentCulture. On a
+# machine whose default calendar is not Gregorian (`ar-SA` -> UmAlQuraCalendar) the year 2026 is
+# outside the supported range, so EVERY TryParseExact returned false and each check silently
+# skipped the record it was about to judge: Check 12 reported no future-dated evidence over a tree
+# containing tomorrow's date, and Checks 21 and 23 reported success over ZERO documents. A guard
+# asserting over an empty set is worse than one that fails, because the verdict is green.
+# The contract is read through the invariant culture, and written back the same way -- a diagnostic
+# rendered in the machine's calendar names a date its reader cannot act on.
+$isoDateFormat  = 'yyyy-MM-dd'
+$isoDateCulture = [System.Globalization.CultureInfo]::InvariantCulture
+
 # --- Living-doc set (what we lint) ----------------------------------------------------------
 $deprecated = @()   # retired 2026-07-17; list kept for future tombstone exclusions
 $livingDocs = $allFiles | Where-Object {
@@ -1212,9 +1226,9 @@ foreach ($f in $scan) {
         $lineNo++
         foreach ($m in [regex]::Matches($line, $dateRx)) {
             $d = [datetime]::MinValue
-            if ([datetime]::TryParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null, 'None', [ref]$d) -and $d -gt $today) {
+            if ([datetime]::TryParseExact($m.Groups[1].Value, $isoDateFormat, $isoDateCulture, 'None', [ref]$d) -and $d -gt $today) {
                 $rel = $f.FullName.Substring($RepoRoot.Length + 1)
-                Write-Host "  FUTURE-DATED: $rel : $lineNo -> $($m.Groups[1].Value) (that date has not begun anywhere on Earth; the newest civil date in existence is $($today.ToString('yyyy-MM-dd')))" -ForegroundColor Red
+                Write-Host "  FUTURE-DATED: $rel : $lineNo -> $($m.Groups[1].Value) (that date has not begun anywhere on Earth; the newest civil date in existence is $($today.ToString($isoDateFormat, $isoDateCulture)))" -ForegroundColor Red
                 $futureHits++
             }
         }
@@ -1234,7 +1248,7 @@ if ($newestCommit) {
         Write-Host "  Every date written this session is suspect. Fix the clock before recording evidence." -ForegroundColor DarkGray
         $issues++
     } elseif ($futureHits -eq 0) {
-        Write-Host "  no future-dated evidence; clock agrees with the newest commit ($($cd.ToString('yyyy-MM-dd')))" -ForegroundColor Green
+        Write-Host "  no future-dated evidence; clock agrees with the newest commit ($($cd.ToString($isoDateFormat, $isoDateCulture)))" -ForegroundColor Green
     }
 }
 
@@ -1809,7 +1823,7 @@ foreach ($f in ($allFiles | Where-Object { $_.Extension -eq '.md' })) {
     for ($i = 0; $i -lt [Math]::Min(12, $lines.Count); $i++) {
         if ($lines[$i] -match $freshHeaderRx) {
             $parsed = [datetime]::MinValue
-            if ([datetime]::TryParseExact($Matches[1], 'yyyy-MM-dd', $null, 'None', [ref]$parsed)) { $hdrDate = $parsed }
+            if ([datetime]::TryParseExact($Matches[1], $isoDateFormat, $isoDateCulture, 'None', [ref]$parsed)) { $hdrDate = $parsed }
             break
         }
     }
@@ -1822,7 +1836,7 @@ foreach ($f in ($allFiles | Where-Object { $_.Extension -eq '.md' })) {
         $ln++
         foreach ($m in [regex]::Matches($line, $bodyDateRx)) {
             $d = [datetime]::MinValue
-            if ([datetime]::TryParseExact($m.Groups[1].Value, 'yyyy-MM-dd', $null, 'None', [ref]$d) -and $d -gt $newest) {
+            if ([datetime]::TryParseExact($m.Groups[1].Value, $isoDateFormat, $isoDateCulture, 'None', [ref]$d) -and $d -gt $newest) {
                 $newest = $d
                 $newestLine = $ln
             }
@@ -1830,7 +1844,7 @@ foreach ($f in ($allFiles | Where-Object { $_.Extension -eq '.md' })) {
     }
     if ($newestLine -gt 0) {
         $rel = $f.FullName.Substring($RepoRoot.Length + 1)
-        Write-Host "  STALE FRESHNESS METADATA: $rel declares $($hdrDate.ToString('yyyy-MM-dd')) but line $newestLine carries $($newest.ToString('yyyy-MM-dd'))" -ForegroundColor Yellow
+        Write-Host "  STALE FRESHNESS METADATA: $rel declares $($hdrDate.ToString($isoDateFormat, $isoDateCulture)) but line $newestLine carries $($newest.ToString($isoDateFormat, $isoDateCulture))" -ForegroundColor Yellow
         $staleHeaders++
     }
 }
@@ -2014,11 +2028,11 @@ if (Test-Path $historyDir) {
         $head = ($text -split "`n" | Select-Object -First 12) -join "`n"
         if ($head -notmatch '(?im)^\s*Date:\s*(20[0-9]{2}-[01][0-9]-[0-3][0-9])') { continue }
         $repDate = [datetime]::MinValue
-        if (-not [datetime]::TryParseExact($Matches[1], 'yyyy-MM-dd', $null, 'None', [ref]$repDate)) { continue }
+        if (-not [datetime]::TryParseExact($Matches[1], $isoDateFormat, $isoDateCulture, 'None', [ref]$repDate)) { continue }
         if ($repDate -lt $handoffRuleDate) { continue }
         $handoffChecked++
         if ($text -notmatch '(?i)HANDOFF') {
-            Write-Host "  NO HANDOFF BLOCK: reports/history/$($rep.Name) is dated $($repDate.ToString('yyyy-MM-dd')) -- on or after the rule -- and has none. A fresh session inherits nothing from it." -ForegroundColor Yellow
+            Write-Host "  NO HANDOFF BLOCK: reports/history/$($rep.Name) is dated $($repDate.ToString($isoDateFormat, $isoDateCulture)) -- on or after the rule -- and has none. A fresh session inherits nothing from it." -ForegroundColor Yellow
             $handoffIssues++
             continue
         }

@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -74,7 +74,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -100,18 +100,38 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_repository_consistency.ps1` declares exactly one ISO date format value and exactly one invariant-culture value, and no new function, module, class or helper file was added for this.
-- [ ] No `TryParseExact` call in Check 12, Check 21 or Check 23 passes `$null` as its format provider.
-- [ ] Every diagnostic in Checks 12, 21 and 23 that renders a repository-contract date passes the invariant format and provider explicitly.
-- [ ] Check 12's ceiling is still `[datetimeoffset]::UtcNow.AddHours(14).Date`, and `$dateRx`, `$freshHeaderRx`, `$bodyDateRx`, `$handoffRuleDate` and `$handoffFields` are unchanged from their pre-change values.
-- [ ] `scripts/test_future_date_guard.ps1` still expresses its five original proof meanings and still invokes the guard exactly four times.
-- [ ] `scripts/test_future_date_guard.ps1` runs the one-day-beyond-edge scenario under a process-local `ar-SA` culture and asserts the Check 12, Check 21 and Check 23 diagnostics from that single run.
-- [ ] `scripts/test_future_date_guard.ps1` formats its fixture dates with an invariant culture it obtains itself, not one imported from the guard.
-- [ ] No file outside Write Scope was created, modified or deleted, and no new test file exists.
+- [x] `scripts/check_repository_consistency.ps1` declares exactly one ISO date format value and exactly one invariant-culture value, and no new function, module, class or helper file was added for this.
+- [x] No `TryParseExact` call in Check 12, Check 21 or Check 23 passes `$null` as its format provider.
+- [x] Every diagnostic in Checks 12, 21 and 23 that renders a repository-contract date passes the invariant format and provider explicitly.
+- [x] Check 12's ceiling is still `[datetimeoffset]::UtcNow.AddHours(14).Date`, and `$dateRx`, `$freshHeaderRx`, `$bodyDateRx`, `$handoffRuleDate` and `$handoffFields` are unchanged from their pre-change values.
+- [x] `scripts/test_future_date_guard.ps1` still expresses its five original proof meanings and still invokes the guard exactly four times.
+- [x] `scripts/test_future_date_guard.ps1` runs the one-day-beyond-edge scenario under a process-local `ar-SA` culture and asserts the Check 12, Check 21 and Check 23 diagnostics from that single run.
+- [x] `scripts/test_future_date_guard.ps1` formats its fixture dates with an invariant culture it obtains itself, not one imported from the guard.
+- [x] No file outside Write Scope was created, modified or deleted, and no new test file exists.
 
 ## Execution Log
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — one `$isoDateFormat` / `$isoDateCulture` pair added after the file-index preamble. No function, module, class or helper file introduced (`+function` count against the base is 0).
+- Step 2: Applied — Check 12's parse takes the invariant provider; its `FUTURE-DATED` ceiling and clock-sanity commit date both render invariantly. `$today`, `$dateRx` and every comparison unchanged.
+- Step 3: Applied — both Check 21 parses take the invariant provider; both dates in `STALE FRESHNESS METADATA` render invariantly. `$freshHeaderRx` and `$bodyDateRx` unchanged.
+- Step 4: Applied — Check 23's parse takes the invariant provider; the `NO HANDOFF BLOCK` date renders invariantly. `$handoffRuleDate` and `$handoffFields` unchanged.
+- Step 5: Applied — the suite's `edge + 1 day` scenario runs under a process-local `ar-SA` culture (user overrides disabled) in a child `pwsh`, carrying the Check 21 and Check 23 probes. Four guard executions, nine assertions.
+
+EARN IT. The implementation is applied by BLOB IDENTITY from the proven lineage preserved at `backup/spec176-pre-reconcile`, not rewritten: `scripts/check_repository_consistency.ps1` is blob `99ea548` and `scripts/test_future_date_guard.ps1` is blob `e567af1`, the exact objects that carried the original RED/GREEN and mutation evidence. Because the implementation bytes are unchanged, that evidence is reused rather than regenerated — the hostile-culture reproduction, the invariant-culture repair, the RED run against the unfixed guard (5 passed / 4 FAILED on assertions 2, 7, 8, 9 with the oracle-integrity assertion passing in the same run), and the four-mutant causal battery in which restoring each parse site to `$null` failed the matching proof and only that proof. A different base SHA does not stale a causal proof over identical bytes.
+
+The one genuinely new question was whether the proven repair still behaves correctly on the SPEC-177-based canonical state, and it was answered with the smallest existing proof: `scripts/test_future_date_guard.ps1` returned 9 passed, 0 failed, exit 0, including the oracle-integrity assertion confirming the child process really held `ar-SA`/`UmAlQuraCalendar`. The rest of the derived `CONTROL, REPOSITORY` profile is executed once inside the mandatory `-Finish` rather than run separately beforehand.
+
+Defect presence on the canonical base was proven before replay rather than assumed: `scripts/check_repository_consistency.ps1` was blob `57a746c` at both `cd92cb2` and `375a62e`, carrying all four `$null`-provider parse sites, and `SPEC-177` touched `scripts/test_agent_continuity.ps1` only.
+
+Lineage. The approved authority above was first approved on 2026-09-13 under the `SPEC-176` identity, whose three commits were never published and are retained at `backup/spec176-pre-reconcile` (`d5d424c`). That run halted at `MANDATORY_VERIFICATION_FAILED` because `scripts/test_agent_continuity.ps1` scored 151/4 on this CRLF workstation against assertions 150, 152, 153 and 155. `SPEC-177` repaired exactly that defect, so the blocker is not inherited here. The identity could not be reused: `SPEC-177` is `Complete` and terminal and names `SPEC-176` inside its own frozen sections, so the Gate refuses any newly added `changes/SPEC-176-*.md` as `SPEC_ID_ALREADY_USED`. Re-identification was forced, and the frozen authority plus Acceptance Criteria normalize to SHA256 `798fcc06...` against the originally approved text, differing only in the title and the Write Scope self-reference.
+
+Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
@@ -119,13 +139,13 @@ None.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
