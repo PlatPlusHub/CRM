@@ -419,6 +419,54 @@ function Validate-CommittedRange([string]$Rel){
 $script:ReceiptName='.orvion-local-certification.json'
 function Receipt-Path{Join-Path $Root $script:ReceiptName}
 
+# COMPLETION-OWNED GENERATED STATE (SPEC-179). The skip list below names the two
+# files the completion act rewrites, for the reason stated above - including them
+# would stale every receipt the instant completion began. `ai-map.json` is the
+# THIRD file in that class and was left out of it, and the completion arm already
+# says so in its own words: "it necessarily rewrites the manifest and the generated
+# `ai-map.json` mirror, which certifying earlier cannot have covered." The result
+# was that a contract scoping the generated map could never complete - Finish
+# fingerprinted it, Complete was REQUIRED to regenerate it so Check 7 would pass,
+# and the Gate then called its own mandatory bookkeeping a changed implementation.
+#
+# The repair is NOT to drop the file. Measured, not assumed: rewriting `boot_order`
+# and `authority.execution_conduct` to name files that do not exist leaves
+# Repository Consistency CLEAN at exit 0, because Check 7 compares only the
+# `live_state` fields the generator extracts and says so - "no other ai-map key is
+# brought under comparison by this". The receipt is the ONLY authority that observes
+# those keys, so removing the file would leave the cold-start map's boot pointers
+# unguarded to make a bookkeeping problem go away.
+#
+# Exactly four values are excluded, each for a stated reason. `generated_at` is a
+# timestamp that carries no authority and moves on every generator run. The three
+# `live_state` fields are the ones `CR_LIFECYCLE.md` §9 REQUIRES the completion act
+# to rewrite, and each is independently compared BY VALUE against the manifest that
+# owns it by Check 7 - proven by making that check fail on a phantom
+# `active_change_request`. Nothing stops being guarded; three fields move to the
+# authority that already proves them. `live_state.source` and `live_state.phase`
+# stay fingerprinted deliberately: completion does not own them, and Check 7 tests
+# `phase` for presence rather than by value.
+#
+# A rename in the generator makes this list stop excluding a field, which stales the
+# receipt and refuses completion LOUDLY - never fails open. Assertion 158 ties these
+# four names to the names the generator emits so the drift is caught before that.
+function AiMap-CertifiedProjection([string]$Path){
+    $raw=[IO.File]::ReadAllText($Path)
+    # Unparseable maps are fingerprinted by their raw text, never skipped: a map this
+    # cannot read is exactly the one whose changes must not slip past unobserved.
+    try{$o=$raw|ConvertFrom-Json}catch{return $raw}
+    if($null-eq$o){return $raw}
+    $o.PSObject.Properties.Remove('generated_at')
+    if($null-ne$o.live_state){
+        foreach($f in @('active_change_request','last_completed','next_capability')){
+            $o.live_state.PSObject.Properties.Remove($f)
+        }
+    }
+    # Compared only against itself, on one machine, minutes apart - so a canonical
+    # re-serialization is sufficient and no stable-ordering guarantee is needed.
+    $o|ConvertTo-Json -Depth 20
+}
+
 function Implementation-Fingerprint($Contract,[string]$Rel){
     $skip=@($Rel,'_ORVION_CANONICAL/manifest.md')
     $sha=[Security.Cryptography.SHA256]::Create()
@@ -430,7 +478,8 @@ function Implementation-Fingerprint($Contract,[string]$Rel){
         # scoped file after certification is itself a fingerprint change.
         $h='absent'
         if(Test-Path -LiteralPath $full -PathType Leaf){
-            $h=([BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($full)))-replace'-','').ToLowerInvariant()
+            $bytes=if($p-eq'ai-map.json'){[Text.Encoding]::UTF8.GetBytes((AiMap-CertifiedProjection $full))}else{[IO.File]::ReadAllBytes($full)}
+            $h=([BitConverter]::ToString($sha.ComputeHash($bytes))-replace'-','').ToLowerInvariant()
         }
         [void]$acc.Append("$p $h`n")
     }

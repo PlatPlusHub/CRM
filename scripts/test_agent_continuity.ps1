@@ -445,6 +445,57 @@ try{
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $closeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
     Assert '98c MUST-ACCEPT: a fresh matching receipt permits the completion' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 
+    # ---- COMPLETION-OWNED GENERATED STATE (SPEC-179) ----
+    # 98 proves an implementation edit after certification is refused. That rule was
+    # applied to `ai-map.json` too, and `ai-map.json` is a GENERATED MIRROR of the
+    # manifest which the completion act is REQUIRED to regenerate - so a contract
+    # scoping it could never complete: Finish certified the map, Complete rewrote it
+    # because Check 7 demands it agree with the manifest, and the Gate then called
+    # its own mandatory bookkeeping a changed implementation. Reproduced on two
+    # unrelated contracts before it was repaired.
+    #
+    # The pair below is the whole point, and neither half is sufficient alone. 156
+    # proves the completion-owned fields no longer stale the receipt; 157 proves the
+    # file did NOT simply leave the fingerprint, which is the repair that would have
+    # been easy and wrong - Check 7 compares only the live_state fields it extracts,
+    # so a `boot_order` rewritten to a file that does not exist leaves Repository
+    # Consistency CLEAN and the receipt is the only authority that sees it at all.
+    # The maps are written inline rather than through a helper so the two cases
+    # cannot drift apart through a shared fixture builder.
+    $mapScope='ai-map.json;_ORVION_CANONICAL/manifest.md'
+    Reset-Fixture
+    Put 'ai-map.json' '{"generated_at":"2026-01-01T00:00:00Z","project":"ORVION","boot_order":["README.md"],"authority":{"execution_conduct":"AGENTS.md"},"live_state":{"source":"_ORVION_CANONICAL/manifest.md","phase":"Phase 8","active_change_request":"changes/SPEC-900-fixture.md","last_completed":"SPEC-899 prior work.","next_capability":"Batch 6 Slice 12 on quotations."}}'
+    Rebase (ContractText -Resume DONE -Scope $mapScope);$f=Run Finish
+    # Exactly what a real completion regenerates: a new stamp, the pointer cleared,
+    # the just-closed work recorded. Every other key byte-identical.
+    Put 'ai-map.json' '{"generated_at":"2026-09-14T11:22:33Z","project":"ORVION","boot_order":["README.md"],"authority":{"execution_conduct":"AGENTS.md"},"live_state":{"source":"_ORVION_CANONICAL/manifest.md","phase":"Phase 8","active_change_request":"None.","last_completed":"SPEC-900 fixture work, Complete.","next_capability":"Batch 6 Slice 12 on quotations."}}'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $mapScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '156 MUST-ACCEPT: completion-owned ai-map regeneration after Finish does not stale the receipt' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-eq0-and$r.Text-match'MODE: VERIFY') "$($f.Text)`n$($r.Text)"
+
+    Reset-Fixture
+    Put 'ai-map.json' '{"generated_at":"2026-01-01T00:00:00Z","project":"ORVION","boot_order":["README.md"],"authority":{"execution_conduct":"AGENTS.md"},"live_state":{"source":"_ORVION_CANONICAL/manifest.md","phase":"Phase 8","active_change_request":"changes/SPEC-900-fixture.md","last_completed":"SPEC-899 prior work.","next_capability":"Batch 6 Slice 12 on quotations."}}'
+    Rebase (ContractText -Resume DONE -Scope $mapScope);$f=Run Finish
+    # ONLY `boot_order` moves. The live_state fields are left exactly as certified, so
+    # a pass here could not be explained by the completion-owned exclusion.
+    Put 'ai-map.json' '{"generated_at":"2026-01-01T00:00:00Z","project":"ORVION","boot_order":["HOSTILE-NOT-README.md"],"authority":{"execution_conduct":"AGENTS.md"},"live_state":{"source":"_ORVION_CANONICAL/manifest.md","phase":"Phase 8","active_change_request":"changes/SPEC-900-fixture.md","last_completed":"SPEC-899 prior work.","next_capability":"Batch 6 Slice 12 on quotations."}}'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $mapScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run Gate
+    Assert '157 a non-completion-owned ai-map mutation after Finish is still refused as stale' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:stale certification receipt') "$($f.Text)`n$($r.Text)"
+
+    # STRUCTURAL, because the four excluded names are otherwise a magic list that
+    # silently diverges the day the generator renames a field. A rename fails in the
+    # SAFE direction - the receipt goes stale and completion is refused - but it
+    # refuses it for an unreadable reason, which is what this case buys. It proves
+    # only that the exclusion list names fields the generator actually emits; it is
+    # deliberately not a test of every ai-map key.
+    $fpSrc=[IO.File]::ReadAllText((Join-Path $sourceRoot 'scripts/check_agent_continuity.ps1'))
+    $genSrc=[IO.File]::ReadAllText((Join-Path $sourceRoot 'scripts/generate-ai-map.ps1'))
+    $proj=[regex]::Match($fpSrc,'(?ms)^function AiMap-CertifiedProjection.*?^\}')
+    $excluded=@([regex]::Matches($proj.Value,"'(generated_at|active_change_request|last_completed|next_capability)'")|ForEach-Object{$_.Groups[1].Value}|Select-Object -Unique|Sort-Object)
+    $emitted=@(@('generated_at','active_change_request','last_completed','next_capability')|Where-Object{$genSrc-match"(?m)^\s*$_\s*="})
+    Assert '158 STRUCTURAL: the certified projection excludes exactly the completion-owned names the generator emits' `
+        ($proj.Success-and($excluded-join',')-eq'active_change_request,generated_at,last_completed,next_capability'-and$emitted.Count-eq4) `
+        "excluded=$($excluded-join',') emittedByGenerator=$($emitted.Count)/4 projectionFound=$($proj.Success)"
+
     # ---- DEFECT B: DATABASE needs a success path, not only a failure path (SPEC-164) ----
     # `LOCAL_NOT_EXECUTED` was truthful and useless: no sequence of correct actions
     # could turn it green, so the profile could only ever withhold certification.

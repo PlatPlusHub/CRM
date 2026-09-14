@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -77,7 +77,7 @@ None. This Change Request repairs the certification lifecycle only. It exists be
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -101,19 +101,47 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `Implementation-Fingerprint` excludes exactly four values from `ai-map.json` — `generated_at`, `live_state.active_change_request`, `live_state.last_completed`, `live_state.next_capability` — and treats no other scoped path specially.
-- [ ] `ai-map.json` remains inside the fingerprint: a change to any key outside those four still changes it.
-- [ ] An unparseable `ai-map.json` is fingerprinted by its raw bytes rather than skipped.
-- [ ] The `$skip` list, the `absent` sentinel, the accumulator format and the final accumulator hash in `Implementation-Fingerprint` are unchanged.
-- [ ] `scripts/test_agent_continuity.ps1` carries a MUST-ACCEPT case proving completion-owned bookkeeping after `-Finish` does not invalidate certification.
-- [ ] `scripts/test_agent_continuity.ps1` carries a MUST-REJECT case proving a non-completion-owned `ai-map.json` mutation after `-Finish` is refused as a stale certification receipt.
-- [ ] A structural case ties the four excluded names to the names `scripts/generate-ai-map.ps1` emits.
-- [ ] The existing stale-receipt, missing-receipt, wrong-Change-Request and wrong-profile rejections are unchanged and still fail; no assertion was deleted, renumbered or weakened.
-- [ ] No file outside Write Scope was created, modified or deleted, and no new test file exists.
+- [x] `Implementation-Fingerprint` excludes exactly four values from `ai-map.json` — `generated_at`, `live_state.active_change_request`, `live_state.last_completed`, `live_state.next_capability` — and treats no other scoped path specially.
+- [x] `ai-map.json` remains inside the fingerprint: a change to any key outside those four still changes it.
+- [x] An unparseable `ai-map.json` is fingerprinted by its raw bytes rather than skipped.
+- [x] The `$skip` list, the `absent` sentinel, the accumulator format and the final accumulator hash in `Implementation-Fingerprint` are unchanged.
+- [x] `scripts/test_agent_continuity.ps1` carries a MUST-ACCEPT case proving completion-owned bookkeeping after `-Finish` does not invalidate certification.
+- [x] `scripts/test_agent_continuity.ps1` carries a MUST-REJECT case proving a non-completion-owned `ai-map.json` mutation after `-Finish` is refused as a stale certification receipt.
+- [x] A structural case ties the four excluded names to the names `scripts/generate-ai-map.ps1` emits.
+- [x] The existing stale-receipt, missing-receipt, wrong-Change-Request and wrong-profile rejections are unchanged and still fail; no assertion was deleted, renumbered or weakened.
+- [x] No file outside Write Scope was created, modified or deleted, and no new test file exists.
 
 ## Execution Log
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — one `AiMap-CertifiedProjection` function added immediately before `Implementation-Fingerprint`. Unparseable input returns the raw text; parseable input loses `generated_at` and, from `live_state`, exactly `active_change_request`, `last_completed` and `next_capability`. No new file, module or class.
+- Step 2: Applied — `Implementation-Fingerprint` hashes that projection when and only when the scoped path is exactly `ai-map.json`, and raw bytes otherwise. The `$skip` list, the `absent` sentinel and its comment, the path sort, the accumulator format and the final accumulator hash are unchanged.
+- Step 3: Applied — cases 156 (MUST-ACCEPT) and 157 (MUST-REJECT) added to the certification group using only the existing harness. Both maps are written inline rather than through a shared builder so the two cases cannot drift apart.
+- Step 4: Applied — case 158 asserts the projection excludes exactly the four names and that `scripts/generate-ai-map.ps1` emits each of them.
+
+RED before GREEN, and the repair was attacked in both directions rather than trusted. Suite 155 -> 158, 158 passed / 0 failed, exit 0, with every pre-existing assertion keeping its number, name and condition; the diff deletes no assertion.
+
+Mutation battery, two mutants, each applied to the real candidate source, run, restored, and the restoration verified by SHA256:
+
+```text
+M1  pre-repair (ai-map hashed as raw bytes)      156=FAIL 157=PASS 158=PASS 98=PASS  157/1
+M2  Candidate A (whole file excluded)            156=PASS 157=FAIL 158=PASS 98=PASS  157/1
+```
+
+The kill is orthogonal, which is the point. M1 is the defect this contract exists to repair and only the MUST-ACCEPT case sees it. M2 is the easy wrong repair — dropping the file from the fingerprint — and only the MUST-REJECT case sees it, so 157 is what makes Candidate A unavailable to a later agent rather than merely unchosen. Case 98 passes under both, so the pre-existing staleness protection is independent of either and was not weakened to make the new pair green.
+
+Candidate A was refused on measurement taken before implementation began: with `boot_order[0]` and `authority.execution_conduct` rewritten to name files that do not exist, Repository Consistency reported `CLEAN` at exit 0, because Check 7 compares only the `live_state` fields the generator extracts. The delegation the narrow exclusion depends on was proven in the same worktree in the opposite direction: a phantom `live_state.active_change_request` made Check 7 fail with `AI-MAP STALE ... disagrees with its own SSOT`, exit 1. Every field this contract stops fingerprinting is a field that check already compares by value.
+
+The projection's three behaviours were proven directly before any test was written: a completion-owned change leaves the projection identical, a `boot_order` change alters it, and malformed JSON returns the raw text so an unreadable map is fingerprinted rather than skipped.
+
+Engineering Observation, recorded and NOT absorbed. The non-`live_state` keys of `ai-map.json` — `boot_order`, `authority`, `verify`, `canonical_docs`, `counts` — have no authority beyond this receipt, which is why the file had to stay fingerprinted. Closing that properly means deciding whether the generated map should be regenerated and diffed by its own guard. That is a different owner and its own Change Request; this contract deliberately does not widen to reach it.
+
+Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
@@ -121,13 +149,13 @@ None.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
