@@ -492,6 +492,52 @@ try{
     $proj=[regex]::Match($fpSrc,'(?ms)^function AiMap-CertifiedProjection.*?^\}')
     $excluded=@([regex]::Matches($proj.Value,"'(generated_at|active_change_request|last_completed|next_capability)'")|ForEach-Object{$_.Groups[1].Value}|Select-Object -Unique|Sort-Object)
     $emitted=@(@('generated_at','active_change_request','last_completed','next_capability')|Where-Object{$genSrc-match"(?m)^\s*$_\s*="})
+    # ---- THE CERTIFICATION TARGET IS THE BRANCH THIS PUBLISHES TO, NOT THE BRANCH
+    # ---- YOU ARE STANDING ON (SPEC-180) ----
+    # 144-149 prove what -Certify DOES with a target: preflight evidence never certifies a
+    # promotion, a wrong branch or wrong event never certifies, a missing target fails
+    # closed, a target ref that has moved is refused. Every one of them injects a receipt
+    # by hand through `ExpectBoth`, so not one of them proved where the target came FROM.
+    # `Target-Branch` had zero coverage, and it read `rev-parse --abbrev-ref HEAD` - a fact
+    # about the checkout, not about the destination. The three cases below are the writer's
+    # missing half, and each asserts the target RECORDED BY A REAL `-Finish`, so the path
+    # exercised is Finish -> Write-Certification -> Target-Branch -> receipt. A test that
+    # parsed Git configuration itself and compared its own answer would prove only that two
+    # copies of the same idea agree.
+    #
+    # No fail-closed case is added here: an unresolvable upstream is already stopped by
+    # assertion 36 (`GIT_UPSTREAM_MISSING`), which runs BEFORE any receipt is written, and
+    # an empty recorded target is already refused by 148.
+    $tScope='allowed.txt;_ORVION_CANONICAL/manifest.md'
+
+    # 159 - the shape that produced the defect. The branch is not named `main`; its upstream
+    # is. The destination is a property of the upstream, so the receipt must say `main`.
+    Reset-Fixture;git -C $root checkout -q -b publishes-elsewhere;git -C $root branch -q --set-upstream-to origin/main publishes-elsewhere
+    Rebase (ContractText -Resume DONE -Scope $tScope);$f=Run Finish;$j=ReceiptJson
+    Assert '159 the certification target is the upstream, not the branch name the agent stands on' `
+        ($f.Text-match'LOCAL_CERTIFY: READY'-and$null-ne$j-and$j.target-eq'main') `
+        "branch=publishes-elsewhere upstream=origin/main recorded target=$($j.target)`n$($f.Text)"
+    git -C $root checkout -q main
+
+    # 160 - the control that makes 159 mean something. Every historical execution here ran
+    # on `main`, so if this moved, the repair would have traded one wrong answer for another.
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $tScope);$f=Run Finish;$j=ReceiptJson
+    Assert '160 CONTROL: executing on main still records main, so the established path cannot regress' `
+        ($f.Text-match'LOCAL_CERTIFY: READY'-and$null-ne$j-and$j.target-eq'main') `
+        "recorded target=$($j.target)`n$($f.Text)"
+
+    # 161 - a branch name may contain `/`. Deriving from the short `origin/release/foo` form
+    # by splitting on the separator yields `foo`, and a target truncated into some OTHER
+    # branch's name is worse than no target: it would query a real, wrong branch.
+    Reset-Fixture
+    git -C $root push -q origin "HEAD:refs/heads/release/foo";git -C $root fetch -q origin
+    git -C $root checkout -q -b slash-work;git -C $root branch -q --set-upstream-to origin/release/foo slash-work
+    Rebase (ContractText -Resume DONE -Scope $tScope);$f=Run Finish;$j=ReceiptJson
+    Assert '161 an upstream branch name containing a slash is recorded whole, never truncated' `
+        ($f.Text-match'LOCAL_CERTIFY: READY'-and$null-ne$j-and$j.target-eq'release/foo') `
+        "upstream merge ref=$(git -C $root config --get branch.slash-work.merge) recorded target=$($j.target)`n$($f.Text)"
+    git -C $root checkout -q main;git -C $root push -q origin --delete 'refs/heads/release/foo' 2>$null;git -C $root fetch -q --prune origin
+
     Assert '158 STRUCTURAL: the certified projection excludes exactly the completion-owned names the generator emits' `
         ($proj.Success-and($excluded-join',')-eq'active_change_request,generated_at,last_completed,next_capability'-and$emitted.Count-eq4) `
         "excluded=$($excluded-join',') emittedByGenerator=$($emitted.Count)/4 projectionFound=$($proj.Success)"

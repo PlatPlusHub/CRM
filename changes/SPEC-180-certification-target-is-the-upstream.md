@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -85,7 +85,7 @@ None. `SPEC-173` introduced the target field and remains correct; this Change Re
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -107,19 +107,44 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `Target-Branch` derives the certification target from the current branch's upstream and contains no `--abbrev-ref HEAD`.
-- [ ] An upstream branch name containing `/` is recorded whole in the certification receipt: an upstream of `refs/heads/release/foo` produces the target `release/foo`, never `foo`.
-- [ ] `Target-Branch` returns an empty string when the upstream cannot be resolved, and no fallback to `main`, to the current branch, or to observed remote runs was added.
-- [ ] No new function, file, module, parameter or error code was introduced, and the target still has exactly one derivation consumed by `Workflow-Expectations` and persisted by `Write-Certification`.
-- [ ] `Certify-Remote` still reads the target from the receipt, still fails closed on an empty one, and its SHA, branch, event, expected-workflow and target-ref-moved checks are unchanged.
-- [ ] `scripts/test_agent_continuity.ps1` proves that a branch not named `main` whose upstream is `origin/main` produces a receipt recording `main`.
-- [ ] `scripts/test_agent_continuity.ps1` proves that executing on `main` still produces a receipt recording `main`.
-- [ ] Assertions 144 through 149 are unchanged and still pass, and no assertion was deleted, renumbered or weakened.
-- [ ] No file outside Write Scope was created, modified or deleted, and no new test file exists.
+- [x] `Target-Branch` derives the certification target from the current branch's upstream and contains no `--abbrev-ref HEAD`.
+- [x] An upstream branch name containing `/` is recorded whole in the certification receipt: an upstream of `refs/heads/release/foo` produces the target `release/foo`, never `foo`.
+- [x] `Target-Branch` returns an empty string when the upstream cannot be resolved, and no fallback to `main`, to the current branch, or to observed remote runs was added.
+- [x] No new function, file, module, parameter or error code was introduced, and the target still has exactly one derivation consumed by `Workflow-Expectations` and persisted by `Write-Certification`.
+- [x] `Certify-Remote` still reads the target from the receipt, still fails closed on an empty one, and its SHA, branch, event, expected-workflow and target-ref-moved checks are unchanged.
+- [x] `scripts/test_agent_continuity.ps1` proves that a branch not named `main` whose upstream is `origin/main` produces a receipt recording `main`.
+- [x] `scripts/test_agent_continuity.ps1` proves that executing on `main` still produces a receipt recording `main`.
+- [x] Assertions 144 through 149 are unchanged and still pass, and no assertion was deleted, renumbered or weakened.
+- [x] No file outside Write Scope was created, modified or deleted, and no new test file exists.
 
 ## Execution Log
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — `Target-Branch` reads `symbolic-ref --quiet HEAD` to name the current branch, then that branch's configured `merge` ref, and returns it with a leading `refs/heads/` removed. No caller changed; `Write-Certification` still passes the one derived value to `Workflow-Expectations` and persists it, and `Certify-Remote` still reads it from the receipt. No new function, file, module, parameter or error code.
+- Step 2: Applied — the comment beside it records the upstream as the authority `CR_LIFECYCLE.md` §9 already uses and `Git-State` already requires, why `@{push}` was rejected on measurement, that transport is not authority, and why the configured merge ref is read instead of the short `origin/main` form.
+- Step 3: Applied — cases 159, 160 and 161 added; suite 158 -> 161, all passing.
+
+Derivation proven in four shapes before any test was written, by running the exact logic against real repositories: an isolated branch whose upstream is `origin/main` yields `main`; a checkout of `main` yields `main`; an upstream of `refs/heads/release/foo` yields `release/foo`, not `foo`; and a detached HEAD yields the empty string, which is the existing fail-closed path.
+
+TEST BEFORE TRUST. Two mutants, each applied to the real candidate source, run, restored, and the restoration verified by SHA256:
+
+```text
+M1  pre-repair (the branch you stand on)   159=FAIL 160=PASS 161=FAIL 144=PASS 148=PASS  159/2
+M2  naive split of `origin/release/foo`    159=PASS 160=PASS 161=FAIL 144=PASS 148=PASS  160/1
+```
+
+M1 is the defect itself and is caught by both new behavioural cases. M2 is the plausible wrong repair — parse the short upstream form and take the last segment — and it is caught by 161 ALONE, which is the evidence that the slash case is not redundant with 159 rather than an assertion added for symmetry. Case 160 survives both, which is what makes it a control: it is insensitive to the defect by construction and only fires if the established `main` path regresses. Cases 144 and 148 pass under both mutants, so the reader's protections are independent of this change and were not leaned on.
+
+No fail-closed case was added. An unresolvable upstream is already stopped by assertion 36 (`GIT_UPSTREAM_MISSING`) on the same run and before any receipt can be written, and an empty recorded target is already refused by assertion 148; adding a third proof of the same fact would have been verification waste.
+
+Review, by inspection of the live diff rather than of this log: exactly the five Write Scope paths differ from the canonical base; `Target-Branch` contains no `--abbrev-ref HEAD`, no `@{push}`, no literal `main` and no split on a separator; the `Certify-Remote` reader is byte-unchanged, so the exact SHA, `headSha`, `headBranch`, event, expected-workflow and target-ref-moved checks keep their semantics; no assertion was deleted, renumbered or weakened, and 144 through 149 are all present and passing.
+
+Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
@@ -127,13 +152,13 @@ None.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

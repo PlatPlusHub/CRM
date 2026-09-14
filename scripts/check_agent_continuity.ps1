@@ -523,9 +523,38 @@ function Trigger-List([string]$Body,[string]$Key){
 # to know which runs on a SHA belong to the promotion. Deriving it twice would let the
 # two disagree about the same fact, and the certification defect this closes came from
 # one of them not knowing the fact at all.
+# THE BRANCH THIS PUBLISHES TO, NOT THE BRANCH YOU ARE STANDING ON (SPEC-180). This
+# read `rev-parse --abbrev-ref HEAD`, which answers a different question: where the
+# agent happens to be checked out. The two coincide only on a branch named after its
+# own upstream, so the derivation was correct by coincidence rather than construction,
+# and a contract executed on any other branch stamped a target no run has ever existed
+# on - green everywhere it mattered, `REMOTE_CERTIFY: PENDING` forever, and unfixable
+# afterwards because the contract is terminal by then and the receipt may not be edited.
+#
+# The upstream is not a new authority. `CR_LIFECYCLE.md` §9 already defines publication
+# against it (`git rev-list @{u}..HEAD` empty), and `Git-State` already resolves `@{u}`
+# and throws `GIT_UPSTREAM_MISSING` on the same run, BEFORE any receipt can be written -
+# which is why no fallback belongs here. Guessing `main`, falling back to the current
+# branch, or inferring the target from runs observed after the push are each this same
+# defect wearing a different hat.
+#
+# `@{push}` was measured and rejected: under this repository's configuration it is
+# `fatal: cannot resolve 'simple' push to a single destination` on exactly the branch
+# shape that motivates this repair, so the more accurate-sounding name is the one that
+# cannot answer. That a bare `git push` also refuses there is a question about TRANSPORT
+# - the remedy is an explicit refspec - and never about which branch is the target.
+#
+# The configured merge ref is read rather than the short `origin/main` form, because a
+# branch name may itself contain `/`: splitting `origin/release/foo` yields `foo`, and a
+# target truncated to another branch's name is worse than no target at all.
 function Target-Branch{
-    $b=(git -C $Root rev-parse --abbrev-ref HEAD 2>$null)
-    if($LASTEXITCODE-eq0){("$b").Trim()}else{''}
+    $ref=(git -C $Root symbolic-ref --quiet HEAD 2>$null)
+    if($LASTEXITCODE-ne0){return ''}
+    $branch=("$ref").Trim()-replace'^refs/heads/',''
+    if(!$branch){return ''}
+    $merge=(git -C $Root config --get "branch.$branch.merge" 2>$null)
+    if($LASTEXITCODE-ne0){return ''}
+    ("$merge").Trim()-replace'^refs/heads/',''
 }
 
 function Workflow-Expectations([string[]]$Paths,[string]$Branch){
