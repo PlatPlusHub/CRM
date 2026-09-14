@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -148,7 +148,21 @@ Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Findings: verified against the live repository and the actual `-Finish` output rather than against the Execution Log's claims. Exactly the five Write Scope paths differ from the canonical base; frozen authority is unchanged.
+
+`Target-Branch` derives the target from the current branch's configured upstream merge ref. Checked by inspection of the function body: it contains no `--abbrev-ref HEAD`, no `@{push}`, no literal `main`, and no split on a separator, so none of the four rejected designs survives in it. The `Certify-Remote` reader is byte-unchanged, so the exact SHA, `headSha`, `headBranch`, `push` event, expected-workflow set and target-ref-moved checks all keep the semantics `SPEC-173` froze; the repair is confined to the writer.
+
+The decisive evidence is the receipt this run actually produced. Standing on `spec179-cert-lifecycle` with upstream `origin/main`, `-Finish` returned `LOCAL_CERTIFY: READY` and recorded `target: main`. Before this change the same command on the same branch recorded the branch name, which is precisely the value no workflow run can ever carry. The expected set derived from that target is `Agent Control, Repository Consistency` — `ORVION Acceptance` correctly excluded, because it is filtered to the preflight branch.
+
+All three writer properties hold and each is non-vacuous. Mutant M1, the pre-repair derivation, fails 159 and 161. Mutant M2, the plausible wrong repair that splits the short `origin/release/foo` form and takes the last segment, fails 161 and nothing else — so the slash case earns its place rather than duplicating 159. Case 160 survives both mutants, which is exactly what a control must do. Cases 144 and 148 pass under both, so no new proof leans on the reader.
+
+Fail-closed coverage was reused rather than duplicated: assertion 36 already stops an unresolvable upstream at `GIT_UPSTREAM_MISSING`, before a receipt can be written, and assertion 148 already refuses an empty recorded target. Suite 158 -> 161, all passing, no assertion deleted, renumbered or weakened. `-Finish` returned `LOCAL_CERTIFY: READY` over the derived `CONTROL, REPOSITORY` profile with all seven commands PASS.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
