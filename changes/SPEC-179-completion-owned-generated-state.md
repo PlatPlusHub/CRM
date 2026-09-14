@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -145,7 +145,23 @@ Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Findings: verified against the live repository rather than the Execution Log's claims. Only the five Write Scope paths differ from the canonical base. Frozen authority is unchanged. The change is Candidate B exactly as approved: `Implementation-Fingerprint` keeps its `$skip` list, its `absent` sentinel and comment, its path sort, its accumulator format and its final accumulator hash, and gains one conditional that routes `ai-map.json` alone through the projection.
+
+Every old anti-staleness protection still works and none was reinterpreted: 95 (no receipt), 96 (receipt naming another contract), 97 (differing profiles), 98 (implementation edited after certification), 98b and 98c (MUST-ACCEPT controls) are present, unrenumbered and passing. The mutation battery independently showed 98 passing under both mutants, so the new pair did not borrow its green from the old case.
+
+The two new behavioural cases were attacked rather than trusted. Reverting the fingerprint to raw bytes — the pre-repair state — fails 156 and nothing else; projecting the whole file to a constant, which is Candidate A, fails 157 and nothing else. A hostile `ai-map.json` mutation is therefore still refused, and the easy wrong repair is now mechanically unavailable to a later agent. Malformed JSON was proven to fall back to the raw text, so an unreadable map is fingerprinted rather than skipped.
+
+Case 158 ties the four excluded names to the names `scripts/generate-ai-map.ps1` actually emits, so the exclusion list cannot quietly become a magic list after a generator rename.
+
+`-Finish` returned `LOCAL_CERTIFY: READY` over the derived `CONTROL, REPOSITORY` profile with all seven commands PASS and the Agent Control suite at 158 passed / 0 failed. The completion bookkeeping below then regenerated `ai-map.json`, and the final Gate accepted the transition — which is this contract's own end-to-end proof, since that exact sequence is what the defect made impossible.
+
+The Engineering Observation about the non-`live_state` ai-map keys having no authority beyond the receipt is recorded in the Execution Log and Notes and was deliberately not absorbed; no second Change Request was opened for it during this execution.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
