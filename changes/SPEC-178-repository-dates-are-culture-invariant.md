@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -135,7 +135,23 @@ Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
-None.
+### 2026-09-14 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Scope of this note. The Execution Log above was written against the `SPEC-177` canonical base and its evidence is left exactly as recorded. This note judges something that entry could not: the same implementation replayed onto the post-`SPEC-179`/`SPEC-180` canonical state at `1ed1b7a`. An old proof over identical bytes still holds; it cannot certify a base that did not exist when it was taken.
+
+The defect was re-measured on the current base before anything was written, not assumed from history. At `1ed1b7a`, `scripts/check_repository_consistency.ps1` is blob `57a746c` with all four `$null`-provider parse sites and zero invariant declarations, and no published change had repaired it. Behaviourally: the widened suite run against that implementation returned 5 passed / 4 FAILED — the three culture assertions plus assertion 2, which fails for the same reason, because the widened suite folds the one-day-beyond-edge scenario into the hostile-culture run and a parse that returns false cannot flag anything. The unwidened suite on the same implementation returns 5 passed / 0 failed, which is precisely the green-over-nothing shape the Business Reason names. Applying the two preserved blobs to that same base returned 9 passed / 0 failed.
+
+Reconciliation preserved authority rather than re-deriving it. The three approved lifecycle commits were replayed onto `1ed1b7a` with `git rebase --onto`; the contract arrives byte-identical at both ends — blob `04a9c644` at Draft and `ac67a0b3` at Execute, the same objects the human approved — so no frozen section was restated and no new approval was manufactured. The `Approve` commit keeps its original author and author date. `ai-map.json` was the one conflict and was resolved by regenerating it from the current manifest, never by taking the old side: `last_completed` stays `SPEC-180`. No old manifest, ai-map or completion bookkeeping was carried across.
+
+Transplant safety is a measurement, not a judgement: `scripts/check_repository_consistency.ps1` and `scripts/test_future_date_guard.ps1` are blob-identical between `375a62e` and `origin/main`, so `SPEC-179` and `SPEC-180` never touched either file and no current improvement was overwritten. Both control-plane scripts remain at their `origin/main` blobs, so neither of those repairs regressed.
+
+Acceptance re-verified against this tree: exactly one `$isoDateFormat` and one `$isoDateCulture`, zero added functions, zero `$null` providers across 4 of 4 call sites, zero bare `yyyy-MM-dd` renders across 5 invariant ones, the Check 12 ceiling still `[datetimeoffset]::UtcNow.AddHours(14).Date`, and `$dateRx`, `$freshHeaderRx`, `$bodyDateRx`, `$handoffRuleDate` and `$handoffFields` byte-identical to the canonical base once newlines are normalized. Four guard invocations, nine assertions, no new test file.
+
+The old `LOCAL_CERTIFY: READY` was deliberately not reused — it was minted by a control plane that predates both repairs. A fresh `-Finish` on this tree returned `LOCAL_CERTIFY: READY` with all seven `CONTROL, REPOSITORY` commands PASS, and the receipt records `target: main` while standing on `spec178-reconcile`, which is `SPEC-180`'s repair being consumed for the first time.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
