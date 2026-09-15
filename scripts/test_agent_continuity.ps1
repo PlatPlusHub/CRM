@@ -2,6 +2,7 @@
 $ErrorActionPreference='Stop'
 $sourceRoot=Split-Path $PSScriptRoot -Parent
 $control=Join-Path $sourceRoot 'scripts/check_agent_continuity.ps1'
+$publisher=Join-Path $sourceRoot 'scripts/publish_candidate.ps1'
 $sandbox=Join-Path ([IO.Path]::GetTempPath())("orvion-agent-control-test-$([guid]::NewGuid().ToString('N'))")
 $remote=Join-Path $sandbox 'remote.git';$root=Join-Path $sandbox 'work';$writer=Join-Path $sandbox 'writer'
 $script:pass=0;$script:fail=0
@@ -100,6 +101,22 @@ function RunRange([string]$Base,[string]$Head='HEAD'){
     [pscustomobject]@{Text=($o|Out-String);Code=$code}
 }
 function Commit([string]$Message){git -C $root add .;git -C $root commit -m $Message --quiet}
+# The publisher, run the way a human runs it, against the sandbox rather than a real remote
+# (SPEC-184). Same shape as `Run`/`RunRange` above - no new harness.
+function RunPublish([string[]]$ExtraArgs=@()){
+    $o=& pwsh -NoProfile -File (Join-Path $root 'scripts/publish_candidate.ps1') -Root $root @ExtraArgs 2>&1;$code=$LASTEXITCODE
+    [pscustomobject]@{Text=($o|Out-String);Code=$code}
+}
+# Read from the BARE repository, never from a tracking ref. The tracking ref is what a bare
+# lease would consult, so trusting it here would make these cases agree with the very defect
+# case 166 exists to catch.
+function PreflightSha{
+    $s=(git -C $remote rev-parse refs/heads/orvion-preflight 2>$null)
+    if($LASTEXITCODE-ne0){''}else{("$s").Trim()}
+}
+# Points the sandbox `orvion-preflight` at an arbitrary commit. `+` because these cases
+# deliberately construct a DIVERGENT preflight, which is the rejected-candidate shape.
+function SetPreflight([string]$Rev){git -C $root push origin "+${Rev}:refs/heads/orvion-preflight" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
 # Frozen authority is compared against the Git baseline, so a test that needs a
 # DIFFERENT approved contract must commit it as the baseline. Swapping the file
 # in the working tree is a post-approval mutation and is correctly rejected.
@@ -143,6 +160,11 @@ try{
     Put '.github/workflows/branch-main.yml' "name: Branch Main`non:`n  push:`n    branches: [main]`n"
     Put '.github/workflows/branch-main-paths.yml' "name: Branch Main Paths`non:`n  push:`n    branches: [main]`n    paths:`n      - `"supabase/migrations/**`"`n"
     Put 'scripts/check_agent_continuity.ps1' (Get-Content -Raw $control)
+    # The publisher under test, placed in the BASELINE commit deliberately (SPEC-184). It is not
+    # in the fixture contract's Write Scope, so introducing it later would itself be the
+    # OUT_OF_SCOPE_WRITE that case 164 exists to provoke - the fixture would fail for the wrong
+    # reason and 164 would pass without proving anything about the publisher.
+    Put 'scripts/publish_candidate.ps1' (Get-Content -Raw $publisher)
     Put 'scripts/check_repository_consistency.ps1' "Write-Output 'REPOSITORY CONSISTENCY: CLEAN'; if(Test-Path env:ORVION_GUARD_MARKER){Set-Content -LiteralPath `$env:ORVION_GUARD_MARKER -Value ran}; exit 0"
     foreach($s in @('test_agent_continuity.ps1','test_cold_start_state_guard.ps1','test_status_contradiction_guard.ps1','test_primary_ledger_guard.ps1','test_future_date_guard.ps1')){Put "scripts/$s" "exit 0"}
     git -C $root add .;git -C $root commit -m baseline --quiet;git -C $root branch -M main;git -C $root push -u origin main --quiet
@@ -1150,6 +1172,45 @@ exit 0
     GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$null=RunCertify
     $q=StubGhLog
     Assert '154 remote certification asks GitHub for the exact SHA on the target branch by push, bounded' ($q-match"--commit $sha"-and$q-match'--branch main'-and$q-match'--event push'-and$q-match'--limit \d+') $q
+
+    # ---- PUBLISH: candidate publication proves its range and fails closed (SPEC-184) ----
+    # Behavioural, against the sandbox bare repository: each case asserts on the REMOTE'S REAL
+    # REF after running the publisher, never on the command string it assembled. A string
+    # assertion would pass for a lease that is correctly spelled and still vacuous, which is
+    # precisely the defect 166 exists to catch.
+
+    # 164. The failure that cost a lineage rebuild: a committed range no Write Scope authorises.
+    # Local `-Finish` and a bare `-Gate` both judge the WORKING TREE, so the offending change is
+    # COMMITTED here - a dirty tree would be refused one step earlier and prove nothing about
+    # the Gate. The remote must be untouched, not merely the exit code non-zero.
+    Reset-Fixture;SetPreflight 'main';$before=PreflightSha
+    Put 'secret.txt' 'out of scope';Commit 'out-of-scope-candidate'
+    $r=RunPublish
+    Assert '164 PUBLISH: a refused committed range publishes nothing and leaves the remote untouched' ($r.Code-ne0-and$r.Text-match'RANGE_GATE_FAILED'-and$r.Text-notmatch'PUBLISHED:'-and(PreflightSha)-eq$before-and$before) "$($r.Text)`nbefore=$before after=$(PreflightSha)"
+
+    # 165. The control for 166. Without it, 166 could pass merely because the publisher never
+    # pushes at all - a script that always refuses would satisfy every negative case in this file.
+    # Preflight is deliberately DIVERGENT from the candidate, which is the rejected-candidate
+    # shape: a plain push cannot fast-forward onto it, so only the lease path can succeed.
+    Reset-Fixture;Put 'allowed.txt' 'rejected candidate';Commit 'rejected';SetPreflight 'HEAD'
+    $rejected=PreflightSha
+    Reset-Fixture;Put 'allowed.txt' 'replacement candidate';Commit 'replacement'
+    $candidate=(git -C $root rev-parse HEAD).Trim()
+    $r=RunPublish @('-ReplaceExpectedSha',$rejected)
+    Assert '165 PUBLISH: a replacement pinned to the correct expected SHA succeeds' ($r.Code-eq0-and$r.Text-match'PUBLISH: DONE'-and(PreflightSha)-eq$candidate-and$rejected-ne$candidate) "$($r.Text)`nrejected=$rejected candidate=$candidate after=$(PreflightSha)"
+
+    # 166. THE differentiator against a bare `--force-with-lease`. The tracking ref is refreshed
+    # before the run AND the publisher fetches again itself, so at push time
+    # `refs/remotes/origin/orvion-preflight` is exactly what the remote holds - the state in which
+    # a valueless lease compares the remote against itself, refuses nothing, and overwrites. Only
+    # an expectation supplied by the CALLER can still be wrong, and being wrong must stop the push.
+    Reset-Fixture;Put 'allowed.txt' 'rejected candidate 2';Commit 'rejected-2';SetPreflight 'HEAD'
+    $rejected=PreflightSha
+    Reset-Fixture;Put 'allowed.txt' 'replacement candidate 2';Commit 'replacement-2'
+    git -C $root fetch origin --quiet 2>$null
+    $wrong=(git -C $root rev-parse refs/remotes/origin/main).Trim()
+    $r=RunPublish @('-ReplaceExpectedSha',$wrong)
+    Assert '166 PUBLISH: a replacement pinned to the WRONG expected SHA is refused and the remote is unchanged' ($r.Code-ne0-and$r.Text-match'LEASE_PUSH_REFUSED'-and$r.Text-notmatch'PUBLISHED:'-and(PreflightSha)-eq$rejected-and$wrong-ne$rejected) "$($r.Text)`nwrong=$wrong rejected=$rejected after=$(PreflightSha)"
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue

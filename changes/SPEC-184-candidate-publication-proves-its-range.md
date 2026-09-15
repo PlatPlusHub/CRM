@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -75,7 +75,7 @@ Also out of scope as SUBJECTS, not merely as files. Publisher V1 does not own an
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -113,7 +113,35 @@ None
 
 ## Execution Log
 
-None.
+### 2026-09-15 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — `scripts/publish_candidate.ps1` did not exist. It refuses a dirty tree before anything else, fetches, captures the fetched `origin/main` and `HEAD` SHAs once and rejects either if it is not a full forty-hex value, invokes `check_agent_continuity.ps1 -Gate -Root -BaseRef -HeadRef` with exactly those captured values, and stops without pushing unless that exits zero. The push is `git push origin <head>:refs/heads/orvion-preflight` with no force argument, or — only when the caller bound `-ReplaceExpectedSha` — the same push carrying the single literal `--force-with-lease=refs/heads/orvion-preflight:<expected>`. No Gate logic is reproduced, `refs/remotes/origin/orvion-preflight` is never read, and a non-fast-forward rejection is reported rather than retried with a lease. Measured on the file rather than asserted: no plain `--force` and no bare `--force-with-lease` occurs anywhere in it.
+- Step 2: Applied — the suite did not contain `164 PUBLISH`. Assertions 164, 165 and 166 were added with no new file, fixture, stub or framework, reusing the sandbox bare repository the suite already builds. Each asserts on the bare repository's real ref after running the publisher, never on the command string it assembled. The publisher is placed in the fixture's BASELINE commit deliberately: it is not in the fixture contract's Write Scope, so introducing it later would itself be the `OUT_OF_SCOPE_WRITE` that case 164 provokes, and 164 would then pass for the wrong reason. Assertions 1 through 163 are unchanged; the maximum identifier moves 163 -> 166 with no duplicates, re-verified immediately before editing.
+- Step 3: Applied — proof obligation discharged below.
+
+Full suite on the candidate tree: `AGENT CONTROL TESTS: 166 passed, 0 failed`.
+
+Mutation proof, run against four disposable clones of this repository with the two uncommitted files overlaid; the authoritative tree was only read.
+
+```text
+case                        164   165   166
+control (unmutated)         PASS  PASS  PASS
+A bare --force-with-lease   PASS  PASS  FAIL
+B gate exit code ignored    FAIL  PASS  PASS
+restore (unmutated)         PASS  PASS  PASS
+```
+
+Mutant A replaces the pinned lease with a valueless `--force-with-lease` — the form that looks protective and is not, because it compares the remote against the tracking ref the publisher itself has just refreshed. It kills 166 while 164 and 165 survive. Mutant B deletes the Gate exit-code check so a refused range still publishes; it kills 164 while 165 and 166 survive. Each assertion is therefore carrying its own property rather than the other's, and the two controls bracket the battery so neither kill can be an artefact of the harness. 165 is the control that makes 166 meaningful: a publisher that never pushed at all would satisfy every negative case in this file, and 165 refuses that.
+
+Three harness defects preceded this result and are recorded because they are the reason it is trustworthy. An `[ordered]` dictionary indexed by the integer assertion number resolved positionally rather than by key and threw; then two successive partial copies of the repository aborted the suite before it reached case 164, because it reads `AGENTS.md` and `.github/workflows` from its own source root. In both copy failures every case reported ABSENT — the control included — and that is what exposed them. A harness that had reported only "the mutants ran" would have certified mutants that never executed. The fix was to stop curating a file list and clone the whole tree.
+
+EARN IT: the battery runs the real suite from the real source rather than a re-implementation, and the full suite was executed once on the candidate tree; `-Finish` supplies the second and final full execution. No suite was re-run on unchanged state to produce a second copy of the same evidence.
+
+Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
