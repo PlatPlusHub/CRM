@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -105,14 +105,14 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `.github/workflows/agent-control.yml` carries exactly one step-level condition, on the `Run Agent Control mutation suite` step, whose value is exactly `${{ github.ref != 'refs/heads/orvion-preflight' }}`.
-- [ ] That file declares no `branches:`, `branches-ignore:`, `paths:` or `paths-ignore:` filter, no job-level condition and no `continue-on-error:`.
-- [ ] That file's `on:`, `permissions:`, checkout step, `fetch-depth:`, `Resolve changed range` step, `BASE_SHA`, `HEAD_SHA`, and the `Enforce governing Change Request` step including its `run:` command are byte-identical to their state before this Change Request, the single added line excepted.
-- [ ] `scripts/test_agent_continuity.ps1` declares assertions 162 and 163, and every assertion numbered 1 through 161 is unchanged in number, name and meaning.
-- [ ] Assertions 162 and 163 evaluate against the emitter collection already derived by `Get-WorkflowEmitters` for both the LF and the CRLF representation, and no second workflow read, parser, fixture file, module or dependency was added.
-- [ ] Assertion 162 fails when the condition literal is altered or removed, and assertion 163 fails when the condition is lifted to the job level or a second step gains one, each proven against an unmutated control in the same run and recorded in the Execution Log.
-- [ ] No file under `.github/workflows/` other than `agent-control.yml` was created, modified or deleted, and no Ruleset, trigger, permission, concurrency, cache or reusable-workflow construct was introduced anywhere.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `.github/workflows/agent-control.yml` carries exactly one step-level condition, on the `Run Agent Control mutation suite` step, whose value is exactly `${{ github.ref != 'refs/heads/orvion-preflight' }}`.
+- [x] That file declares no `branches:`, `branches-ignore:`, `paths:` or `paths-ignore:` filter, no job-level condition and no `continue-on-error:`.
+- [x] That file's `on:`, `permissions:`, checkout step, `fetch-depth:`, `Resolve changed range` step, `BASE_SHA`, `HEAD_SHA`, and the `Enforce governing Change Request` step including its `run:` command are byte-identical to their state before this Change Request, the single added line excepted.
+- [x] `scripts/test_agent_continuity.ps1` declares assertions 162 and 163, and every assertion numbered 1 through 161 is unchanged in number, name and meaning.
+- [x] Assertions 162 and 163 evaluate against the emitter collection already derived by `Get-WorkflowEmitters` for both the LF and the CRLF representation, and no second workflow read, parser, fixture file, module or dependency was added.
+- [x] Assertion 162 fails when the condition literal is altered or removed, and assertion 163 fails when the condition is lifted to the job level or a second step gains one, each proven against an unmutated control in the same run and recorded in the Execution Log.
+- [x] No file under `.github/workflows/` other than `agent-control.yml` was created, modified or deleted, and no Ruleset, trigger, permission, concurrency, cache or reusable-workflow construct was introduced anywhere.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -150,19 +150,35 @@ Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
-None.
+### 2026-09-15 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live tree rather than against the Execution Log's self-report.
+
+`.github/workflows/agent-control.yml` differs from its state at the range base by exactly one added line and zero deletions, confirmed by diff. That line is the step-level condition on `Run Agent Control mutation suite`. The `Enforce governing Change Request` step, its `run:` command, both trigger keys, `permissions:`, `runs-on:`, the checkout step, `fetch-depth: 0` and the whole `Resolve changed range` step including `BASE_SHA` and `HEAD_SHA` are byte-identical. The file declares no `branches:`, `branches-ignore:`, `paths:`, `paths-ignore:`, no job-level condition and no `continue-on-error:`. Independently re-derived from the parsed emitter rather than from the diff: the `gate` job holds four steps and exactly one carries a condition.
+
+`scripts/test_agent_continuity.ps1` declares assertions 162 and 163 and no assertion identifier is duplicated; the maximum moves 161 -> 163. Both new assertions read the `agent-control.yml` `gate` emitter out of the SAME `Get-WorkflowEmitters` pass the block already ran, for both the LF and the CRLF representation, so the newline invariance `SPEC-177` earned is inherited rather than re-implemented. No new file, module, dependency, parser, framework or fixture was added, and `.github/workflows` is read exactly once.
+
+Causality is established by the mutation battery in the Execution Log, not by the assertions passing. The two discriminating rows are what make the pair non-duplicative: M1 kills 162 while 163 survives, M4 kills 163 while 162 survives. An assertion that merely agreed with correct code would have survived both. That battery is reused on proven byte identity rather than repeated; the identity is recorded in the Execution Log and was re-confirmed here by `git diff` over both implementation paths reporting no difference.
+
+`-Finish` was run FRESH under this contract's own identity and returned `LOCAL_CERTIFY: READY` over the derived `CI, CONTROL, REPOSITORY` profiles, with `scripts/test_agent_continuity.ps1`, the cold-start, status-contradiction, primary-ledger and future-date guard suites, `scripts/check_repository_consistency.ps1` and `git diff --check` all PASS. No earlier receipt was reused; the completion Gate's fingerprint check is keyed to this contract and would have refused one. CI is correctly recorded as `POST_PUSH: workflow conclusions on the exact pushed SHA` and is NOT claimed by any Acceptance Criterion; it is owned by `-Certify` after the push.
+
+Range legality is verified before publication, not after: the committed candidate range `origin/main -> HEAD` is judged by the Agent Control Gate directly, which is the check the previous lineage's `OUT_OF_SCOPE_WRITE` failure earned. That check necessarily runs AFTER this contract reaches Complete, because the candidate HEAD is the completion commit itself, so like POST_PUSH evidence its result is reported with the publication and is deliberately not a criterion inside this contract.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
