@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -101,15 +101,15 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/publish_candidate.ps1` exists, is the only file created by this Change Request, and refuses to proceed on a dirty working tree, on a failed fetch, on an unresolvable ref, and on a non-zero exit from the committed-range Gate.
-- [ ] That script captures the fetched `origin/main` and candidate `HEAD` SHAs once and passes exactly those captured values to `check_agent_continuity.ps1 -Gate -BaseRef <base> -HeadRef <head>`, and contains no reimplementation of Gate logic.
-- [ ] That script forms the replacement lease only from a caller-supplied expected SHA, emits it as the literal `--force-with-lease=refs/heads/orvion-preflight:<expected-full-sha>`, and never reads `refs/remotes/origin/orvion-preflight` to derive it.
-- [ ] Neither a plain `--force` nor a bare `--force-with-lease` appears anywhere in that script, and the non-replacement path carries no force argument at all.
-- [ ] That script contains no promotion to `main`, no `-Certify` call, no Acceptance polling, no GitHub Actions or API query, no retry, recovery, rollback or repair logic, and no commit-creating or history-rewriting Git command.
-- [ ] `scripts/test_agent_continuity.ps1` declares assertions 164, 165 and 166, every assertion numbered 1 through 163 is unchanged in number, name and meaning, and no new test file, fixture file, stub, helper module or framework was added.
-- [ ] Assertions 164, 165 and 166 each assert on the sandbox remote's actual ref after invoking the script, and all three run entirely inside the suite's existing disposable sandbox with no network access and no real remote.
-- [ ] Assertion 166 fails when the pinned lease is replaced by a bare `--force-with-lease`, and assertion 164 fails when the Gate exit-code check is removed, each proven against an unmutated control in the same run and recorded in the Execution Log.
-- [ ] No file outside Write Scope was created, modified or deleted, and the two `(SPEC-182)` provenance comments are unchanged.
+- [x] `scripts/publish_candidate.ps1` exists, is the only file created by this Change Request, and refuses to proceed on a dirty working tree, on a failed fetch, on an unresolvable ref, and on a non-zero exit from the committed-range Gate.
+- [x] That script captures the fetched `origin/main` and candidate `HEAD` SHAs once and passes exactly those captured values to `check_agent_continuity.ps1 -Gate -BaseRef <base> -HeadRef <head>`, and contains no reimplementation of Gate logic.
+- [x] That script forms the replacement lease only from a caller-supplied expected SHA, emits it as the literal `--force-with-lease=refs/heads/orvion-preflight:<expected-full-sha>`, and never reads `refs/remotes/origin/orvion-preflight` to derive it.
+- [x] Neither a plain `--force` nor a bare `--force-with-lease` appears anywhere in that script, and the non-replacement path carries no force argument at all.
+- [x] That script contains no promotion to `main`, no `-Certify` call, no Acceptance polling, no GitHub Actions or API query, no retry, recovery, rollback or repair logic, and no commit-creating or history-rewriting Git command.
+- [x] `scripts/test_agent_continuity.ps1` declares assertions 164, 165 and 166, every assertion numbered 1 through 163 is unchanged in number, name and meaning, and no new test file, fixture file, stub, helper module or framework was added.
+- [x] Assertions 164, 165 and 166 each assert on the sandbox remote's actual ref after invoking the script, and all three run entirely inside the suite's existing disposable sandbox with no network access and no real remote.
+- [x] Assertion 166 fails when the pinned lease is replaced by a bare `--force-with-lease`, and assertion 164 fails when the Gate exit-code check is removed, each proven against an unmutated control in the same run and recorded in the Execution Log.
+- [x] No file outside Write Scope was created, modified or deleted, and the two `(SPEC-182)` provenance comments are unchanged.
 
 ## Execution Log
 
@@ -145,19 +145,37 @@ Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
-None.
+### 2026-09-15 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live tree rather than against the Execution Log's self-report.
+
+`scripts/publish_candidate.ps1` is the only file this contract created. Read end to end: it refuses a dirty tree before any network call, fetches, captures `refs/remotes/origin/main` and `HEAD` once, rejects either unless it matches `^[0-9a-f]{40}$`, and passes exactly those captured values to `check_agent_continuity.ps1 -Gate`. It stops on a non-zero Gate exit with `RANGE_GATE_FAILED` before reaching any push. It contains no promotion to `main`, no `-Certify` call, no Acceptance or GitHub Actions query, no retry, rollback or repair, and no history-rewriting command. A pattern check over the file confirms no plain `--force` and no bare `--force-with-lease`: the sole force argument is built as `--force-with-lease=refs/heads/orvion-preflight:<expected>` from the caller's bound parameter, and `refs/remotes/origin/orvion-preflight` is never read anywhere in the file.
+
+The empty-range case carries no rule of its own, as contracted — the Gate already refuses it as `NO_GOVERNING_CR`, and nothing in the publisher duplicates that judgement.
+
+`scripts/test_agent_continuity.ps1` declares 164, 165 and 166; the maximum moves 163 -> 166 with no duplicate identifier, and assertions 1 through 163 are untouched. All three run inside the suite's existing disposable sandbox against its bare repository, with no network and no real remote, and each reads the bare repository's ref directly rather than a tracking ref — deliberately, since a tracking ref is what the defective bare lease consults and trusting it here would make the cases agree with the bug they exist to catch. No test file, fixture file, stub, helper module or framework was added.
+
+Causality is established by the mutation battery in the Execution Log, not by the assertions passing. The two kills are independent and mirrored: the bare-lease mutant kills 166 alone, the ignored-Gate-exit mutant kills 164 alone. An assertion that merely agreed with correct code would have survived both.
+
+`-Finish` returned `LOCAL_CERTIFY: READY` over the derived `CONTROL, REPOSITORY` profiles, with the Agent Control suite, the cold-start, status-contradiction, primary-ledger and future-date guards, `check_repository_consistency.ps1` and `git diff --check` all PASS. No `CI` profile was derived and none should have been: this Write Scope touches no workflow file. `Required Capabilities` remains `None` and was not raised to `github` — the verification is hermetic, and declaring a capability the contract never exercises would be unearned even though the finished publisher pushes at runtime.
+
+Scope: no file outside Write Scope was created, modified or deleted, and the two `(SPEC-182)` provenance comments in the suite are unchanged. Publisher V1 has not been used: no candidate was published by this contract.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
