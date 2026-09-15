@@ -1059,7 +1059,26 @@ exit 0
         $em=@(Get-WorkflowEmitters $rep.Src)
         $ad=@($em|Where-Object{$_.Context-eq'orvion-acceptance'})
         $bd=if($ad.Count-eq1){$ad[0].Body}else{''}
-        $reps+=[pscustomobject]@{Rep=$rep.Name;Emitters=$em;Admission=$ad;Body=$bd;Tmo=[regex]::Matches($bd,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')}
+        # The Agent Control gate job, from the SAME emitter pass (SPEC-182). Selected by file
+        # and job id rather than by `Context`, because that job declares no `name:` and the
+        # parser's documented fallback is the job id - matching on the fallback keeps this
+        # working if a display name is ever added, and adding one would not silently unguard it.
+        $ac=@($em|Where-Object{$_.File-eq'agent-control.yml'-and$_.Job-eq'gate'})
+        $acBody=if($ac.Count-eq1){$ac[0].Body}else{''}
+        # Steps, split on the step bullet at the job's step indentation. Inside a chunk the
+        # bullet's own first key sits at column 0 and every sibling key at eight spaces, so
+        # `^name:` can only be the step's name and `^        if:` can only be a step-level
+        # condition - the same "job-level keys only" discipline assertion 152 uses one level up.
+        $acSteps=@()
+        foreach($chunk in @($acBody-split'(?m)^      - '|Select-Object -Skip 1)){
+            $nm=[regex]::Match($chunk,'(?m)^name:[ \t]*(?<v>.+?)[ \t]*$')
+            $cond=[regex]::Match($chunk,'(?m)^        if:[ \t]*(?<v>.+?)[ \t]*$')
+            $acSteps+=[pscustomobject]@{
+                Name=$(if($nm.Success){$nm.Groups['v'].Value}else{''})
+                If=$(if($cond.Success){$cond.Groups['v'].Value}else{$null})}
+        }
+        $reps+=[pscustomobject]@{Rep=$rep.Name;Emitters=$em;Admission=$ad;Body=$bd;Tmo=[regex]::Matches($bd,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
+                                 Gate=$ac;GateBody=$acBody;GateSteps=$acSteps}
     }
     # Binding the Ruleset to the GitHub Actions App stops another PROVIDER satisfying the
     # context; it does nothing about a second Actions job claiming the same name. Only
@@ -1090,6 +1109,34 @@ exit 0
     # so a step-level timeout leaves the JOB unbounded. The keys are COUNTED rather than
     # matched once, so a second contradicting job-level key is refused too.
     Assert '155 STRUCTURAL: the required admission job declares exactly one job-level timeout, at the approved 30' (@($reps|Where-Object{$_.Tmo.Count-ne1-or[int]$_.Tmo[0].Groups['m'].Value-ne30}).Count-eq0) (($reps|ForEach-Object{"[$($_.Rep)] job-level timeout-minutes keys=$($_.Tmo.Count) value(s)=$(if($_.Tmo.Count){(@($_.Tmo|ForEach-Object{$_.Groups['m'].Value})-join',')}else{'<none at job level>'})"})-join' || ')
+
+    # ---- STRUCTURAL: on preflight ONLY the duplicate deterministic step is skipped (SPEC-182) ----
+    # `ORVION Acceptance` runs this same argument-free mutation suite on the same candidate SHA, so
+    # its second execution there reads identical inputs and can only reach an identical verdict.
+    # What is NOT duplicate is the Gate standing beside it: that resolves
+    # `github.event.before -> github.sha`, a push-range question Acceptance never asks, and the two
+    # contexts can legitimately disagree. So the condition belongs to exactly one step, and both
+    # halves of that sentence need a detector - nothing else in this repository parses
+    # `agent-control.yml` at all, and assertion 152 covers the ADMISSION job only.
+    #
+    # The literal is pinned rather than merely required to be present. `github.ref` is
+    # `refs/pull/N/merge` on a pull request and `refs/tags/...` on a tag, so a typo here keeps a
+    # condition that still reads as deliberate while silently removing Gate coverage from `main`.
+    $mutName='Run Agent Control mutation suite';$gateName='Enforce governing Change Request'
+    $preflightIf='${{ github.ref != ''refs/heads/orvion-preflight'' }}'
+    Assert '162 STRUCTURAL: the preflight skip sits on the mutation-suite step and names exactly that ref' (@($reps|Where-Object{
+        $m=@($_.GateSteps|Where-Object{$_.Name-eq$mutName})
+        -not($_.Gate.Count-eq1-and$m.Count-eq1-and$m[0].If-eq$preflightIf)}).Count-eq0) (($reps|ForEach-Object{$r=$_;$m=@($r.GateSteps|Where-Object{$_.Name-eq$mutName});"[$($r.Rep)] gate jobs=$($r.Gate.Count) mutation steps=$($m.Count) if=$(if($m.Count-eq1-and$null-ne$m[0].If){$m[0].If}else{'<none>'})"})-join' || ')
+    # The containment half. A job-level condition would take the Gate down with the suite and GitHub
+    # reports a skipped job in a way that does not read as a failure; `continue-on-error` would let
+    # the Gate fail without failing the job. Job-level keys are `^    key:` and anything deeper
+    # belongs to a step, exactly as 152 reads them. Counting CONDITIONED steps rather than checking
+    # the Gate step alone is what makes this survive a future third step: the invariant is that one
+    # step is suppressible, not merely that today's Gate happens not to be.
+    Assert '163 STRUCTURAL: nothing else in the Agent Control job can be suppressed by that condition' (@($reps|Where-Object{
+        $g=@($_.GateSteps|Where-Object{$_.Name-eq$gateName})
+        $c=@($_.GateSteps|Where-Object{$null-ne$_.If})
+        -not($_.Gate.Count-eq1-and$_.GateBody-notmatch'(?m)^    if:'-and$_.GateBody-notmatch'(?m)^    continue-on-error:'-and$g.Count-eq1-and$c.Count-eq1-and$c[0].Name-eq$mutName)}).Count-eq0) (($reps|ForEach-Object{$r=$_;$c=@($r.GateSteps|Where-Object{$null-ne$_.If});"[$($r.Rep)] job-level if=$([bool]($r.GateBody-match'(?m)^    if:')) continue-on-error=$([bool]($r.GateBody-match'(?m)^    continue-on-error:')) conditioned=$(if($c.Count){(@($c|ForEach-Object{$_.Name})-join',')}else{'<none>'}) steps=$(@($r.GateSteps|ForEach-Object{$_.Name})-join'|')"})-join' || ')
 
     # The QUERY is asserted separately from the revalidation, because the two are
     # redundant for correctness and therefore cannot catch each other's removal: with

@@ -27,6 +27,7 @@ jobs:
             "HEAD_SHA=${{ github.sha }}" >> $env:GITHUB_ENV
           }
       - name: Run Agent Control mutation suite
+        if: ${{ github.ref != 'refs/heads/orvion-preflight' }}
         shell: pwsh
         run: ./scripts/test_agent_continuity.ps1
       - name: Enforce governing Change Request

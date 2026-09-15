@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -79,7 +79,7 @@ Also out of scope as SUBJECTS, not merely as files: GitHub Rulesets; the retirem
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -116,7 +116,37 @@ None
 
 ## Execution Log
 
-None.
+### 2026-09-15 — Claude Opus 5 (agent)
+
+Outcome: Complete
+
+Step results:
+
+- Step 1: Applied — `.github/workflows/agent-control.yml` did not contain `orvion-preflight`. Exactly one line was inserted, indented eight spaces, between the `Run Agent Control mutation suite` step header and its `shell: pwsh` line. The diff against the base is one addition and zero deletions; triggers, `permissions:`, the `gate` job key, `runs-on:`, checkout, `fetch-depth:`, `Resolve changed range`, `BASE_SHA`, `HEAD_SHA` and the `Enforce governing Change Request` step with its `run:` command are untouched. No trigger filter and no job-level condition were added.
+- Step 2: Applied — the suite did not contain `162 STRUCTURAL`. The existing `$reps` loop now also selects the `agent-control.yml` `gate` emitter from the SAME `Get-WorkflowEmitters` pass and splits its step list, and assertions 162 and 163 evaluate over both the LF and the CRLF representation. No new file, module, dependency, parser, fixture or second workflow read was introduced, and no assertion numbered 1 through 161 was added, removed, renumbered or altered. The suite's maximum assertion identifier moves 161 -> 163 with no duplicates.
+- Step 3: Applied — proof obligation discharged below.
+
+Mutation proof, run in a disposable sandbox against copies of the workflow directory; the repository was only read. The harness executes the CANDIDATE SOURCE VERBATIM — the region from `Get-WorkflowEmitters` through assertion 163 is sliced out of `scripts/test_agent_continuity.ps1` and executed, never reimplemented — so a kill is attributable to the shipped parser rather than to a restatement of it.
+
+```text
+case                              162   163   (150,151,152,153,155)
+control (unmutated)               PASS  PASS  all PASS
+M1 literal -> refs/heads/main     FAIL  PASS  all PASS
+M2 condition removed              FAIL  FAIL  all PASS
+M3 condition lifted to job level  FAIL  FAIL  all PASS
+M4 Gate step gains a condition    PASS  FAIL  all PASS
+restore (unmutated)               PASS  PASS  all PASS
+```
+
+M1 and M4 are the rows that matter, and they are mirrors: M1 kills 162 while 163 survives, so the ref literal is genuinely carried by 162; M4 kills 163 while 162 survives, so containment is genuinely carried by 163. Neither assertion is doing the other's work, and the two controls bracket the battery so a kill cannot be an artefact of the harness. M2 and M3 are the removal and job-lift cases Step 3 requires; both die on both assertions, which is correct — removing the condition defeats 162's literal and 163's exactly-one-conditioned-step count together.
+
+The harness's own first run is recorded because it is the reason the result is trustworthy. M2 and M3 initially reported PASS/PASS: the mutator matched a condition line terminated by `LF` against a `CRLF` working copy, so those two mutants silently ran the UNMUTATED file. Nothing in the mutation itself said so — the expectation table did, by refusing a PASS where a kill was specified. The mutator was made newline-agnostic and the battery re-run; a harness that had merely reported "all mutants ran" would have certified two mutants that never existed. This is the same CRLF class `SPEC-177` closed inside the parser, reappearing in the tooling that attacks it.
+
+EARN IT, on the evidence NOT re-run. This contract's two implementation files are byte-identical to the revision the battery above was executed against — proven by `git diff` over both paths reporting no difference, and by SHA256 over the worktree bytes. Because the bytes did not change, the causal conclusions cannot have changed either, so the four-mutant battery was not repeated to produce a second copy of the same report. What IS re-earned is everything keyed to this contract's own identity: a fresh `-Finish` under `SPEC-183`, never a reused receipt.
+
+Numbering, measured rather than assumed: a baseline run of the unmodified suite on this tree reported `AGENT CONTROL TESTS: 161 passed, 0 failed`, and the structural block being edited ends at 155 while `SPEC-179` owns 156-157 and `SPEC-180` owns 158-161. 162 and 163 are the next free identifiers.
+
+Commits: recorded by the implementation commit carrying this entry.
 
 ## Verification Notes
 
