@@ -1682,11 +1682,8 @@ if (-not (Test-Path $ciWorkflow)) {
         'supabase/migrations/**'                      = 'Check 9 (migration count, latest, ledger fingerprint)'
         'supabase/tests/**'                           = 'Check 1 (pgTAP reference resolution) and Check 15 (suite figures)'
         'ai-map.json'                                 = 'Check 7 (ai-map freshness vs manifest)'
-        # DEBT, tracked by SPEC-187: Check 28 reads `.vscode/extensions.json` and `.mcp.json`, so
-        # both belong here AND in repository-consistency.yml's push/pull_request paths. Declaring
-        # them before the workflow carries them would fail CI-1 by design; SPEC-186's Write Scope
-        # could not reach the workflow, so the pair lands together in SPEC-187 rather than half-done.
-        # Until then the pre-commit hook still runs Check 28 on every local commit.
+        '.vscode/extensions.json'                     = 'Check 28 (WS-1) compares it against the manifest table'
+        '.mcp.json'                                   = 'Check 28 (WS-1) compares it against the manifest table'
     }
     # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
     # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent

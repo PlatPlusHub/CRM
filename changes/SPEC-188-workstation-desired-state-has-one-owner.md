@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -150,6 +150,48 @@ None
 ## Execution Log
 
 (no entries yet)
+
+### 2026-09-16 — Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Already Applied — `.workstation/prepare.ps1` already reads `recommendations` from the authority; verification string present.
+- Step 2: Already Applied — `.workstation/doctor.ps1` already reads the same authority; verification string present.
+- Step 3: Already Applied — `$projectMcp = @($mcp.mcpServers.PSObject.Properties)` present; `github` still the one literal server.
+- Step 4: Already Applied — `$projectMcpNames` present; both client loops iterate the derived list.
+- Step 5: Already Applied — `$UpToDateExitCodes` present; `Step` classifies by `$LASTEXITCODE`.
+- Step 6: Already Applied — the widened `Profiles` pattern is present.
+- Step 7: Already Applied — Check 28 present and registered in the header summary.
+- Step 8: Already Applied — assertions 168-172 present.
+- Step 9: Already Applied — `HISTORICAL` present in the snapshot header; `WORKSTATION.md` routes current status to the doctor.
+- Step 10: Already Applied — both manifest sections name their authority.
+- Step 11: Applied — `.vscode/extensions.json` and `.mcp.json` added to BOTH `on.push.paths` and `on.pull_request.paths` of `.github/workflows/repository-consistency.yml`, with the reason recorded beside them; no job, step, condition, runner or permission touched. The `DEBT` comment in Check 20's `$requiredTriggers` map was replaced by the two entries it described, each naming Check 28 as the consumer.
+
+Steps 1-10 were applied under `SPEC-186` and committed at `7e62849`; that contract was cancelled at Step 7 as `WRITE_SCOPE_INSUFFICIENT` because it could not reach the workflow. Those bytes were preserved, not reimplemented, and each step's verification check detected them as already applied. This contract is `SPEC-188` rather than `SPEC-187` because naming the successor inside the cancellation permanently retired that identifier under the collision rule.
+
+Causal proofs, executed rather than asserted:
+
+| proof | result |
+| --- | --- |
+| literal identifiers remaining in `prepare.ps1` / `doctor.ps1` | 0 extension IDs, 0 project-MCP tokens |
+| derived set follows a mutated scratch authority | 2 mutant IDs derived; empty authority takes the fail-closed branch |
+| `update.ps1` native classification | `exit 7` and a missing command now `FAILED (exit 7)` / `FAILED (exit 1)`; both documented winget no-op codes `up to date`; a throw still `FAILED`; a step running no native command is not poisoned by a prior code |
+| Check 28 — M1 extension row dropped (the exact `2ded739` shape) | `EXTENSION DRIFT` raised |
+| Check 28 — M2 MCP row dropped | `MCP DRIFT` raised |
+| Check 28 — M3 manifest lists an undeclared extension | `EXTENSION DRIFT` raised (reverse direction) |
+| Check 28 — M4 manifest lists an undeclared server | `MCP DRIFT` raised (reverse direction) |
+| restore after every mutant | `.workstation/manifest.md` SHA256 unchanged; guard CLEAN |
+| Check 20 after Step 11 | push (14 paths) and pull_request (14 paths) cover all 13 guard inputs and agree entry-for-entry |
+| `doctor.ps1` read-only | all 795 tracked files and `git status` byte-identical across a run |
+| `Profiles` derivation | `bootstrap.ps1`, `workstation.cmd`, `.vscode/extensions.json`, `.mcp.json` derive `WORKSTATION`; `.vscode/settings.json`, `AGENTS.md`, `PROJECT_CONTEXT.md` and `supabase/migrations/**` do not |
+| control suite | `AGENT CONTROL TESTS: 172 passed, 0 failed`, including `PASS 168`-`PASS 172` |
+
+Each Check 28 mutant is killed by its own direction and the file restores byte-identical, which is what separates a detector from a coincidence. The four mutants were run against `.workstation/manifest.md`, a file inside this Write Scope; no authority file and no real workstation component was damaged to manufacture a failure.
+
+The CI profile derives from `.github/workflows/repository-consistency.yml` and its evidence is `POST_PUSH` by construction: a workflow run on the completion commit's own SHA cannot exist before that commit does. It is declared and deferred to `-Certify`, never asserted here.
+
+Commits: this entry's own commit.
 
 ## Verification Notes
 

@@ -31,6 +31,11 @@ on:
       - "supabase/tests/**"
       - "ai-map.json"
       - ".github/workflows/repository-consistency.yml"
+      # Check 28 (WS-1) reads these two workstation desired-state authorities and compares them
+      # against `.workstation/manifest.md`. A commit editing only one of them changes the guard's
+      # input, so it must run the guard -- the same CI-1 rule the entries above record.
+      - ".vscode/extensions.json"
+      - ".mcp.json"
       # The guard-of-the-guard suites this workflow now runs. A change to a detector's calibration
       # is a change to what the gate means, so it re-runs the gate.
       - "scripts/test_future_date_guard.ps1"
@@ -55,6 +60,8 @@ on:
       - "supabase/tests/**"
       - "ai-map.json"
       - ".github/workflows/repository-consistency.yml"
+      - ".vscode/extensions.json"
+      - ".mcp.json"
       - "scripts/test_future_date_guard.ps1"
       - "scripts/test_status_contradiction_guard.ps1"
       - "scripts/test_primary_ledger_guard.ps1"
