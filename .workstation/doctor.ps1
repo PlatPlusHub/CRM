@@ -36,15 +36,27 @@ docker info *> $null
 if ($LASTEXITCODE -eq 0) { Pass "Docker Engine ready" } elseif (Get-Command docker -ErrorAction SilentlyContinue) { Fail "Docker installed but engine not ready" }
 
 Write-Host ""; Write-Host "[VS Code extensions]"
-$requiredExtensions = @("anthropic.claude-code","openai.chatgpt","supabase.vscode-supabase-extension","mtxr.sqltools","ms-vscode.powershell","ms-azuretools.vscode-docker")
-if (Get-Command code -ErrorAction SilentlyContinue) { $installed = @(code --list-extensions 2>$null); foreach ($ext in $requiredExtensions) { if ($installed -contains $ext) { Pass $ext } else { Fail "VS Code extension $ext missing" } } }
+# Read the same authority prepare.ps1 provisions from, so the verifier can never
+# require an extension the provisioner does not install. See .vscode/extensions.json.
+$requiredExtensions = @((Get-Content -Raw ".vscode\extensions.json" | ConvertFrom-Json).recommendations)
+if ($requiredExtensions.Count -eq 0) { Fail ".vscode/extensions.json declares no required extensions" }
+elseif (Get-Command code -ErrorAction SilentlyContinue) { $installed = @(code --list-extensions 2>$null); foreach ($ext in $requiredExtensions) { if ($installed -contains $ext) { Pass $ext } else { Fail "VS Code extension $ext missing" } } }
 
 Write-Host ""; Write-Host "[MCP definitions]"
-try { $mcp = Get-Content -Raw ".mcp.json" | ConvertFrom-Json; foreach ($name in @("context7","postgres-local","supabase-primary","n8n")) { if ($mcp.mcpServers.PSObject.Properties.Name -contains $name) { Pass ".mcp.json contains $name" } else { Fail ".mcp.json missing $name" } } } catch { Fail ".mcp.json is invalid JSON" }
-if (Get-Command claude -ErrorAction SilentlyContinue) { $claudeMcp = (claude mcp list 2>&1 | Out-String); foreach ($name in @("context7","postgres-local","supabase-primary","n8n")) { if ($claudeMcp -match "(?m)^$([regex]::Escape($name)):") { Pass "Claude MCP $name enumerated" } else { Fail "Claude MCP $name not enumerated" } } }
+# The project MCP inventory is DERIVED from .mcp.json, never restated here: asserting a
+# hardcoded name is present in the file that defines it proves nothing. What is worth
+# proving is that every server the authority declares is actually enumerated by each client.
+$projectMcpNames = @()
+try {
+    $mcp = Get-Content -Raw ".mcp.json" | ConvertFrom-Json
+    $projectMcpNames = @($mcp.mcpServers.PSObject.Properties.Name)
+    if ($projectMcpNames.Count -eq 0) { Fail ".mcp.json declares no project MCP servers" }
+    else { Pass ".mcp.json declares $($projectMcpNames.Count) project MCP server(s)" }
+} catch { Fail ".mcp.json is invalid JSON" }
+if (Get-Command claude -ErrorAction SilentlyContinue) { $claudeMcp = (claude mcp list 2>&1 | Out-String); foreach ($name in $projectMcpNames) { if ($claudeMcp -match "(?m)^$([regex]::Escape($name)):") { Pass "Claude MCP $name enumerated" } else { Fail "Claude MCP $name not enumerated" } } }
 if (Get-Command codex -ErrorAction SilentlyContinue) {
     $codexMcp = (codex mcp list 2>&1 | Out-String)
-    foreach ($name in @("context7","postgres-local","supabase-primary","n8n","github")) { if ($codexMcp -match "(?m)^$([regex]::Escape($name))\s") { Pass "Codex MCP $name enumerated" } else { Fail "Codex MCP $name not enumerated" } }
+    foreach ($name in @($projectMcpNames + "github")) { if ($codexMcp -match "(?m)^$([regex]::Escape($name))\s") { Pass "Codex MCP $name enumerated" } else { Fail "Codex MCP $name not enumerated" } }
     if ($codexMcp -match "supabase-primary.*Not logged in") { Warn "Codex supabase-primary configured; OAuth authentication required" }
 }
 if (-not $env:GITHUB_PAT_TOKEN) { Warn "Codex GitHub MCP configured; GITHUB_PAT_TOKEN is not present in this process" } else { Pass "Codex GitHub MCP credential variable is present (value not inspected)" }

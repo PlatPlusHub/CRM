@@ -33,7 +33,10 @@ repository deliberately executes `psql` in the local Supabase container.
 
 ## 2. Required VS Code extensions
 
-`prepare.ps1` installs and `doctor.ps1` verifies:
+**`.vscode/extensions.json` is the authority.** `prepare.ps1` and `doctor.ps1` both read its
+`recommendations` array and neither carries a list of its own, so the provisioner can never install
+a different set from the one the verifier requires. The table below restates that array for
+rationale only; Check 28 of `scripts/check_repository_consistency.ps1` fails if the two disagree.
 
 | Extension | Purpose |
 |---|---|
@@ -49,9 +52,13 @@ extensions are neither installed nor removed by bootstrap.
 
 ## 3. MCP inventory and authentication
 
-The four project MCP definitions live in `.mcp.json`, which Claude loads at project scope.
-`prepare.ps1` idempotently mirrors them into Codex because Codex uses user configuration rather than
-importing `.mcp.json`. A mismatching Codex definition is reported, never silently overwritten.
+**`.mcp.json` is the authority for project servers.** Claude loads it at project scope, and
+`prepare.ps1` idempotently mirrors every server it declares into Codex — by iterating the file, not
+by restating it — because Codex uses user configuration rather than importing `.mcp.json`.
+`doctor.ps1` likewise derives the names it verifies from that file. A mismatching Codex definition is
+reported, never silently overwritten. The table below restates the inventory for rationale only;
+Check 28 of `scripts/check_repository_consistency.ps1` fails if the two disagree. `github` is the one
+row that is deliberately not a project server: it is absent from `.mcp.json` and is workstation-specific.
 
 | Server | Clients | Connection/runtime | Authentication | Bootstrap status |
 |---|---|---|---|---|

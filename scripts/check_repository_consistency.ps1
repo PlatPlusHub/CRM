@@ -52,7 +52,9 @@
     Check 22 the surface disposition record covers exactly the surfaces the migrations create (DISP-1) ·
     Check 23 every session report written under the HANDOFF rule carries its seven fields (HANDOFF-1) ·
     Check 24 `ADVERSARIAL` is earned by a declaring test file with negative assertions, not typed (ADV-1) ·
-    Check 25 every registered decision reaches the manifest's boot line (GOV-16).
+    Check 25 every registered decision reaches the manifest's boot line (GOV-16) ·
+    Check 28 workstation desired state has ONE owner -- `.workstation/manifest.md` may restate
+    `.vscode/extensions.json` and `.mcp.json` for rationale, never disagree with them (WS-1).
 
   COLD-START STATE IS ONE FACT WITH ONE PARSE (2026-09-09). Three synchronization defects were
   repaired together because they were one shape -- a check reading LESS than its name claims:
@@ -1680,6 +1682,11 @@ if (-not (Test-Path $ciWorkflow)) {
         'supabase/migrations/**'                      = 'Check 9 (migration count, latest, ledger fingerprint)'
         'supabase/tests/**'                           = 'Check 1 (pgTAP reference resolution) and Check 15 (suite figures)'
         'ai-map.json'                                 = 'Check 7 (ai-map freshness vs manifest)'
+        # DEBT, tracked by SPEC-187: Check 28 reads `.vscode/extensions.json` and `.mcp.json`, so
+        # both belong here AND in repository-consistency.yml's push/pull_request paths. Declaring
+        # them before the workflow carries them would fail CI-1 by design; SPEC-186's Write Scope
+        # could not reach the workflow, so the pair lands together in SPEC-187 rather than half-done.
+        # Until then the pre-commit hook still runs Check 28 on every local commit.
     }
     # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
     # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent
@@ -2356,6 +2363,81 @@ if (-not (Test-Path $methodPath)) {
     } else {
         Write-Host "  all $($anchors.Count) relocated owner-ratified rules are present in ENGINEERING_METHOD.md, and AGENTS.md routes to it" -ForegroundColor Green
     }
+}
+
+Write-Host ""
+Write-Host "== Check 28: workstation desired state has ONE owner (WS-1) ==" -ForegroundColor Cyan
+# WS-1 (2026-09-16, SPEC-186). The required VS Code extension identities once existed in four
+# places and DID drift: 2ded739 removed `openai.chatgpt` from `.workstation/prepare.ps1` and
+# updated `.workstation/manifest.md`, while `.vscode/extensions.json` kept it -- and the repair,
+# 8d67f77, hand-synchronized them by adding a THIRD copy to `.workstation/doctor.ps1`. SPEC-186
+# made both scripts READ their authority, which removes the executable copies entirely. What a
+# structural fix cannot remove is the manifest's prose restatement, and that file declares itself
+# the source of truth for what the workstation needs -- so a manifest that disagrees with the
+# authority misleads every agent that reads it. This check is the smallest thing that keeps the
+# remaining restatement honest: two set comparisons, no framework, no dependency graph.
+$wsIssues = 0
+$wsManifestPath = Join-Path $RepoRoot '.workstation/manifest.md'
+$wsExtPath      = Join-Path $RepoRoot '.vscode/extensions.json'
+$wsMcpPath      = Join-Path $RepoRoot '.mcp.json'
+if (-not (Test-Path $wsManifestPath)) {
+    Write-Host "  MISSING: .workstation/manifest.md" -ForegroundColor Red; $wsIssues++
+} elseif (-not (Test-Path $wsExtPath)) {
+    Write-Host "  MISSING: .vscode/extensions.json -- prepare.ps1 and doctor.ps1 read it for their required set" -ForegroundColor Red; $wsIssues++
+} elseif (-not (Test-Path $wsMcpPath)) {
+    Write-Host "  MISSING: .mcp.json -- prepare.ps1 and doctor.ps1 read it for the project MCP inventory" -ForegroundColor Red; $wsIssues++
+} else {
+    $wsManifest = [IO.File]::ReadAllText($wsManifestPath)
+    # Compare the AUTHORITY against the identifiers the manifest's own tables carry. Section
+    # bodies are isolated first so an identifier mentioned in prose elsewhere cannot satisfy
+    # or break the comparison by accident.
+    function Get-WsSection([string]$Text, [string]$Heading) {
+        $m = [regex]::Match($Text, "(?ms)^##\s+\d+\.\s+$([regex]::Escape($Heading))\s*\r?\n(?<b>.*?)(?=^##\s|\z)")
+        if ($m.Success) { $m.Groups['b'].Value } else { '' }
+    }
+    # --- extensions ---
+    try { $wsExtDeclared = @(([IO.File]::ReadAllText($wsExtPath) | ConvertFrom-Json).recommendations) }
+    catch { $wsExtDeclared = $null; Write-Host "  .vscode/extensions.json is not valid JSON" -ForegroundColor Red; $wsIssues++ }
+    if ($null -ne $wsExtDeclared) {
+        $extSection = Get-WsSection $wsManifest 'Required VS Code extensions'
+        if (-not $extSection) {
+            Write-Host "  .workstation/manifest.md has no 'Required VS Code extensions' section to compare" -ForegroundColor Red; $wsIssues++
+        } else {
+            $extListed = @([regex]::Matches($extSection, '(?m)^\|\s*`(?<id>[A-Za-z0-9][A-Za-z0-9._-]*\.[A-Za-z0-9._-]+)`') | ForEach-Object { $_.Groups['id'].Value })
+            foreach ($miss in @($wsExtDeclared | Where-Object { $extListed -notcontains $_ })) {
+                Write-Host "  EXTENSION DRIFT: .vscode/extensions.json declares '$miss' but .workstation/manifest.md does not list it" -ForegroundColor Red; $wsIssues++
+            }
+            foreach ($extra in @($extListed | Where-Object { $wsExtDeclared -notcontains $_ })) {
+                Write-Host "  EXTENSION DRIFT: .workstation/manifest.md lists '$extra' but .vscode/extensions.json does not declare it" -ForegroundColor Red; $wsIssues++
+            }
+        }
+    }
+    # --- project MCP servers ---
+    try { $wsMcpDeclared = @((([IO.File]::ReadAllText($wsMcpPath) | ConvertFrom-Json).mcpServers).PSObject.Properties.Name) }
+    catch { $wsMcpDeclared = $null; Write-Host "  .mcp.json is not valid JSON" -ForegroundColor Red; $wsIssues++ }
+    if ($null -ne $wsMcpDeclared) {
+        $mcpSection = Get-WsSection $wsManifest 'MCP inventory and authentication'
+        if (-not $mcpSection) {
+            Write-Host "  .workstation/manifest.md has no 'MCP inventory and authentication' section to compare" -ForegroundColor Red; $wsIssues++
+        } else {
+            # `github` is deliberately NOT a project server: it is absent from .mcp.json and is
+            # registered by prepare.ps1 as workstation-specific, so it is excluded by name.
+            $mcpListed = @([regex]::Matches($mcpSection, '(?m)^\|\s*`(?<id>[A-Za-z0-9][A-Za-z0-9._-]*)`') | ForEach-Object { $_.Groups['id'].Value } | Where-Object { $_ -ne 'github' })
+            foreach ($miss in @($wsMcpDeclared | Where-Object { $mcpListed -notcontains $_ })) {
+                Write-Host "  MCP DRIFT: .mcp.json declares '$miss' but .workstation/manifest.md does not list it" -ForegroundColor Red; $wsIssues++
+            }
+            foreach ($extra in @($mcpListed | Where-Object { $wsMcpDeclared -notcontains $_ })) {
+                Write-Host "  MCP DRIFT: .workstation/manifest.md lists '$extra' but .mcp.json does not declare it" -ForegroundColor Red; $wsIssues++
+            }
+        }
+    }
+}
+if ($wsIssues -gt 0) {
+    Write-Host "  Remedy: the JSON files are the authorities -- correct .workstation/manifest.md to match them," -ForegroundColor DarkGray
+    Write-Host "  never the reverse, and never by adding another copy of the list to a script." -ForegroundColor DarkGray
+    $issues += $wsIssues
+} else {
+    Write-Host "  .workstation/manifest.md agrees with .vscode/extensions.json and .mcp.json" -ForegroundColor Green
 }
 
 Write-Host ""

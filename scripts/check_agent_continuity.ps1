@@ -772,7 +772,13 @@ function Profiles($scope){
     foreach($p in $scope){
         if(Test-ControlPath $p){[void]$h.Add('CONTROL')}
         if($p-match'^\.github/workflows/'){[void]$h.Add('CI')}
-        if($p-match'^\.workstation/'){[void]$h.Add('WORKSTATION')}
+        # `.workstation/` alone missed the two ROOT entry points that execute workstation
+        # setup - `bootstrap.ps1` is the only thing that runs on a machine before the
+        # repository exists - so a change to either earned no doctor run and no idempotence
+        # requirement. `.vscode/extensions.json` and `.mcp.json` join them because
+        # prepare.ps1 and doctor.ps1 now READ them: they became workstation desired state,
+        # not merely editor and client convenience files.
+        if($p-match'^(\.workstation/|bootstrap\.ps1$|workstation\.cmd$|\.vscode/extensions\.json$|\.mcp\.json$)'){[void]$h.Add('WORKSTATION')}
         # This surface must not disagree with `.github/workflows/migration-ci.yml`.
         # It omitted `supabase/tests/` and `supabase/config.toml`, so a change to a
         # pgTAP test or to the stack's configuration was database-sensitive to remote

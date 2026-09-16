@@ -417,6 +417,24 @@ try{
     Reset-Fixture;Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_RAN';exit 0";Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish
     Assert '92 WORKSTATION local evidence runs the doctor instead of deferring it' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File \.workstation/doctor\.ps1'-and$r.Text-match'LOCAL_CERTIFY: INCOMPLETE'-and$r.Text-match'bootstrap idempotence') $r.Text
 
+    # ---- WORKSTATION derives for the ROOT entry points and the desired-state authorities ----
+    # `^\.workstation/` alone left `bootstrap.ps1` - the only thing that runs on a machine
+    # before the repository exists - deriving nothing but REPOSITORY, so a change to it
+    # earned no doctor run and no idempotence duty at all. The two JSON files join the
+    # surface because prepare.ps1 and doctor.ps1 now READ them for their required sets.
+    Reset-Fixture;Rebase (ContractText -Scope 'bootstrap.ps1');$r=Run
+    Assert '168 bootstrap.ps1 derives WORKSTATION verification' ($r.Code-eq0-and$r.Text-match'VERIFICATION:.*WORKSTATION') $r.Text
+    Reset-Fixture;Rebase (ContractText -Scope 'workstation.cmd');$r=Run
+    Assert '169 workstation.cmd derives WORKSTATION verification' ($r.Code-eq0-and$r.Text-match'VERIFICATION:.*WORKSTATION') $r.Text
+    Reset-Fixture;Rebase (ContractText -Scope '.vscode/extensions.json');$r=Run
+    Assert '170 .vscode/extensions.json derives WORKSTATION verification' ($r.Code-eq0-and$r.Text-match'VERIFICATION:.*WORKSTATION') $r.Text
+    Reset-Fixture;Rebase (ContractText -Scope '.mcp.json');$r=Run
+    Assert '171 .mcp.json derives WORKSTATION verification' ($r.Code-eq0-and$r.Text-match'VERIFICATION:.*WORKSTATION') $r.Text
+    # MUST-REJECT: the widening is bounded. A detector that fired on everything would
+    # pass the four cases above while proving nothing about the classification at all.
+    Reset-Fixture;Rebase (ContractText -Scope 'PROJECT_CONTEXT.md');$r=Run
+    Assert '172 MUST-REJECT: an unrelated document derives no WORKSTATION duty' ($r.Code-eq0-and$r.Text-notmatch'VERIFICATION:.*WORKSTATION') $r.Text
+
     # ---- Identity: a textual mention reserves, by decision (CR_LIFECYCLE.md §4) ----
     # Conservative on purpose. An unused identifier costs nothing; a reused identity
     # is unrecoverable. This fixes the rule so a later agent cannot "fix" it silently.

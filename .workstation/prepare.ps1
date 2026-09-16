@@ -88,8 +88,15 @@ if (Get-Command npm -ErrorAction SilentlyContinue) {
 
 Write-Host ""
 Write-Host "== VS Code extensions =="
-$requiredExtensions = @("anthropic.claude-code","openai.chatgpt","supabase.vscode-supabase-extension","mtxr.sqltools","ms-vscode.powershell","ms-azuretools.vscode-docker")
-if (Get-Command code -ErrorAction SilentlyContinue) {
+# .vscode/extensions.json is the ONE authority for required extension identities.
+# This list was previously retyped here, in doctor.ps1 and in manifest.md; 2ded739
+# changed this copy alone and the authorities disagreed until 8d67f77 resynchronized
+# them by hand. Read the authority; never restate it.
+$requiredExtensions = @((Get-Content -Raw (Join-Path $Root ".vscode\extensions.json") | ConvertFrom-Json).recommendations)
+if ($requiredExtensions.Count -eq 0) {
+    Write-Host "[FAIL] .vscode/extensions.json declares no required extensions"
+    Note "VS Code extensions" "FAILED (authority declares none)"
+} elseif (Get-Command code -ErrorAction SilentlyContinue) {
     $installed = @(code --list-extensions 2>$null)
     foreach ($ext in $requiredExtensions) {
         if ($installed -contains $ext) { Write-Host "[ OK ] $ext"; Note "ext:$ext" "present"; continue }
@@ -101,10 +108,20 @@ if (Get-Command code -ErrorAction SilentlyContinue) {
 Write-Host ""
 Write-Host "== Project MCP configuration =="
 $mcp = Get-Content -Raw (Join-Path $Root ".mcp.json") | ConvertFrom-Json
-Ensure-CodexMcp "context7" $null @("npx", "-y", "@upstash/context7-mcp") $null
-Ensure-CodexMcp "postgres-local" $null @("npx", "-y", "@modelcontextprotocol/server-postgres", "postgresql://postgres:postgres@127.0.0.1:54322/postgres") $null
-Ensure-CodexMcp "supabase-primary" $mcp.mcpServers.'supabase-primary'.url $null $null
-Ensure-CodexMcp "n8n" $mcp.mcpServers.n8n.url $null $null
+# .mcp.json is the ONE authority for PROJECT MCP definitions. It was already parsed
+# above and then ignored in favour of retyped names and argument vectors, so a server
+# added to the authority would never have been registered into Codex. Iterate it.
+$projectMcp = @($mcp.mcpServers.PSObject.Properties)
+if ($projectMcp.Count -eq 0) {
+    Write-Host "[FAIL] .mcp.json declares no project MCP servers"
+    Note "project MCP configuration" "FAILED (authority declares none)"
+} else {
+    foreach ($server in $projectMcp) {
+        if ($server.Value.url) { Ensure-CodexMcp $server.Name $server.Value.url $null $null }
+        else { Ensure-CodexMcp $server.Name $null (@($server.Value.command) + @($server.Value.args)) $null }
+    }
+}
+# NOT a project MCP: absent from .mcp.json by design, so it stays workstation-specific.
 Ensure-CodexMcp "github" "https://api.githubcopilot.com/mcp/" $null "GITHUB_PAT_TOKEN"
 Write-Host "[NOTE] Remote MCP OAuth and GITHUB_PAT_TOKEN remain external to git."
 

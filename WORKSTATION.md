@@ -73,7 +73,8 @@ is permanent).
 | Project MCP configuration | `.mcp.json` (Claude project scope) + `prepare.ps1` Codex registration; secrets/OAuth never committed |
 | Claude engineering-awareness wiring (expected shape) | `.claude/awareness.json` (tracked) — applied by `.workstation/claude-awareness.ps1 -Apply`, verified by `-Verify`; `.claude/settings.json` itself stays machine-local |
 | Known blockers | `.workstation/reports/INCIDENT_*.md` |
-| Current install status | `.workstation/reports/INSTALLATION_STATUS.md` |
+| Current install status (live, the only source) | `.workstation/doctor.ps1` — run it; no tracked file reports current state |
+| Historical install snapshot (2026-09-10, evidence only) | `.workstation/reports/INSTALLATION_STATUS.md` |
 
 ## Secrets (not in the repo)
 Some MCP servers need secrets (e.g. the Supabase MCP connection string). Provide them as environment

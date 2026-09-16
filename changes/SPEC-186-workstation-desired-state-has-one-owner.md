@@ -3,10 +3,10 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -89,9 +89,9 @@ Also out of scope as SUBJECTS, not merely as files: any new workstation data fil
 
 ## Runtime Checkpoint
 
-Resume Step: 1
-Blocker: None
-Recovery Attempt: 0
+Resume Step: 7
+Blocker: WRITE_SCOPE_INSUFFICIENT
+Recovery Attempt: 1
 
 ## Required Capabilities
 
@@ -150,16 +150,45 @@ Step results:
 
 Commits: <commit hash(es) for this run>
 
-## Verification Notes
+### 2026-09-16 — Claude Opus 5 (executing agent)
 
-### <YYYY-MM-DD HH:MM> — <agent identifier>
+Outcome: Blocked
 
-Verdict: Confirmed Complete | Discrepancy Found | Needs Corrective Change Request
+Step results:
+- Step 1: Applied — `.workstation/prepare.ps1` reads `recommendations` from `.vscode/extensions.json`; fail-closed branch added.
+- Step 2: Applied — `.workstation/doctor.ps1` reads the same authority; fail-closed branch added.
+- Step 3: Applied — provisioner iterates `$mcp.mcpServers`; `github` left literal as the one workstation-specific server.
+- Step 4: Applied — doctor derives project MCP names from `.mcp.json`; the vacuous "file contains name" assertion replaced by a declared-count check plus per-client enumeration.
+- Step 5: Applied — `Step` classifies by `$LASTEXITCODE`; the winget loop preserves the first real failure so a later success cannot mask it.
+- Step 6: Applied — `Profiles` derives `WORKSTATION` for the two root entry points and the two desired-state authorities.
+- Step 7: FAILED — blocked, see Blocker.
+- Step 8: Applied — assertions 168-172 added; suite reports 172 passed, 0 failed.
+- Step 9: Applied — `INSTALLATION_STATUS.md` reclassified as a dated historical snapshot; `WORKSTATION.md` routes current status to `doctor.ps1`.
+- Step 10: Applied — manifest sections 2 and 3 name their authorities; no identifier added, removed or altered.
+- Step 11: Not reached.
 
-Findings: <what was independently re-checked, and what was found>
+Causal evidence obtained on these bytes, recorded here so the successor contract does not repeat it:
+zero literal extension identifiers and zero literal project-MCP tokens remain in either script; a
+mutated scratch authority changes the derived set and an empty one takes the fail-closed branch;
+the two native failures that previously reported `ok` now report `FAILED (exit 7)` and
+`FAILED (exit 1)` while both documented winget no-op codes report `up to date`; Check 28 raises
+`EXTENSION DRIFT` on the exact 2ded739 mutant and the file restored byte-identical; all 795 tracked
+files and `git status` are unchanged across a `doctor.ps1` run; the four newly covered paths derive
+`WORKSTATION` while `.vscode/settings.json`, `AGENTS.md` and `supabase/migrations/**` do not.
 
-Recommendation to human: Set Status to Complete | Set Status to Cancelled | Approve corrective
-Change Request `changes/SPEC-00N-*.md`
+Commits: this entry's own commit.
+
+Blocker: Step 7 cannot complete inside this contract's Write Scope. Check 28 reads
+`.vscode/extensions.json` and `.mcp.json`, so Check 20 (CI-1) requires both paths in
+`.github/workflows/repository-consistency.yml` on `push` and `pull_request`. That workflow is not in
+this contract's Write Scope, and Out of Scope declares Write Scope exhaustive with no exceptions.
+Declaring the inputs without the workflow carrying them produced four `CI TRIGGER GAP` findings and a
+non-zero guard; declaring less than the guard reads would introduce the very CI-1 defect class the
+repository documents. No in-scope repair exists: every invariant protecting this contract's repairs
+must read the JSON authorities or `.workstation/*.ps1`, none of which that workflow triggers on. The
+owner therefore directed cancellation and reissue; `changes/SPEC-187-workstation-desired-state-has-one-owner.md`
+supersedes this contract and adds only that workflow to Write Scope. The implementation bytes above
+are preserved and are not reimplemented.
 
 ## Review Gate
 
@@ -178,3 +207,14 @@ Change Request `changes/SPEC-00N-*.md`
 The rejected proposals are recorded here because the evidence that rejected them is worth more than the proposals. A host-tool inventory data file was rejected: the winget package identities in `prepare.ps1` and `update.ps1` are duplicated, but they have agreed at every commit since `05d2292`, so the duplication has never drifted and a new data file would be an abstraction bought on a theoretical risk. Docker detection was rejected: the hardcoded Docker Desktop path resolves on the live workstation and `docker` is on PATH, so there is no observed defect to attack. A retry helper was rejected: no transient failure has been observed, and the real defect in the same script was the unchecked native exit code, which Step 5 repairs directly. Making `doctor.ps1` a mutator, adding a root `Doctor.cmd`, and splitting `prepare.ps1` were all rejected: the observe/converge separation is intact and nothing in live evidence argues against it. The README, `AGENTS.md`, the boot command and all five client adapters were frozen after a cold-start exercise resolved mode, active CR, next capability, write authority and Git state from the repository alone, with every adapter a pointer carrying no independent rule.
 
 The manifest records that the control-plane optimization chapter is closed and may be reopened only by newly earned evidence. This contract touches `scripts/check_agent_continuity.ps1` at one line under that clause and not as an optimization: Step 6 repairs a proven coverage gap, and Steps 5 and 9 repair two false greens. The winget classification in Step 5 uses the two codes documented in `microsoft/winget-cli` `doc/windows/package-manager/winget/returnCodes.md` as `APPINSTALLER_CLI_ERROR_UPDATE_NOT_APPLICABLE` and `APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED`.
+
+## Verification Notes
+
+### <YYYY-MM-DD HH:MM> — <agent identifier>
+
+Verdict: Confirmed Complete | Discrepancy Found | Needs Corrective Change Request
+
+Findings: <what was independently re-checked, and what was found>
+
+Recommendation to human: Set Status to Complete | Set Status to Cancelled | Approve corrective
+Change Request `changes/SPEC-00N-*.md`

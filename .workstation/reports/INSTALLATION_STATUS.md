@@ -1,10 +1,15 @@
-# ORVION Workstation Installation Status
+# ORVION Workstation Installation Snapshot — 2026-09-10 (HISTORICAL)
 
-Last verified: 2026-09-10
-Status: READY WITH EXTERNAL AUTHENTICATION BOUNDARY
+Class: historical evidence. Observed: 2026-09-10.
 
-This file records the latest live workstation verification only. Required contents and rationale
-live in `../manifest.md`; executable verification lives in `../doctor.ps1`.
+**This is not current workstation status and must never be read as such.** It records what one
+verification run observed on 2026-09-10 and is preserved unchanged as evidence of that date.
+Tool versions, readiness and authentication state all move; this file does not.
+
+**Current workstation status has exactly one source: run `pwsh -NoProfile -File .workstation/doctor.ps1`.**
+Live observation is the only thing entitled to report the state of a machine, and a tracked file
+cannot be one — which is why no replacement current-state mirror exists. Required contents and
+rationale live in `../manifest.md`.
 
 | Area | Verified state |
 |---|---|
