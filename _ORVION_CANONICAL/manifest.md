@@ -45,7 +45,7 @@ Current session blocker: **None.**
 
 Other open work is owned elsewhere and is never restated as the next action: `MASTER_EXECUTION_PLAN.md` owns Batch 6 order, the Phase-10 Meta-ecosystem Learn-Before-Designing research and the communications-domain Design Challenge; `MASTER_INTEGRATION_CATALOG.md §2/§2a` owns the preserved n8n workflow build steps.
 
-Next capability: **Ad-hoc process safety, then Publisher.** Phases B and C are CLOSED: Ruleset 22950574 requires `orvion-acceptance` bound to the Actions App, with `non_fast_forward`, `deletion` and zero bypass preserved and readback exact. Never sync preflight by an empty push — an empty range has no governing CR and fails closed. A rejected candidate is replaced on preflight only by an explicit expected-value lease, never plain force; that Publisher is a separate unit. Migration CI is OBSERVE ONLY until the first Batch-6 DB slice compares it. Batch 6 Slice 12 resumes after.
+Next capability: **Batch 6 Slice 12**, ranked by `scripts/batch6_select_target.ps1`. **The control-plane optimization chapter is CLOSED** — reopening it requires newly earned evidence (a real incident, a false green or false red, a measured material cost, or a proven safety/governance gap), never a further search for theoretical optimizations. Standing facts: Ruleset 22950574 requires `orvion-acceptance` on the default branch with `non_fast_forward`, `deletion` and zero bypass; candidates are published by `scripts/publish_candidate.ps1`, which proves the committed range first and replaces a rejected preflight candidate only under a caller-pinned lease; `main` is promoted by pushing the exact accepted SHA. Migration CI is OBSERVE ONLY until the first Batch-6 DB slice compares it.
 
 ---
 

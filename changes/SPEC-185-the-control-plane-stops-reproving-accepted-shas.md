@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -83,7 +83,7 @@ Also out of scope as SUBJECTS, not merely as files: GitHub Rulesets, including a
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -126,7 +126,32 @@ None
 
 ## Execution Log
 
-None.
+Step 1 — APPLIED. `.github/workflows/agent-control.yml`: the existing step-level condition on `Run Agent Control mutation suite` now reads `${{ github.ref != 'refs/heads/orvion-preflight' && github.ref != 'refs/heads/main' }}`. Nothing else in the file changed; the diff is one line.
+
+Step 2 — APPLIED. `.github/workflows/repository-consistency.yml`: exactly one step-level condition added, on `Attack the guards themselves`, value `${{ github.ref != 'refs/heads/main' }}`, with the reason recorded beside it. `Run repository consistency guard` carries no condition. No trigger, `paths:` entry, job key or step was added, removed or reordered.
+
+Step 3 — APPLIED. `scripts/test_agent_continuity.ps1`: the step splitter was lifted out of the Agent Control block into ONE `Get-JobSteps` function called for every job examined, the consistency job was added to the same existing `Get-WorkflowEmitters` pass as `Rc`/`RcBody`/`RcSteps`, assertion 162 was repinned to the Step 1 literal, and assertion 167 was added. No new file, fixture, stub or helper module. Assertion 163 was not modified. No assertion proving Acceptance carries the four calibration suites was added: assertion 142 already owns that fact.
+
+Step 4 — EXECUTED, PASS. Targeted mutation proof of the SHIPPED source, not a reimplementation: the 148-line block from `function Get-WorkflowEmitters(` through the assertion 167 statement was sliced verbatim out of `scripts/test_agent_continuity.ps1` and executed against mutated COPIES of the workflows in a scratch sandbox. ONE baseline, no repository clones, no full-suite run per mutant, no framework added to the repository.
+
+| case | 162 | 163 | 167 |
+| --- | --- | --- | --- |
+| control (unmutated) | PASS | PASS | PASS |
+| M1 — agent-control condition names `refs/heads/release` | **FAIL** | PASS | PASS |
+| M2 — calibration condition moved onto the consistency-guard step | PASS | PASS | **FAIL** |
+| restore (unmutated) | PASS | PASS | PASS |
+
+Each mutant is killed by its intended assertion ALONE and every unrelated assertion survives it, which is what distinguishes a detector from a coincidence. Restoration proven by hash: `scripts/test_agent_continuity.ps1` SHA256 `AF8043531B06949A20EA50FBA43B1C995764C5F652B5EA095D2726A93A074323` before and after, unchanged.
+
+Step 5 — APPLIED. `_ORVION_CANONICAL/manifest.md` `Next capability:` returns the plan to the canonical Batch-6 selector and records the control-plane optimization chapter as CLOSED. Measured at 6930 chars against the unchanged 7000 budget; the budget was not raised.
+
+**Baseline suite — already executed on this exact tree, not repeated.** `AGENT CONTROL TESTS: 167 passed, 0 failed`, exit 0, including `PASS 162`, `PASS 163` and `PASS 167`. That run post-dates the last write to every file in this Write Scope, so it is evidence about the tree standing now. It was not re-run: repeating a passing suite over unchanged state buys nothing and is refused by the verification-cost rule.
+
+**Target A — EARNED and implemented.** Measured on the real `main` run of `a2957f1`: the duplicated mutation suite 194s against the Gate's 5s. The Gate is untouched and unconditional.
+
+**Target B — EARNED and implemented.** Measured on the same run: the duplicated calibration 84s against the repository guard's 3s. The guard is untouched and unconditional, and calibration still runs on every other event.
+
+**Target C — NO CHANGE — NOT EARNED.** Re-confirmed from the existing command graph rather than by a fresh search. `Finish-Checks` derives the mandatory list once, deduplicates ACROSS profiles through `$seen`, and subtracts the mandatory set from Additional Verification into `$extra`; assertion 77 already proves a command that is both mandatory and additional executes exactly once. `scripts/test_agent_continuity.ps1` is derived by the CONTROL profile only and has no second caller. The one real duplicate is `Repo-Guard` executing `scripts/check_repository_consistency.ps1` as the precondition for the command, and the REPOSITORY profile executing it again as evidence — two different owners, already analyzed in Notes, and removing either would collapse a precondition into evidence or leave a profile deriving nothing. No other duplicate execution path exists, so no code and no test were added for C.
 
 ## Verification Notes
 

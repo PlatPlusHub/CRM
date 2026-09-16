@@ -1062,6 +1062,22 @@ exit 0
         }
         $found
     }
+    # One job's steps, split on the step bullet at the job's step indentation. Inside a chunk the
+    # bullet's own first key sits at column 0 and every sibling key at eight spaces, so `^name:`
+    # can only be the step's name and `^        if:` can only be a step-level condition - the same
+    # "job-level keys only" discipline assertion 152 uses one level up. ONE splitter, called for
+    # every job examined (SPEC-185): two copies would be two parsers that can disagree.
+    function Get-JobSteps([string]$Body){
+        $steps=@()
+        foreach($chunk in @($Body-split'(?m)^      - '|Select-Object -Skip 1)){
+            $nm=[regex]::Match($chunk,'(?m)^name:[ \t]*(?<v>.+?)[ \t]*$')
+            $cond=[regex]::Match($chunk,'(?m)^        if:[ \t]*(?<v>.+?)[ \t]*$')
+            $steps+=[pscustomobject]@{
+                Name=$(if($nm.Success){$nm.Groups['v'].Value}else{''})
+                If=$(if($cond.Success){$cond.Groups['v'].Value}else{$null})}
+        }
+        ,$steps
+    }
     # BOTH representations are DERIVED, in memory, from one canonical form of the same file.
     # Reading the checkout twice would prove nothing: on a machine that checks out CRLF both
     # arms would be CRLF, and on GitHub's LF runners both would be LF, so the proof would
@@ -1087,20 +1103,15 @@ exit 0
         # working if a display name is ever added, and adding one would not silently unguard it.
         $ac=@($em|Where-Object{$_.File-eq'agent-control.yml'-and$_.Job-eq'gate'})
         $acBody=if($ac.Count-eq1){$ac[0].Body}else{''}
-        # Steps, split on the step bullet at the job's step indentation. Inside a chunk the
-        # bullet's own first key sits at column 0 and every sibling key at eight spaces, so
-        # `^name:` can only be the step's name and `^        if:` can only be a step-level
-        # condition - the same "job-level keys only" discipline assertion 152 uses one level up.
-        $acSteps=@()
-        foreach($chunk in @($acBody-split'(?m)^      - '|Select-Object -Skip 1)){
-            $nm=[regex]::Match($chunk,'(?m)^name:[ \t]*(?<v>.+?)[ \t]*$')
-            $cond=[regex]::Match($chunk,'(?m)^        if:[ \t]*(?<v>.+?)[ \t]*$')
-            $acSteps+=[pscustomobject]@{
-                Name=$(if($nm.Success){$nm.Groups['v'].Value}else{''})
-                If=$(if($cond.Success){$cond.Groups['v'].Value}else{$null})}
-        }
+        $acSteps=Get-JobSteps $acBody
+        # The same pass, for the consistency job (SPEC-185). ONE emitter is required of that file:
+        # a second job there could carry the calibration unconditionally and this would not notice.
+        $rc=@($em|Where-Object{$_.File-eq'repository-consistency.yml'})
+        $rcBody=if($rc.Count-eq1){$rc[0].Body}else{''}
+        $rcSteps=Get-JobSteps $rcBody
         $reps+=[pscustomobject]@{Rep=$rep.Name;Emitters=$em;Admission=$ad;Body=$bd;Tmo=[regex]::Matches($bd,'(?m)^    timeout-minutes:[ \t]*(?<m>\d+)[ \t]*$')
-                                 Gate=$ac;GateBody=$acBody;GateSteps=$acSteps}
+                                 Gate=$ac;GateBody=$acBody;GateSteps=$acSteps
+                                 Rc=$rc;RcBody=$rcBody;RcSteps=$rcSteps}
     }
     # Binding the Ruleset to the GitHub Actions App stops another PROVIDER satisfying the
     # context; it does nothing about a second Actions job claiming the same name. Only
@@ -1145,7 +1156,11 @@ exit 0
     # `refs/pull/N/merge` on a pull request and `refs/tags/...` on a tag, so a typo here keeps a
     # condition that still reads as deliberate while silently removing Gate coverage from `main`.
     $mutName='Run Agent Control mutation suite';$gateName='Enforce governing Change Request'
-    $preflightIf='${{ github.ref != ''refs/heads/orvion-preflight'' }}'
+    # SPEC-185 extends this to `main`: a commit cannot reach `main` without a successful
+    # `orvion-acceptance` run on that exact SHA, and that workflow runs this same suite. Both
+    # halves are `refs/heads/` literals, which is what keeps pull requests covered - their
+    # `github.ref` is `refs/pull/N/merge` and matches neither.
+    $preflightIf='${{ github.ref != ''refs/heads/orvion-preflight'' && github.ref != ''refs/heads/main'' }}'
     Assert '162 STRUCTURAL: the preflight skip sits on the mutation-suite step and names exactly that ref' (@($reps|Where-Object{
         $m=@($_.GateSteps|Where-Object{$_.Name-eq$mutName})
         -not($_.Gate.Count-eq1-and$m.Count-eq1-and$m[0].If-eq$preflightIf)}).Count-eq0) (($reps|ForEach-Object{$r=$_;$m=@($r.GateSteps|Where-Object{$_.Name-eq$mutName});"[$($r.Rep)] gate jobs=$($r.Gate.Count) mutation steps=$($m.Count) if=$(if($m.Count-eq1-and$null-ne$m[0].If){$m[0].If}else{'<none>'})"})-join' || ')
@@ -1159,6 +1174,24 @@ exit 0
         $g=@($_.GateSteps|Where-Object{$_.Name-eq$gateName})
         $c=@($_.GateSteps|Where-Object{$null-ne$_.If})
         -not($_.Gate.Count-eq1-and$_.GateBody-notmatch'(?m)^    if:'-and$_.GateBody-notmatch'(?m)^    continue-on-error:'-and$g.Count-eq1-and$c.Count-eq1-and$c[0].Name-eq$mutName)}).Count-eq0) (($reps|ForEach-Object{$r=$_;$c=@($r.GateSteps|Where-Object{$null-ne$_.If});"[$($r.Rep)] job-level if=$([bool]($r.GateBody-match'(?m)^    if:')) continue-on-error=$([bool]($r.GateBody-match'(?m)^    continue-on-error:')) conditioned=$(if($c.Count){(@($c|ForEach-Object{$_.Name})-join',')}else{'<none>'}) steps=$(@($r.GateSteps|ForEach-Object{$_.Name})-join'|')"})-join' || ')
+
+    # ---- STRUCTURAL: calibration is suppressed on main ONLY, and the guard never is (SPEC-185) ----
+    # A commit cannot reach `main` without a successful `orvion-acceptance` run on that exact SHA -
+    # ruleset 22950574, active on the default branch, empty bypass list, `do_not_enforce_on_create:
+    # false` - and that workflow runs these same four suites, which assertion 142 fixes. So on a
+    # `main` push this calibration is a repeat of admitted evidence and nothing else.
+    #
+    # The single `refs/heads/main` literal is what keeps pull requests covered: their `github.ref`
+    # is `refs/pull/N/merge` and cannot match it. Pinning the literal rather than merely requiring
+    # a condition is the point - a condition that looks deliberate and names the wrong ref would
+    # silently stop calibrating the events that still need it.
+    $calName='Attack the guards themselves';$guardName='Run repository consistency guard'
+    $mainIf='${{ github.ref != ''refs/heads/main'' }}'
+    Assert '167 STRUCTURAL: guard calibration is skipped on main only and the consistency guard never is' (@($reps|Where-Object{
+        $cal=@($_.RcSteps|Where-Object{$_.Name-eq$calName})
+        $grd=@($_.RcSteps|Where-Object{$_.Name-eq$guardName})
+        $c=@($_.RcSteps|Where-Object{$null-ne$_.If})
+        -not($_.Rc.Count-eq1-and$_.RcBody-notmatch'(?m)^    if:'-and$_.RcBody-notmatch'(?m)^    continue-on-error:'-and$cal.Count-eq1-and$cal[0].If-eq$mainIf-and$grd.Count-eq1-and$null-eq$grd[0].If-and$c.Count-eq1)}).Count-eq0) (($reps|ForEach-Object{$r=$_;$cal=@($r.RcSteps|Where-Object{$_.Name-eq$calName});$c=@($r.RcSteps|Where-Object{$null-ne$_.If});"[$($r.Rep)] jobs=$($r.Rc.Count) job-level if=$([bool]($r.RcBody-match'(?m)^    if:')) calibration if=$(if($cal.Count-eq1-and$null-ne$cal[0].If){$cal[0].If}else{'<none>'}) conditioned=$(if($c.Count){(@($c|ForEach-Object{$_.Name})-join',')}else{'<none>'}) steps=$(@($r.RcSteps|ForEach-Object{$_.Name})-join'|')"})-join' || ')
 
     # The QUERY is asserted separately from the revalidation, because the two are
     # redundant for correctness and therefore cannot catch each other's removal: with

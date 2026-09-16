@@ -104,6 +104,19 @@ jobs:
       # sandbox, so it also proves the guard survives being pointed somewhere other than the
       # checkout -- the assumption every one of these suites rests on.
       - name: Attack the guards themselves
+        # SPEC-185. Skipped on a `main` push ONLY, because a commit cannot reach `main` without a
+        # successful `orvion-acceptance` check run on that exact SHA -- ruleset 22950574 is active
+        # on the default branch with an empty bypass list and `do_not_enforce_on_create: false` --
+        # and that workflow runs these same four suites before it can conclude. Measured on the
+        # real `main` run of `a2957f1`: this step 84s, the guard above it 3s.
+        #
+        # NOT skipped anywhere else, and the asymmetry is the point. On a pull request Acceptance
+        # never runs, so this is the only calibration there; `github.ref` is `refs/pull/N/merge`
+        # under that event and cannot match a `refs/heads/` literal. On `orvion-preflight` both
+        # workflows run on one SHA, which is the only place the comparator `SPEC-172` preserves
+        # can actually compare anything. On `main` Acceptance does not run at all, so nothing is
+        # being compared here and this is purely a repeat of admitted evidence.
+        if: ${{ github.ref != 'refs/heads/main' }}
         shell: pwsh
         #
         # $LASTEXITCODE is checked after EVERY suite, deliberately. With `shell: pwsh` GitHub gates
