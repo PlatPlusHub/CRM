@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -193,3 +193,22 @@ Mechanisms considered and rejected, recorded so a later agent does not re-derive
 The verifier runs `prepare.ps1` ONCE rather than twice. Idempotence is `f(f(x)) = f(x)`, and the doctor command that precedes it in the same profile is what establishes that the machine is already converged; measuring one further run against a converged machine is therefore the property itself, at half the cost. On a machine that is not converged the single run installs or configures something and the verifier fails loudly, which is the correct fail-closed answer rather than a false green.
 
 Doctor remains read-only and is deliberately kept as separate executed evidence. `prepare.ps1` runs the doctor internally at its end, so a workstation Finish observes doctor health more than once; that duplication belongs to the provisioner's own self-verifying design and is not introduced here, and collapsing the two would make a contract that changes only `doctor.ps1` stop verifying it directly.
+
+
+### 2026-09-17 — Claude Opus 5 (reviewing agent, pattern and resilience gate)
+
+Verdict: Confirmed Complete
+
+Findings: `-Finish` returned `LOCAL_CERTIFY: READY` on `adcbed9` with all nine mandatory commands PASS, including `scripts/verify_workstation_idempotence.ps1` against the real workstation, and wrote a receipt naming `SPEC-189` and the four derived profiles. The deadlock is closed on the real path, not only in fixtures.
+
+The recurrence class was tested rather than assumed. `LOCAL_NOT_EXECUTED` was injected into the `CONTROL` profile — chosen because neither of the two profile-specific positive-path assertions (92 for `WORKSTATION`, 103 for `DATABASE`) derives it — and the existing suite KILLED it: assertion 79, whose scope `.github/workflows/agent-control.yml` derives `CONTROL`, `CI` and `REPOSITORY` and which pins `LOCAL_CERTIFY: READY`, failed. `scripts/check_agent_continuity.ps1` was restored byte-identical by SHA256 and the receipt remained valid.
+
+A generic "no profile may emit `LOCAL_NOT_EXECUTED`" assertion therefore DOES NOT EARN IMPLEMENTATION, and none was added. The protection already exists by construction: every profile is covered by at least one assertion that pins a positive `LOCAL_CERTIFY: READY` path — `REPOSITORY` by 42, 98b and 110b, `CONTROL` and `CI` by 79, `WORKSTATION` by 92, `DATABASE` by 78 and 103 — so the same deadlock injected into any profile fails an existing test. No pattern registry, taxonomy, report or meta-test was created; the durable protection is executable and already present.
+
+The verifier's own failure branches were proven causally in an isolated scratch repository, never against the real machine: a non-zero exit, an `[INSTALL]` action, a `[CONFIG]` action, a reported `[FAIL]`, and a silent tracked-byte mutation are each rejected, while a silent no-op run passes both before and after those mutants. Four of the five rejected cases exit 0, which is the property that matters — exit 0 alone never reads as idempotent. Nothing was uninstalled, no credential cleared and no environmental damage manufactured.
+
+The bounded false-green sweep over the workstation surface found no further occurrence of the `update.ps1` shape. Both candidates were probed rather than assumed: `$?` does observe a native non-zero exit, so `doctor.ps1`'s `Test-Version` is sound, and the apparent native call in `claude-awareness.ps1` was a prose line matching the search. Check 20 and Check 28 already own their recurrence classes and were not duplicated. The `SPEC-186` and `SPEC-188` cancellations have different causes and are not treated as a reusable pattern.
+
+Known in-unit debt: none. The `CI` profile's evidence remains `POST_PUSH` and is declared, never claimed locally.
+
+Recommendation to human: Set Status to Complete
