@@ -413,9 +413,38 @@ try{
     Reset-Fixture;Rebase (ContractText -Capabilities n8n);$r=Run
     Assert '91 an EXTERNAL_EVIDENCE capability is declared, never claimed proven' ($r.Code-eq0-and$r.Text-match'CAPABILITY: n8n EXTERNAL_EVIDENCE'-and$r.Text-notmatch'MISSING_REQUIRED_CAPABILITY') $r.Text
 
-    # ---- WORKSTATION evidence is executed, not merely deferred ----
-    Reset-Fixture;Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_RAN';exit 0";Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish
-    Assert '92 WORKSTATION local evidence runs the doctor instead of deferring it' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File \.workstation/doctor\.ps1'-and$r.Text-match'LOCAL_CERTIFY: INCOMPLETE'-and$r.Text-match'bootstrap idempotence') $r.Text
+    # ---- WORKSTATION evidence is executed, and can therefore REACH certification ----
+    # The old assertion here pinned `LOCAL_CERTIFY: INCOMPLETE` plus the words
+    # "bootstrap idempotence" as correct. That encoded a deadlock as the contract:
+    # idempotence was declared `LOCAL_NOT_EXECUTED`, which forced INCOMPLETE, which
+    # meant `Write-Certification` never ran, which meant `Complete` was refused for
+    # every actor - so NO workstation contract could ever be completed. It is the
+    # DATABASE defect (SPEC-164 DEFECT B) one profile over, and the repair is the same
+    # one: EXECUTE the evidence. These three cases replace it and prove the SEMANTIC
+    # invariant - both doors of the receipt - rather than a new output string.
+    Reset-Fixture
+    Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_RAN';exit 0"
+    Put 'scripts/verify_workstation_idempotence.ps1' "Write-Output 'IDEMPOTENCE_RAN';exit 0"
+    Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish;$j=ReceiptJson
+    Assert '92 MUST-ACCEPT: proven WORKSTATION evidence executes and reaches a receipt' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File \.workstation/doctor\.ps1'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/verify_workstation_idempotence\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$r.Text-notmatch'LOCAL_NOT_EXECUTED'-and$null-ne$j-and$j.result-eq'READY'-and(@($j.profiles)-contains'WORKSTATION')) "$($r.Text)`n$($j|ConvertTo-Json -Depth 5)"
+
+    # FAILURE DOOR, idempotence. A workstation that mutates on a second convergence
+    # must not certify - and a receipt minted earlier must not survive the attempt,
+    # which is why Finish destroys it BEFORE running anything.
+    Reset-Fixture
+    Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_RAN';exit 0"
+    Put 'scripts/verify_workstation_idempotence.ps1' "Write-Output 'NOT IDEMPOTENT';exit 1"
+    Receipt @{cr='SPEC-900';profiles=@('REPOSITORY','WORKSTATION');fingerprint='0';result='READY'}
+    Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish
+    Assert '173 MUST-REJECT: failing idempotence blocks certification and destroys the older receipt' ($r.Code-ne0-and$r.Text-match'FAILED: pwsh -NoProfile -File scripts/verify_workstation_idempotence\.ps1 \(exit 1\)'-and$r.Text-notmatch'LOCAL_CERTIFY: READY'-and$null-eq(ReceiptJson)) "$($r.Text)`nreceipt: $(ReceiptJson|ConvertTo-Json -Depth 5)"
+
+    # FAILURE DOOR, doctor. Executing idempotence must not have demoted doctor health
+    # into something a passing idempotence run can paper over.
+    Reset-Fixture
+    Put '.workstation/doctor.ps1' "Write-Output 'DOCTOR_UNHEALTHY';exit 1"
+    Put 'scripts/verify_workstation_idempotence.ps1' "Write-Output 'IDEMPOTENCE_RAN';exit 0"
+    Rebase (ContractText -Resume DONE -Scope '.workstation/doctor.ps1');$r=Run Finish
+    Assert '174 MUST-REJECT: a failing doctor still blocks certification and writes no receipt' ($r.Code-ne0-and$r.Text-match'FAILED: pwsh -NoProfile -File \.workstation/doctor\.ps1 \(exit 1\)'-and$r.Text-notmatch'LOCAL_CERTIFY: READY'-and$null-eq(ReceiptJson)) $r.Text
 
     # ---- WORKSTATION derives for the ROOT entry points and the desired-state authorities ----
     # `^\.workstation/` alone left `bootstrap.ps1` - the only thing that runs on a machine

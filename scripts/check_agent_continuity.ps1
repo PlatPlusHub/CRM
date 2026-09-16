@@ -815,13 +815,28 @@ function Get-ProfileEvidence([string]$Profile){
             'pwsh -NoProfile -File scripts/test_future_date_guard.ps1');Deferred=@()}}
         'CI'{[pscustomobject]@{Local=@();Deferred=@(
             'POST_PUSH: workflow conclusions on the exact pushed SHA')}}
-        # The doctor is read-only and deterministic, so it is EXECUTED rather than
-        # deferred. Bootstrap idempotence mutates the workstation and is therefore
-        # never run automatically - but its exact command is named, so a weaker
-        # agent does not have to re-derive it.
+        # The doctor is read-only and deterministic, so it is EXECUTED.
+        #
+        # Bootstrap idempotence is now EXECUTED too, and this is the repair of a real
+        # deadlock rather than a convenience. Declaring it `LOCAL_NOT_EXECUTED` meant
+        # every WORKSTATION contract ended `LOCAL_CERTIFY: INCOMPLETE`, so
+        # `Write-Certification` never ran, so no receipt existed, so `Validate-Certification`
+        # refused the `Complete` transition - for a human as much as for an agent, because
+        # the Gate does not care who commits. No workstation contract could be completed at
+        # all. That is exactly the shape SPEC-164 named in DEFECT B and repaired for
+        # DATABASE by EXECUTING the protocol instead of listing it; listing evidence that
+        # can never run is truthful and useless, because the profile could only ever
+        # withhold certification.
+        #
+        # The verifier runs `prepare.ps1` ONCE and measures whether it mutated anything,
+        # which is the idempotence property given a converged machine - and convergence is
+        # what the doctor above establishes. It is a separate script for the same reason
+        # `check_database_parity.ps1` is one: the evidence is a COMPARISON. It never
+        # uninstalls, never manufactures damage, and fails closed on a machine that has not
+        # been converged yet.
         'WORKSTATION'{[pscustomobject]@{Local=@(
-            'pwsh -NoProfile -File .workstation/doctor.ps1');Deferred=@(
-            'LOCAL_NOT_EXECUTED: bootstrap idempotence — run `.workstation/prepare.ps1` twice and compare; mutating, never automatic')}}
+            'pwsh -NoProfile -File .workstation/doctor.ps1',
+            'pwsh -NoProfile -File scripts/verify_workstation_idempotence.ps1');Deferred=@()}}
         # The `ENGINEERING_METHOD.md §4` protocol, EXECUTED in its documented order.
         #
         # These commands are destructive and slow, which is why they never run inside a

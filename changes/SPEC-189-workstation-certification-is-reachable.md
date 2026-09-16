@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -87,7 +87,7 @@ Also out of scope as SUBJECTS, not merely as files: any change to the certificat
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -113,36 +113,78 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `scripts/verify_workstation_idempotence.ps1` exists, runs `.workstation/prepare.ps1` once, and exits non-zero when the run installs, reconfigures, reports a failure, exits non-zero, or changes any tracked repository file.
-- [ ] The `WORKSTATION` profile in `scripts/check_agent_continuity.ps1` lists both the doctor and the idempotence verifier as `Local` evidence and carries no `LOCAL_NOT_EXECUTED` note.
-- [ ] `scripts/test_agent_continuity.ps1` contains an assertion proving a proven `WORKSTATION` Finish reaches `LOCAL_CERTIFY: READY` and writes a receipt recording the `WORKSTATION` profile.
-- [ ] `scripts/test_agent_continuity.ps1` contains an assertion proving a failing idempotence verifier blocks certification and leaves no usable receipt, including one written before the attempt.
-- [ ] `scripts/test_agent_continuity.ps1` contains an assertion proving a failing doctor blocks certification and writes no receipt.
-- [ ] `.workstation/prepare.ps1` and `.workstation/doctor.ps1` contain no literal VS Code extension identifier and no literal project MCP name, and both fail closed when their authority declares nothing.
-- [ ] `.workstation/update.ps1` classifies a step by `$LASTEXITCODE`, recording `FAILED (exit <code>)` for any non-zero value other than `-1978335189` and `-1978335135`.
-- [ ] `Profiles` returns `WORKSTATION` for `bootstrap.ps1`, `workstation.cmd`, `.vscode/extensions.json` and `.mcp.json`.
-- [ ] `scripts/check_repository_consistency.ps1` contains Check 28, and both `.vscode/extensions.json` and `.mcp.json` appear in Check 20's input map and in both trigger blocks of `.github/workflows/repository-consistency.yml`.
-- [ ] `.workstation/reports/INSTALLATION_STATUS.md` identifies itself as a dated historical snapshot, `WORKSTATION.md` routes current status to `.workstation/doctor.ps1`, and `.workstation/manifest.md` names both authorities.
+- [x] `scripts/verify_workstation_idempotence.ps1` exists, runs `.workstation/prepare.ps1` once, and exits non-zero when the run installs, reconfigures, reports a failure, exits non-zero, or changes any tracked repository file.
+- [x] The `WORKSTATION` profile in `scripts/check_agent_continuity.ps1` lists both the doctor and the idempotence verifier as `Local` evidence and carries no `LOCAL_NOT_EXECUTED` note.
+- [x] `scripts/test_agent_continuity.ps1` contains an assertion proving a proven `WORKSTATION` Finish reaches `LOCAL_CERTIFY: READY` and writes a receipt recording the `WORKSTATION` profile.
+- [x] `scripts/test_agent_continuity.ps1` contains an assertion proving a failing idempotence verifier blocks certification and leaves no usable receipt, including one written before the attempt.
+- [x] `scripts/test_agent_continuity.ps1` contains an assertion proving a failing doctor blocks certification and writes no receipt.
+- [x] `.workstation/prepare.ps1` and `.workstation/doctor.ps1` contain no literal VS Code extension identifier and no literal project MCP name, and both fail closed when their authority declares nothing.
+- [x] `.workstation/update.ps1` classifies a step by `$LASTEXITCODE`, recording `FAILED (exit <code>)` for any non-zero value other than `-1978335189` and `-1978335135`.
+- [x] `Profiles` returns `WORKSTATION` for `bootstrap.ps1`, `workstation.cmd`, `.vscode/extensions.json` and `.mcp.json`.
+- [x] `scripts/check_repository_consistency.ps1` contains Check 28, and both `.vscode/extensions.json` and `.mcp.json` appear in Check 20's input map and in both trigger blocks of `.github/workflows/repository-consistency.yml`.
+- [x] `.workstation/reports/INSTALLATION_STATUS.md` identifies itself as a dated historical snapshot, `WORKSTATION.md` routes current status to `.workstation/doctor.ps1`, and `.workstation/manifest.md` names both authorities.
 
 ## Execution Log
 
 (no entries yet)
 
+### 2026-09-16 — Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `scripts/verify_workstation_idempotence.ps1` created. It runs `.workstation/prepare.ps1` once and fails closed on any of: non-zero exit, an `[INSTALL]` line, a `[CONFIG]` line, a `[FAIL]`/`FAILED` report, or a change to any tracked repository file. It uninstalls nothing and names `workstation.cmd` as the remedy for an unconverged machine.
+- Step 2: Applied — the `WORKSTATION` profile now lists the doctor and the verifier as `Local` evidence with an empty `Deferred` list; no `LOCAL_NOT_EXECUTED` note remains. No other profile touched.
+- Step 3: Applied — assertion 92 replaced and assertions 173 and 174 added.
+- Step 4: Already Applied — every inherited element verified present and unaltered: both scripts read their authorities and fail closed, `update.ps1` classifies by `$LASTEXITCODE`, `Profiles` covers the four paths, Check 28 exists with both inputs declared and both trigger blocks carrying them, the snapshot is historical, `WORKSTATION.md` routes to the doctor, and the manifest names both authorities. Nothing was reimplemented.
+- Step 5: Applied — manifest pointer and `ai-map.json` synchronized.
+
+The deadlock, measured before the repair. `Get-ProfileEvidence` gave `WORKSTATION` an unconditional `LOCAL_NOT_EXECUTED` note; `Finish-Checks` turns any such note into `LOCAL_CERTIFY: INCOMPLETE`; `Write-Certification` runs only on the `READY` branch; `Validate-Certification` refuses `Complete` without a receipt. Staging the exact `Complete` transition on `SPEC-188` with all 13 Acceptance Criteria and 7 Review Gate items checked, `Blocker: None`, `Resume Step: DONE`, a `Confirmed Complete` verdict, the pointer cleared and `ai-map.json` regenerated returned `COMPLETION_PREREQUISITE:no local certification receipt`. The three touched files were restored byte-identical afterwards. That is the closed door this contract opens.
+
+Idempotence, defined from the live provisioner rather than abstractly. One `prepare.ps1` run on an already-converged workstation must exit 0, emit no `[INSTALL]` line, emit no `[CONFIG]` line, report no failure, and leave every tracked repository file byte-identical. Silence is deliberately NOT required: `prepare.ps1` legitimately re-runs detection, refreshes PATH and re-verifies through the doctor on every run, and demanding zero operating-system noise would measure the wrong property.
+
+Causal proofs:
+
+| door | case | result |
+| --- | --- | --- |
+| SUCCESS | both workstation commands pass (assertion 92) | `LOCAL_CERTIFY: READY`, receipt written, `profiles` contains `WORKSTATION` |
+| FAILURE | idempotence verifier exits 1 with a READY receipt already on disk (assertion 173) | Finish fails, no `READY`, and `ReceiptJson` is null — the pre-existing receipt did not survive |
+| FAILURE | doctor exits 1, idempotence passes (assertion 174) | Finish fails, no `READY`, no receipt — doctor health was not demoted |
+| REAL PATH | the real verifier against the real workstation | exit 0, no installation, no reconfiguration, no failure, every tracked file byte-identical |
+
+Assertions 173 and 174 use stubbed `.workstation/doctor.ps1` and verifier scripts inside the suite's synthetic sandbox, so no real software was uninstalled, no credential cleared, and no environmental damage manufactured to produce a failure. The stale-receipt protection they exercise is `Finish-Checks`'s existing "a previous receipt is destroyed FIRST" behaviour, which this contract preserves rather than adds.
+
+Suite: `AGENT CONTROL TESTS: 174 passed, 0 failed`, including `PASS 92`, `PASS 173` and `PASS 174`.
+
+Prior workstation and SSOT proofs from the cancelled contracts were NOT repeated: their implementation bytes are unchanged, proven by restoring the three repair files byte-identical by SHA256 and by every inherited element verifying as Already Applied. Only the receipt-door proofs are new, because only the certification path changed.
+
+Commits: this entry's own commit.
+
 ## Verification Notes
 
 (no entries yet)
 
+### 2026-09-16 — Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings: all ten Acceptance Criteria were re-derived from the live files rather than read back from the Execution Log; 10 of 10 hold. `WORKSTATION` certification is now reachable — assertion 92 proves a proven run reaches `READY` and writes a receipt recording the profile. It cannot become `READY` without the proof: assertions 173 and 174 each fail Finish and leave no receipt, and 173 additionally proves a receipt written beforehand is destroyed rather than reused. Doctor remains read-only and remains separately executed evidence; nothing in this contract writes through it. The preserved workstation work is intact and unaltered, verified element by element and by byte-identical restoration of the three repair files.
+
+No rejected proposal entered scope: no `.workstation/inventory.psd1`, no retry framework, no Docker or WSL change, no doctor mutation, no root `Doctor.cmd`, no receipt-shape change, no `WORKSTATION` exemption from receipt validation, and no per-identity special case. The `Deferred` lists of `DATABASE`, `CI`, `CONTROL` and `REPOSITORY` are untouched. Known in-unit debt: none.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
