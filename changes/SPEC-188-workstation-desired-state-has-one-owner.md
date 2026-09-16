@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -249,3 +249,13 @@ The deferred evidence itself WAS obtained, manually and deliberately, because it
 This is a genuine control-plane defect of the class `SPEC-164` named when it repaired `DATABASE` — a profile that "could only ever withhold certification, so a weaker agent's options were permanent incompleteness or completing without it". `DATABASE` was fixed by EXECUTING its protocol; `WORKSTATION` was left deferring. Repairing it means changing `Get-ProfileEvidence`, which is a frozen-authority change this contract's Implementation Steps do not authorize, so it is NOT attempted here and awaits an owner decision.
 
 Recommendation to human: Set Status to Complete
+
+### 2026-09-16 — Claude Opus 5 (reviewing agent, cancellation)
+
+Verdict: Confirmed Complete
+
+Findings: cancelled by owner direction, with the work intact. Every acceptance criterion of this contract was met and independently verified, and the implementation bytes remain in the tree exactly as committed at `343186f`; nothing is reverted or reimplemented by this cancellation.
+
+The reason is the `WORKSTATION` certification deadlock recorded in the previous entry. It cannot be repaired inside this contract: the repair changes how the profile's evidence is EXECUTED, which this contract's Objective does not cover and its frozen Implementation Steps do not authorize, and it needs a file this Write Scope does not carry. The Gate refuses a frozen-authority change, and only one contract may hold the active pointer, so this one is cancelled to free it. The corrective successor carries this contract's preserved work together with the deadlock repair, and certifies through the repaired path — which makes it the first real proof that the path works.
+
+No successor identity is named here, deliberately. Naming one inside a cancellation is what retired `SPEC-187`, because any tracked textual occurrence permanently reserves an identifier under the collision rule.
