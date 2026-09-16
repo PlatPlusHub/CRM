@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -83,7 +83,7 @@ Also out of scope as SUBJECTS, not merely as files: GitHub Rulesets, including a
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -114,15 +114,15 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `.github/workflows/agent-control.yml` carries exactly one step-level condition, on the `Run Agent Control mutation suite` step, whose value is exactly `${{ github.ref != 'refs/heads/orvion-preflight' && github.ref != 'refs/heads/main' }}`.
-- [ ] `.github/workflows/repository-consistency.yml` carries exactly one step-level condition, on the `Attack the guards themselves` step, whose value is exactly `${{ github.ref != 'refs/heads/main' }}`, and its `Run repository consistency guard` step carries none.
-- [ ] Neither workflow declares a job-level condition or `continue-on-error:`, and neither gained or lost a trigger, a `paths:` entry, a permission or a step.
-- [ ] Both conditions compare `github.ref` only against `refs/heads/...` values, so a `pull_request` event, whose ref is `refs/pull/N/merge`, matches neither and pull-request behaviour is unchanged.
-- [ ] The four guard-calibration suites remain named inside the `Repository Consistency` calibration loop and inside `.github/workflows/orvion-acceptance.yml`, and `scripts/check_repository_consistency.ps1` is still executed unconditionally by the `Run repository consistency guard` step.
-- [ ] `scripts/test_agent_continuity.ps1` declares assertion 167, assertion 162 pins the new literal, and every other assertion numbered 1 through 166 is unchanged in number, name and meaning.
-- [ ] Assertion 162 fails when its condition names a different ref, and assertion 167 fails when the calibration condition is moved onto the consistency-guard step, each proven against an unmutated control in the same run and recorded in the Execution Log.
-- [ ] `_ORVION_CANONICAL/manifest.md` no longer names ad-hoc process safety or Publisher as the next capability, names the canonical Batch-6 selector instead, and remains within its existing budget.
-- [ ] No file outside Write Scope was created, modified or deleted, and no Ruleset was changed.
+- [x] `.github/workflows/agent-control.yml` carries exactly one step-level condition, on the `Run Agent Control mutation suite` step, whose value is exactly `${{ github.ref != 'refs/heads/orvion-preflight' && github.ref != 'refs/heads/main' }}`.
+- [x] `.github/workflows/repository-consistency.yml` carries exactly one step-level condition, on the `Attack the guards themselves` step, whose value is exactly `${{ github.ref != 'refs/heads/main' }}`, and its `Run repository consistency guard` step carries none.
+- [x] Neither workflow declares a job-level condition or `continue-on-error:`, and neither gained or lost a trigger, a `paths:` entry, a permission or a step.
+- [x] Both conditions compare `github.ref` only against `refs/heads/...` values, so a `pull_request` event, whose ref is `refs/pull/N/merge`, matches neither and pull-request behaviour is unchanged.
+- [x] The four guard-calibration suites remain named inside the `Repository Consistency` calibration loop and inside `.github/workflows/orvion-acceptance.yml`, and `scripts/check_repository_consistency.ps1` is still executed unconditionally by the `Run repository consistency guard` step.
+- [x] `scripts/test_agent_continuity.ps1` declares assertion 167, assertion 162 pins the new literal, and every other assertion numbered 1 through 166 is unchanged in number, name and meaning.
+- [x] Assertion 162 fails when its condition names a different ref, and assertion 167 fails when the calibration condition is moved onto the consistency-guard step, each proven against an unmutated control in the same run and recorded in the Execution Log.
+- [x] `_ORVION_CANONICAL/manifest.md` no longer names ad-hoc process safety or Publisher as the next capability, names the canonical Batch-6 selector instead, and remains within its existing budget.
+- [x] No file outside Write Scope was created, modified or deleted, and no Ruleset was changed.
 
 ## Execution Log
 
@@ -155,19 +155,37 @@ Step 5 — APPLIED. `_ORVION_CANONICAL/manifest.md` `Next capability:` returns t
 
 ## Verification Notes
 
-None.
+### 2026-09-16 — Claude Opus 5 (agent)
+
+Verdict: Confirmed Complete
+
+Findings: reviewed against the live repository rather than against the Execution Log's claims, and after a session loss mid-execution the tree was treated as authoritative over any recollection of it.
+
+`.github/workflows/agent-control.yml` — the `gate` job declares four steps, exactly one of which carries a condition: `Run Agent Control mutation suite`, with the approved literal. `Enforce governing Change Request` carries none, so the Gate that resolves `github.event.before -> github.sha` still runs on every push including `main`. No job-level `if:` and no `continue-on-error:`.
+
+`.github/workflows/repository-consistency.yml` — `Run repository consistency guard` still executes `scripts/check_repository_consistency.ps1` unconditionally; the only condition in the job is on `Attack the guards themselves`. Both trigger blocks and all 24 `paths:` entries are byte-identical to the base, and the file gained one `if:` line and its comment and nothing else.
+
+Pull-request behaviour is unchanged in BOTH workflows, which is the criterion most easily lost: every condition added compares `github.ref` against `refs/heads/...` only, and a `pull_request` event's ref is `refs/pull/N/merge`. Neither the mutation suite nor the calibration is suppressed there.
+
+Distinct assurance was not weakened. `.github/workflows/orvion-acceptance.yml` is byte-identical to the base and still runs `./scripts/test_agent_continuity.ps1` and, in one loop, `test_future_date_guard`, `test_status_contradiction_guard`, `test_primary_ledger_guard` and `test_cold_start_state_guard` — the four suites assertion 142 fixes and the whole premise of this change. Every Out of Scope path, including `scripts/check_agent_continuity.ps1` and `scripts/check_repository_consistency.ps1`, is unchanged from `origin/main`.
+
+Target C received no code and no test, as recorded.
+
+One defect was found and repaired in scope during execution rather than worked around: Step 5 moved the manifest's `Next capability:`, which staled `ai-map.json` and made Repository Consistency Check 7 fail the pre-commit Gate. `ai-map.json` is inside this Write Scope, and the fix was to run `scripts/generate-ai-map.ps1` — the generator that owns the file — not to hand-edit it. The resulting diff is `generated_at` and `live_state.next_capability` only, both among the four values `SPEC-179` excludes from the certification fingerprint, so it could not mask an implementation change.
+
+`-Finish` was run ONCE and returned `LOCAL_CERTIFY: READY` over the derived `CI, CONTROL, REPOSITORY` profiles, with all seven commands PASS and the Agent Control suite at 167 passed / 0 failed; the receipt it minted names `SPEC-185`, replacing the stale `SPEC-184` receipt. The suite was not executed a second time to restate the pre-loss run: identical inputs cannot reach a different verdict, and paying 194s to hear it again is the cost this contract exists to stop.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
