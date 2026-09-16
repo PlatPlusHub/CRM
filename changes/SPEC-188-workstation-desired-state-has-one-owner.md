@@ -93,7 +93,7 @@ Also out of scope as SUBJECTS, not merely as files: any new workstation data fil
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -133,19 +133,19 @@ None
 
 ## Acceptance Criteria
 
-- [ ] `.workstation/prepare.ps1` contains no literal VS Code extension identifier and obtains its required set from `.vscode/extensions.json`, failing closed when that set is empty.
-- [ ] `.workstation/doctor.ps1` contains no literal VS Code extension identifier and obtains its required set from `.vscode/extensions.json`, failing closed when that set is empty.
-- [ ] `.workstation/prepare.ps1` registers project MCP servers by iterating `$mcp.mcpServers` and contains no literal project MCP name or argument list; the `github` registration remains the only literal server, and the provisioner fails closed when `.mcp.json` declares none.
-- [ ] `.workstation/doctor.ps1` derives the project MCP names it verifies from `.mcp.json` rather than from a hardcoded list, and its Claude and Codex enumeration loops both iterate that derived list.
-- [ ] `.workstation/update.ps1` classifies a step by `$LASTEXITCODE`, recording `FAILED (exit <code>)` for any non-zero value other than `-1978335189` and `-1978335135`.
-- [ ] `Profiles` in `scripts/check_agent_continuity.ps1` returns `WORKSTATION` for `bootstrap.ps1`, `workstation.cmd`, `.vscode/extensions.json` and `.mcp.json`.
-- [ ] `scripts/check_repository_consistency.ps1` contains a Check 28 that fails when `.workstation/manifest.md` disagrees with `.vscode/extensions.json` or `.mcp.json`.
-- [ ] `scripts/test_agent_continuity.ps1` contains the four positive `WORKSTATION` derivation assertions and the one negative assertion.
-- [ ] `.workstation/reports/INSTALLATION_STATUS.md` identifies itself as a dated historical snapshot and not as current status, and its 2026-09-10 observation table is unaltered.
-- [ ] `WORKSTATION.md` routes current workstation status to `.workstation/doctor.ps1`.
-- [ ] `.workstation/manifest.md` names `.vscode/extensions.json` and `.mcp.json` as the authorities its tables restate, with no identifier in the file added, removed or altered.
-- [ ] `.github/workflows/repository-consistency.yml` lists `.vscode/extensions.json` and `.mcp.json` in both its `on.push.paths` and its `on.pull_request.paths`, and no job, step, condition or permission in that file differs from its state before this contract.
-- [ ] Check 20's `$requiredTriggers` map in `scripts/check_repository_consistency.ps1` declares `.vscode/extensions.json` and `.mcp.json` as Check 28's inputs, and the guard reports CLEAN on the unmodified repository.
+- [x] `.workstation/prepare.ps1` contains no literal VS Code extension identifier and obtains its required set from `.vscode/extensions.json`, failing closed when that set is empty.
+- [x] `.workstation/doctor.ps1` contains no literal VS Code extension identifier and obtains its required set from `.vscode/extensions.json`, failing closed when that set is empty.
+- [x] `.workstation/prepare.ps1` registers project MCP servers by iterating `$mcp.mcpServers` and contains no literal project MCP name or argument list; the `github` registration remains the only literal server, and the provisioner fails closed when `.mcp.json` declares none.
+- [x] `.workstation/doctor.ps1` derives the project MCP names it verifies from `.mcp.json` rather than from a hardcoded list, and its Claude and Codex enumeration loops both iterate that derived list.
+- [x] `.workstation/update.ps1` classifies a step by `$LASTEXITCODE`, recording `FAILED (exit <code>)` for any non-zero value other than `-1978335189` and `-1978335135`.
+- [x] `Profiles` in `scripts/check_agent_continuity.ps1` returns `WORKSTATION` for `bootstrap.ps1`, `workstation.cmd`, `.vscode/extensions.json` and `.mcp.json`.
+- [x] `scripts/check_repository_consistency.ps1` contains a Check 28 that fails when `.workstation/manifest.md` disagrees with `.vscode/extensions.json` or `.mcp.json`.
+- [x] `scripts/test_agent_continuity.ps1` contains the four positive `WORKSTATION` derivation assertions and the one negative assertion.
+- [x] `.workstation/reports/INSTALLATION_STATUS.md` identifies itself as a dated historical snapshot and not as current status, and its 2026-09-10 observation table is unaltered.
+- [x] `WORKSTATION.md` routes current workstation status to `.workstation/doctor.ps1`.
+- [x] `.workstation/manifest.md` names `.vscode/extensions.json` and `.mcp.json` as the authorities its tables restate, with no identifier in the file added, removed or altered.
+- [x] `.github/workflows/repository-consistency.yml` lists `.vscode/extensions.json` and `.mcp.json` in both its `on.push.paths` and its `on.pull_request.paths`, and no job, step, condition or permission in that file differs from its state before this contract.
+- [x] Check 20's `$requiredTriggers` map in `scripts/check_repository_consistency.ps1` declares `.vscode/extensions.json` and `.mcp.json` as Check 28's inputs, and the guard reports CLEAN on the unmodified repository.
 
 ## Execution Log
 
@@ -197,17 +197,33 @@ Commits: this entry's own commit.
 
 (no entries yet)
 
+### 2026-09-16 — Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings: every Acceptance Criterion was re-derived from the live files rather than read back from the Execution Log; 13 of 13 hold. `prepare.ps1` and `doctor.ps1` each contain zero literal VS Code extension identifiers and zero literal project-MCP names, both read their authority, and both carry a fail-closed branch; `github` remains the single literal server in the provisioner, correctly, because it is absent from `.mcp.json` by design. `update.ps1` carries both documented winget no-op codes and the `FAILED (exit $code)` arm. `Profiles` carries the widened pattern. Check 28 and assertions 168-172 are present. The historical snapshot declares itself historical and its 2026-09-10 observation table is intact, including the now-superseded `Docker Engine 29.7.2` row, which is exactly what a dated snapshot should preserve. `WORKSTATION.md` routes current status to the doctor. Both trigger blocks carry both authorities and Check 20's map declares them.
+
+Scope was checked against the diff, not asserted: the files changed across the whole unit are the fourteen in Write Scope and nothing else. `README.md`, `AGENTS.md`, `GOVERNANCE.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md`, all five client adapters, `bootstrap.ps1`, `workstation.cmd`, and both authority files `.vscode/extensions.json` and `.mcp.json` are byte-unchanged since `889fc74`, so the cold-start chain that passed its precheck was not disturbed and the authorities were not edited to match the scripts. The diff of `.github/workflows/repository-consistency.yml` is four added path entries and three comment lines; no job, step, condition, runner or permission differs.
+
+None of the rejected proposals appears in the implementation: no `.workstation/inventory.psd1` or any other new data file exists, no retry or backoff helper was added, Docker detection and the WSL branch are byte-unchanged in `prepare.ps1`, `doctor.ps1` performs no write and was proven read-only over 795 tracked files, no root `Doctor.cmd` was created, and no new engine, harness or orchestrator was introduced.
+
+The four Check 28 mutants were run against `.workstation/manifest.md`, a file inside Write Scope, and each was killed by its own direction with the file restored byte-identical; no authority file and no real workstation component was damaged to manufacture a failure. Workstation convergence was run because the WORKSTATION profile executes `doctor.ps1` and the contract names it in Additional Verification, not to make the machine green for its own sake; the second consecutive `prepare.ps1` run performed zero installations, zero configuration changes, reported `project dependencies present` rather than `restored`, left every tracked file and `git status` byte-identical, and ended `WORKSTATION PREPARATION: COMPLETE` with the doctor at zero required failures.
+
+The CI profile's evidence remains `POST_PUSH` and is not claimed here.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
