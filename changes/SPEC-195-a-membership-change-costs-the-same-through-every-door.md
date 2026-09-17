@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -87,8 +87,8 @@ Supersedes `changes/SPEC-194-a-membership-change-costs-the-same-through-every-do
 - `scripts/verify_database.sql` — the smoke verification, and in particular its `CHECK 6a`/`CHECK 6b` catalog pins and the `ALL CHECKS PASSED` notice, which are the executable invariants this contract's migration moves
 ## Runtime Checkpoint
 
-Resume Step: 1
-Blocker: None
+Resume Step: 12
+Blocker: FROZEN_STEP_ORDER_CONTRADICTION
 Recovery Attempt: 0
 
 ## Required Capabilities
@@ -210,17 +210,35 @@ Recovery Attempt: 0
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-09-17 — Claude Opus 5 (executing agent)
+Outcome: Blocked
+Blocker: `FROZEN_STEP_ORDER_CONTRADICTION`. Step 12's pre-deploy readiness gate refused to proceed because `Check 10 STALE POINTER` is a FOURTH failure class, outside the exactly three this contract admits. It is unavoidable under this contract's own frozen ordering: Step 10 moves `reports/README.md`'s live session pointer, Step 13 moves the matching manifest `Narrative:` but is gated on "AFTER the Primary synchronization step has completed", and Step 12 sits between them. It is not repairable inside this contract, because every available repair would have to change frozen authority: deploying to Primary with a fourth class standing is forbidden by Step 12(c2), and setting the manifest `Narrative:` early is forbidden by Step 13's mandated ordering.
+Step results: Steps 1-11 Applied. Step 12 STOPPED at its own pre-deploy readiness gate, sub-step (c2), before any irreversible action. Steps 13 and 14 not reached.
+Commits: `b4a2aa3` draft, `30e289b` Approve, `c18bd03` In Progress. **No implementation commit exists** — the pre-commit Gate rejected the Execute commit with `REPOSITORY_CONSISTENCY_FAILED`, so Steps 1-11 were never committed under this contract.
+
+Every local proof this contract demanded was produced and passed. Clean `npx supabase db reset` exit 0 with **219 migrations**, latest `20260917120000`. pgTAP **Pass A 118 files / 1944 assertions PASS**; all six named HTTP suites exit 0; pgTAP **Pass B 118 / 1944 PASS** with no reset in between; declared `plan(N)` total **1944 equals executed 1944**. Smoke `ALL CHECKS PASSED (... 71/621 catalog ...)`.
+
+Step 11 closed by measurement, not arithmetic: the reset database read `catalog_types` **71** and `catalog_values` **621**, and the delta of exactly three is exactly `user_deactivated` / `user_reactivated` / `user_identity_bound` at `sort_order` 166/167/168 under `event_type`. Causality proven in both directions — the pre-change file FAILED against that state with `CHECK 6b FAILED: expected 618 catalog_values, found 621`, and the updated file PASSED. The equality stayed an exact literal; `CHECK 6a`'s 71 was re-measured and left untouched.
+
+Step 7 was proven causally before it was applied: measured live, `reset role` moves the SQL role to `postgres` while `request.jwt.claims` survives, so `auth.uid()` still resolved to the employee — the hybrid the guard keys on. The repaired `31_access_revocation_test.sql` then ran **10 planned / 10 executed / 10 passed** with its subject intact (a departed employee resolves to no tenant, no user, sees nothing, holds nothing). `118_membership_authority_and_audit_test.sql` ran **29/29**, including the drop/restore mutation control proving the refusal belongs to `users_guard_membership_authority`.
+
+THE STOP. Step 12(c2) admits exactly three failure classes from `scripts/check_repository_consistency.ps1`. The run produced **8 issues in FOUR classes**: `MIGRATION STATE DRIFT` (3, admissible), `SUITE FIGURE DRIFT` (2, admissible), bounded `RECOVER-1`/Check 19 (2, admissible and exactly bounded — one `only in repository` entry, `20260917120000_a_membership_change_costs_the_same_through_every_door`, and ZERO `only on Primary`), and **`Check 10 STALE POINTER` (2), which is not in the admitted set**. Check 10 is not a consequence of the undeployed migration at all; it is a consequence of this contract's own frozen step ordering, and it is structurally unavoidable — Step 10 moves `reports/README.md`'s live pointer, Step 13 moves the matching manifest `Narrative:` but only "AFTER the Primary synchronization step has completed", and Step 12's gate sits between them. At `origin/main` both sides name the same report and Check 10 passes, which proves the failure is introduced by Step 10 and closable only by Step 13.
+
+Primary was NOT contacted for any write and no schema-changing call was made. Read-only verification immediately after the stop: project ref `vrvtsxexkiiiivlkdxzp`, **218 migrations**, latest `20260909180403`, `20260917120000` ABSENT, ledger fingerprint `70ba44e108ff9936f5d5f1bf8e27e349` — identical to the recorded pre-deployment evidence. Secondary `brplkqmbzffpxqgkkdzo` was never contacted at any point.
+
+No path outside Write Scope was written, and no path the dependency audit classified `READ/VERIFY ONLY` or `NOT AFFECTED` was touched. No frozen field was altered. The gate did its job: it refused before the irreversible step rather than after it.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-17 — Claude Opus 5 (reviewing agent)
+Verdict: Needs Corrective Change Request
+Findings — the engineering was never falsified; the CONTRACT was. Re-checked against the live repository rather than the log above: no implementation commit exists under this contract, nothing was deployed, and Primary was read live at 218 migrations with `20260917120000` absent. The blocking fact is internal to the frozen text: Step 10 and Step 13 together guarantee `Check 10 STALE POINTER` is red at exactly the moment Step 12(c2) admits only three failure classes, and Step 12(c2) itself states that any failure outside those three is a STOP. The two escapes available to an executing agent — deploying to Primary with a fourth class standing, or setting the manifest `Narrative:` ahead of Step 13's mandated ordering — are both forbidden by this same frozen authority. This is therefore not an execution error to retry; it is a defect in the contract that only a successor may repair.
+Recommendation to human: Set Status to Cancelled on this one. The Slice-12 engineering, the dependency-closure audit and every measurement recorded above remain valid and reusable.
+
+### 2026-09-18 — owner-authorized cancellation
+Cancelled by explicit human command on the evidence above, with the instruction to return ORVION to a clean synchronized baseline and to start no successor. The interrupted Steps 1-11 implementation was preserved as forensic evidence OUTSIDE the repository working tree — a `git diff --binary HEAD` patch covering all 12 paths plus their full bodies, verified reconstructable with `git apply --check --ignore-whitespace` against `c18bd03` — and the working tree was then restored to that commit, so no Slice-12 implementation byte remains anywhere in this repository. No frozen field of this contract was modified at any point, and the Check-10 ordering defect is deliberately NOT repaired here: a terminal contract is never edited into correctness.
+
+Carried forward as newly earned evidence, to be addressed by whatever the owner authorizes next and not by this contract: **a contract whose steps move two sides of a by-value consistency pairing must not place a gate that forbids that pairing's disagreement between them** — the same class of finding as the Write Scope dependency-closure lesson, one ordering level up.
 
 ## Review Gate
 
