@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -131,8 +131,26 @@ Certification sequence reproduced with the generated cache LEFT PRESENT, nothing
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-17 — Claude Opus 5 (reviewing agent)
+
+Verdict: Needs Corrective Change Request
+
+Findings:
+
+- **Local Windows evidence passed in full.** `-Finish` emitted `LOCAL_CERTIFY: READY` with all seven mandatory commands PASS across the derived CONTROL and REPOSITORY profiles; `test_future_date_guard.ps1` reported **16 passed, 0 failed**; the production guard `check_repository_consistency.ps1` was **CLEAN** with the regenerated cache left in place, and the certification sequence was reproduced without deleting anything between mandatory steps.
+- **The committed range passed the range-integrity mechanism.** `-Gate -BaseRef origin/main -HeadRef HEAD` returned `ORVION: READY`. It had earlier returned `OUT_OF_SCOPE_WRITE` for the SPEC-190 Draft commit sharing the range; that commit was replayed out before publication, which is what made the range legal.
+- **Candidate `97b049bacbfaf71d670cf1c6181dd4ba4ac6da3f` was REJECTED remotely.** `Agent Control` **succeeded**. `Repository Consistency` and `ORVION Acceptance` both **failed**, on one and the same assertion in each: `MUTATION: reverting the population REINTRODUCES the pgdelta false positive` — `15 passed, 1 FAILED`. Every other assertion in the suite, including all four controls and the companion mutation assertion, passed remotely.
+- **Root cause is the mutation fixture's platform-dependent visibility, not the production repair.** `$allFiles` enumerates with `Get-ChildItem -Recurse -File` and no `-Force`. Measured locally: a dot-prefixed directory is **visible** on Windows while an attribute-hidden directory is not; on Unix the leading dot **is** the hidden marker, so `supabase/.temp/` is omitted there. The same mutant, over the same fixture, therefore flags on Windows and cannot flag on Linux.
+- **A consequence worth stating plainly: AUD-01c is Windows-specific.** On Linux, Check 12 never enumerated `supabase/.temp/pgdelta` at all, so the false positive could not arise there. The defect and the blocked certification remain entirely real on the Windows workstation where `-Finish` and LOCAL certification actually run, which is why the production repair stays earned.
+- **The production semantics were NOT falsified by the remote failure.** The Git repository-candidate population, the unchanged UTC+14 ceiling, the invariant-culture parsing, the unchanged shared `$allFiles` and the register entry were all exercised remotely and produced no failure.
+- **Therefore frozen Implementation Step 2 is not portable.** It requires the faithful old-population mutant to flag a Negative-A fixture defined as living under a gitignored `supabase/.temp/pgdelta/` path. That is satisfiable on Windows and unsatisfiable on Linux. Step 1 forbids modifying `$allFiles`, and `CR_LIFECYCLE.md §8` rejects editing a frozen field, so the step cannot honestly be completed as written and must not be edited to make it pass.
+- **Nothing was promoted.** `origin/main` remained at `7c0c704` throughout. The Review and Complete commits made on the falsified evidence were rewound before any publication; that rewind is recorded here rather than hidden, and it touched no published history. Rejected candidate `97b049b` is deliberately preserved on `orvion-preflight` as evidence and will be replaced only through the caller-pinned lease mechanism, never by an uncontrolled force push.
+
+Recommendation to human: Approve corrective Change Request (successor), and Set Status to Cancelled on this one.
+
+### 2026-09-17 — owner-authorized cancellation
+
+Cancelled by explicit human command on the evidence above. The production Check-12 repair in this range is retained as evidence-backed work for the successor to inherit where independently proven; only the cross-platform mutation oracle is defective.
 
 ## Review Gate
 
