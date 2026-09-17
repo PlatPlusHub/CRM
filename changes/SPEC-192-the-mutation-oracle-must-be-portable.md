@@ -141,8 +141,30 @@ Production semantics were retained and re-proved, not re-implemented: `$allFiles
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-17 — Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings — re-measured from committed state at HEAD, not read back from the Execution Log:
+
+1. **Tracked future-dated authored evidence is FLAGGED** — `POSITIVE A`, green on Windows and on Linux.
+2. **Untracked, non-ignored future-dated authored evidence is FLAGGED** — `POSITIVE B`, green on both.
+3. **The non-hidden ignored generated-cache fixture is NOT flagged, because Git excludes it** — `NEGATIVE A`, green on both; the exclusion comes from the sandbox `.gitignore` rule, not from any pathname in production code.
+4. **Tracked-before-ignore evidence remains measured** — `BOUNDARY`, green on both.
+5. **The mutant demonstrably SEES the discriminator on both platforms** — `ORACLE PRECONDITION` computes the pre-repair population independently of the guard and asserts membership before any mutation claim; green on Windows and Linux. This is the assertion whose absence made SPEC-191's evidence invalid.
+6. **The mutant then flags the ignored generated-cache fixture on both platforms** — `MUTATION: reverting the population REINTRODUCES the false positive on the ignored cache`, green on Windows and **green on Linux**, where the predecessor's equivalent was unsatisfiable and rejected the candidate.
+7. **The mutant still flags genuine authored evidence** — it isolates the population rather than breaking the invariant.
+8. **AUD-01a/AUD-01b controls remain green** — all nine original assertion names are present at HEAD and the range deletes **0 lines** from the suite (136 added, 0 removed), so assertions 1–9 and `Invoke-Guard` are intact by construction rather than by inspection.
+9. **Real pgdelta is non-authoritative and does not block certification** — the live tree carried the regenerated cache with 5 future-dated tokens while `check_repository_consistency.ps1` exited 0, and `NEGATIVE B` pins it as a control.
+10. **`$allFiles` and unrelated guard semantics are unchanged** — `$allFiles`, `$dateRx`, the UTC+14 ceiling and the `git log -1 --format=%aI` clock cross-check are byte-identical to `origin/main`; the guard diff across the whole range is a single hunk `@@ -1224 +1224,44 @@`; Check 12's 47 code lines contain no pathname, no product name and no `-Force`.
+
+Also verified: `changes/SPEC-191-…md` is byte-identical to `904a987` (empty diff) and still `Cancelled`; `changes/SPEC-190-…md` is absent from HEAD and was neither created, modified nor deleted here; `ai-map.json`'s three live_state fields match the manifest by value and `Next capability` still names Batch 6 Slice 12.
+
+Certification: `-Finish` emitted `LOCAL_CERTIFY: READY` with eight PASS lines, including the digest-pinned Linux container obligation executed as a mandatory step rather than skipped.
+
+One correction recorded against my own earlier reporting: a hunk-count check run mid-execution was evaluated against committed state while Steps 2–3 were still uncommitted, so it reported the stale figure 40. Re-run against HEAD it is 44, which is the SPEC-191 hunk plus this contract's four comment lines. The conclusion did not change; the measurement was repeated properly rather than left standing.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
