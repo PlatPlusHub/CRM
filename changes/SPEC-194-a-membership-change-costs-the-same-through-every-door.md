@@ -3,10 +3,10 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -211,8 +211,23 @@ only in a CR that has at least one real entry.]
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-17 — Claude Opus 5 (reviewing agent)
+
+Verdict: Needs Corrective Change Request
+
+Findings — local execution reached the mandatory smoke test and STOPPED BEFORE PRIMARY. No implementation byte was ever committed under this contract, and nothing was deployed.
+
+- **Everything before the smoke passed.** Clean `db reset` → 219 migrations. pgTAP **Pass A: 118 files / 1944 assertions, PASS**. All six named `scripts/verify_*` suites exit 0. pgTAP **Pass B: 118 / 1944, PASS**. Declared `plan(N)` total **1944** equals executed **1944**, closing the 1944-versus-1936 question by measurement exactly as this contract predicted. Repaired `31_access_revocation_test.sql` **10/10** with a purely additive delta (+11 / −0), `plan(10)` unchanged and all four access-revocation subject assertions intact. `118_membership_authority_and_audit_test.sql` passed in full including its drop/restore mutation control. Exactly **one** undeployed migration existed — `20260917120000_a_membership_change_costs_the_same_through_every_door` — with **zero** only-on-Primary migrations, and no out-of-scope working-tree path.
+- **BLOCKER — the mandatory smoke failed.** `scripts/verify_database.sql` carries a hard executable invariant, `if n <> 618 then raise exception 'CHECK 6b FAILED: expected 618 catalog_values, found %'`. The approved migration legitimately seeds three `event_type` rows, so the clean-reset count is **621** and the smoke exits 3. That file is named in this contract's **Out of Scope** at its own line 65, so the repair was not available here. The file's own comment records the established practice — *"The pin moves with the seed; the check is not weakened"* — which confirms both that moving the pin is the correct repair and that this contract's Write Scope should have reached it.
+- **The pre-deploy readiness gate did exactly what it was added for.** The failure was caught before the irreversible step. **Primary was never touched**: read live at cancellation it holds 218 migrations, latest `20260909180403`, and no `20260917120000`. The Secondary was never contacted.
+- **This is the third contract blocked by one root cause, and the cause is the process rather than the engineering.** Write Scope dependency closure was derived from the implementation files and from the guards already tripped, rather than closed over every executable validator and authoritative derived fact the change affects. The engineering design was not falsified at any point.
+- **State on cancellation:** the working tree was restored to this contract's Approved commit and the local database reset to repository truth — 218 migrations, 618 `catalog_values`, `public.users` back to two triggers. An external forensic snapshot of the blocked implementation was preserved outside the repository as evidence only; it grants no write authority.
+
+Recommendation to human: Approve corrective Change Request (successor), and Set Status to Cancelled on this one.
+
+### 2026-09-17 — owner-authorized cancellation
+
+Cancelled by explicit human command on the evidence above. The engineering objective and every revalidated finding are retained for a corrective successor allocated through the normal lifecycle after a mechanically derived dependency-closure audit. No successor identity is named here, because naming one before it is legally allocated is what retires an identifier.
 
 ## Review Gate
 
