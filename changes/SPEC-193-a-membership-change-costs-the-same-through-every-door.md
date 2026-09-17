@@ -3,10 +3,10 @@
 ## Status
 
 [ ] Draft
-[x] Approved
+[ ] Approved
 [ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -162,8 +162,23 @@ only in a CR that has at least one real entry.]
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-17 — Claude Opus 5 (reviewing agent)
+
+Verdict: Needs Corrective Change Request
+
+Findings — execution BEGAN in the working tree and could not be committed. No commit of any implementation byte was ever made under this contract, and nothing was deployed to Primary.
+
+- **What was applied in the working tree and measured:** the three `security` event codes; the migration creating `users_guard_membership_authority` (BEFORE INSERT+UPDATE) and `users_emit_membership_change` (AFTER INSERT+UPDATE), neither naming DELETE, with `users_enforce_identity_binding` untouched; `create_tenant_user` losing its own `record_event`; and the new behavioural test. A clean `db reset` applied **219 migrations**, and the new test passed **29 of 29**, including the mandatory employee-claimant self-claim regression and a drop/restore mutation control.
+- **BLOCKER 1 — a fixture outside frozen Write Scope.** `supabase/tests/31_access_revocation_test.sql` fails. At lines 74–75 it runs `reset role;` then a bare `update public.users set is_active = false` while `request.jwt.claims` is still set at line 65 to an `employee` identity. The new guard derives the caller from `auth.uid()` rather than from the SQL role, so that statement is judged as that employee's session and is correctly refused `permission denied: MANAGE_USERS`. It is the same stale-claim fixture shape already corrected in-scope in `35_subscription_write_gate_test.sql` and inside the new test, and the repair is one line — but that file is not in this contract's Write Scope, and `CR_LIFECYCLE.md §11` forbids widening approved Write Scope to absorb a discovery. Measured precisely: **118 files / 1936 assertions with exactly this one file failing**; no production behaviour is implicated and no guard was weakened to avoid it.
+- **BLOCKER 2 — the control plane will not accept an undeployed migration.** The new migration and test made the manifest's `Live state:` figures stale, and the pre-commit Gate refused the commit with `MIGRATION STATE DRIFT` (manifest 218 vs repository 219; latest `20260909180403` vs `20260917120000`; ledger `70ba44e1…` vs `7f5b1e25…`) and `SUITE FIGURE DRIFT` (117 files vs 118; 1915 assertions vs 1944). That same sentence also asserts **proven Primary parity at the prior migration set**, and `scripts/check_primary_ledger.ps1` requires the recorded Primary ledger and the repository migration set to agree — so the figures cannot simply be incremented. Doing so would have published a parity claim that was never earned. Primary was read and remains at `20260909180403` with no `20260917120000`; nothing was deployed.
+- **Therefore this contract cannot honestly reach completion as scoped.** Both blockers are dependency-closure failures of its Write Scope and Implementation Steps, not defects in the engineering design, which was revalidated against the live database before execution began.
+- **State on cancellation:** the working tree was restored to this contract's Approved commit and the local database was reset to repository truth (218 migrations, `public.users` back to two triggers, no new event codes). An external forensic snapshot of the blocked implementation was preserved outside the repository as evidence only; it grants no write authority.
+
+Recommendation to human: Approve corrective Change Request (successor), and Set Status to Cancelled on this one.
+
+### 2026-09-17 — owner-authorized cancellation
+
+Cancelled by explicit human command on the evidence above. The engineering objective, the revalidated USR-1 / USR-2 / IDENT-2 findings and the BEFORE+AFTER architecture are retained for a corrective successor allocated through the normal lifecycle; no successor identity is named here, because naming one before it is legally allocated is what retires an identifier.
 
 ## Review Gate
 
