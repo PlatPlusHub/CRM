@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -107,19 +107,19 @@ Recovery Attempt: 0
 
 ## Acceptance Criteria
 
-- [ ] `scripts/test_future_date_guard.ps1` creates a non-hidden, git-ignored generated-cache fixture whose directory name does not begin with `.`, ignored by its own rule in the sandbox `.gitignore`.
-- [ ] That fixture's date is the independently computed UTC+14 edge plus thirty days, and the dot-prefixed pgdelta fixture carries the same date.
-- [ ] The suite contains an `ORACLE PRECONDITION` assertion proving the pre-repair on-disk population enumerates the non-hidden generated-cache fixture, evaluated before any mutation claim.
-- [ ] Against the repaired guard the suite asserts: tracked future evidence FLAGGED, untracked non-ignored future evidence FLAGGED, non-hidden ignored generated-cache NOT FLAGGED, pgdelta cache NOT FLAGGED, tracked-before-ignore boundary FLAGGED.
-- [ ] The mutation asserts the **non-hidden** generated-cache fixture IS flagged by the reverted-population mutant and that genuine tracked evidence remains flagged; the dot-prefixed fixture is not the mutation discriminator.
-- [ ] `scripts/test_future_date_guard.ps1` reports 0 failed on Windows, and 0 failed under Linux PowerShell via the container command in Additional Verification.
-- [ ] Assertions 1–9 of `scripts/test_future_date_guard.ps1` and its `Invoke-Guard` helper are unchanged from their state at the start of this Change Request.
-- [ ] `scripts/check_repository_consistency.ps1` has no `-Force` on `$allFiles`, no pathname/`pgdelta`/`.temp`/Supabase exception in any code line, and its `$dateRx`, UTC+14 ceiling, invariant-culture parsing and clock-sanity block are unchanged from their state at the start of this Change Request.
-- [ ] Check 12's `AUD-01c` comment attributes the repair to SPEC-192 and records SPEC-191's cancellation.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md`'s `AUD-01c` row attributes the repair to SPEC-192, names SPEC-191 as the cancelled predecessor, and records the measured platform split.
-- [ ] `changes/SPEC-191-check-12-measures-repository-evidence-not-generated-cache.md` is byte-identical to its state at the `SPEC-191: Cancel (human command)` commit, and its Status is still `Cancelled`.
-- [ ] `changes/SPEC-190-a-membership-change-costs-the-same-through-every-door.md` is neither created, modified nor deleted by this Change Request.
-- [ ] `_ORVION_CANONICAL/manifest.md`'s `Next capability` still names Batch 6 Slice 12, and `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value.
+- [x] `scripts/test_future_date_guard.ps1` creates a non-hidden, git-ignored generated-cache fixture whose directory name does not begin with `.`, ignored by its own rule in the sandbox `.gitignore`.
+- [x] That fixture's date is the independently computed UTC+14 edge plus thirty days, and the dot-prefixed pgdelta fixture carries the same date.
+- [x] The suite contains an `ORACLE PRECONDITION` assertion proving the pre-repair on-disk population enumerates the non-hidden generated-cache fixture, evaluated before any mutation claim.
+- [x] Against the repaired guard the suite asserts: tracked future evidence FLAGGED, untracked non-ignored future evidence FLAGGED, non-hidden ignored generated-cache NOT FLAGGED, pgdelta cache NOT FLAGGED, tracked-before-ignore boundary FLAGGED.
+- [x] The mutation asserts the **non-hidden** generated-cache fixture IS flagged by the reverted-population mutant and that genuine tracked evidence remains flagged; the dot-prefixed fixture is not the mutation discriminator.
+- [x] `scripts/test_future_date_guard.ps1` reports 0 failed on Windows, and 0 failed under Linux PowerShell via the container command in Additional Verification.
+- [x] Assertions 1–9 of `scripts/test_future_date_guard.ps1` and its `Invoke-Guard` helper are unchanged from their state at the start of this Change Request.
+- [x] `scripts/check_repository_consistency.ps1` has no `-Force` on `$allFiles`, no pathname/`pgdelta`/`.temp`/Supabase exception in any code line, and its `$dateRx`, UTC+14 ceiling, invariant-culture parsing and clock-sanity block are unchanged from their state at the start of this Change Request.
+- [x] Check 12's `AUD-01c` comment attributes the repair to SPEC-192 and records SPEC-191's cancellation.
+- [x] `reports/master/MASTER_GAP_REGISTER.md`'s `AUD-01c` row attributes the repair to SPEC-192, names SPEC-191 as the cancelled predecessor, and records the measured platform split.
+- [x] `changes/SPEC-191-check-12-measures-repository-evidence-not-generated-cache.md` is byte-identical to its state at the `SPEC-191: Cancel (human command)` commit, and its Status is still `Cancelled`.
+- [x] `changes/SPEC-190-a-membership-change-costs-the-same-through-every-door.md` is neither created, modified nor deleted by this Change Request.
+- [x] `_ORVION_CANONICAL/manifest.md`'s `Next capability` still names Batch 6 Slice 12, and `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value.
 
 ## Execution Log
 
@@ -168,15 +168,15 @@ Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
