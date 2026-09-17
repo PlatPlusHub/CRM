@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-09-09. **repository, local stack and Primar
 
 Batch 6 surface coverage: **12 of 77 surfaces have a recorded audit disposition**, all twelve at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary last recorded **zero business rows** (2026-09-08; not re-read this session).
 
-Active Change Request: None
+Active Change Request: `changes/SPEC-191-check-12-measures-repository-evidence-not-generated-cache.md`
 
 Open owner decisions — **MAIL-1**, **RET-1**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-189 workstation certification is reachable, Complete (2026-09-17).** The `WORKSTATION` profile declared its idempotence evidence unexecutable, so `-Finish` could never reach `READY` and `Complete` was refused - the `SPEC-164` DEFECT B shape one profile over. `scripts/verify_workstation_idempotence.ps1` now runs `prepare.ps1` once and fails closed on any install, reconfiguration, failure or tracked-byte change. It also carries the single-authority work from the cancelled `SPEC-186`/`SPEC-188`: `.vscode/extensions.json` and `.mcp.json` are the sole authorities `prepare`/`doctor` read, guarded by Check 28. Assertions 92, 173, 174.
+Last Completed: **SPEC-189 workstation certification is reachable, Complete (2026-09-17).** Detail lives in `changes/SPEC-189-workstation-certification-is-reachable.md` and in Git, per this file's current-state-only rule above.
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
