@@ -208,6 +208,104 @@ Check "Check 23 flags the block-less probe and renders its Gregorian date" `
     $handoffHit
 
 Write-Host ""
+Write-Host "== AUD-01c: Check 12 measures repository evidence, not generated cache ==" -ForegroundColor Cyan
+
+# AUD-01c (2026-09-17, SPEC-191). The scenarios above all run against a NON-git temp copy, so
+# `git ls-files` fails there and Check 12 takes its fallback population. That is deliberate and worth
+# stating: assertions 1-9 now prove the FALLBACK path, and everything below proves the PRIMARY one.
+# Without a git-backed sandbox the repair would be untested by its own suite.
+#
+# One sandbox, two guard runs: the repaired guard, then a faithful mutant whose Check 12 population
+# is reverted to every typed file on disk. Four controls must be judged DIFFERENTLY by the repaired
+# guard, and the mutant must reintroduce exactly the defect that was reproduced in the field.
+function New-GitSandbox {
+    $dir = Join-Path ([IO.Path]::GetTempPath()) ("orvion-aud01c-" + [Guid]::NewGuid().ToString('N').Substring(0,8))
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    Get-ChildItem -Path $repoRoot -Recurse -File |
+        Where-Object { $_.FullName -notmatch '[\\/](node_modules|backup|\.git)[\\/]' } |
+        ForEach-Object {
+            $rel = $_.FullName.Substring($repoRoot.Length + 1)
+            $dest = Join-Path $dir $rel
+            New-Item -ItemType Directory -Path (Split-Path $dest -Parent) -Force | Out-Null
+            Copy-Item $_.FullName $dest -Force
+        }
+    # Any real cache copied in would confound the controlled one below.
+    Remove-Item (Join-Path $dir 'supabase/.temp') -Recurse -Force -ErrorAction SilentlyContinue
+
+    Push-Location $dir
+    try {
+        git init -q . 2>&1 | Out-Null
+        git config user.email 'guard@orvion.test'; git config user.name 'guard'
+
+        # BOUNDARY -- tracked FIRST, then matched by an ignore rule written afterwards. This is the
+        # case that separates a repository-candidate population from a naive "check-ignore means
+        # exempt" one, and it must stay judged.
+        Set-Content 'aud01c-boundary-probe.md' -Encoding UTF8 -Value "Last updated: $(Iso $edge.AddDays(1))"
+        git add -f 'aud01c-boundary-probe.md' 2>&1 | Out-Null
+        Add-Content '.gitignore' -Value "`naud01c-boundary-probe.md"
+
+        # POSITIVE A -- ordinary tracked authored evidence.
+        Set-Content 'aud01c-tracked-probe.md' -Encoding UTF8 -Value "Last updated: $(Iso $edge.AddDays(1))"
+        git add 'aud01c-tracked-probe.md' 2>&1 | Out-Null
+
+        # POSITIVE B -- authored but never added, and matching no ignore rule. An agent must not be
+        # able to write tomorrow's date and escape simply by not committing it yet.
+        Set-Content 'aud01c-untracked-probe.sql' -Encoding UTF8 -Value "-- Last updated: $(Iso $edge.AddDays(1))"
+
+        # NEGATIVE A -- the reproduced false positive: a gitignored generated cache carrying the
+        # Supabase Realtime partition bounds that a mandatory `db reset` regenerates.
+        New-Item -ItemType Directory -Path 'supabase/.temp/pgdelta' -Force | Out-Null
+        Set-Content 'supabase/.temp/pgdelta/aud01c-cache-probe.sql' -Encoding UTF8 `
+            -Value "FOR VALUES FROM ('$(Iso $edge.AddDays(1)) 00:00:00') TO ('$(Iso $edge.AddDays(2)) 00:00:00')"
+    } finally { Pop-Location }
+    $dir
+}
+
+function Hits($out, $probe) { @($out -split "`n" | Where-Object { $_ -match ('FUTURE-DATED: ' + [regex]::Escape($probe)) }).Count }
+
+$sandbox = New-GitSandbox
+try {
+    $repairedOut = & pwsh -NoProfile -File $guard -RepoRoot $sandbox 2>&1 | Out-String
+    if ($repairedOut -notmatch 'Check 12: no future-dated evidence') {
+        throw 'the repaired guard never reached Check 12 -- the git sandbox is not viable, not the check'
+    }
+
+    Check "POSITIVE A: TRACKED authored evidence dated beyond the ceiling IS flagged" `
+        ((Hits $repairedOut 'aud01c-tracked-probe.md') -gt 0) 'tracked evidence escaped the check'
+
+    Check "POSITIVE B: UNTRACKED, non-ignored authored evidence IS flagged" `
+        ((Hits $repairedOut 'aud01c-untracked-probe.sql') -gt 0) 'new evidence escaped merely by being uncommitted'
+
+    Check "NEGATIVE A: an IGNORED generated pgdelta cache is NOT flagged" `
+        ((Hits $repairedOut 'supabase') -eq 0) 'the reproduced false positive is still present'
+
+    Check "BOUNDARY: evidence tracked BEFORE an ignore rule matched it stays flagged" `
+        ((Hits $repairedOut 'aud01c-boundary-probe.md') -gt 0) `
+        'a later ignore rule silently removed already-tracked evidence from the check'
+
+    # THE MUTANT. One line, the smallest faithful reversion: Check 12's population goes back to every
+    # typed file on disk. If the four assertions above could pass against this, they would be proving
+    # nothing about the repair.
+    $mutant = Join-Path $sandbox 'aud01c-mutant-guard.ps1'
+    $guardSrc = Get-Content $guard -Raw
+    $mutantSrc = $guardSrc -replace [regex]::Escape('$scan = $typedFiles | Where-Object { $candidatePaths.Contains($_.FullName) }'), '$scan = $typedFiles'
+    Check "the mutant differs from the repaired guard (the reversion actually applied)" `
+        ($mutantSrc -ne $guardSrc) 'the mutation target string was not found -- the mutant would be a copy'
+    Set-Content -Path $mutant -Value $mutantSrc -Encoding UTF8
+
+    $mutantOut = & pwsh -NoProfile -File $mutant -RepoRoot $sandbox 2>&1 | Out-String
+    if ($mutantOut -notmatch 'Check 12: no future-dated evidence') { throw 'the mutant never reached Check 12' }
+
+    Check "MUTATION: reverting the population REINTRODUCES the pgdelta false positive" `
+        ((Hits $mutantOut 'supabase') -gt 0) `
+        'the mutant did not resurrect the defect -- these controls cannot tell the repair from a fake'
+
+    Check "MUTATION: the mutant still flags genuine tracked evidence (it is not simply broken)" `
+        ((Hits $mutantOut 'aud01c-tracked-probe.md') -gt 0) 'the mutant broke the invariant instead of isolating the population'
+}
+finally { Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue }
+
+Write-Host ""
 if ($fail -gt 0) {
     Write-Host "FUTURE-DATE GUARD TEST: $pass passed, $fail FAILED" -ForegroundColor Red
     exit 1

@@ -1221,7 +1221,46 @@ Write-Host "== Check 12: no future-dated evidence ==" -ForegroundColor Cyan
 $today = [datetimeoffset]::UtcNow.AddHours(14).Date
 $dateRx = '\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b'
 $futureHits = 0
-$scan = $allFiles | Where-Object { $_.Extension -in '.md', '.json', '.ps1', '.sql' }
+# AUD-01c (2026-09-17, SPEC-191). WHAT THIS CHECK MEASURES -- the date invariant above is untouched.
+# The population was every file on disk minus node_modules/backup/.git, which is not the same set as
+# "evidence this repository authors". DATABASE `-Finish` runs `npx supabase db reset` BEFORE the
+# repository-consistency step (`Profiles()` sorts DATABASE ahead of REPOSITORY), the reset regenerates
+# the gitignored `supabase/.temp/pgdelta` catalog cache, and that cache captures Supabase Realtime's
+# own `realtime.messages_<date>` daily partition bounds -- legitimately future-dated, because a
+# partition must exist before the day it covers. The check read them as evidence, exited 1, and made
+# LOCAL certification unreachable for every database slice. Deleting the cache first does not help:
+# the reset that regenerates it is itself one of the mandatory steps.
+#
+# THIS IS NOT AN EXEMPTION LIST, which this check refuses by design ("every exemption is a place the
+# next future date can hide"), and it is not a Supabase- or pgdelta-specific exception: there is no
+# pathname here. It states the POPULATION by adopting the repository's own existing answer to "which
+# files are ours" rather than inventing a second one.
+#
+# `--others --exclude-standard` is load-bearing: untracked, non-ignored files STAY in the population,
+# so a future-dated report is judged before it is ever `git add`ed. `--cached` is equally load-bearing:
+# a tracked file remains judged even if an ignore rule is later written that matches it.
+#
+# FAIL-CLOSED, BY EXIT STATUS. Git failure is detected from the command's own exit code, never from
+# empty output, and either a failed call or an empty result falls back to the previous on-disk
+# population -- which OVER-measures. There is deliberately no path on which this check measures
+# nothing: "a guard that asserts over an empty set is worse than one that fails". The guard-of-guard
+# copies the repository into a non-git temp directory, so it exercises exactly that fallback, and its
+# git-backed section exercises this primary path.
+#
+# No new dependency class: Check 12 already shells out to git for its clock cross-check a few lines
+# below, with the same silent-degradation posture.
+$typedFiles = $allFiles | Where-Object { $_.Extension -in '.md', '.json', '.ps1', '.sql' }
+$candidatePaths = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+$gitCandidates = @(& git -C $RepoRoot -c core.quotepath=off ls-files --cached --others --exclude-standard 2>$null)
+$gitResolved = ($LASTEXITCODE -eq 0) -and $gitCandidates.Count -gt 0
+if ($gitResolved) {
+    foreach ($rel in $gitCandidates) {
+        if ($rel) { [void]$candidatePaths.Add((Join-Path $RepoRoot ($rel -replace '/', [IO.Path]::DirectorySeparatorChar))) }
+    }
+    $scan = $typedFiles | Where-Object { $candidatePaths.Contains($_.FullName) }
+} else {
+    $scan = $typedFiles
+}
 foreach ($f in $scan) {
     $lineNo = 0
     foreach ($line in [System.IO.File]::ReadAllLines($f.FullName)) {

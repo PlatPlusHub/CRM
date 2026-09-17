@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -71,7 +71,7 @@ None. `changes/SPEC-190-a-membership-change-costs-the-same-through-every-door.md
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -110,12 +110,24 @@ Recovery Attempt: 0
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-09-17 — Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — Check 12's population is now Git's repository-candidate set; `$allFiles`, `$dateRx`, the UTC+14 ceiling, the invariant-culture parsing and the clock-sanity block are untouched, and no other check was edited.
+- Step 2: Applied — git-backed sandbox section added; suite went 9 → 16 assertions, 0 failed. Assertions 1–9 and `Invoke-Guard` unchanged.
+- Step 3: Applied — `AUD-01c` row inserted directly after `AUD-01a`. Future dates are DESCRIBED, never quoted, per Check 12's own recorded lesson that an explanatory comment once flagged itself.
+- Step 4: Applied — `ai-map.json` regenerated after every manifest-affecting commit; Check 7 passes by value.
+
+Commits: recorded in this Change Request's range on `main`.
+
+Engineering Observations, both handled inside Write Scope and neither widening it:
+- **Owner guardrail applied to Step 1's fallback trigger.** The step says "yields no entries"; the owner directed that Git failure be detected by exit status, not by empty output. Implemented as the superset — fall back when `$LASTEXITCODE -ne 0` **or** the result is empty — so there is no path on which Check 12 measures nothing. The frozen step text was not edited.
+- **Check 5 (manifest leanness) refused the Approve commit at 7060/7000 characters.** Cause was pre-existing, not this contract: `Last Completed` had accumulated a 658-character changelog, which `manifest.md`'s own line-24 rule forbids ("Current state only … If any field becomes a changelog, trim it"). Trimmed to the single current capability, pointing at SPEC-189's contract and Git for the detail. Headroom is now 371 characters (6629/7000), not a squeeze. No other current-state prose was touched and the budget was not raised.
+- **Check 21 (STALE-1) then required the register's freshness header to carry the newer date**, which is that check's own prescribed remedy. A new `Last updated:` line was written and the previous one demoted to `Previously:`, exactly as the file already does.
+
+Certification sequence reproduced with the generated cache LEFT PRESENT, nothing deleted between the mandatory steps: cache absent → `npx supabase db reset` (exit 0) → cache regenerated carrying **7 future-dated tokens** → Repository Consistency **CLEAN** → genuine future-dated authored evidence injected as an untracked, non-ignored file → **exit 1, correctly refused** → only the injected file removed, cache still present → **CLEAN restored**.
 
 ## Verification Notes
 
