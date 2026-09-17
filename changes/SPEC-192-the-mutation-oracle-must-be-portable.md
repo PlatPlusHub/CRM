@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -74,7 +74,7 @@ Supersedes `changes/SPEC-191-check-12-measures-repository-evidence-not-generated
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -123,12 +123,21 @@ Recovery Attempt: 0
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-09-17 — Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — the `AUD-01c` section was rewritten between its own header and the pass/fail summary. Assertions 1–9, `Invoke-Guard`, `Future-Hits`, `$edge`, `$inv` and `Iso` untouched. Suite 16 → 18 assertions.
+- Step 2: Applied — Check 12's `AUD-01c` comment header now attributes the repair to SPEC-192 and records SPEC-191's cancellation. No code line changed.
+- Step 3: Applied — the `AUD-01c` register row attributes the repair to SPEC-192 with SPEC-191 named as the cancelled predecessor, and records the measured platform split. No literal future date written. Check 21 did not require a freshness-header change: the file's `Last updated:` line already carries this date.
+- Step 4: Applied — `ai-map.json` regenerated after every manifest-affecting commit; Check 7 passes by value.
+
+Commits: recorded in this Change Request's range on `main`.
+
+The portability fix is proven on BOTH platforms rather than asserted: **18 passed, 0 failed on Windows and 18 passed, 0 failed under Linux PowerShell** in the digest-pinned container — including `MUTATION: reverting the population REINTRODUCES the false positive on the ignored cache`, the exact assertion that was unsatisfiable on Linux under SPEC-191 and that rejected its candidate. `ORACLE PRECONDITION` passed on both, so neither mutation claim was made over an invisible fixture.
+
+Production semantics were retained and re-proved, not re-implemented: `$allFiles`, `$dateRx`, the UTC+14 ceiling and the `git log -1 --format=%aI` clock cross-check are byte-identical to `origin/main`; no `-Force` was added; Check 12's code lines contain no pathname or product name; and the real pgdelta cache sat in the tree carrying 5 future-dated tokens while the guard exited 0.
 
 ## Verification Notes
 

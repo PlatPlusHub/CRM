@@ -210,14 +210,26 @@ Check "Check 23 flags the block-less probe and renders its Gregorian date" `
 Write-Host ""
 Write-Host "== AUD-01c: Check 12 measures repository evidence, not generated cache ==" -ForegroundColor Cyan
 
-# AUD-01c (2026-09-17, SPEC-191). The scenarios above all run against a NON-git temp copy, so
-# `git ls-files` fails there and Check 12 takes its fallback population. That is deliberate and worth
-# stating: assertions 1-9 now prove the FALLBACK path, and everything below proves the PRIMARY one.
-# Without a git-backed sandbox the repair would be untested by its own suite.
+# AUD-01c (2026-09-17, SPEC-192; predecessor SPEC-191 cancelled). The scenarios above all run against
+# a NON-git temp copy, so `git ls-files` fails there and Check 12 takes its fallback population. That
+# is deliberate and worth stating: assertions 1-9 prove the FALLBACK path, and everything below
+# proves the PRIMARY one. Without a git-backed sandbox the repair would be untested by its own suite.
 #
-# One sandbox, two guard runs: the repaired guard, then a faithful mutant whose Check 12 population
-# is reverted to every typed file on disk. Four controls must be judged DIFFERENTLY by the repaired
-# guard, and the mutant must reintroduce exactly the defect that was reproduced in the field.
+# THE DISCRIMINATOR IS NON-HIDDEN, AND THAT IS THE ENTIRE POINT OF THIS SECTION. SPEC-191 keyed its
+# mutation on a fixture under `supabase/.temp/` -- an ordinary directory on Windows, and a HIDDEN one
+# on Unix, where a leading dot IS the hidden marker and `Get-ChildItem -Recurse` omits it without
+# `-Force`. The mutant that reverts to the on-disk population therefore could not resurrect the
+# defect on Linux at all: the assertion was unsatisfiable there, local Windows evidence was green,
+# and remote CI rejected the candidate. Measured side by side in disposable sandboxes with one
+# identical script: the dot-prefixed fixture is VISIBLE on Windows and hidden on Linux, while a
+# non-hidden ignored fixture is VISIBLE on both and excluded from the Git population on both.
+#
+# The pgdelta-shaped fixture is KEPT, because it is what the field defect actually looked like -- but
+# only as a realistic control on the repaired guard. It is never the mutation discriminator again.
+#
+# A MUTATION ASSERTION OVER AN INVISIBLE FIXTURE IS INVALID EVIDENCE. The ORACLE PRECONDITION below
+# therefore proves the pre-repair population can actually SEE the discriminator before any claim is
+# made about what the mutant did or did not flag.
 function New-GitSandbox {
     $dir = Join-Path ([IO.Path]::GetTempPath()) ("orvion-aud01c-" + [Guid]::NewGuid().ToString('N').Substring(0,8))
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -237,9 +249,8 @@ function New-GitSandbox {
         git init -q . 2>&1 | Out-Null
         git config user.email 'guard@orvion.test'; git config user.name 'guard'
 
-        # BOUNDARY -- tracked FIRST, then matched by an ignore rule written afterwards. This is the
-        # case that separates a repository-candidate population from a naive "check-ignore means
-        # exempt" one, and it must stay judged.
+        # BOUNDARY -- tracked FIRST, then matched by an ignore rule written afterwards. Separates a
+        # repository-candidate population from a naive "check-ignore means exempt" one.
         Set-Content 'aud01c-boundary-probe.md' -Encoding UTF8 -Value "Last updated: $(Iso $edge.AddDays(1))"
         git add -f 'aud01c-boundary-probe.md' 2>&1 | Out-Null
         Add-Content '.gitignore' -Value "`naud01c-boundary-probe.md"
@@ -248,44 +259,72 @@ function New-GitSandbox {
         Set-Content 'aud01c-tracked-probe.md' -Encoding UTF8 -Value "Last updated: $(Iso $edge.AddDays(1))"
         git add 'aud01c-tracked-probe.md' 2>&1 | Out-Null
 
-        # POSITIVE B -- authored but never added, and matching no ignore rule. An agent must not be
-        # able to write tomorrow's date and escape simply by not committing it yet.
+        # POSITIVE B -- authored but never added, matching no ignore rule. An agent must not write
+        # tomorrow's date and escape simply by not committing it yet.
         Set-Content 'aud01c-untracked-probe.sql' -Encoding UTF8 -Value "-- Last updated: $(Iso $edge.AddDays(1))"
 
-        # NEGATIVE A -- the reproduced false positive: a gitignored generated cache carrying the
-        # Supabase Realtime partition bounds that a mandatory `db reset` regenerates.
+        # NEGATIVE A / THE MUTATION DISCRIMINATOR -- a git-ignored generated cache whose directory
+        # name does NOT begin with a dot and which carries no hidden attribute, so BOTH populations
+        # resolve it identically on Windows and on Linux. edge+30 keeps it clear of any midnight
+        # boundary during a CI run.
+        New-Item -ItemType Directory -Path 'aud01c-generated-cache' -Force | Out-Null
+        Add-Content '.gitignore' -Value "`naud01c-generated-cache/"
+        Set-Content 'aud01c-generated-cache/aud01c-cache-probe.sql' -Encoding UTF8 `
+            -Value "FOR VALUES FROM ('$(Iso $edge.AddDays(30)) 00:00:00') TO ('$(Iso $edge.AddDays(30)) 23:59:59')"
+
+        # NEGATIVE B -- the realistic shape the field defect wore. Control only.
         New-Item -ItemType Directory -Path 'supabase/.temp/pgdelta' -Force | Out-Null
-        Set-Content 'supabase/.temp/pgdelta/aud01c-cache-probe.sql' -Encoding UTF8 `
-            -Value "FOR VALUES FROM ('$(Iso $edge.AddDays(1)) 00:00:00') TO ('$(Iso $edge.AddDays(2)) 00:00:00')"
+        Set-Content 'supabase/.temp/pgdelta/aud01c-pgdelta-probe.sql' -Encoding UTF8 `
+            -Value "FOR VALUES FROM ('$(Iso $edge.AddDays(30)) 00:00:00') TO ('$(Iso $edge.AddDays(30)) 23:59:59')"
     } finally { Pop-Location }
     $dir
 }
 
-function Hits($out, $probe) { @($out -split "`n" | Where-Object { $_ -match ('FUTURE-DATED: ' + [regex]::Escape($probe)) }).Count }
+# The PRE-REPAIR population, computed here exactly as the guard computes `$allFiles` plus its
+# extension filter, and independently of the guard so a defect in one cannot hide in the other.
+function Old-Population([string]$root) {
+    @(Get-ChildItem -Path $root -Recurse -File |
+      Where-Object { $_.FullName -notmatch '[\\/](node_modules|backup|\.git)[\\/]' -and $_.Extension -in '.md', '.json', '.ps1', '.sql' } |
+      ForEach-Object { $_.FullName.Substring($root.Length + 1).Replace('\', '/') })
+}
+
+# Each probe is matched by its own unique basename, so one probe's finding can never satisfy
+# another's assertion.
+function Hits($out, $probe) { @($out -split "`n" | Where-Object { $_ -match ('FUTURE-DATED: .*' + [regex]::Escape($probe)) }).Count }
 
 $sandbox = New-GitSandbox
 try {
+    # ---- ORACLE PRECONDITION -------------------------------------------------------------------
+    $oldPop = Old-Population $sandbox
+    Check "ORACLE PRECONDITION: the pre-repair population can SEE the generated-cache discriminator" `
+        ($oldPop -contains 'aud01c-generated-cache/aud01c-cache-probe.sql') `
+        'the mutation assertions below would be vacuous -- this is the exact defect SPEC-191 shipped'
+
     $repairedOut = & pwsh -NoProfile -File $guard -RepoRoot $sandbox 2>&1 | Out-String
     if ($repairedOut -notmatch 'Check 12: no future-dated evidence') {
         throw 'the repaired guard never reached Check 12 -- the git sandbox is not viable, not the check'
     }
 
+    # ---- THE REPAIRED GUARD --------------------------------------------------------------------
     Check "POSITIVE A: TRACKED authored evidence dated beyond the ceiling IS flagged" `
         ((Hits $repairedOut 'aud01c-tracked-probe.md') -gt 0) 'tracked evidence escaped the check'
 
     Check "POSITIVE B: UNTRACKED, non-ignored authored evidence IS flagged" `
         ((Hits $repairedOut 'aud01c-untracked-probe.sql') -gt 0) 'new evidence escaped merely by being uncommitted'
 
-    Check "NEGATIVE A: an IGNORED generated pgdelta cache is NOT flagged" `
-        ((Hits $repairedOut 'supabase') -eq 0) 'the reproduced false positive is still present'
+    Check "NEGATIVE A: the NON-HIDDEN ignored generated cache is NOT flagged" `
+        ((Hits $repairedOut 'aud01c-cache-probe.sql') -eq 0) 'an ignored generated artifact is being judged as evidence'
+
+    Check "NEGATIVE B: the real pgdelta-shaped ignored cache is NOT flagged" `
+        ((Hits $repairedOut 'aud01c-pgdelta-probe.sql') -eq 0) 'the reproduced field false positive is still present'
 
     Check "BOUNDARY: evidence tracked BEFORE an ignore rule matched it stays flagged" `
         ((Hits $repairedOut 'aud01c-boundary-probe.md') -gt 0) `
         'a later ignore rule silently removed already-tracked evidence from the check'
 
-    # THE MUTANT. One line, the smallest faithful reversion: Check 12's population goes back to every
-    # typed file on disk. If the four assertions above could pass against this, they would be proving
-    # nothing about the repair.
+    # ---- THE MUTANT ----------------------------------------------------------------------------
+    # One line, the smallest faithful reversion: Check 12's population goes back to every typed file
+    # on disk. If the assertions above could pass against this, they would prove nothing.
     $mutant = Join-Path $sandbox 'aud01c-mutant-guard.ps1'
     $guardSrc = Get-Content $guard -Raw
     $mutantSrc = $guardSrc -replace [regex]::Escape('$scan = $typedFiles | Where-Object { $candidatePaths.Contains($_.FullName) }'), '$scan = $typedFiles'
@@ -296,15 +335,14 @@ try {
     $mutantOut = & pwsh -NoProfile -File $mutant -RepoRoot $sandbox 2>&1 | Out-String
     if ($mutantOut -notmatch 'Check 12: no future-dated evidence') { throw 'the mutant never reached Check 12' }
 
-    Check "MUTATION: reverting the population REINTRODUCES the pgdelta false positive" `
-        ((Hits $mutantOut 'supabase') -gt 0) `
+    Check "MUTATION: reverting the population REINTRODUCES the false positive on the ignored cache" `
+        ((Hits $mutantOut 'aud01c-cache-probe.sql') -gt 0) `
         'the mutant did not resurrect the defect -- these controls cannot tell the repair from a fake'
 
     Check "MUTATION: the mutant still flags genuine tracked evidence (it is not simply broken)" `
         ((Hits $mutantOut 'aud01c-tracked-probe.md') -gt 0) 'the mutant broke the invariant instead of isolating the population'
 }
 finally { Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue }
-
 Write-Host ""
 if ($fail -gt 0) {
     Write-Host "FUTURE-DATE GUARD TEST: $pass passed, $fail FAILED" -ForegroundColor Red

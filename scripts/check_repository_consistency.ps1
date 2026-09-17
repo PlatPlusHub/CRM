@@ -1221,7 +1221,11 @@ Write-Host "== Check 12: no future-dated evidence ==" -ForegroundColor Cyan
 $today = [datetimeoffset]::UtcNow.AddHours(14).Date
 $dateRx = '\b(20[0-9]{2}-[01][0-9]-[0-3][0-9])\b'
 $futureHits = 0
-# AUD-01c (2026-09-17, SPEC-191). WHAT THIS CHECK MEASURES -- the date invariant above is untouched.
+# AUD-01c (2026-09-17, SPEC-192). WHAT THIS CHECK MEASURES -- the date invariant above is untouched.
+# SPEC-191 wrote this population repair and was CANCELLED after remote CI falsified its mutation
+# oracle, not this code: its mutant keyed on a dot-prefixed fixture that Unix hides from the
+# pre-repair population. The production semantics below were retained unchanged and re-proved; only
+# the test's discriminator moved to a non-hidden ignored path.
 # The population was every file on disk minus node_modules/backup/.git, which is not the same set as
 # "evidence this repository authors". DATABASE `-Finish` runs `npx supabase db reset` BEFORE the
 # repository-consistency step (`Profiles()` sorts DATABASE ahead of REPOSITORY), the reset regenerates
