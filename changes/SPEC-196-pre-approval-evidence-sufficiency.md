@@ -1,4 +1,4 @@
-# Change Request — SPEC-1002
+# Change Request — SPEC-196
 
 ## Status
 
@@ -107,7 +107,7 @@ Evidence Commands:
 | Repository consistency | `scripts/check_repository_consistency.ps1` | VERIFY | Existing guard and Check 27 must remain clean; no new semantic parser is added there. |
 | Local and remote adapters | `.githooks/pre-commit`; `.claude/hooks/session-state.ps1`; `.github/workflows/agent-control.yml`; `.github/workflows/orvion-acceptance.yml`; `.github/workflows/repository-consistency.yml` | UNAFFECTED | They continue invoking the same repository Gate and suites; no client-specific rule or workflow is added. |
 | Candidate publication | `scripts/publish_candidate.ps1` | UNAFFECTED | Continue invoking the existing committed-range Gate and normal preflight publication path. |
-| This contract | `changes/SPEC-1002-pre-approval-evidence-sufficiency.md` | WRITE | Implicit workflow synchronization only, as already defined by `CR_LIFECYCLE.md §8`. |
+| This contract | `changes/SPEC-196-pre-approval-evidence-sufficiency.md` | WRITE | Implicit workflow synchronization only, as already defined by `CR_LIFECYCLE.md §8`. |
 
 Unresolved Material Consumers: None
 
