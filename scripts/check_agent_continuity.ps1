@@ -430,13 +430,43 @@ function StepNumber([string]$Value,[int]$Max){
     $n
 }
 function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
-    # DERIVED applicability. A control or governance surface in Write Scope, or a
-    # derived CONTROL profile, makes the evidence classes applicable whatever the
-    # contract calls itself.
-    $applicable=($Profiles-contains'CONTROL')
-    if(-not $applicable){foreach($p in $Contract.Scope){if(Test-ControlPath $p){$applicable=$true;break}}}
+    # DERIVED applicability, from the inputs ENGINEERING_METHOD actually names: Write
+    # Scope, derived verification profiles, known control/governance surfaces,
+    # cross-path triggers and a declared irreversible action. SPEC-196 implemented only
+    # the control-surface one, so a DATABASE, CI, WORKSTATION or Edge Function contract
+    # had its evidence SKIPPED while the Gate still printed `APPROVAL_EVIDENCE: PASS` -
+    # reproduced on the real Draft->Approved path, invalid three ways, admitted (SPEC-198).
+    #
+    # `REPOSITORY` is the profile every contract derives unconditionally, so "any other
+    # profile" is exactly the statement "this change reached a surface the profile system
+    # marks as special". Written against the SHAPE of that system rather than a list of
+    # its current members, so adding a profile later needs no edit here.
+    $applicable=@($Profiles|Where-Object{$_-ne'REPOSITORY'}).Count-gt0
+    if(-not $applicable){
+        foreach($p in $Contract.Scope){
+            if(Test-ControlPath $p){$applicable=$true;break}
+            # Edge Functions derive NO profile and are not a control surface, yet this
+            # repository's only one authorizes itself with the service_role key, bypasses
+            # RLS and destroys customer documents. It is the single execution surface no
+            # other mechanical input reaches; adding it to `Profiles` instead would
+            # disagree with migration-ci.yml and force the database protocol on a
+            # TypeScript change, so the path is read HERE and nowhere else.
+            if($p-match'^supabase/functions/'){$applicable=$true;break}
+        }
+    }
     $body=Section $Contract.Text 'Pre-Approval Evidence' -Optional
-    if(-not $applicable){return 'PASS'}
+    # A contract's own declared irreversible action is an applicability input. It can only
+    # ADD an obligation, never remove one, so it is consulted last and only when a section
+    # exists - a contract cannot be made applicable by a section it does not have. `NONE`
+    # is matched as a prefix because the established idiom writes the reason after it.
+    if(-not $applicable-and$null-ne$body-and(Normalize $body)-ne''){
+        $irr=EvidenceField (SubSection $body 'Execution-Boundary Satisfiability') 'Irreversible Action Step'
+        if($irr-and$irr-notmatch'^\s*NONE\b'){$applicable=$true}
+    }
+    # NOT the same word as PASS. `ENGINEERING_METHOD` states that "we did not look" and
+    # "we looked and it is fine" are different facts; reporting PASS for a section that
+    # was never read asserted the very thing this evaluator exists to establish.
+    if(-not $applicable){return 'NOT APPLICABLE'}
     if($null-eq$body-or(Normalize $body)-eq''){throw 'APPROVAL_EVIDENCE:INDETERMINATE:section missing for control-scope work'}
 
     # Self-exemption. Repository evidence says applicable; the contract may not

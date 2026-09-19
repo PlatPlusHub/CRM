@@ -137,7 +137,9 @@ function EvidenceText(
     [string]$Consumer='ok',          # ok | none | unknown | unresolved | placeholder | baddisposition
     [string]$Boundary='ok',          # ok | conflict | badstep | openended
     [string]$HJ='ok',                # ok | missing
-    [string]$Applicability='ok'      # ok | selfexempt
+    [string]$Applicability='ok',     # ok | selfexempt
+    [string]$Irreversible='NONE'     # SPEC-198: a declared irreversible action is itself
+                                     # an applicability input, so it must be settable.
 ){
     $rows=switch($Consumer){
         'none'         {''}
@@ -206,7 +208,7 @@ Unresolved Material Consumers: $unresolved
 
 Applicability: $derived
 
-Irreversible Action Step: NONE
+Irreversible Action Step: $Irreversible
 
 | Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
 | --- | --- | --- | --- | --- |
@@ -229,13 +231,17 @@ Applicability: NOT APPLICABLE
 # The manifest pointer MOVES as part of approval, so it must be inside the fixture's
 # own Write Scope or the run is refused as OUT_OF_SCOPE_WRITE before the evidence is
 # ever read - a refusal that would credit these cases for the wrong defect.
-function ApproveRun([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1'){
+# SPEC-198. `Capabilities`/`Additional` are passed through because a DATABASE-profile
+# contract is refused by `Validate-DatabaseContract` unless it declares `supabase-local`
+# and names a `scripts/verify_*` suite. Without them a DATABASE evidence fixture is
+# rejected for the WRONG reason and proves nothing about applicability.
+function ApproveRun([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1',[string]$Capabilities='None',[string]$Additional='None'){
     $full="$Scope;_ORVION_CANONICAL/manifest.md"
     Reset-Fixture
-    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence -Capabilities $Capabilities -Additional $Additional)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
     Commit 'evidence-draft-baseline'
-    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence -Capabilities $Capabilities -Additional $Additional)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
     Run 'Gate'
 }
@@ -258,13 +264,13 @@ function Pop([string]$Family,[string]$Kind){
     }
 }
 # Setups are separated from the RUN so a mutation can be applied between them.
-function ApproveSetup([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1'){
+function ApproveSetup([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1',[string]$Capabilities='None',[string]$Additional='None'){
     $full="$Scope;_ORVION_CANONICAL/manifest.md"
     Reset-Fixture
-    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence -Capabilities $Capabilities -Additional $Additional)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
     Commit 'evidence-draft-baseline'
-    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence -Capabilities $Capabilities -Additional $Additional)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
 }
 function FrozenEvidenceSetup{
@@ -1796,6 +1802,81 @@ exit 0
     Assert '194 ALLOCATING GATE: identity allocation invokes no stubbed external executable' ($r.Code-eq0-and((StubLog)-eq'')) "code=$($r.Code) stub-log=[$(StubLog)]"
     Pop 'K-local;K-reservation;K-activation' 'accept'
 
+    # ---- APPROVAL-EVIDENCE APPLICABILITY (SPEC-198) ----
+    # SPEC-196 shipped ONE of the five applicability inputs its own frozen Step E named,
+    # so a contract that reached a non-control surface had its evidence skipped and the
+    # Gate still printed `APPROVAL_EVIDENCE: PASS`. Reproduced on the real Draft->Approved
+    # path before repair. Every scope below is chosen so exactly ONE new input makes it
+    # applicable - a fixture that two arms would catch cannot prove either is load-bearing.
+    $dbScope='supabase/migrations/20260101000000_fixture.sql'
+    $fnScope='supabase/functions/storage-executor/index.ts'
+    # A DATABASE-profile contract must declare these or `Validate-DatabaseContract`
+    # refuses it before the evidence is read - a wrong-reason failure that would look
+    # identical to the defect these fixtures exist to catch.
+    $dbCaps='supabase-local'
+    $dbAdd='pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1'
+
+    $r=ApproveRun (EvidenceText -Consumer 'unknown') $dbScope $dbCaps $dbAdd
+    Assert '195 APPROVAL-EVIDENCE APPLICABILITY: DATABASE scope does not exempt an UNKNOWN disposition' ($r.Code-ne0-and$r.Text-match'SUBJECT: INDETERMINATE') $r.Text
+    Pop 'APPLIC' 'reject'
+
+    $r=ApproveRun (EvidenceText -Boundary 'conflict') $dbScope $dbCaps $dbAdd
+    Assert '196 APPROVAL-EVIDENCE APPLICABILITY: DATABASE scope does not exempt a gate inside its red window' ($r.Code-ne0-and$r.Text-match'CODE: APPROVAL_EVIDENCE') $r.Text
+    Pop 'APPLIC' 'reject'
+
+    # An applicable contract that carries no section at all is INDETERMINATE, not absent.
+    Reset-Fixture
+    $dbFull="$dbScope;_ORVION_CANONICAL/manifest.md"
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $dbFull -Capabilities $dbCaps -Additional $dbAdd)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'db-draft-no-evidence'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $dbFull -Capabilities $dbCaps -Additional $dbAdd)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    $r=Run 'Gate'
+    Assert '197 APPROVAL-EVIDENCE APPLICABILITY: an applicable DATABASE contract may not omit the section' ($r.Code-ne0-and$r.Text-match'section missing') $r.Text
+    Pop 'APPLIC' 'reject'
+
+    # REPOSITORY-only scope: the ONLY thing that can make this applicable is the contract's
+    # own declared irreversible action, which is what isolates that arm for its mutation.
+    $r=ApproveRun (EvidenceText -Consumer 'unknown' -Irreversible 'Step 2') 'allowed.txt'
+    Assert '198 APPROVAL-EVIDENCE APPLICABILITY: a declared irreversible action makes evidence applicable' ($r.Code-ne0-and$r.Text-match'SUBJECT: INDETERMINATE') $r.Text
+    Pop 'APPLIC' 'reject'
+
+    # Edge Functions derive NO profile and are absent from Get-ControlSurface, so before
+    # this repair nothing reached them at all - yet this one authorizes itself with the
+    # service_role key and destroys customer documents.
+    $r=ApproveRun (EvidenceText -Consumer 'unknown') $fnScope
+    Assert '199 APPROVAL-EVIDENCE APPLICABILITY: an Edge Function contract is applicable' ($r.Code-ne0-and$r.Text-match'SUBJECT: INDETERMINATE') $r.Text
+    Pop 'APPLIC' 'reject'
+
+    # The fixtures must prove they are the shape they claim, read from the Gate's own
+    # derived VERIFICATION line - otherwise they prove nothing about the input they name.
+    $r=ApproveRun (EvidenceText) $dbScope $dbCaps $dbAdd
+    Assert '200 APPROVAL-EVIDENCE APPLICABILITY: the DATABASE fixture derives DATABASE and not CONTROL' ($r.Code-eq0-and$r.Text-match'VERIFICATION: DATABASE, REPOSITORY'-and$r.Text-notmatch'CONTROL') $r.Text
+    Pop 'APPLIC' 'accept'
+
+    $r=ApproveRun (EvidenceText) $fnScope
+    Assert '201 APPROVAL-EVIDENCE APPLICABILITY: the Edge Function fixture derives REPOSITORY alone' ($r.Code-eq0-and$r.Text-match'VERIFICATION: REPOSITORY'-and$r.Text-notmatch'DATABASE'-and$r.Text-notmatch'CONTROL') $r.Text
+    Pop 'APPLIC' 'accept'
+
+    # POSITIVE. Applicability must not become "refuse everything outside REPOSITORY".
+    $r=ApproveRun (EvidenceText) $dbScope $dbCaps $dbAdd
+    Assert '202 APPROVAL-EVIDENCE APPLICABILITY: complete evidence on a DATABASE contract is ADMITTED' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'APPLIC' 'accept'
+
+    # POSITIVE. A genuinely non-applicable contract stays light AND says so, because
+    # "we did not look" and "we looked and it is fine" are different facts.
+    Reset-Fixture
+    $plain2='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $plain2)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'plain-draft-not-applicable'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $plain2)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    $r=Run 'Gate'
+    Assert '203 APPROVAL-EVIDENCE APPLICABILITY: a non-applicable contract reports NOT APPLICABLE' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
+    Pop 'APPLIC' 'accept'
+
     # ---- APPROVAL-EVIDENCE MUTATION POPULATION (SPEC-196) ----
     # A guard that cannot be broken was never load-bearing. Each mutation bypasses
     # exactly ONE predicate in a disposable copy of the evaluator and re-runs the
@@ -1805,6 +1886,18 @@ exit 0
     foreach($m in @(
         @{Fam='D';N='derived applicability / self-exemption (per-class declaration)';S={ApproveSetup (EvidenceText -Class 'Routine' -Applicability 'subonly')};E='CODE: APPROVAL_EVIDENCE'
           F="if((EvidenceField `$sub 'Applicability')-ne'APPLICABLE'){";R='if($false){'}
+        # APPROVAL-EVIDENCE APPLICABILITY POPULATION (SPEC-198). Each scenario below is
+        # applicable through exactly ONE arm, so no other arm can kill its mutation for it.
+        @{Fam='APPLIC';N='applicability: derived non-REPOSITORY profile';S={ApproveSetup (EvidenceText -Consumer 'unknown') 'supabase/migrations/20260101000000_fixture.sql' 'supabase-local' 'pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1'};E='SUBJECT: INDETERMINATE'
+          F="`$applicable=@(`$Profiles|Where-Object{`$_-ne'REPOSITORY'}).Count-gt0";R="`$applicable=(`$Profiles-contains'CONTROL')"}
+        @{Fam='APPLIC';N='applicability: Edge Function execution surface';S={ApproveSetup (EvidenceText -Consumer 'unknown') 'supabase/functions/storage-executor/index.ts'};E='SUBJECT: INDETERMINATE'
+          F="if(`$p-match'^supabase/functions/'){`$applicable=`$true;break}";R=''}
+        @{Fam='APPLIC';N='applicability: declared irreversible action';S={ApproveSetup (EvidenceText -Consumer 'unknown' -Irreversible 'Step 2') 'allowed.txt'};E='SUBJECT: INDETERMINATE'
+          F="if(`$irr-and`$irr-notmatch'^\s*NONE\b'){`$applicable=`$true}";R='if($false){}'}
+        # The vocabulary itself is load-bearing: reporting PASS for a section nobody read
+        # is the defect's user-visible face, so it gets its own kill on its own scenario.
+        @{Fam='APPLIC';N='applicability: a non-applicable contract reports NOT APPLICABLE, not PASS';S={ApproveSetup (EvidenceText) 'allowed.txt'};E='APPROVAL_EVIDENCE: NOT APPLICABLE'
+          F="if(-not `$applicable){return 'NOT APPLICABLE'}";R="if(-not `$applicable){return 'PASS'}"}
         @{Fam='D';N='D rows present';S={ApproveSetup (EvidenceText -Consumer 'none')};E='CODE: APPROVAL_EVIDENCE'
           F="if(!`$rows.Count){throw 'APPROVAL_EVIDENCE:INDETERMINATE:no consumer closure rows'}";R=''}
         @{Fam='D';N='D UNKNOWN disposition';S={ApproveSetup (EvidenceText -Consumer 'unknown')};E='SUBJECT: INDETERMINATE'
@@ -1868,7 +1961,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
