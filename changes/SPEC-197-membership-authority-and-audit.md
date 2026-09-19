@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -311,8 +311,17 @@ Append-only — never edit or delete a prior entry, including a Blocked or Faile
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-20 — owner-authorized cancellation (control-plane deadlock)
+
+Verdict: Needs Corrective Change Request
+
+Findings: nothing in this contract was falsified. USR-1 and USR-2 remain reproduced, the four pre-Approval gaps were closed, and the real automatic evaluator returned `APPROVAL_EVIDENCE: PASS` at the genuine Draft-to-Approved transition (`2e530ae`). No implementation step ran; Primary was never contacted.
+
+This contract is cancelled for a reason external to its engineering. Publishing its range is refused by `FROZEN_AUTHORITY_MUTATED: Pre-Approval Evidence`, because the evaluator's ENDPOINT block compares the governing contract against its snapshot at the range base without consulting `$baselineStatus` — and at the base this contract was still a `Draft`, which `CR_LIFECYCLE.md` §8 and `Validate-CommittedRange` both say is precisely the state that may be revised. Recorded as `CTRL-2A`. Proved causally in a disposable clone: gating that block on the base status turns the identical range into `ORVION: READY`, exit 0.
+
+The repair lives in `scripts/check_agent_continuity.ps1`, which this contract's own frozen Out of Scope forbids it to touch, and no corrective Change Request can be authored while this one governs — measured: `OUT_OF_SCOPE_WRITE`. From `In Progress` the only legal exits are `Complete`, which is impossible with no implementation, and `Cancelled`. Cancellation is therefore the only legal way to reach the ratified correction pattern in `CR_LIFECYCLE.md` §4, and the complete recovery topology was proven green in a disposable clone before this commit.
+
+Recommendation to human: Set Status to Cancelled. Slice 12 returns as a legally allocated successor carrying this contract's proven objective and evidence; this contract is terminal and is never resumed.
 
 ## Review Gate
 
