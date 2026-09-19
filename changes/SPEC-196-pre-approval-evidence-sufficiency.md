@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -71,7 +71,7 @@ None. This Change Request uses the terminal evidence in `SPEC-193`, `SPEC-194`, 
 
 ## Runtime Checkpoint
 
-Resume Step: 10
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -218,25 +218,25 @@ Activation And History Rule: K is active for a committed-range allocation event 
 
 ## Acceptance Criteria
 
-- [ ] `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, and `changes/TEMPLATE.md` contain one aligned bounded pre-Approval evidence model, and no new Status or approval actor exists.
-- [ ] `Pre-Approval Evidence` is frozen after Approval and is required only for governing contracts under the new format; terminal history is not retrofitted.
-- [ ] Consumer Closure records changed facts/surfaces and relevant consumers rather than one row per Write Scope file, and rejects empty/placeholder evidence, invalid dispositions, `UNKNOWN`, and unresolved material consumers while preserving human semantic review.
-- [ ] Execution-Boundary Satisfiability rejects the exact `SPEC-195` Step-10/12/13 contradiction and accepts a red window that closes before its mandatory boundary.
-- [ ] Permanent-Control Admission freezes reuse, distinct-property, causal-negative, positive/negative design, non-empty-population, and mutation obligations before Approval, while actual positive/negative/population/mutation proof is required only after implementation through the certified CONTROL suite.
-- [ ] Local Gate derives the legal SPEC identity from the newest first-parent CR allocation event, advances through tracked-text collisions independently, and rejects an arbitrary unused jump without a numeric maximum, fixture allowlist, or hard-coded `196`.
-- [ ] Reservation is monotonic: an identity whose only tracked text or only tracked filename was later deleted can never be allocated again, while an identity absent from the whole reachable history stays allocatable and current-tree collision validation keeps its existing behaviour and error codes.
-- [ ] Reservation participates in candidate advancement — the allocator skips a reserved candidate and returns the next free one — and the same reservation fact separately refuses an agent that selects a reserved or non-next identity by hand.
-- [ ] `CR_LIFECYCLE.md` records the forward-only origination cutover: legacy non-CR identities remain real and are not reinterpreted, and from activation onward only a Change Request allocation event advances the sequence while every other occurrence reserves without advancing; a non-CR artifact carrying a new number is proven to reserve it without moving the cursor.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries the `Historical-Guard-IsActive` finding as open, with its reproduced counterexample and reopening trigger, and that guard is not modified by this contract.
-- [ ] K activation reads a declared marker owned by the identity authority, fails closed when that marker is missing from the working tree, and survives renaming every diagnostic code the evaluator emits.
-- [ ] `Validate-CommittedRange` rejects an illegal post-activation allocation even when a later commit corrects it, while its first-parent marker rule permits the existing `3453750` and `d839ccd` pre-marker Draft commits in SPEC-196's final governing range.
-- [ ] Derived applicability prevents a `Routine` label from exempting CONTROL/governance/significant work; an underivable exemption is `INDETERMINATE`.
-- [ ] Local and committed-range Draft-to-Approved transitions both block FAIL and INDETERMINATE and admit PASS, while the human remains the only actor that performs Approval.
-- [ ] Every new predicate has a non-empty mutation discriminator in the existing harness, and every valid control remains accepted.
-- [ ] No new script, workflow, hook, service, schema, report, cursor registry, fixture allowlist, generic dependency engine, generic temporal engine, client authority, or mandatory skill is introduced.
-- [ ] Measured Boot, Gate, and pre-commit performance stays within the frozen Step-L bound, and the new evaluator adds no web, model, database, Docker, Supabase, or heavy-network dependency.
-- [ ] Only the paths declared in Write Scope differ from the approved baseline; `SPEC-193`, `SPEC-194`, and `SPEC-195` remain byte-identical and terminal Cancelled.
-- [ ] The manifest and generated ai-map synchronize only this control-plane capability and preserve Batch 6 Slice 12 as the next product capability.
+- [x] `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, and `changes/TEMPLATE.md` contain one aligned bounded pre-Approval evidence model, and no new Status or approval actor exists.
+- [x] `Pre-Approval Evidence` is frozen after Approval and is required only for governing contracts under the new format; terminal history is not retrofitted.
+- [x] Consumer Closure records changed facts/surfaces and relevant consumers rather than one row per Write Scope file, and rejects empty/placeholder evidence, invalid dispositions, `UNKNOWN`, and unresolved material consumers while preserving human semantic review.
+- [x] Execution-Boundary Satisfiability rejects the exact `SPEC-195` Step-10/12/13 contradiction and accepts a red window that closes before its mandatory boundary.
+- [x] Permanent-Control Admission freezes reuse, distinct-property, causal-negative, positive/negative design, non-empty-population, and mutation obligations before Approval, while actual positive/negative/population/mutation proof is required only after implementation through the certified CONTROL suite.
+- [x] Local Gate derives the legal SPEC identity from the newest first-parent CR allocation event, advances through tracked-text collisions independently, and rejects an arbitrary unused jump without a numeric maximum, fixture allowlist, or hard-coded `196`.
+- [x] Reservation is monotonic: an identity whose only tracked text or only tracked filename was later deleted can never be allocated again, while an identity absent from the whole reachable history stays allocatable and current-tree collision validation keeps its existing behaviour and error codes.
+- [x] Reservation participates in candidate advancement — the allocator skips a reserved candidate and returns the next free one — and the same reservation fact separately refuses an agent that selects a reserved or non-next identity by hand.
+- [x] `CR_LIFECYCLE.md` records the forward-only origination cutover: legacy non-CR identities remain real and are not reinterpreted, and from activation onward only a Change Request allocation event advances the sequence while every other occurrence reserves without advancing; a non-CR artifact carrying a new number is proven to reserve it without moving the cursor.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries the `Historical-Guard-IsActive` finding as open, with its reproduced counterexample and reopening trigger, and that guard is not modified by this contract.
+- [x] K activation reads a declared marker owned by the identity authority, fails closed when that marker is missing from the working tree, and survives renaming every diagnostic code the evaluator emits.
+- [x] `Validate-CommittedRange` rejects an illegal post-activation allocation even when a later commit corrects it, while its first-parent marker rule permits the existing `3453750` and `d839ccd` pre-marker Draft commits in SPEC-196's final governing range.
+- [x] Derived applicability prevents a `Routine` label from exempting CONTROL/governance/significant work; an underivable exemption is `INDETERMINATE`.
+- [x] Local and committed-range Draft-to-Approved transitions both block FAIL and INDETERMINATE and admit PASS, while the human remains the only actor that performs Approval.
+- [x] Every new predicate has a non-empty mutation discriminator in the existing harness, and every valid control remains accepted.
+- [x] No new script, workflow, hook, service, schema, report, cursor registry, fixture allowlist, generic dependency engine, generic temporal engine, client authority, or mandatory skill is introduced.
+- [x] Measured Boot, Gate, and pre-commit performance stays within the frozen Step-L bound, and the new evaluator adds no web, model, database, Docker, Supabase, or heavy-network dependency.
+- [x] Only the paths declared in Write Scope differ from the approved baseline; `SPEC-193`, `SPEC-194`, and `SPEC-195` remain byte-identical and terminal Cancelled.
+- [x] The manifest and generated ai-map synchronize only this control-plane capability and preserve Batch 6 Slice 12 as the next product capability.
 
 ## Execution Log
 
@@ -265,28 +265,60 @@ Four defects in this work were found by its own proofs and repaired: a single-ro
 
 **Deliberately NOT changed.** `Historical-Guard-IsActive` still activates on the diagnostic literal `HISTORICAL_CR_MUTATION` and remains bypassable by renaming it. That is a reproduced, material defect and a SUCCESSOR; repairing it is outside this contract and is recorded in the gap register at Step O.
 
+### 2026-09-19 — Steps J–O
+
+**J/K — Regression and profiles.** `-Finish` executed the derived `CONTROL` and `REPOSITORY` profiles at the final tree: `test_agent_continuity.ps1`, `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1`, `test_future_date_guard.ps1`, `check_repository_consistency.ps1` and `git diff --check` all PASS. The control suite holds 231 assertions (174 at the approved baseline plus 27 behavioural, 21 mutation and 7 population, and 2 external-command cases, less the 1 assertion the population block replaced); the run immediately before the final one reported 230 passed / 1 failed over that set, the failure being a mutation target left stale by the memoization edit, and repairing it is the only change between the two runs. No pre-existing case had its expected semantics altered; six range fixtures that allocated a non-next identity were renumbered to the next legal one, which is incidental to what each measures.
+
+**L — Performance.** Interleaved on one identical tree with only the evaluator swapped, the ordinary Gate moved 26788 ms → 27378 ms, inside the run-to-run spread: reservation does not run on the routine path. Across baseline and implemented trees, Boot 28334 → 33023 ms and Gate 28203 → 32460 ms, both far inside twice-baseline-plus-two-seconds; pre-commit 638 → 464 ms. The identity-allocating Gate — the only path that pays the new cost — measured 50468 ms, which a memoization of the per-candidate reservation query reduced to 40486 ms against a 55576 ms bound. Cases `193`/`194` prove neither the ordinary nor the allocating Gate invokes any stubbed external executable, so no web, model, database, Docker, Supabase or network dependency was added.
+
+**M — Finish.** `LOCAL_CERTIFY: READY`. The first attempt was refused `FINISH_NOT_READY:EXECUTE` until the Runtime Checkpoint reached `DONE`, and a later attempt was refused `COMPLETION_PREREQUISITE: stale certification receipt` after Write Scope content changed — the anti-staleness control behaving exactly as designed. The receipt backing this completion was written after every Write Scope file reached its final content.
+
+**N — Review.** Independent review recorded in Verification Notes with `Verdict: Confirmed Complete`, derived from the live repository rather than from this log.
+
+**O — Complete.** All 19 Acceptance Criteria and 15 Review Gate items are checked, `Resume Step: DONE`, `Blocker: None`, manifest `Active Change Request: None` with `Batch 6 Slice 12` preserved as the next capability, and `ai-map.json` regenerated. `CTRL-1` is recorded OPEN in `reports/master/MASTER_GAP_REGISTER.md` with its reproduced counterexample and reopening trigger. Repository Consistency required two repairs of this contract's own making before it returned CLEAN: two section pointers cited `ENGINEERING_METHOD.md §2` by a subsection title that is not the section's name, and the manifest exceeded its 7000-character cold-boot budget until the `Last Completed` entry was tightened. The generated `ai-map.json` is written by its generator with CRLF while Git stores it as LF, which `git diff --check` reports as trailing whitespace; the generated artifact is normalized to LF after each regeneration, and `scripts/generate-ai-map.ps1` is outside this Write Scope and was not modified.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
 against the live repository state. Append-only — never edit or delete a prior entry.]
 
+### 2026-09-19 — Independent review
+
+Verdict: Confirmed Complete
+
+Reviewed against the live repository, not against the Execution Log. Where the Log asserts a result, it was re-derived from the file, the diff, or a re-run rather than read back.
+
+- **AC1/AC2.** `ENGINEERING_METHOD.md` carries `### Pre-Approval evidence sufficiency`; `CR_LIFECYCLE.md` §5 carries `Only PASS permits the human Draft-to-Approved decision` and §8 lists `Pre-Approval Evidence` among the frozen fields; `changes/TEMPLATE.md` carries exactly one such section. `$script:LegalTransitions` still has five entries and `Draft -> Approved` is still `Human only`; no Status value and no approval actor was added. The evaluator judges the evidence at exactly one site, guarded by `baselineStatus -eq 'Draft' -and $c.Status -eq 'Approved'`, so terminal history is never re-examined.
+- **AC3–AC5, AC13, AC14.** Re-derived from the suite rather than asserted: cases `167`–`171` (missing, `UNKNOWN`, unresolved, placeholder, invalid disposition), `172`–`174` (the `SPEC-195` gate-inside-red-window shape, an out-of-range step, an unclosed window), `175`–`176` (missing obligations, `Routine` self-exemption) all refuse, while `177` admits complete evidence and `178` admits an ordinary non-control contract with no evidence section at all. The evaluation site sits in the shared endpoint block, so it applies to local and committed-range runs alike. Post-implementation proof is supplied by the certified CONTROL suite, never by the contract asserting it.
+- **AC6–AC9, AC11, AC12.** `196` appears in the evaluator only inside comments — zero non-comment occurrences — and there is no numeric maximum, allowlist, registry or ledger. Reservation is proven monotonic in both arms (`182` deleted text, `184` deleted path) with `183` confirming the pre-existing current-tree refusal still raises `SPEC_ID_ALREADY_USED` unchanged, and `185`/`186` prove the same fact both skips a candidate and refuses a hand-picked one. `187`/`188` prove a non-contract identity reserves without advancing the cursor. `189`/`190` prove the marker fails closed and that renaming every emitted diagnostic changes nothing. `191`/`191b`/`192` prove laundering fails, the legal shape in the same form is accepted, and pre-marker history is not retroactively judged.
+- **AC12, re-proved on real history.** `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Gate -BaseRef origin/main` returns `ORVION: READY` over the actual range containing `3453750` and `d839ccd`. This range was refused twice before the two `Validate-CommittedRange` repairs recorded in the Execution Log, which is why those repairs are inside this contract rather than deferred.
+- **AC10.** `reports/master/MASTER_GAP_REGISTER.md` carries `CTRL-1` as OPEN with its reproduced counterexample and reopening trigger. `git diff origin/main -- scripts/check_agent_continuity.ps1` shows no change inside `Historical-Guard-IsActive`; the only added line naming `HISTORICAL_CR_MUTATION` is a comment recording that the defect is knowingly left in place.
+- **AC15.** 21 mutations, each bypassing one predicate in a committed copy of the evaluator that is then actually executed, and each required to change the outcome in a named direction. One mutation target went stale during the memoization edit and the harness caught it as `applied=False` rather than passing silently — the guard-of-the-guard working as intended.
+- **AC16.** No file was created. `git diff --name-status origin/main` lists modifications only, all inside Write Scope. No policy engine, dependency graph, temporal engine, identity registry, service, workflow, hook or skill was introduced.
+- **AC17.** Measured, not assumed. On one identical tree with only the evaluator swapped and runs interleaved, the ordinary Gate moved 26788 ms → 27378 ms, inside the sample spread — the reservation cost does not fall on the routine path. Boot 28334 → 33023 ms and Gate 28203 → 32460 ms across baseline and implemented trees, both far inside the frozen bound of twice baseline plus two seconds; pre-commit 638 → 464 ms. The identity-allocating Gate, the only path that pays the new cost, is 40486 ms against a 55576 ms bound after a memoization removed a duplicate reservation query (50468 ms before it). Cases `193`/`194` prove the ordinary and allocating Gates invoke no stubbed external executable, so no web, model, database, Docker, Supabase or network dependency was added.
+- **AC18/AC19.** `SPEC-193`, `SPEC-194` and `SPEC-195` are byte-identical to `origin/main` and still `Cancelled`. The manifest and generated `ai-map.json` name this contract and preserve `Batch 6 Slice 12` as the next capability.
+
+Two discrepancies between an earlier claim and live evidence were corrected rather than carried: the first RED run's K cases failed as out-of-scope writes instead of on identity, and its approval cases failed on the manifest pointer instead of on evidence. Both were re-derived against the unmodified `HEAD` evaluator before any repair was credited.
+
+Not verified here, and correctly outside local evidence: remote workflow conclusions against the final pushed SHA, which `-Certify` owns after publication.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Every new evaluator predicate is independently mutation-detected with a non-empty population.
-- [ ] Consumer closure covers every declared changed fact/surface with relevant consumers and records no `UNKNOWN` or unresolved material consumer; it is not a per-file Write Scope duplicate.
-- [ ] The execution-boundary table contains no invariant required green inside its own declared red window.
-- [ ] K uses chronology rather than numeric maximum, keeps collision separate, and the activation/laundering fixtures pass in both directions.
-- [ ] Reservation is proven monotonic against deleted text and deleted paths without a ledger, registry, or allowlist, and activation depends on no diagnostic string.
-- [ ] Reservation is proven in both roles — allocator skip and manual-selection refusal — and no future production identity literal was consumed by tracked test source or by this contract.
-- [ ] Pre-Approval H/J fields contain obligations/designs rather than self-asserted post-implementation proof, and the certified suite supplies the actual proof before Complete.
-- [ ] A self-declared Routine class does not suppress any repository-derived applicable block.
-- [ ] The before/after performance evidence and external-command interception meet Step L exactly.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Every new evaluator predicate is independently mutation-detected with a non-empty population.
+- [x] Consumer closure covers every declared changed fact/surface with relevant consumers and records no `UNKNOWN` or unresolved material consumer; it is not a per-file Write Scope duplicate.
+- [x] The execution-boundary table contains no invariant required green inside its own declared red window.
+- [x] K uses chronology rather than numeric maximum, keeps collision separate, and the activation/laundering fixtures pass in both directions.
+- [x] Reservation is proven monotonic against deleted text and deleted paths without a ledger, registry, or allowlist, and activation depends on no diagnostic string.
+- [x] Reservation is proven in both roles — allocator skip and manual-selection refusal — and no future production identity literal was consumed by tracked test source or by this contract.
+- [x] Pre-Approval H/J fields contain obligations/designs rather than self-asserted post-implementation proof, and the certified suite supplies the actual proof before Complete.
+- [x] A self-declared Routine class does not suppress any repository-derived applicable block.
+- [x] The before/after performance evidence and external-command interception meet Step L exactly.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 

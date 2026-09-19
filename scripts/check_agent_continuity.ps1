@@ -277,22 +277,35 @@ function Get-SpecSequenceCursor([string]$Ref){
 # that ever appeared and is now gone must have a commit whose occurrence count
 # DECREASED; one that is still present is found by the current-tree arm. The
 # cheap path walk runs before the expensive pickaxe deliberately.
+# Memoized per (ref, candidate). One allocation asks about the identity it wants
+# and then about the candidates it walks past, and the per-commit range walk asks
+# the same questions again for the same parents. History does not change inside a
+# run, so paying for the same answer twice is waste, not safety.
+$script:ReservationCache=@{}
 function Get-SpecIdReservation([string]$Ref,[string]$Id){
-    if(Base-HasId $Ref $Id){return 'tree'}
-    $rx='(^|[^0-9])'+[regex]::Escape($Id)+'([^0-9]|$)'
-    $current=''
-    foreach($line in @(git -C $Root log $Ref --root --format='@%h' --name-only --diff-filter=AR 2>$null)){
-        if($line-match'^@(?<h>[0-9a-f]+)$'){$current=$Matches['h'];continue}
-        if($line-and$line-match$rx){$LASTEXITCODE=0;return $current}
+    $key="$Ref|$Id"
+    if($script:ReservationCache.ContainsKey($key)){return $script:ReservationCache[$key]}
+    $result=$null
+    if(Base-HasId $Ref $Id){$result='tree'}
+    else{
+        $rx='(^|[^0-9])'+[regex]::Escape($Id)+'([^0-9]|$)'
+        $current=''
+        foreach($line in @(git -C $Root log $Ref --root --format='@%h' --name-only --diff-filter=AR 2>$null)){
+            if($line-match'^@(?<h>[0-9a-f]+)$'){$current=$Matches['h'];continue}
+            if($line-and$line-match$rx){$result=$current;break}
+        }
+        $LASTEXITCODE=0
+        if($null-eq$result){
+            # QUOTED deliberately: written as `-S$rx` the shell splits the token and git
+            # receives no usable pickaxe at all, so every historical content reservation
+            # silently reads as free - a false GREEN, which is the worst failure a
+            # reservation check can have.
+            $hits=@(git -C $Root log $Ref --root --pickaxe-regex "-S$rx" --format=%h 2>$null);$LASTEXITCODE=0
+            if($hits.Count){$result=$hits[-1]}
+        }
     }
-    $LASTEXITCODE=0
-    # QUOTED deliberately: written as `-S$rx` the shell splits the token and git
-    # receives no usable pickaxe at all, so every historical content reservation
-    # silently reads as free - a false GREEN, which is the worst failure a
-    # reservation check can have.
-    $hits=@(git -C $Root log $Ref --root --pickaxe-regex "-S$rx" --format=%h 2>$null);$LASTEXITCODE=0
-    if($hits.Count){return $hits[-1]}
-    $null
+    $script:ReservationCache[$key]=$result
+    $result
 }
 function Test-SpecIdEverReserved([string]$Ref,[string]$Id){$null-ne(Get-SpecIdReservation $Ref $Id)}
 

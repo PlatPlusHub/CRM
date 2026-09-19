@@ -1778,6 +1778,24 @@ exit 0
     Assert '192 SPEC-ALLOCATION ACTIVATION: allocation before the marker is not retroactively judged' ($r.Text-notmatch'SPEC_ID_NOT_NEXT') $r.Text
     Pop 'K-activation' 'accept'
 
+    # 193. The routine Gate must stay a LOCAL, deterministic check. The stub bin
+    # already shadows npx and docker, so an invocation of either - and by extension
+    # any Supabase, container or network work routed through them - leaves a trace.
+    # Asserted on the ALLOCATING path too, because history-anchored reservation is
+    # the only new cost and it must be Git and nothing else.
+    Reset-Fixture
+    if(Test-Path -LiteralPath $stubLog){Remove-Item -LiteralPath $stubLog -Force}
+    $r=Run 'Gate'
+    Assert '193 ORDINARY GATE: invokes no stubbed external executable' ($r.Code-eq0-and((StubLog)-eq'')) "code=$($r.Code) stub-log=[$(StubLog)]"
+    Pop 'D;F;HJ;K-local' 'accept'
+
+    PlanBaseline
+    if(Test-Path -LiteralPath $stubLog){Remove-Item -LiteralPath $stubLog -Force}
+    Put "changes/$(FxId 1)-perf-probe.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '194 ALLOCATING GATE: identity allocation invokes no stubbed external executable' ($r.Code-eq0-and((StubLog)-eq'')) "code=$($r.Code) stub-log=[$(StubLog)]"
+    Pop 'K-local;K-reservation;K-activation' 'accept'
+
     # ---- APPROVAL-EVIDENCE MUTATION POPULATION (SPEC-196) ----
     # A guard that cannot be broken was never load-bearing. Each mutation bypasses
     # exactly ONE predicate in a disposable copy of the evaluator and re-runs the
@@ -1812,7 +1830,7 @@ exit 0
         @{Fam='K-reservation';N='K historical content reservation';S={ReservedTextSetup};E='SPEC_ID_HISTORICALLY_RESERVED'
           F='$hits=@(git -C $Root log $Ref --root --pickaxe-regex "-S$rx" --format=%h 2>$null);$LASTEXITCODE=0';R='$hits=@()'}
         @{Fam='K-reservation';N='K historical path reservation';S={ReservedPathSetup};E='SPEC_ID_HISTORICALLY_RESERVED'
-          F='if($line-and$line-match$rx){$LASTEXITCODE=0;return $current}';R='if($false){}'}
+          F='if($line-and$line-match$rx){$result=$current;break}';R='if($false){}'}
         @{Fam='K-reservation';N='K reservation drives advancement';S={SkipReservedSetup};E='ORVION: READY'
           F='while(Test-SpecIdEverReserved $Ref "SPEC-$candidate"){$candidate++}';R=''}
         @{Fam='K-local';N='K origination restriction';S={NonCrOriginSetup};E='ORVION: READY'
