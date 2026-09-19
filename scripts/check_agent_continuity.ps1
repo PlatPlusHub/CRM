@@ -37,7 +37,7 @@ try{[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false)}catch{}
 $script:FrozenSections=@(
     'Objective','Business Reason','Risks','Supersedes / Depends On',
     'Write Scope','Required Reading','Required Capabilities',
-    'Additional Verification','Implementation Steps'
+    'Additional Verification','Pre-Approval Evidence','Implementation Steps'
 )
 # Legal Status transitions, CR_LIFECYCLE.md §4. "Unchanged" is always legal;
 # Complete and Cancelled are terminal and reach nothing else.
@@ -190,6 +190,138 @@ function Base-HasId([string]$Ref,[string]$Id){
     $hits.Count-gt0
 }
 
+# ---------------------------------------------------------------------------
+# SPEC IDENTITY: ALLOCATION, RESERVATION, ORIGINATION, ACTIVATION (SPEC-196).
+#
+# Three different questions that were previously conflated, which is what
+# produced the SPEC-1000 jump and then admitted an unused SPEC-1002:
+#
+#   ORIGINATION - which event creates a new sequence-advancing identity. From
+#                 the activation marker onward that is a Change Request
+#                 allocation event and nothing else; every other occurrence
+#                 reserves a number without advancing the sequence.
+#   ALLOCATION  - which number the next contract takes. Derived from the newest
+#                 first-parent allocation event, never from a repository-wide
+#                 numeric maximum, which observes fixtures and prose.
+#   RESERVATION - whether a number may be taken at all. Monotonic over reachable
+#                 history, so deleting an occurrence never releases an identity.
+#
+# Activation rides on a DECLARED marker in the identity authority rather than on
+# a diagnostic literal. The previous pattern read an error string out of the
+# evaluator's own source, so a behaviour-preserving rename silently disabled it -
+# reproduced against `HISTORICAL_CR_MUTATION`, which still carries that defect
+# and is recorded as a successor rather than repaired here.
+# ---------------------------------------------------------------------------
+$script:AllocationAuthority='CR_LIFECYCLE.md'
+function Get-AllocationMarker([string]$Text){
+    if($null-eq$Text){return 0}
+    $m=[regex]::Match($Text,'(?m)^SPEC Allocation Enforcement:\s*(?<v>[0-9]+)\s*$')
+    if($m.Success){[int]$m.Groups['v'].Value}else{0}
+}
+function Allocation-ActiveAt([string]$Ref){(Get-AllocationMarker (Read-GitFile $Ref $script:AllocationAuthority))-ge1}
+
+# Allocation events in a name-status diff: an ADDED contract path, or a rename
+# whose two sides carry DIFFERENT integer identities. A rename that merely
+# retitles one identity is not an allocation.
+function Allocation-Events([object[]]$Records,[string]$Ref){
+    $ids=@()
+    foreach($r in $Records){
+        if($r.Code-eq'R'-and$r.Old-match'^changes/SPEC-(?<o>[0-9]+)-.*\.md$'){
+            $old=[int]$Matches['o']
+            if($r.Path-match'^changes/SPEC-(?<n>[0-9]+)-.*\.md$'){
+                $new=[int]$Matches['n'];if($new-ne$old){$ids+=$new}
+            }
+            continue
+        }
+        if($r.Code-eq'D'){continue}
+        # NEW relative to the ref, judged the same way collision validation judges
+        # it. Editing an existing contract is not an allocation, and reading the
+        # diff code alone would call every modification one.
+        if($r.Path-match'^changes/SPEC-(?<n>[0-9]+)-.*\.md$'-and$null-eq(Read-GitFile $Ref $r.Path)){$ids+=[int]$Matches['n']}
+    }
+    @($ids|Sort-Object -Unique)
+}
+
+function Records-For([string]$Commit){
+    $records=@()
+    # `diff-tree --root` rather than `diff <sha>^ <sha>`: a ROOT commit has no
+    # parent to name, and the repository's own first contracts were added by one.
+    # Without this the cursor is unresolvable in exactly the history that defines it.
+    foreach($line in @(git -C $Root diff-tree -r -M --root --no-commit-id --name-status $Commit 2>$null)){
+        if(!$line){continue}
+        $parts=$line-split"`t";$code=$parts[0].Substring(0,1)
+        if($code-eq'R'){$records+=[pscustomobject]@{Code='R';Old=($parts[1]-replace'\\','/');Path=($parts[2]-replace'\\','/')}}
+        else{$records+=[pscustomobject]@{Code=$code;Old=$null;Path=($parts[1]-replace'\\','/')}}
+    }
+    $records
+}
+
+# The cursor is the new-side identity of the NEWEST allocation event on a ref's
+# first-parent history, and the walk STOPS there. Stopping is what makes older
+# anomalies unreachable: SPEC-1000, SPEC-1001 and the transient SPEC-1002 are
+# never examined, with no exception list and no hard-coded number.
+function Get-SpecSequenceCursor([string]$Ref){
+    foreach($commit in @(git -C $Root rev-list --first-parent $Ref)){
+        $ids=Allocation-Events (Records-For $commit) "$commit^"
+        if($ids.Count){return ($ids|Measure-Object -Maximum).Maximum}
+    }
+    throw 'SPEC_SEQUENCE_CURSOR_UNRESOLVED'
+}
+
+# Reservation is the union of the current tree and reachable history, answered
+# ONE CANDIDATE AT A TIME. Anchored to the supplied ref, never `--all`: a
+# temporary or unrelated branch must not be able to reserve a production
+# identity, and `--all` reachability differs between clones.
+#
+# The content pickaxe is sufficient for the historical arm because an identity
+# that ever appeared and is now gone must have a commit whose occurrence count
+# DECREASED; one that is still present is found by the current-tree arm. The
+# cheap path walk runs before the expensive pickaxe deliberately.
+function Get-SpecIdReservation([string]$Ref,[string]$Id){
+    if(Base-HasId $Ref $Id){return 'tree'}
+    $rx='(^|[^0-9])'+[regex]::Escape($Id)+'([^0-9]|$)'
+    $current=''
+    foreach($line in @(git -C $Root log $Ref --root --format='@%h' --name-only --diff-filter=AR 2>$null)){
+        if($line-match'^@(?<h>[0-9a-f]+)$'){$current=$Matches['h'];continue}
+        if($line-and$line-match$rx){$LASTEXITCODE=0;return $current}
+    }
+    $LASTEXITCODE=0
+    # QUOTED deliberately: written as `-S$rx` the shell splits the token and git
+    # receives no usable pickaxe at all, so every historical content reservation
+    # silently reads as free - a false GREEN, which is the worst failure a
+    # reservation check can have.
+    $hits=@(git -C $Root log $Ref --root --pickaxe-regex "-S$rx" --format=%h 2>$null);$LASTEXITCODE=0
+    if($hits.Count){return $hits[-1]}
+    $null
+}
+function Test-SpecIdEverReserved([string]$Ref,[string]$Id){$null-ne(Get-SpecIdReservation $Ref $Id)}
+
+# Reservation drives ADVANCEMENT, not only rejection. The allocator skips a
+# reserved candidate and hands out the next free one, which is what makes a
+# number burned by a non-contract artifact harmless. The same fact refuses an
+# agent that reaches for a reserved identity by hand.
+function Validate-SpecAllocation([object[]]$Records,[string]$Ref,[switch]$SkipMarkerCheck){
+    $events=Allocation-Events $Records $Ref
+    if(!$events.Count){return}
+    if(-not $SkipMarkerCheck){
+        $local=Join-Path $Root $script:AllocationAuthority
+        $text=if(Test-Path -LiteralPath $local){[IO.File]::ReadAllText($local)}else{$null}
+        if((Get-AllocationMarker $text)-lt1){throw 'SPEC_ALLOCATION_MARKER_MISSING'}
+    }
+    $cursor=Get-SpecSequenceCursor $Ref
+    $candidate=$cursor+1
+    foreach($id in $events){
+        $idText="SPEC-$id"
+        $reserved=Get-SpecIdReservation $Ref $idText
+        # A current-tree collision has already been refused by name upstream, so
+        # reaching this with a reservation means history alone reserved it.
+        if($null-ne$reserved){throw "SPEC_ID_HISTORICALLY_RESERVED:${idText}:$reserved"}
+        while(Test-SpecIdEverReserved $Ref "SPEC-$candidate"){$candidate++}
+        if($id-ne$candidate){throw "SPEC_ID_NOT_NEXT:${candidate}:$id"}
+        $candidate++
+    }
+}
+
 function Historical-Guard-IsActive([string]$Ref){
     if(!$BaseRef){return $true}
     $old=Read-GitFile $Ref 'scripts/check_agent_continuity.ps1'
@@ -221,6 +353,142 @@ function Validate-HistoryAndIds([object[]]$Records,[string]$Ref){
             $newIds[$id]=$r.Path
         }
     }
+}
+
+# ---------------------------------------------------------------------------
+# PRE-APPROVAL EVIDENCE SUFFICIENCY (SPEC-196).
+#
+# Approval FREEZES authority, so the evidence that makes execution safe has to be
+# sufficient before the freeze rather than discovered inside it. Three cancelled
+# Slice-12 successors proved the asymmetry: the execution-time guards failed
+# closed correctly every time, while the frozen contracts themselves were not
+# evidence-closed.
+#
+# Three outcomes, no score and no compensation between predicates. INDETERMINATE
+# is first-class because "we did not look" and "we looked and it is fine" are
+# different facts, and only one of them is evidence.
+#
+# Applicability is DERIVED from repository evidence - Write Scope, the profiles
+# it derives, and known control/governance surfaces - never from the contract's
+# own Change Class. A label may add obligations; it may never remove one.
+# ---------------------------------------------------------------------------
+function SubSection([string]$Body,[string]$Name){
+    if($null-eq$Body){return $null}
+    $m=[regex]::Matches($Body,"(?ms)^### $([regex]::Escape($Name))\s*\r?\n(?<b>.*?)(?=^### |\z)")
+    if($m.Count-ne1){return $null}
+    $m[0].Groups['b'].Value.Trim()
+}
+function EvidenceField([string]$Body,[string]$Name){
+    if($null-eq$Body){return ''}
+    $m=[regex]::Match($Body,"(?m)^$([regex]::Escape($Name)):\s*(?<v>.*?)\s*$")
+    if($m.Success){$m.Groups['v'].Value.Trim()}else{''}
+}
+# A row is evidence only if every cell carries something a human wrote. The
+# template's own bracketed placeholders are explicitly NOT evidence - shipping
+# the template unfilled is the commonest way a section looks complete.
+function EvidenceRows([string]$Body){
+    $rows=@()
+    if($null-eq$Body){return $rows}
+    foreach($line in @($Body-split'\r?\n')){
+        $t=$line.Trim()
+        if(-not $t.StartsWith('|')){continue}
+        if($t-match'^\|[\s\-:|]+\|$'){continue}
+        $cells=@(($t.Trim('|')-split'\|')|ForEach-Object{$_.Trim()})
+        if($cells.Count-lt2){continue}
+        if(($cells|Where-Object{$_-match'^\[.*\]$'}).Count){continue}
+        if(($cells|Where-Object{$_-eq'Predicate'-or$_-eq'Invariant'-or$_-eq'Changed fact or surface'}).Count){continue}
+        $rows+=,$cells
+    }
+    # Returned with the comma on purpose: a ONE-row table would otherwise unroll on
+    # return and arrive at the caller as its own cells, so every single-row table
+    # read as malformed - the opposite of the defect this evidence class exists for.
+    ,$rows
+}
+$script:EvidenceBoundaries=@('BEFORE_IMPLEMENTATION','BEFORE_IRREVERSIBLE_ACTION','AFTER_IRREVERSIBLE_ACTION','BEFORE_COMPLETION')
+function StepNumber([string]$Value,[int]$Max){
+    if($null-eq$Value){return $null}
+    $v=$Value.Trim()
+    if($v-eq'NONE'-or$v-eq''){return 0}
+    $m=[regex]::Match($v,'(?i)step\s*(?<n>[0-9]+)')
+    if(-not $m.Success){$m=[regex]::Match($v,'^(?<n>[0-9]+)$')}
+    if(-not $m.Success){return $null}
+    $n=[int]$m.Groups['n'].Value
+    if($n-lt1-or$n-gt$Max){return $null}
+    $n
+}
+function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
+    # DERIVED applicability. A control or governance surface in Write Scope, or a
+    # derived CONTROL profile, makes the evidence classes applicable whatever the
+    # contract calls itself.
+    $applicable=($Profiles-contains'CONTROL')
+    if(-not $applicable){foreach($p in $Contract.Scope){if(Test-ControlPath $p){$applicable=$true;break}}}
+    $body=Section $Contract.Text 'Pre-Approval Evidence' -Optional
+    if(-not $applicable){return 'PASS'}
+    if($null-eq$body-or(Normalize $body)-eq''){throw 'APPROVAL_EVIDENCE:INDETERMINATE:section missing for control-scope work'}
+
+    # Self-exemption. Repository evidence says applicable; the contract may not
+    # answer otherwise. A contradiction is INDETERMINATE, never a quiet pass.
+    foreach($name in @('Consumer Closure','Execution-Boundary Satisfiability','Permanent-Control Admission')){
+        $sub=SubSection $body $name
+        if($null-eq$sub){throw "APPROVAL_EVIDENCE:INDETERMINATE:$name missing"}
+        if((EvidenceField $sub 'Applicability')-ne'APPLICABLE'){
+            throw "APPROVAL_EVIDENCE:INDETERMINATE:$name declared not applicable while repository evidence makes it applicable"
+        }
+    }
+    foreach($row in (EvidenceRows (SubSection $body 'Derived Applicability'))){
+        if($row[-1]-ne'APPLICABLE'){throw 'APPROVAL_EVIDENCE:INDETERMINATE:derived applicability contradicts repository evidence'}
+    }
+
+    # D - CONSUMER CLOSURE. Closes what DEPENDS on a changed fact, which is a
+    # different question from Write Scope's what may be modified, so it is never
+    # satisfied by restating the file list.
+    $d=SubSection $body 'Consumer Closure'
+    $rows=EvidenceRows $d
+    if(!$rows.Count){throw 'APPROVAL_EVIDENCE:INDETERMINATE:no consumer closure rows'}
+    foreach($row in $rows){
+        if($row.Count-lt4){throw 'APPROVAL_EVIDENCE:INDETERMINATE:malformed consumer row'}
+        if($row[2]-eq'UNKNOWN'){throw 'APPROVAL_EVIDENCE:INDETERMINATE:UNKNOWN consumer disposition'}
+        if(@('WRITE','VERIFY','UNAFFECTED')-notcontains$row[2]){throw "APPROVAL_EVIDENCE:FAIL:invalid disposition $($row[2])"}
+        foreach($cell in $row){if($cell-eq''){throw 'APPROVAL_EVIDENCE:INDETERMINATE:empty consumer cell'}}
+    }
+    $unresolved=EvidenceField $d 'Unresolved Material Consumers'
+    if($unresolved-eq''){throw 'APPROVAL_EVIDENCE:INDETERMINATE:unresolved material consumers not stated'}
+    if($unresolved-ne'None'){throw "APPROVAL_EVIDENCE:INDETERMINATE:unresolved material consumer: $unresolved"}
+
+    # F - EXECUTION-BOUNDARY SATISFIABILITY. Bounded checkpoint comparison, never
+    # simulation. SPEC-195 froze a sequence whose Step-12 gate demanded an
+    # invariant green between the Step-10 that broke it and the Step-13 that
+    # repaired it; that contract was approved and then cancelled for exactly this.
+    $f=SubSection $body 'Execution-Boundary Satisfiability'
+    $stepCount=@($Contract.Steps).Count
+    $frows=EvidenceRows $f
+    if(!$frows.Count){throw 'APPROVAL_EVIDENCE:INDETERMINATE:no execution-boundary rows'}
+    foreach($row in $frows){
+        if($row.Count-lt5){throw 'APPROVAL_EVIDENCE:INDETERMINATE:malformed boundary row'}
+        foreach($b in @($row[1]-split',')){
+            if($script:EvidenceBoundaries-notcontains$b.Trim()){throw "APPROVAL_EVIDENCE:INDETERMINATE:unknown boundary $($b.Trim())"}
+        }
+        $opens=StepNumber $row[2] $stepCount
+        $closes=StepNumber $row[3] $stepCount
+        $gate=StepNumber $row[4] $stepCount
+        if($null-eq$opens-or$null-eq$closes-or$null-eq$gate){throw 'APPROVAL_EVIDENCE:INDETERMINATE:invalid step reference in boundary row'}
+        if($opens-gt0-and$closes-eq0){throw 'APPROVAL_EVIDENCE:FAIL:red window never closes'}
+        if($opens-gt0-and$gate-gt$opens-and$gate-le$closes){
+            throw "APPROVAL_EVIDENCE:FAIL:mandatory gate at step $gate lies inside the red window $opens..$closes"
+        }
+    }
+
+    # H/J - PERMANENT CONTROL ADMISSION. Pre-Approval freezes the OBLIGATIONS and
+    # the already-reproduced causal negative. Actual positive/negative/population/
+    # mutation proof belongs to the certified suite after the code exists, so this
+    # never demands proof of code that has not been written.
+    $hj=SubSection $body 'Permanent-Control Admission'
+    foreach($field in @('Existing Mechanism Reusable','Existing Mechanism','Added Property','Causal Negative',
+                        'Positive Test Design','Negative Test Design','Non-Empty Population Obligation',
+                        'Mutation Obligation','Post-Implementation Proof Obligation')){
+        if((EvidenceField $hj $field)-eq''){throw "APPROVAL_EVIDENCE:INDETERMINATE:permanent-control obligation missing: $field"}
+    }
+    'PASS'
 }
 
 function Validate-FrozenAuthority([string]$BaselineText,[string]$CurrentText){
@@ -340,18 +608,44 @@ function Validate-CommittedRange([string]$Rel){
     # born and completed in one push legal (SPEC-165) - demanding a base version
     # would refuse exactly that history.
     $FrozenBaseline=Read-GitFile $BaseRef $governing
+    # Authority freezes at APPROVAL, not at a contract's first appearance. A Draft
+    # exists precisely to be revised, so a contract drafted and hardened inside the
+    # range must not have its pre-approval edits read as post-approval mutation.
+    # Already-approved contracts bind at the range base exactly as before.
+    $frozenBound=$false
+    if($null-ne$FrozenBaseline){
+        $baseStatus=try{Status-FromText $FrozenBaseline}catch{$null}
+        if($baseStatus-and$baseStatus-ne'Draft'){$frozenBound=$true}
+    }
 
     $terminal=@{};$touched=@{}
+    # A cross-identity rename of the GOVERNING contract leaves its former path in
+    # the diff. Without this the contract's own earlier name reads as a foreign
+    # file and the range is refused OUT_OF_SCOPE_WRITE - which is exactly how this
+    # repository's own SPEC-1002 -> SPEC-196 correction became unpublishable.
+    # Renaming an identity is a first-class event here, so its lineage is followed.
+    $aliases=@{}
 
     foreach($commit in $commits){
         $short=$commit.Substring(0,7)
+        $records=Records-For $commit
         $paths=@()
-        foreach($line in @(git -C $Root diff --name-status -M "$commit^" $commit --)){
-            $parts=$line-split"`t"
-            if($parts[0].Substring(0,1)-eq'R'){$paths+=($parts[1]-replace'\\','/');$paths+=($parts[2]-replace'\\','/')}
-            else{$paths+=($parts[1]-replace'\\','/')}
+        foreach($r in $records){
+            if($r.Code-eq'R'){
+                $paths+=$r.Old;$paths+=$r.Path
+                if($r.Path-eq$governing){$aliases[$r.Old]=$true}
+            }
+            else{$paths+=$r.Path}
         }
         $paths=@($paths|Sort-Object -Unique)
+
+        # Per-commit allocation, gated on the marker in THIS commit's first parent.
+        # Pre-activation commits are not retroactively judged; after activation a
+        # later correction cannot erase the earlier illegal allocation, which a net
+        # BASE..HEAD diff can never see.
+        if(Allocation-ActiveAt "$commit^"){
+            try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck}catch{throw "$($_.Exception.Message)@$short"}
+        }
 
         # A contract that was terminal at an EARLIER commit in this range is
         # historical from that point on. Validate-HistoryAndIds already rejects
@@ -367,13 +661,17 @@ function Validate-CommittedRange([string]$Rel){
         if($null-ne$FrozenBaseline){
             $text=Read-GitFile $commit $governing
             if($null-ne$text){
-                try{Validate-FrozenAuthority $FrozenBaseline $text}catch{throw "$($_.Exception.Message)@$short"}
+                $statusAt=try{Status-FromText $text}catch{$null}
+                # The commit that leaves Draft is the one that freezes authority, so
+                # it supplies the baseline every later commit is judged against.
+                if(-not$frozenBound-and$statusAt-and$statusAt-ne'Draft'){$FrozenBaseline=$text;$frozenBound=$true}
+                if($frozenBound){try{Validate-FrozenAuthority $FrozenBaseline $text}catch{throw "$($_.Exception.Message)@$short"}}
             }
             # Scope comes from the frozen baseline on purpose: a commit that
             # widened its own Write Scope must not thereby authorise its own writes.
             $scopeAt=@(Bullets (Section $FrozenBaseline 'Write Scope') 'WRITE_SCOPE'|%{$_-replace'\\','/'})
             foreach($p in $paths){
-                if($p-ne$governing-and$scopeAt-notcontains$p){throw "OUT_OF_SCOPE_WRITE:${p}@$short"}
+                if($p-ne$governing-and-not$aliases.ContainsKey($p)-and$scopeAt-notcontains$p){throw "OUT_OF_SCOPE_WRITE:${p}@$short"}
             }
         }
 
@@ -1161,6 +1459,12 @@ try{
 
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'}
     Validate-HistoryAndIds $records $base
+    # Allocation is judged locally on every run, and in range mode only when the
+    # base itself was already under enforcement - current rules are never applied
+    # retroactively to history that predates the marker. Reservation, unlike
+    # allocation, is never gated by it.
+    if(-not $BaseRef){Validate-SpecAllocation $records $base}
+    elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}
     $m=Manifest
     $rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
     if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
@@ -1197,6 +1501,12 @@ try{
         Validate-Checklist (ChecklistItems (Section $baselineText 'Review Gate' -Optional)) $c.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
         Validate-StatusPath @(Status-Path ($rel-replace'\\','/') $base $c.Status)
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
+        # Judged on the Draft -> Approved transition ALONE. That is what freezes
+        # authority, and it is also why terminal history is never retrofitted: a
+        # contract that is already past this boundary is never re-examined.
+        if($baselineStatus-eq'Draft'-and$c.Status-eq'Approved'){
+            $script:ApprovalEvidence=Evaluate-PreApprovalEvidence $c $profiles
+        }
     }
 
     # The endpoint view above proves what the range LANDED ON. This proves what it
@@ -1254,6 +1564,7 @@ try{
     if($Finish-and$mode-ne'VERIFY'){throw "FINISH_NOT_READY:$mode"}
 
     Write-Output 'ORVION: READY';Write-Output "MODE: $mode";Write-Output "CR: $($c.Id)";Write-Output "STATUS: $($c.Status)"
+    if($script:ApprovalEvidence){Write-Output "APPROVAL_EVIDENCE: $($script:ApprovalEvidence)"}
     Write-Output "STEP: $(if($c.Resume-eq'DONE'){'DONE'}else{"$($c.Resume)/$($c.Steps.Count)"})"
     if($mode-eq'EXECUTE'){Write-Output 'ACTION:';Write-Output $c.Steps[[int]$c.Resume-1]}
     Write-Output "WRITE: $($c.Scope-join', ')"

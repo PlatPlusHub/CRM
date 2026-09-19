@@ -48,6 +48,27 @@ This document owns ORVION's engineering *method*: how a decision is classified a
 
 Governance is self-revising: if a step stops earning its confidence, propose simplifying it; if a missing practice would raise quality without materially slowing execution, propose adding it. Reconsider methodology only on concrete repository evidence, never on preference alone.
 
+### Pre-Approval evidence sufficiency
+
+Approval freezes authority, so the evidence that makes execution safe must be sufficient *before* the freeze, not discovered during it. Three failed Slice-12 successors proved the asymmetry: execution-time guards failed closed correctly, while the frozen contracts themselves were not always evidence-closed (`SPEC-196`).
+
+A Change Request carries a bounded `## Pre-Approval Evidence` section whose every predicate resolves to exactly one of three values. There is no score and no compensation between predicates:
+
+- **PASS** — every required predicate is satisfied.
+- **FAIL** — a required predicate is contradicted by evidence.
+- **INDETERMINATE** — required evidence is missing, stale, malformed, or unresolved.
+
+`FAIL` and `INDETERMINATE` both block the transition they govern; only `PASS` permits it. `INDETERMINATE` is a first-class outcome rather than a soft pass, because "we did not look" and "we looked and it is fine" are different facts.
+
+Four evidence classes are required where deterministically applicable:
+
+- **Consumer Closure** — for each changed fact or surface, the relevant consumers and a disposition of `WRITE`, `VERIFY`, or `UNAFFECTED`, with evidence. This closes *what depends on the changed fact*, which is a different question from Write Scope's *what may be modified*. An `UNKNOWN` disposition or a named unresolved material consumer is `INDETERMINATE`.
+- **Execution-Boundary Satisfiability** — a frozen sequence must be possible. Declared invariants are checked against the four bounded checkpoints `BEFORE_IMPLEMENTATION`, `BEFORE_IRREVERSIBLE_ACTION`, `AFTER_IRREVERSIBLE_ACTION`, and `BEFORE_COMPLETION`. An invariant required green at a mandatory boundary that lies inside its own declared red window is `FAIL`. This is bounded checkpoint comparison, never simulation of arbitrary program state.
+- **Permanent-Control Admission** — a new permanent control freezes its reuse assessment, the distinct property it adds, a reproduced causal negative, positive and negative test designs, a non-empty-population obligation, and a mutation obligation. Actual positive, negative, population, and mutation proof is supplied after implementation, by the certified suite, and is never asserted before the code exists.
+- **SPEC Identity Allocation** — the proposed identity must be legally allocated. `CR_LIFECYCLE.md` §4 owns that rule.
+
+Applicability is derived from repository evidence — Write Scope, derived verification profiles, known control and governance surfaces, cross-path triggers, and declared irreversible actions — never from the contract's own `Change Class` label. A declared class is descriptive input; it can add obligations but can never remove one that repository evidence makes applicable. An exemption that cannot be derived deterministically is `INDETERMINATE`.
+
 ---
 
 ## 3. Measurement integrity

@@ -120,6 +120,78 @@ None
 
 ---
 
+## Pre-Approval Evidence
+
+[Bounded evidence that must be sufficient BEFORE Approval freezes authority. Semantics are owned by
+the `### Pre-Approval evidence sufficiency` rule in `ENGINEERING_METHOD.md`; admissibility is owned by
+`CR_LIFECYCLE.md §5`. Every predicate resolves to PASS, FAIL, or INDETERMINATE — there is no score.
+Only PASS permits the human Draft-to-Approved decision. `Change Class` is descriptive input and can
+never exempt work that repository evidence makes applicable. Each class below records
+`Applicability: APPLICABLE` or `NOT APPLICABLE`; a class derived applicable by repository evidence
+but declared otherwise is INDETERMINATE. This section is frozen at Approval.]
+
+Change Class: [Routine | Significant | Owner-Decision]
+
+### Derived Applicability
+
+| Predicate | Repository-derived fact | Result |
+| --- | --- | --- |
+| Consumer Closure | [fact] | [APPLICABLE / NOT APPLICABLE] |
+| Execution-Boundary Satisfiability | [fact] | [APPLICABLE / NOT APPLICABLE] |
+| Permanent-Control Admission | [fact] | [APPLICABLE / NOT APPLICABLE] |
+| SPEC Allocation | [fact] | [APPLICABLE / NOT APPLICABLE] |
+
+### Consumer Closure
+
+Applicability: [APPLICABLE / NOT APPLICABLE]
+
+| Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
+| --- | --- | --- | --- |
+| [changed fact, not a file list] | [consumer] | [WRITE / VERIFY / UNAFFECTED] | [evidence] |
+
+Unresolved Material Consumers: [None / named consumer]
+
+### Execution-Boundary Satisfiability
+
+Applicability: [APPLICABLE / NOT APPLICABLE]
+
+Irreversible Action Step: [NONE / step reference]
+
+| Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
+| --- | --- | --- | --- | --- |
+| [invariant] | [BEFORE_IMPLEMENTATION / BEFORE_IRREVERSIBLE_ACTION / AFTER_IRREVERSIBLE_ACTION / BEFORE_COMPLETION] | [NONE / step] | [NONE / step] | [step] |
+
+### Permanent-Control Admission
+
+Applicability: [APPLICABLE / NOT APPLICABLE]
+
+Existing Mechanism Reusable: [YES / NO]
+
+Existing Mechanism: [what already exists and why it is or is not sufficient]
+
+Added Property: [the distinct property this control adds]
+
+Causal Negative: [the ALREADY REPRODUCED counterexample]
+
+Positive Test Design: [allowed behavior that must keep working]
+
+Negative Test Design: [forbidden behavior that must fail, and with which evidence]
+
+Non-Empty Population Obligation: [the population that must be proven non-empty]
+
+Mutation Obligation: [each load-bearing predicate that must be independently mutation-killed]
+
+Post-Implementation Proof Obligation: [what the certified suite must prove before Complete]
+
+### SPEC Identity Allocation
+
+Applicability: [APPLICABLE / NOT APPLICABLE]
+
+[Allocation, reservation, origination, and activation semantics are owned by `CR_LIFECYCLE.md` §4.
+Record here only what is specific to this contract.]
+
+---
+
 ## Implementation Steps
 
 [Number each step. Each step must be deterministic. Each step must identify exactly what to change,

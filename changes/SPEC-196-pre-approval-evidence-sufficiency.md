@@ -71,7 +71,7 @@ None. This Change Request uses the terminal evidence in `SPEC-193`, `SPEC-194`, 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 10
 Blocker: None
 Recovery Attempt: 0
 
@@ -244,6 +244,26 @@ Activation And History Rule: K is active for a committed-range allocation event 
 IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
 — this file is always implicitly in scope for this section.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+
+### 2026-09-19 — Steps A–I
+
+**A — Transition.** `Approved` at `fdad5b6` (human command carried in the execution request), `In Progress` at `7cc1f79` as the first execution action. Manifest pointer synchronized with the approval commit.
+
+**B — Authority and representation.** `ENGINEERING_METHOD.md` §2 gained `### Pre-Approval evidence sufficiency` (the bounded PASS/FAIL/INDETERMINATE model and the four evidence classes). `CR_LIFECYCLE.md` §5 gained the admission rule (`Only PASS permits the human Draft-to-Approved decision`), §8 added `Pre-Approval Evidence` to the frozen field list, and §4 was rewritten for allocation/reservation/collision, the forward-only origination cutover, and the declared marker `SPEC Allocation Enforcement: 1`. The stale synthetic-ID enumeration was removed rather than replaced — monotonic reservation makes a maintained list unnecessary, and those identities remain reserved by history. `changes/TEMPLATE.md` gained exactly one `## Pre-Approval Evidence` section.
+
+**C/D — PRE-REPAIR RED.** The new fixtures were run against the UNMODIFIED `HEAD` evaluator in a detached worktree (`scripts/test_agent_continuity.ps1` copied in; `scripts/check_agent_continuity.ps1` untouched at `9d507e4`): **190 passed, 39 failed**. Failing pre-repair, each for its intended reason: `167`–`177` and `179` (no evidence model existed at all, and `Pre-Approval Evidence` was not a frozen section), `180` (`SPEC_ID_NOT_NEXT` did not exist), `182`/`184` (deleted text and deleted path were both re-admitted), `186`, `189` (`SPEC_ALLOCATION_MARKER_MISSING` did not exist), `190`, `191`, and all 20 predicate mutations. Passing pre-repair and therefore recorded as controls rather than new predicates: `178`, `181`, `185`, `187`, `188`, `191b`, `192` (MUST-ACCEPT controls) and `183` plus the `K current-tree collision` mutation, which are **Already Protected** by the existing `Base-HasId`/`SPEC_ID_ALREADY_USED` mechanism. That mechanism is preserved unchanged, so no predicate was unearned and none was removed from this contract.
+
+An earlier RED attempt produced wrong-reason failures and was discarded rather than recorded: the allocation fixtures had run under a governing contract, so a new contract file was refused as an out-of-scope write before identity was ever judged, and the approval fixtures moved the manifest pointer without it being in the fixture's own Write Scope. Both were corrected to PLAN-mode authoring and scoped manifests before the baseline above was taken.
+
+**E — Evaluator repair.** `scripts/check_agent_continuity.ps1` only: `Evaluate-PreApprovalEvidence` (+ `SubSection`, `EvidenceField`, `EvidenceRows`, `StepNumber`) judged solely on the Draft→Approved transition; `Get-AllocationMarker`/`Allocation-ActiveAt`; `Allocation-Events`; `Records-For`; `Get-SpecSequenceCursor`; `Get-SpecIdReservation`/`Test-SpecIdEverReserved`; `Validate-SpecAllocation`. `Pre-Approval Evidence` joined `FrozenSections`. `Validate-CommittedRange` gained per-commit allocation gated on the first parent's marker. Applicability reuses the existing `Test-ControlPath`/`Profiles`; no second engine, registry, ledger, allowlist, service, workflow or hook was added.
+
+**F–I — Proof.** Full suite **229 passed, 0 failed** (HEAD baseline was 174 passing; +55 = 27 behavioural + 21 mutation + 7 population). Every load-bearing predicate is independently mutation-killed, each mutation executed against the sandbox's own evaluator copy and required to change the outcome in the named direction. Populations for `D`, `F`, `HJ`, `K-local`, `K-reservation`, `K-activation` and `K-range` each assert non-zero accept, reject and mutation counts.
+
+Four defects in this work were found by its own proofs and repaired: a single-row evidence table unrolled on return and read as malformed; an unquoted `-S$rx` made the content pickaxe match nothing, so every historical reservation read as free (a false GREEN); `Records-For` could not diff a root commit, leaving the cursor unresolvable; and a mutation token written into the evaluator was then found by the pickaxe it was meant to disable.
+
+**Two reproduced blockers in `Validate-CommittedRange`, both FIX NOW.** This contract's own publication range was refused before either repair. (1) `OUT_OF_SCOPE_WRITE:changes/SPEC-1002-pre-approval-evidence-sufficiency.md@d839ccd` — a cross-identity rename of the governing contract left its former path in the diff, where it read as a foreign file; the walk now follows that lineage. (2) `FROZEN_AUTHORITY_MUTATED:Objective@7b8c1c8` — frozen authority was compared from a contract's first appearance rather than from Approval, so ordinary pre-approval hardening of a Draft read as post-approval mutation; the baseline now binds at the commit that leaves `Draft`. Both are inside `Write Scope`, and the Acceptance Criterion requiring `3453750` and `d839ccd` to publish in this contract's governing range cannot be met without them. `origin/main..HEAD` now returns `ORVION: READY`.
+
+**Deliberately NOT changed.** `Historical-Guard-IsActive` still activates on the diagnostic literal `HISTORICAL_CR_MUTATION` and remains bypassable by renaming it. That is a reproduced, material defect and a SUCCESSOR; repairing it is outside this contract and is recorded in the gap register at Step O.
 
 ## Verification Notes
 

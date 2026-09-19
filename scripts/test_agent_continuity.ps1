@@ -14,6 +14,7 @@ function ContractText(
     [string]$Objective='Fixture.',[string]$OutOfScope='secret.txt',
     [string]$Acceptance='Fixture.',[string]$Review='Fixture.',
     [string]$Log='None.',[string]$Notes='None.',
+    [string]$Evidence='',
     [switch]$Closeable
 ){
     $steps=if($Multiline){"1. first line`n   continuation line`n2. Exact second action."}else{"1. Exact fixture action.`n2. Exact second action."}
@@ -49,6 +50,7 @@ Recovery Attempt: $Attempt
 $(if($Capabilities-eq'None'){'None'}else{"- ``$Capabilities``"})
 ## Additional Verification
 $(if($Additional-eq'None'){'None'}else{"- $Additional"})
+$(if($Evidence-eq''){''}else{"## Pre-Approval Evidence`n$Evidence"})
 ## Implementation Steps
 $steps
 ## Acceptance Criteria
@@ -122,11 +124,244 @@ function SetPreflight([string]$Rev){git -C $root push origin "+${Rev}:refs/heads
 # in the working tree is a post-approval mutation and is correctly rejected.
 function Rebase([string]$Text,[string]$Rel='changes/SPEC-900-fixture.md'){$script:rebase++;Put $Rel $Text;Commit "rebase-$script:rebase"}
 $script:rebase=0
+# SPEC-196. Fixture identities are DERIVED from the fixture contract's own identity
+# rather than written as literals. A literal future number in tracked test source
+# would permanently reserve a real production identity under the very monotonic
+# reservation rule these cases exist to prove, so the suite must not spend one.
+$fxBase=900
+function FxId([int]$Offset){"SPEC-$($fxBase+$Offset)"}
+# The compact pre-Approval evidence section. Every parameter breaks exactly ONE
+# predicate so a refusal can never be credited to the wrong defect.
+function EvidenceText(
+    [string]$Class='Significant',
+    [string]$Consumer='ok',          # ok | none | unknown | unresolved | placeholder | baddisposition
+    [string]$Boundary='ok',          # ok | conflict | badstep | openended
+    [string]$HJ='ok',                # ok | missing
+    [string]$Applicability='ok'      # ok | selfexempt
+){
+    $rows=switch($Consumer){
+        'none'         {''}
+        'unknown'      {"| Fixture changed fact | Fixture consumer | UNKNOWN | Fixture evidence. |"}
+        'placeholder'  {"| [changed fact, not a file list] | [consumer] | WRITE | [evidence] |"}
+        'baddisposition'{"| Fixture changed fact | Fixture consumer | MAYBE | Fixture evidence. |"}
+        default        {"| Fixture changed fact | ``allowed.txt`` | WRITE | Fixture preserved behaviour. |"}
+    }
+    $unresolved=if($Consumer-eq'unresolved'){'A named downstream consumer is still unresolved'}else{'None'}
+    $boundaryRow=switch($Boundary){
+        # The SPEC-195 shape: the mandatory gate sits INSIDE the invariant's own red
+        # window. Every step reference is deliberately IN RANGE, so the refusal can
+        # only come from the ordering predicate and never from step validation.
+        'conflict'  {"| Fixture invariant | BEFORE_COMPLETION | Step 1 | Step 2 | Step 2 |"}
+        'badstep'   {"| Fixture invariant | BEFORE_COMPLETION | Step 1 | Step 99 | Step 2 |"}
+        'openended' {"| Fixture invariant | BEFORE_COMPLETION | Step 1 | NONE | Step 2 |"}
+        default     {"| Fixture invariant | BEFORE_COMPLETION | NONE | NONE | Step 2 |"}
+    }
+    $hj=if($HJ-eq'missing'){"Existing Mechanism Reusable: YES`n`nExisting Mechanism: Fixture mechanism."}else{@"
+Existing Mechanism Reusable: YES
+
+Existing Mechanism: Fixture mechanism.
+
+Added Property: Fixture distinct property.
+
+Causal Negative: Fixture reproduced counterexample.
+
+Positive Test Design: Fixture positive design.
+
+Negative Test Design: Fixture negative design.
+
+Non-Empty Population Obligation: Fixture population obligation.
+
+Mutation Obligation: Fixture mutation obligation.
+
+Post-Implementation Proof Obligation: Fixture post-implementation proof.
+"@}
+    # `selfexempt` answers NOT APPLICABLE in both places; the two narrow variants let a
+    # mutation isolate ONE of the two checks, because a scenario both of them catch
+    # cannot prove either is load-bearing.
+    $derivedTable=if($Applicability-in@('selfexempt','tableonly')){'NOT APPLICABLE'}else{'APPLICABLE'}
+    $derived=if($Applicability-in@('selfexempt','subonly')){'NOT APPLICABLE'}else{'APPLICABLE'}
+@"
+Change Class: $Class
+
+### Derived Applicability
+
+| Predicate | Repository-derived fact | Result |
+| --- | --- | --- |
+| Consumer Closure | Fixture derived fact. | $derivedTable |
+| Execution-Boundary Satisfiability | Fixture derived fact. | $derivedTable |
+| Permanent-Control Admission | Fixture derived fact. | $derivedTable |
+| SPEC Allocation | Fixture derived fact. | $derivedTable |
+
+### Consumer Closure
+
+Applicability: $derived
+
+| Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
+| --- | --- | --- | --- |
+$rows
+
+Unresolved Material Consumers: $unresolved
+
+### Execution-Boundary Satisfiability
+
+Applicability: $derived
+
+Irreversible Action Step: NONE
+
+| Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
+| --- | --- | --- | --- | --- |
+$boundaryRow
+
+### Permanent-Control Admission
+
+Applicability: $derived
+
+$hj
+
+### SPEC Identity Allocation
+
+Applicability: NOT APPLICABLE
+"@
+}
+# Draft -> Approved is the only transition the evidence gate judges, so every
+# evidence case must COMMIT the Draft first and then present the Approved tree.
+# The manifest may not name a Draft, so it moves with the transition.
+# The manifest pointer MOVES as part of approval, so it must be inside the fixture's
+# own Write Scope or the run is refused as OUT_OF_SCOPE_WRITE before the evidence is
+# ever read - a refusal that would credit these cases for the wrong defect.
+function ApproveRun([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1'){
+    $full="$Scope;_ORVION_CANONICAL/manifest.md"
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'evidence-draft-baseline'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Run 'Gate'
+}
+# Allocation is judged while a new Draft is being AUTHORED, which is PLAN: no contract
+# holds write authority, so the new contract file is the only change. Leaving the
+# fixture contract In Progress would refuse the new file as an out-of-scope write and
+# prove nothing about identity at all.
+function PlanBaseline{
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'plan-baseline'
+}
+# Population counters. A family with no accepting case, no rejecting case or no
+# mutation kill has not been measured, however green it looks.
+$script:pop=@{}
+function Pop([string]$Family,[string]$Kind){
+    foreach($f in @($Family-split';')){
+        $k="$f/$Kind";if(-not $script:pop.ContainsKey($k)){$script:pop[$k]=0};$script:pop[$k]++
+    }
+}
+# Setups are separated from the RUN so a mutation can be applied between them.
+function ApproveSetup([string]$Evidence,[string]$Scope='scripts/check_agent_continuity.ps1'){
+    $full="$Scope;_ORVION_CANONICAL/manifest.md"
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $full -Evidence $Evidence)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'evidence-draft-baseline'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+}
+function FrozenEvidenceSetup{
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope 'scripts/check_agent_continuity.ps1' -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Commit 'approved-with-evidence'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope 'scripts/check_agent_continuity.ps1' -Evidence (EvidenceText -Consumer 'none'))
+}
+function AllocSetup([int]$Offset){PlanBaseline;Put "changes/$(FxId $Offset)-alloc.md" (ContractText -Id (FxId $Offset) -Status Draft)}
+function ReservedPresentSetup{PlanBaseline;Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'reserve-present';Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)}
+function ReservedTextSetup{
+    PlanBaseline;Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'reserve-text'
+    git -C $root rm -q 'lineage.txt';Commit 'delete-text'
+    Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)
+}
+function ReservedPathSetup{
+    PlanBaseline;Put "notes-$(FxId 2)-plan.txt" 'a path that carries the identity';Commit 'reserve-path'
+    git -C $root rm -q "notes-$(FxId 2)-plan.txt";Commit 'delete-path'
+    Put "changes/$(FxId 2)-reuse.md" (ContractText -Id (FxId 2) -Status Draft)
+}
+function SkipReservedSetup{
+    PlanBaseline;Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'burn-next'
+    git -C $root rm -q 'lineage.txt';Commit 'delete-burned'
+    Put "changes/$(FxId 2)-after-skip.md" (ContractText -Id (FxId 2) -Status Draft)
+}
+function NonCrOriginSetup{
+    PlanBaseline;Put "supabase/migrations/20260102_$(FxId 40)_fixture.sql" 'select 1;';Commit 'non-cr-origin'
+    Put "changes/$(FxId 1)-still-next.md" (ContractText -Id (FxId 1) -Status Draft)
+}
+function NoMarkerSetup{PlanBaseline;Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n";Put "changes/$(FxId 1)-no-marker.md" (ContractText -Id (FxId 1) -Status Draft)}
+# Mutations must be EXECUTED, not merely written: `Run` invokes the source
+# evaluator against the sandbox, so a mutated sandbox copy would never run and
+# every mutation would report a false kill. These invoke the sandbox's own copy.
+function RunMutant([string]$Mode='Gate'){
+    $o=& pwsh -NoProfile -File (Join-Path $root 'scripts/check_agent_continuity.ps1') "-$Mode" -Root $root 2>&1
+    [pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}
+}
+function RunMutantRange([string]$Base,[string]$Head='HEAD'){
+    $c=Join-Path $root 'scripts/check_agent_continuity.ps1'
+    $cmd=". '$c' -Gate -Root '$root' -BaseRef '$Base' -HeadRef '$Head'; if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit `$LASTEXITCODE }"
+    $o=& pwsh -NoProfile -Command $cmd 2>&1
+    [pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}
+}
+# The mutant is COMMITTED so the scenario's own pending change stays the only
+# working-tree difference; an uncommitted evaluator edit would be refused as an
+# out-of-scope write and the mutation would appear killed for the wrong reason.
+function CommitOnly([string]$Rel,[string]$Message){git -C $root add -- $Rel;git -C $root commit -m $Message --quiet}
+# The laundering range, reused by the range mutations.
+function LaunderSetup{PlanBaseline;LaunderHistory}
+function LaunderHistory{
+    $script:launderBase=(git -C $root rev-parse HEAD).Trim()
+    $s='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Put "changes/$(FxId 50)-illegal.md" (ContractText -Id (FxId 50) -Status Draft -Scope $s);Commit 'illegal-allocation'
+    git -C $root mv "changes/$(FxId 50)-illegal.md" "changes/$(FxId 1)-corrected.md";Commit 'correct-it'
+    Put "changes/$(FxId 1)-corrected.md" (ContractText -Id (FxId 1) -Status Approved -Scope $s)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText "changes/$(FxId 1)-corrected.md");Commit 'approve-the-correction'
+}
+# One predicate bypassed per run, in a disposable copy of the evaluator. The
+# pristine run must show the expected evidence and the mutated run must not, so a
+# mutation that merely crashes the evaluator cannot be counted as a kill.
+function MutationKill([string]$Name,[scriptblock]$Setup,[string]$Expect,[string]$Find,[string]$Replace,[string]$Family){
+    & $Setup;$pristine=RunMutant 'Gate'
+    & $Setup
+    $src=Get-Content -Raw $control
+    $applied=$src.Contains($Find)
+    Put 'scripts/check_agent_continuity.ps1' ($src.Replace($Find,$Replace))
+    CommitOnly 'scripts/check_agent_continuity.ps1' 'mutant'
+    $mutated=RunMutant 'Gate'
+    Pop $Family 'mutation'
+    Assert $Name ($applied-and($pristine.Text-match$Expect)-and($mutated.Text-notmatch$Expect)) "applied=$applied pristine-has-expected=$($pristine.Text-match$Expect) mutated-has-expected=$($mutated.Text-match$Expect)`n$($mutated.Text)"
+}
+function MutationKillRange([string]$Name,[string]$Expect,[string]$Find,[string]$Replace,[string]$Family='K-range'){
+    LaunderSetup;$pristine=RunMutantRange $script:launderBase
+    # The mutant is committed BEFORE the range base, so the range under test carries
+    # the same history in both halves and differs only in the evaluator judging it.
+    PlanBaseline
+    $src=Get-Content -Raw $control
+    $applied=$src.Contains($Find)
+    Put 'scripts/check_agent_continuity.ps1' ($src.Replace($Find,$Replace))
+    CommitOnly 'scripts/check_agent_continuity.ps1' 'mutant'
+    LaunderHistory
+    $mutated=RunMutantRange $script:launderBase
+    Pop $Family 'mutation'
+    Assert $Name ($applied-and($pristine.Text-match$Expect)-and($mutated.Text-notmatch$Expect)) "applied=$applied pristine-has-expected=$($pristine.Text-match$Expect) mutated-has-expected=$($mutated.Text-match$Expect)`n$($mutated.Text)"
+}
 try{
     [IO.Directory]::CreateDirectory($sandbox)|Out-Null
     git init --bare $remote --quiet;git clone $remote $root --quiet
     git -C $root config user.email test@orvion.invalid;git -C $root config user.name ORVION-Test
     Put 'AGENTS.md' '# fixture'
+    # SPEC-196. The allocation-enforcement marker lives in the identity authority and is
+    # read from a commit's FIRST PARENT copy, so it must exist in the baseline commit for
+    # activation to be testable in both directions. It is placed here, not written by a
+    # later commit, for the same reason `publish_candidate.ps1` is: introducing it later
+    # would be an OUT_OF_SCOPE_WRITE and the K cases would fail for the wrong reason.
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n"
     Put 'context.txt' 'readable';Put 'allowed.txt' 'baseline';Put 'product-history.txt' 'SPEC-155 commission lineage'
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
     Put 'changes/SPEC-900-fixture.md' (ContractText)
@@ -810,22 +1045,22 @@ exit 0
     function Pre-Range{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit pre-range}
 
     Reset-Fixture;Pre-Range
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-approved
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope $rangeScope);Commit born-inprogress
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-complete
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-approved
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $rangeScope);Commit born-inprogress
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-complete
     $r=RunRange 'HEAD~3'
-    Assert '111 MUST-ACCEPT: a contract created and completed inside one range is a legal history' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match'CR: SPEC-902') $r.Text
+    Assert '111 MUST-ACCEPT: a contract created and completed inside one range is a legal history' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match'CR: SPEC-901') $r.Text
 
     Reset-Fixture;Pre-Range
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-complete-outright
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-complete-outright
     $r=RunRange 'HEAD~1'
-    Assert '112 a contract created already marked Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-902-born\.md') $r.Text
+    Assert '112 a contract created already marked Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-901-born\.md') $r.Text
 
     Reset-Fixture;Pre-Range
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Draft -Scope $rangeScope);Commit born-draft
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-draft-to-complete
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $rangeScope);Commit born-draft
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Commit born-draft-to-complete
     $r=RunRange 'HEAD~2'
-    Assert '113 a newly created contract taken from Draft straight to Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-902-born\.md') $r.Text
+    Assert '113 a newly created contract taken from Draft straight to Complete is still rejected' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION:changes/SPEC-901-born\.md') $r.Text
 
     # ---- A successful Gate must SAY it succeeded (SPEC-166) ----
     # Production symptom: the Gate printed ORVION: READY, MODE: VERIFY and BLOCKER:
@@ -837,9 +1072,9 @@ exit 0
     # Change Request. The report is asserted alongside the code, because a guard that
     # exits 0 while reporting a failure would be the same defect facing the other way.
     Reset-Fixture;Pre-Range
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-first-push
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-first-push
     $r=RunRange 'HEAD~1'
-    Assert '114 a Gate that reports success exits 0, even when the contract is new to the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY'-and$r.Text-match'CR: SPEC-902'-and$r.Text-notmatch'BLOCKED') $r.Text
+    Assert '114 a Gate that reports success exits 0, even when the contract is new to the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY'-and$r.Text-match'CR: SPEC-901'-and$r.Text-notmatch'BLOCKED') $r.Text
 
     # ---- A range hides nothing behind a later revert (SPEC-167) ----
     # `SPEC-162` and `SPEC-165` established that a range is a SEQUENCE of committed
@@ -922,10 +1157,10 @@ exit 0
     # re-breaks `SPEC-165`, so it is asserted rather than assumed.
     Reset-Fixture;Pre-Range
     $bornScope='_ORVION_CANONICAL/manifest.md;allowed.txt;context.txt'
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $bornScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit born-a
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope $bornScope);Put 'allowed.txt' 'step one';Commit born-b
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $bornScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-a
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $bornScope);Put 'allowed.txt' 'step one';Commit born-b
     Put 'context.txt' 'step two';Commit born-c
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $bornScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-d
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $bornScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-d
     $r=RunRange 'HEAD~4'
     Assert '120 MUST-ACCEPT: a contract born in range writing in-scope files across commits is legal' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 
@@ -1002,8 +1237,8 @@ exit 0
 
     # Regression: Complete keeps the STRICTER rule and must not inherit the Cancelled path.
     Reset-Fixture;Pre-Range
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-born.md');Commit strict-approved
-    Put 'changes/SPEC-902-born.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit strict-complete
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit strict-approved
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit strict-complete
     $r=RunRange 'HEAD~2'
     Assert '130 Complete still requires In Progress immediately before it' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION|ILLEGAL_STATUS_TRANSITION') $r.Text
 
@@ -1291,6 +1526,335 @@ exit 0
     $wrong=(git -C $root rev-parse refs/remotes/origin/main).Trim()
     $r=RunPublish @('-ReplaceExpectedSha',$wrong)
     Assert '166 PUBLISH: a replacement pinned to the WRONG expected SHA is refused and the remote is unchanged' ($r.Code-ne0-and$r.Text-match'LEASE_PUSH_REFUSED'-and$r.Text-notmatch'PUBLISHED:'-and(PreflightSha)-eq$rejected-and$wrong-ne$rejected) "$($r.Text)`nwrong=$wrong rejected=$rejected after=$(PreflightSha)"
+    # ---- APPROVAL EVIDENCE + SPEC ALLOCATION (SPEC-196) ----
+    # Approval freezes authority, so sufficiency is proven BEFORE the freeze. Every case
+    # below drives a real Draft -> Approved transition through the Gate rather than
+    # asserting on parsed text, and every negative is paired with the positive that
+    # proves the refusal is discriminating rather than universal.
+
+    # 167. APPROVAL-EVIDENCE D. A control-scope contract may not freeze with no consumer
+    # closure at all. This is the reproduced D defect: the contract looks complete.
+    $r=ApproveRun (EvidenceText -Consumer 'none')
+    Assert '167 APPROVAL-EVIDENCE D: control-scope approval with no consumer rows is refused' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'D' 'reject'
+
+    # 168. APPROVAL-EVIDENCE D. `UNKNOWN` is not an answer; it is the absence of one.
+    $r=ApproveRun (EvidenceText -Consumer 'unknown')
+    Assert '168 APPROVAL-EVIDENCE D: an UNKNOWN disposition is INDETERMINATE, never a pass' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'D' 'reject'
+
+    # 169. APPROVAL-EVIDENCE D. A named unresolved material consumer blocks the freeze.
+    $r=ApproveRun (EvidenceText -Consumer 'unresolved')
+    Assert '169 APPROVAL-EVIDENCE D: a named unresolved material consumer blocks approval' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'D' 'reject'
+
+    # 170. APPROVAL-EVIDENCE D. The template's own placeholder text is not evidence.
+    $r=ApproveRun (EvidenceText -Consumer 'placeholder')
+    Assert '170 APPROVAL-EVIDENCE D: unfilled template placeholders are not evidence' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'D' 'reject'
+
+    # 171. APPROVAL-EVIDENCE D. Disposition vocabulary is closed.
+    $r=ApproveRun (EvidenceText -Consumer 'baddisposition')
+    Assert '171 APPROVAL-EVIDENCE D: a disposition outside WRITE/VERIFY/UNAFFECTED is refused' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'D' 'reject'
+
+    # 172. APPROVAL-EVIDENCE F SPEC-195. THE canonical negative: an invariant required green
+    # at a mandatory gate that sits inside its own declared red window. SPEC-195 froze exactly
+    # this shape - Step 10 opened the window, Step 13 closed it, and the Step 12 gate demanded
+    # green in between - and the contract was approved and then cancelled because of it.
+    $r=ApproveRun (EvidenceText -Boundary 'conflict')
+    Assert '172 APPROVAL-EVIDENCE F SPEC-195: a gate inside an invariant red window is refused' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'F' 'reject'
+
+    # 173. APPROVAL-EVIDENCE F. A step reference that does not exist cannot be ordered.
+    $r=ApproveRun (EvidenceText -Boundary 'badstep')
+    Assert '173 APPROVAL-EVIDENCE F: an out-of-range step reference is INDETERMINATE' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'F' 'reject'
+
+    # 174. APPROVAL-EVIDENCE F. A red window that never closes is unsatisfiable by construction.
+    $r=ApproveRun (EvidenceText -Boundary 'openended')
+    Assert '174 APPROVAL-EVIDENCE F: an open-ended red window is refused' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'F' 'reject'
+
+    # 175. APPROVAL-EVIDENCE HJ. A permanent control may not freeze without its obligations.
+    $r=ApproveRun (EvidenceText -HJ 'missing')
+    Assert '175 APPROVAL-EVIDENCE HJ: missing permanent-control obligations block approval' ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE') $r.Text
+    Pop 'HJ' 'reject'
+
+    # 176. APPROVAL-EVIDENCE HJ. Routine is descriptive input, never an exemption. A CONTROL
+    # Write Scope makes the obligations applicable whatever the contract calls itself.
+    $r=ApproveRun (EvidenceText -Class 'Routine' -Applicability 'selfexempt')
+    Assert '176 APPROVAL-EVIDENCE HJ: a Routine label cannot self-exempt control work' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'HJ' 'reject'
+
+    # 177. POSITIVE control for 167-176. Without it every case above would pass against a
+    # guard that simply refused all approvals, which is the vacuous-control shape H/J exists
+    # to reject.
+    $r=ApproveRun (EvidenceText)
+    Assert '177 APPROVAL-EVIDENCE: complete applicable evidence is ADMITTED' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'D;F;HJ' 'accept'
+
+    # 178. POSITIVE. A contract whose Write Scope touches no control or governance surface
+    # derives NOT APPLICABLE and needs no evidence section at all - backward compatibility
+    # for every ordinary contract, and the reason this is not governance bloat.
+    Reset-Fixture
+    $plain='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $plain)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'plain-draft'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $plain)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    $r=Run 'Gate'
+    Assert '178 APPROVAL-EVIDENCE: a non-control contract approves with no evidence section' ($r.Code-eq0) $r.Text
+    Pop 'D;F;HJ' 'accept'
+
+    # 179. The evidence section is frozen at Approval like every other authority field.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope 'scripts/check_agent_continuity.ps1' -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Commit 'approved-with-evidence'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope 'scripts/check_agent_continuity.ps1' -Evidence (EvidenceText -Consumer 'none'))
+    $r=Run 'Gate'
+    Assert '179 APPROVAL-EVIDENCE: rewriting frozen evidence after approval is refused' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED') $r.Text
+    Pop 'HJ' 'reject'
+
+    # ---- SPEC ALLOCATION ----
+    # The fixture's own cursor is its baseline commit, which added SPEC-900 alongside two
+    # terminal contracts, so the next legal identity is derived - never asserted - below.
+
+    # 180. SPEC-ALLOCATION LOCAL. The reproduced K defect: the Draft that became this very
+    # contract was created as SPEC-1002 while the real sequence ended at SPEC-195, and the
+    # Gate admitted it because it enforced collision only.
+    PlanBaseline
+    Put "changes/$(FxId 50)-jump.md" (ContractText -Id (FxId 50) -Status Draft)
+    $r=Run 'Gate'
+    Assert '180 SPEC-ALLOCATION LOCAL: an arbitrary unused high identity is refused' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT') $r.Text
+    Pop 'K-local' 'reject'
+
+    # 181. POSITIVE control for 180. The next legal identity must still be admitted, or the
+    # rule would simply forbid all new contracts.
+    PlanBaseline
+    Put "changes/$(FxId 1)-legal.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '181 SPEC-ALLOCATION LOCAL: the next legal identity is admitted' ($r.Code-eq0) $r.Text
+    Pop 'K-local' 'accept'
+
+    # 182. SPEC-ALLOCATION RESERVED-TEXT. K1, reproduced: an identity whose ONLY tracked
+    # occurrence was committed and then deleted was re-admitted by the unmodified evaluator
+    # while it remained reachable in history.
+    PlanBaseline
+    Put 'lineage.txt' "historical note naming $(FxId 1) once"
+    Commit 'reserve-by-text'
+    git -C $root rm -q 'lineage.txt';Commit 'delete-the-text'
+    Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '182 SPEC-ALLOCATION RESERVED-TEXT: a deleted tracked-text identity stays reserved' ($r.Code-ne0-and$r.Text-match'SPEC_ID_HISTORICALLY_RESERVED') $r.Text
+    Pop 'K-reservation' 'reject'
+
+    # 183. CONTROL for 182. While the occurrence still exists the EXISTING current-tree rule
+    # must refuse it with its own unchanged vocabulary - proving 182 tested history, not this.
+    PlanBaseline
+    Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'reserve-by-text-present'
+    Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '183 SPEC-ALLOCATION RESERVED-TEXT: a present occurrence still raises SPEC_ID_ALREADY_USED' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED') $r.Text
+    Pop 'K-reservation' 'reject'
+
+    # 184. SPEC-ALLOCATION RESERVED-PATH. The same defect through a tracked FILENAME, which
+    # the content pickaxe alone cannot see.
+    PlanBaseline
+    Put "notes-$(FxId 2)-plan.txt" 'a path that carries the identity'
+    Commit 'reserve-by-path'
+    git -C $root rm -q "notes-$(FxId 2)-plan.txt";Commit 'delete-the-path'
+    Put "changes/$(FxId 2)-reuse.md" (ContractText -Id (FxId 2) -Status Draft)
+    $r=Run 'Gate'
+    Assert '184 SPEC-ALLOCATION RESERVED-PATH: a deleted tracked-path identity stays reserved' ($r.Code-ne0-and$r.Text-match'SPEC_ID_HISTORICALLY_RESERVED') $r.Text
+    Pop 'K-reservation' 'reject'
+
+    # 185. SPEC-ALLOCATION SKIP-RESERVED. Reservation must drive ADVANCEMENT, not only
+    # rejection. With cursor+1 burned in history the allocator must hand out cursor+2.
+    PlanBaseline
+    Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'burn-next'
+    git -C $root rm -q 'lineage.txt';Commit 'delete-burned'
+    Put "changes/$(FxId 2)-after-skip.md" (ContractText -Id (FxId 2) -Status Draft)
+    $r=Run 'Gate'
+    Assert '185 SPEC-ALLOCATION SKIP-RESERVED: the allocator skips a reserved candidate' ($r.Code-eq0) $r.Text
+    Pop 'K-reservation' 'accept'
+
+    # 186. The enforcer half of 185: the very candidate the allocator skipped may not be
+    # taken by hand. One reservation fact, two independently proven roles.
+    PlanBaseline
+    Put 'lineage.txt' "historical note naming $(FxId 1) once";Commit 'burn-next-2'
+    git -C $root rm -q 'lineage.txt';Commit 'delete-burned-2'
+    Put "changes/$(FxId 1)-manual.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '186 SPEC-ALLOCATION SKIP-RESERVED: the skipped candidate is refused when chosen by hand' ($r.Code-ne0-and$r.Text-match'SPEC_ID_HISTORICALLY_RESERVED') $r.Text
+    Pop 'K-reservation' 'reject'
+
+    # 187. SPEC-ALLOCATION NON-CR-ORIGIN. Q1's cutover: a non-contract artifact carrying a
+    # brand-new number reserves it but must NOT move the cursor, so the next contract still
+    # allocates cursor+1 rather than following the stray number.
+    PlanBaseline
+    Put "supabase/migrations/20260102_$(FxId 40)_fixture.sql" 'select 1;'
+    Commit 'non-cr-origination'
+    Put "changes/$(FxId 1)-still-next.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '187 SPEC-ALLOCATION NON-CR-ORIGIN: a non-contract identity does not advance the cursor' ($r.Code-eq0) $r.Text
+    Pop 'K-local' 'accept'
+
+    # 188. The reservation half of 187 - the stray number is burned, not merely ignored.
+    PlanBaseline
+    Put "supabase/migrations/20260102_$(FxId 40)_fixture.sql" 'select 1;'
+    Commit 'non-cr-origination-2'
+    Put "changes/$(FxId 40)-claim.md" (ContractText -Id (FxId 40) -Status Draft)
+    $r=Run 'Gate'
+    Assert '188 SPEC-ALLOCATION NON-CR-ORIGIN: the stray number is permanently reserved' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED|SPEC_ID_HISTORICALLY_RESERVED') $r.Text
+    Pop 'K-reservation' 'reject'
+
+    # 189. SPEC-ALLOCATION ACTIVATION. The marker is the activation signal. With no marker
+    # in the working tree the evaluator fails CLOSED rather than silently allocating unchecked.
+    PlanBaseline
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n"
+    Put "changes/$(FxId 1)-no-marker.md" (ContractText -Id (FxId 1) -Status Draft)
+    $r=Run 'Gate'
+    Assert '189 SPEC-ALLOCATION ACTIVATION: a missing allocation marker fails closed' ($r.Code-ne0-and$r.Text-match'SPEC_ALLOCATION_MARKER_MISSING') $r.Text
+    Pop 'K-activation' 'reject'
+
+    # 190. SPEC-ALLOCATION DIAGNOSTIC-RENAME. K2, reproduced: the old activation pattern read
+    # a diagnostic literal out of the evaluator's own source, so a behaviour-preserving rename
+    # silently disabled it. Renaming every diagnostic this evaluator emits must change nothing.
+    PlanBaseline
+    $renamed=(Get-Content -Raw $control).
+        Replace('SPEC_ID_NOT_NEXT','ALLOC_NOT_NEXT_RENAMED').
+        Replace('SPEC_ID_HISTORICALLY_RESERVED','ALLOC_RESERVED_RENAMED').
+        Replace('SPEC_ALLOCATION_MARKER_MISSING','ALLOC_MARKER_RENAMED')
+    Put 'scripts/check_agent_continuity.ps1' $renamed
+    Commit 'rename-every-diagnostic'
+    Put "changes/$(FxId 50)-jump-after-rename.md" (ContractText -Id (FxId 50) -Status Draft)
+    $r=& pwsh -NoProfile -File (Join-Path $root 'scripts/check_agent_continuity.ps1') -Gate -Root $root 2>&1
+    $rc=$LASTEXITCODE
+    Assert '190 SPEC-ALLOCATION DIAGNOSTIC-RENAME: renaming diagnostics does not disable enforcement' ($rc-ne0-and(($r|Out-String)-match'ALLOC_NOT_NEXT_RENAMED')) ($r|Out-String)
+    Pop 'K-activation' 'reject'
+
+    # 191. SPEC-ALLOCATION RANGE-LAUNDER. A net diff cannot see a violation that a later
+    # commit corrected. The range must still fail on the offending commit.
+    # The range must carry a GOVERNING contract or range validation never reaches the
+    # per-commit walk, so the corrected contract becomes governing exactly as it does
+    # in a real publication: authored in PLAN, then approved inside the same push.
+    PlanBaseline
+    $base=(git -C $root rev-parse HEAD).Trim()
+    $launderScope='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Put "changes/$(FxId 50)-illegal.md" (ContractText -Id (FxId 50) -Status Draft -Scope $launderScope)
+    Commit 'illegal-allocation'
+    git -C $root mv "changes/$(FxId 50)-illegal.md" "changes/$(FxId 1)-corrected.md";Commit 'correct-it'
+    Put "changes/$(FxId 1)-corrected.md" (ContractText -Id (FxId 1) -Status Approved -Scope $launderScope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText "changes/$(FxId 1)-corrected.md")
+    Commit 'approve-the-correction'
+    $r=RunRange $base
+    Assert '191 SPEC-ALLOCATION RANGE-LAUNDER: a corrected illegal allocation still fails the range' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT') $r.Text
+    Pop 'K-range' 'reject'
+
+    # 191b. The control for 191: the SAME shape with a LEGAL first allocation must be
+    # accepted, or 191 would pass against a range check that refused every history.
+    PlanBaseline
+    $base=(git -C $root rev-parse HEAD).Trim()
+    Put "changes/$(FxId 1)-legal-range.md" (ContractText -Id (FxId 1) -Status Draft -Scope $launderScope)
+    Commit 'legal-allocation'
+    Put "changes/$(FxId 1)-legal-range.md" (ContractText -Id (FxId 1) -Status Approved -Scope $launderScope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText "changes/$(FxId 1)-legal-range.md")
+    Commit 'approve-the-legal-one'
+    $r=RunRange $base
+    Assert '191b SPEC-ALLOCATION RANGE-LAUNDER: a legal allocation in the same shape is accepted' ($r.Code-eq0) $r.Text
+    Pop 'K-range' 'accept'
+
+    # 192. SPEC-ALLOCATION ACTIVATION. Pre-marker history is NOT retroactively judged, which
+    # is what keeps this contract's own SPEC-1002 creation and correction publishable.
+    PlanBaseline
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker yet`n";Commit 'pre-marker-state'
+    $base=(git -C $root rev-parse HEAD).Trim()
+    Put "changes/$(FxId 50)-premarker.md" (ContractText -Id (FxId 50) -Status Draft);Commit 'pre-marker-allocation'
+    git -C $root mv "changes/$(FxId 50)-premarker.md" "changes/$(FxId 1)-premarker-fixed.md";Commit 'pre-marker-correction'
+    $r=RunRange $base
+    Assert '192 SPEC-ALLOCATION ACTIVATION: allocation before the marker is not retroactively judged' ($r.Text-notmatch'SPEC_ID_NOT_NEXT') $r.Text
+    Pop 'K-activation' 'accept'
+
+    # ---- APPROVAL-EVIDENCE MUTATION POPULATION (SPEC-196) ----
+    # A guard that cannot be broken was never load-bearing. Each mutation bypasses
+    # exactly ONE predicate in a disposable copy of the evaluator and re-runs the
+    # same scenario: the pristine run must produce the expected evidence and the
+    # mutated run must not. Both halves are required - asserting only that the
+    # mutated run differs would credit a crash as a kill.
+    foreach($m in @(
+        @{Fam='D';N='derived applicability / self-exemption (per-class declaration)';S={ApproveSetup (EvidenceText -Class 'Routine' -Applicability 'subonly')};E='CODE: APPROVAL_EVIDENCE'
+          F="if((EvidenceField `$sub 'Applicability')-ne'APPLICABLE'){";R='if($false){'}
+        @{Fam='D';N='D rows present';S={ApproveSetup (EvidenceText -Consumer 'none')};E='CODE: APPROVAL_EVIDENCE'
+          F="if(!`$rows.Count){throw 'APPROVAL_EVIDENCE:INDETERMINATE:no consumer closure rows'}";R=''}
+        @{Fam='D';N='D UNKNOWN disposition';S={ApproveSetup (EvidenceText -Consumer 'unknown')};E='SUBJECT: INDETERMINATE'
+          F="if(`$row[2]-eq'UNKNOWN'){";R='if($false){'}
+        @{Fam='D';N='D disposition vocabulary';S={ApproveSetup (EvidenceText -Consumer 'baddisposition')};E='CODE: APPROVAL_EVIDENCE'
+          F="if(@('WRITE','VERIFY','UNAFFECTED')-notcontains`$row[2]){";R='if($false){'}
+        @{Fam='D';N='D placeholder rejection';S={ApproveSetup (EvidenceText -Consumer 'placeholder')};E='CODE: APPROVAL_EVIDENCE'
+          F="if((`$cells|Where-Object{`$_-match'^\[.*\]`$'}).Count){continue}";R=''}
+        @{Fam='D';N='D unresolved material consumer';S={ApproveSetup (EvidenceText -Consumer 'unresolved')};E='CODE: APPROVAL_EVIDENCE'
+          F="if(`$unresolved-ne'None'){";R='if($false){'}
+        @{Fam='F';N='F boundary conflict ordering';S={ApproveSetup (EvidenceText -Boundary 'conflict')};E='CODE: APPROVAL_EVIDENCE'
+          F='if($opens-gt0-and$gate-gt$opens-and$gate-le$closes){';R='if($false){'}
+        @{Fam='F';N='F open-ended red window';S={ApproveSetup (EvidenceText -Boundary 'openended')};E='CODE: APPROVAL_EVIDENCE'
+          F="if(`$opens-gt0-and`$closes-eq0){";R='if($false){'}
+        @{Fam='HJ';N='H/J obligation completeness';S={ApproveSetup (EvidenceText -HJ 'missing')};E='CODE: APPROVAL_EVIDENCE'
+          F="if((EvidenceField `$hj `$field)-eq''){";R='if($false){'}
+        @{Fam='HJ';N='frozen membership of the evidence section';S={FrozenEvidenceSetup};E='FROZEN_AUTHORITY_MUTATED'
+          F="'Additional Verification','Pre-Approval Evidence','Implementation Steps'";R="'Additional Verification','Implementation Steps'"}
+        @{Fam='K-local';N='K local allocation invocation';S={AllocSetup 50};E='SPEC_ID_NOT_NEXT'
+          F='if($id-ne$candidate){throw "SPEC_ID_NOT_NEXT:${candidate}:$id"}';R=''}
+        @{Fam='K-reservation';N='K current-tree collision';S={ReservedPresentSetup};E='SPEC_ID_ALREADY_USED'
+          F='if(Base-HasId $Ref $id){throw "SPEC_ID_ALREADY_USED:$id"}';R=''}
+        @{Fam='K-reservation';N='K historical content reservation';S={ReservedTextSetup};E='SPEC_ID_HISTORICALLY_RESERVED'
+          F='$hits=@(git -C $Root log $Ref --root --pickaxe-regex "-S$rx" --format=%h 2>$null);$LASTEXITCODE=0';R='$hits=@()'}
+        @{Fam='K-reservation';N='K historical path reservation';S={ReservedPathSetup};E='SPEC_ID_HISTORICALLY_RESERVED'
+          F='if($line-and$line-match$rx){$LASTEXITCODE=0;return $current}';R='if($false){}'}
+        @{Fam='K-reservation';N='K reservation drives advancement';S={SkipReservedSetup};E='ORVION: READY'
+          F='while(Test-SpecIdEverReserved $Ref "SPEC-$candidate"){$candidate++}';R=''}
+        @{Fam='K-local';N='K origination restriction';S={NonCrOriginSetup};E='ORVION: READY'
+          F="if(`$r.Path-match'^changes/SPEC-(?<n>[0-9]+)-.*\.md`$'-and`$null-eq(Read-GitFile `$Ref `$r.Path)){`$ids+=[int]`$Matches['n']}"
+          R="if(`$r.Path-match'SPEC-(?<n>[0-9]+)'-and`$null-eq(Read-GitFile `$Ref `$r.Path)){`$ids+=[int]`$Matches['n']}"}
+        @{Fam='K-activation';N='K working-tree activation marker';S={NoMarkerSetup};E='SPEC_ALLOCATION_MARKER_MISSING'
+          F="if((Get-AllocationMarker `$text)-lt1){throw 'SPEC_ALLOCATION_MARKER_MISSING'}";R=''}
+    )){
+        MutationKill "APPROVAL-EVIDENCE MUTATION POPULATION: $($m.N)" $m.S $m.E $m.F $m.R $m.Fam
+    }
+
+    # Range-scoped mutations. Same contract, driven through RunRange because a
+    # per-commit invariant cannot be observed from a working-tree gate at all.
+    foreach($m in @(
+        @{N='K per-commit range invocation';E='SPEC_ID_NOT_NEXT'
+          F='try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck}catch{throw "$($_.Exception.Message)@$short"}';R=''}
+        @{N='K first-parent activation marker';E='SPEC_ID_NOT_NEXT'
+          F='if(Allocation-ActiveAt "$commit^"){';R='if($false){'}
+    )){
+        MutationKillRange "APPROVAL-EVIDENCE MUTATION POPULATION: $($m.N)" $m.E $m.F $m.R
+    }
+
+    # The derived-applicability TABLE is a second, independent self-exemption door.
+    # Both are proven separately; a scenario that trips both would prove neither.
+    MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: derived applicability / self-exemption (derived table)' `
+        {ApproveSetup (EvidenceText -Class 'Routine' -Applicability 'tableonly')} 'CODE: APPROVAL_EVIDENCE' `
+        "if(`$row[-1]-ne'APPLICABLE'){throw 'APPROVAL_EVIDENCE:INDETERMINATE:derived applicability contradicts repository evidence'}" '' 'D'
+
+    # Cursor chronology is proven by an ACCEPTING scenario on purpose. Shifting the
+    # cursor would merely move WHICH commit a rejecting scenario blames, which is not
+    # evidence; breaking it must refuse the identity that is actually legal.
+    MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: K cursor chronology' {AllocSetup 1} 'ORVION: READY' `
+        'if($ids.Count){return ($ids|Measure-Object -Maximum).Maximum}' 'if($ids.Count){return 0}' 'K-local'
+
+    # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
+    # A guard reasoning over an empty set reports success while measuring nothing.
+    # Every family must have proven acceptance, refusal AND a mutation kill.
+    foreach($family in @('D','F','HJ','K-local','K-reservation','K-activation','K-range')){
+        $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
+        Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
+    }
+
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
