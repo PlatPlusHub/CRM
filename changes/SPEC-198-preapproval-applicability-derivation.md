@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -71,7 +71,7 @@ None. `SPEC-196` is `Complete` and terminal; this contract does not reopen, edit
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -173,50 +173,72 @@ Derived mechanically, not chosen. The first-parent sequence cursor stands at **1
 
 ## Acceptance Criteria
 
-- [ ] `Evaluate-PreApprovalEvidence` derives applicability from the derived profile set, from `Test-ControlPath` over Write Scope, from a Write Scope path matching `^supabase/functions/`, and from a declared `Irreversible Action Step` other than `NONE`.
-- [ ] `supabase/functions/` appears in `Evaluate-PreApprovalEvidence` only, and neither `Profiles` nor `Get-ControlSurface` was modified.
-- [ ] The harness proves a contract scoped only to `supabase/functions/**` is refused, and asserts from the Gate's `VERIFICATION:` line that it derives `REPOSITORY` and nothing else.
-- [ ] `changes/SPEC-197-membership-authority-and-audit.md` is byte-identical to its state at the start of this Change Request, despite being carried in Write Scope for range publishability.
-- [ ] A contract whose derived profile set contains any entry other than `REPOSITORY` is applicable, and the previous `-contains 'CONTROL'` test no longer appears in that function.
-- [ ] A contract with no `## Pre-Approval Evidence` section is not made applicable by the irreversible-action input.
-- [ ] The non-applicable branch returns `NOT APPLICABLE`, and every applicable passing path still returns `PASS`.
-- [ ] `scripts/test_agent_continuity.ps1` contains the sentinels `APPROVAL-EVIDENCE APPLICABILITY` and `APPROVAL-EVIDENCE APPLICABILITY POPULATION`.
-- [ ] The harness proves a `DATABASE`-scope contract is refused for an `UNKNOWN` consumer disposition, for a gate inside its own red window, and for an absent evidence section.
-- [ ] The harness proves a `REPOSITORY`-only contract declaring an irreversible action step is refused rather than exempted.
-- [ ] The harness proves the `DATABASE` fixtures derive `DATABASE` and do not derive `CONTROL`, read from the Gate's own `VERIFICATION:` line.
-- [ ] The harness proves a `DATABASE`-scope contract carrying complete valid evidence is admitted.
-- [ ] Assertion 177 still reports `APPROVAL_EVIDENCE: PASS` for a CONTROL contract with complete evidence, and assertion 178 still admits a `REPOSITORY`-only contract with no evidence section.
-- [ ] Accept, reject and mutation population counters exist for the new applicability family.
-- [ ] Every mutation named in this contract's Mutation Obligation is independently killed by the unchanged focused assertions.
-- [ ] `npx`-free `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` reports zero failures.
-- [ ] `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md` and `changes/SPEC-196-pre-approval-evidence-sufficiency.md` are byte-identical to their state at the start of this Change Request.
-- [ ] The Execution Log records which applicability inputs the ordinary automatic Gate derives for `changes/SPEC-197-membership-authority-and-audit.md`, with that contract left `Draft` and unedited.
-- [ ] `_ORVION_CANONICAL/manifest.md` names SPEC-198 as `Last Completed`, and `ai-map.json`'s three live_state fields match it by value with LF line endings.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `Evaluate-PreApprovalEvidence` derives applicability from the derived profile set, from `Test-ControlPath` over Write Scope, from a Write Scope path matching `^supabase/functions/`, and from a declared `Irreversible Action Step` other than `NONE`.
+- [x] `supabase/functions/` appears in `Evaluate-PreApprovalEvidence` only, and neither `Profiles` nor `Get-ControlSurface` was modified.
+- [x] The harness proves a contract scoped only to `supabase/functions/**` is refused, and asserts from the Gate's `VERIFICATION:` line that it derives `REPOSITORY` and nothing else.
+- [x] `changes/SPEC-197-membership-authority-and-audit.md` is byte-identical to its state at the start of this Change Request, despite being carried in Write Scope for range publishability.
+- [x] A contract whose derived profile set contains any entry other than `REPOSITORY` is applicable, and the previous `-contains 'CONTROL'` test no longer appears in that function.
+- [x] A contract with no `## Pre-Approval Evidence` section is not made applicable by the irreversible-action input.
+- [x] The non-applicable branch returns `NOT APPLICABLE`, and every applicable passing path still returns `PASS`.
+- [x] `scripts/test_agent_continuity.ps1` contains the sentinels `APPROVAL-EVIDENCE APPLICABILITY` and `APPROVAL-EVIDENCE APPLICABILITY POPULATION`.
+- [x] The harness proves a `DATABASE`-scope contract is refused for an `UNKNOWN` consumer disposition, for a gate inside its own red window, and for an absent evidence section.
+- [x] The harness proves a `REPOSITORY`-only contract declaring an irreversible action step is refused rather than exempted.
+- [x] The harness proves the `DATABASE` fixtures derive `DATABASE` and do not derive `CONTROL`, read from the Gate's own `VERIFICATION:` line.
+- [x] The harness proves a `DATABASE`-scope contract carrying complete valid evidence is admitted.
+- [x] Assertion 177 still reports `APPROVAL_EVIDENCE: PASS` for a CONTROL contract with complete evidence, and assertion 178 still admits a `REPOSITORY`-only contract with no evidence section.
+- [x] Accept, reject and mutation population counters exist for the new applicability family.
+- [x] Every mutation named in this contract's Mutation Obligation is independently killed by the unchanged focused assertions.
+- [x] `npx`-free `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` reports zero failures.
+- [x] `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md` and `changes/SPEC-196-pre-approval-evidence-sufficiency.md` are byte-identical to their state at the start of this Change Request.
+- [x] The Execution Log records which applicability inputs the ordinary automatic Gate derives for `changes/SPEC-197-membership-authority-and-audit.md`, with that contract left `Draft` and unedited.
+- [x] `_ORVION_CANONICAL/manifest.md` names SPEC-198 as `Last Completed`, and `ai-map.json`'s three live_state fields match it by value with LF line endings.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-19 — Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — nine focused cases (195-203) and four mutation entries added to the existing harness; no new script or helper file.
+- Step 2: Applied — applicability now derives from the profile set, `Test-ControlPath`, `^supabase/functions/`, and a declared irreversible action. `Profiles` and `Get-ControlSurface` were not modified.
+- Step 3: Applied — the non-applicable branch returns `NOT APPLICABLE`; every applicable passing path still returns `PASS`.
+- Step 4: Applied — positive controls, negative controls, population counters and four mutation kills.
+- Step 5: Applied — see below.
+- Step 6: Applied — manifest and `ai-map.json` updated by measurement and normalised to LF.
+
+**RED was earned twice, and the first attempt was discarded rather than recorded.** The first baseline failed cases 195-197, 200 and 202, but for the WRONG reason: `Validate-DatabaseContract` refuses a DATABASE-profile contract that does not declare `supabase-local` and name a `scripts/verify_*` suite, and it runs *before* the evidence is read. Those fixtures would have gone green after the repair while proving nothing about applicability. `ApproveRun`/`ApproveSetup` gained a capabilities/verification passthrough and the baseline was retaken: **235 passed, 10 failed**, the failures being exactly the five refusal cases (the defect), case 203 (`NOT APPLICABLE` not yet written) and four mutations reporting `applied=False` because their targets did not exist yet. Positive controls 200, 201 and 202 were GREEN before the repair, which is what makes the refusal cases non-vacuous.
+
+After the repair: **245 passed, 0 failed**, with all eight non-empty-population families satisfied including the new `APPLIC` family.
+
+**Mutation kills, each on a scenario no other arm can rescue.** Reverting the profile test to `-contains 'CONTROL'` restored the DATABASE false green; deleting the `^supabase/functions/` arm restored the Edge Function false green (that fixture derives `REPOSITORY` alone and declares no irreversible action); deleting the irreversible-action arm restored it for a `REPOSITORY`-only contract that declares one; and replacing `return 'NOT APPLICABLE'` with `return 'PASS'` killed the vocabulary assertion. Each recorded `applied=True`, a green pristine baseline and a red mutant.
+
+**Performance, measured on one identical tree with only the evaluator swapped** (three ordinary `-Gate` runs each): repaired 14689 / 12732 / 12572 ms against HEAD 14550 / 15270 / 14894 ms. No material routine slowdown — the difference is inside machine noise and `Repo-Guard` dominates both. Applicability remains repository-local: an in-memory filter over the derived profile set, a path match over Write Scope already being iterated, and one regex over a section already parsed. No web, database, model or network call was added.
+
+**Step 5 — what the repaired evaluator now derives for `changes/SPEC-197-membership-authority-and-audit.md`**, run read-only through the ordinary automatic path with that contract left `Draft` and unedited: derived profiles `DATABASE, REPOSITORY`; applicable via the non-`REPOSITORY` profile arm and independently via its declared irreversible action (`Step 11`, the Primary deployment); `Test-ControlPath` and the Edge Function arm do not fire for it. Its evidence is therefore evaluated rather than skipped.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-19 — Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository rather than the log above. All four applicability arms are present in `Evaluate-PreApprovalEvidence` and the former `($Profiles-contains'CONTROL')` test is gone. `supabase/functions` occurs at exactly one line in the evaluator — inside the applicability predicate — and neither `Profiles` nor `Get-ControlSurface` was touched, so no verification protocol changed. The non-applicable branch returns `NOT APPLICABLE`. Both harness sentinels exist. Against `origin/main` the only paths that differ are this contract, `SPEC-197`'s Draft file (its creation commit, carried for range publishability) and the two control scripts; `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md`, `SPEC-196` and `check_repository_consistency.ps1` are untouched. `SPEC-197`'s blob is `240cd4c` at both `67e6092` and `HEAD` — byte-identical despite riding in Write Scope. `-Finish` reported `LOCAL_CERTIFY: READY` with all five guard suites, repository consistency and `git diff --check` passing.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
