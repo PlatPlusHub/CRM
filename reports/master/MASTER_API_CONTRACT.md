@@ -231,7 +231,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `user_branch_assignments` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `user_permission_grants` | `SIU-` | no | no | scope_insert, scope_read, scope_update |
 | `user_role_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
-| `users` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `users` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 
 ## 5. Known exposure a client author must design around
 

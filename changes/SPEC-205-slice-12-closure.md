@@ -213,6 +213,82 @@ IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCL
 — this file is always implicitly in scope for this section.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
 
+### 2026-09-20 — Steps 1-3 executed and PROVEN, then a blocker found in this contract's own frozen Additional Verification.
+
+**Step 1 — the database the generator would read was proven first, on a clean reset.**
+`npx supabase db reset` re-applied the repository migrations including `20260920120000`; the local
+ledger reads **219 / `dd2427080e9cfb5e8d1d162bf818360f`**. `npx supabase test db` reported
+`Files=118, Tests=1958`, `All tests successful`, `Result: PASS`, and the sum of the literal
+`plan(N)` declarations across `supabase/tests`, computed independently, is **1958** — executed
+equals declared. `scripts/verify_database.sql` completed with
+`ALL CHECKS PASSED (77 tables, … 71/621 catalog, …)`. No migration was authored, applied or
+re-applied.
+
+**Step 2 — the generated document was regenerated and its delta PROVEN before being accepted.**
+`pwsh -NoProfile -File scripts/generate-api-contract.ps1` reported
+`79 RPC endpoints (79 with HTTP evidence), 8 reporting views, 73 tables`. Measured against the
+previously committed bytes taken from `HEAD`:
+
+```
+committed lines = 268      generated lines = 268      LINE COUNT EQUAL = True
+--- differing line 234
+  committed: | `users` | `SIU-` | no  | no          | scope_delete, scope_insert, scope_read, scope_update |
+  generated: | `users` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
+TOTAL DIFFERING LINES = 1
+```
+
+Exactly one line, exactly the predicted one, with no unrelated generated drift — the disproof
+attempt failed and the hypothesis stands. `git diff --stat` confirms `1 insertion(+), 1 deletion(-)`
+and `git diff --check` is clean. The file was produced by its generator and not hand-edited.
+
+**Step 3 — Check L3 is GREEN.** `scripts/check_database_parity.ps1` now reports
+`MASTER_API_CONTRACT.md matches the live surface`, and Check L5 is green. The defect that cancelled
+`SPEC-203` is repaired.
+
+---
+
+**BLOCKER — and it is in this contract's own frozen `Additional Verification`, not in the work.**
+
+This contract names `pwsh -NoProfile -File scripts/check_database_parity.ps1` as an Additional
+Verification, precisely so that Check L3 could not be quietly skipped by a `REPOSITORY`-only
+profile. `Invoke-Verification` treats any non-zero exit as fatal. Measured, that command **cannot
+exit 0 in this repository**:
+
+| Invocation | Result | Exit |
+| --- | --- | --- |
+| bare, as this contract froze it | `DATABASE PARITY: UNPROVEN — local matches the repository, but PRIMARY WAS NOT CONTACTED` | **2** |
+| with all three values read live FROM Primary | `PRIMARY STRUCTURE DRIFT: Primary reports e17675f7…, local produces 9643df5a…` | **1** |
+
+Both are correct refusals. The script's own contract is explicit: `exit 0 CLEAN`, `exit 1 DRIFT`,
+`exit 2 UNPROVEN`, and `$primaryProven = $PrimaryFingerprint -and $PrimaryLogicHash -and
+$PrimaryStructureHash` — there is no evidence-file fallback and no environment override. So a bare
+call is structurally incapable of returning 0, and a fully-supplied call returns 1 because of
+**PAR-5**: local's `service_role` holds three non-DML privileges on all 85 public tables while
+Primary holds all seven, a 333-row difference in a role `202607050200` states the repository
+deliberately does not manage. Everything else agrees — ledger, function surface, and the other nine
+structural surfaces.
+
+**This is materially larger than this contract.** `Get-ProfileEvidence` lists that same bare command
+as a MANDATORY verification for the `DATABASE` profile, with the three Primary values recorded only
+as `Deferred` notes. Therefore **no `DATABASE`-profile contract can currently reach
+`LOCAL_CERTIFY: READY`**, and none has been attempted since `SPEC-189` wired it in — the last
+DATABASE slice completed 2026-09-09, before that. `SPEC-203` would have been blocked by this even
+after its Check L3 failure was repaired. The failure was latent, not new, and this recovery is what
+exposed it.
+
+**My own error, stated plainly.** I added that Additional Verification line to close the exact gap
+that cancelled `SPEC-203`, and froze it without first running the command and reading its achievable
+exit code. `check_primary_ledger.ps1` was verified (exit 0) and this one was not. That is the same
+lesson as "prototype before freezing", applied to a verification command rather than to an
+Acceptance Criterion — and `Additional Verification` is a frozen section, so it cannot be corrected
+in place.
+
+**Steps 1-3 are real and are kept.** The regenerated document is committed under this contract's
+valid authority while it is still `In Progress` and the file is in its Write Scope, so Check L3 is
+green in the repository from this commit onward rather than waiting. Steps 4-7 are not performed
+here; a successor carries them, and its Step 2 will legitimately record Already Applied because the
+condition is now observably true.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
