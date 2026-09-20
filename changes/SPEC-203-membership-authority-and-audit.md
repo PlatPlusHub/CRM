@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -677,6 +677,65 @@ rather than an automated recovery attempt. The blocker is recorded here instead.
 **STOPPED for an out-of-scope material blocker, which is one of the four conditions this session
 was told to stop for.** No guard was bypassed, no `--no-verify`, no force push, no history rewrite,
 and no file outside Write Scope was touched.
+
+### 2026-09-20 — CANCELLED. The engineering is deployed and proven; this contract cannot certify it.
+
+Cancelled on human authorization after an independent attempt to REFUTE the need, not to justify it.
+From `In Progress` the only legal exits are `Complete` and `Cancelled` (`LegalTransitions`), and
+`Complete` is mechanically unreachable here.
+
+**Every refutation avenue was tested against the code and closed:**
+
+1. *Can Finish be satisfied without writing an out-of-scope artifact?* NO. `check_database_parity.ps1`
+   Check L3 regenerates `reports/master/MASTER_API_CONTRACT.md` and byte-compares it, and
+   `Invoke-Verification` throws `MANDATORY_VERIFICATION_FAILED` on any non-zero exit — there is no
+   exception mechanism.
+2. *Can that file stay unchanged and still be accurate?* NO, by construction: it is GENERATED from the
+   database, and the database now carries the two triggers. Unchanged means untrue.
+3. *Is there a legal lifecycle operation that corrects it under this contract?* NO. Verified in
+   `check_agent_continuity.ps1`: the scope test exempts exactly two things — the governing contract
+   file and a cross-identity rename alias of that same file. There is no generated-artifact exemption
+   and no recovery-mode relaxation, and `$scopeAt` is read from the FROZEN BASELINE on purpose, with
+   the stated reason that *"a commit that widened its own Write Scope must not thereby authorise its
+   own writes."* `MASTER_API_CONTRACT.md` is confirmed absent from this contract's Write Scope.
+4. *Can `Complete` occur with Finish failed?* NO. `COMPLETION_PREREQUISITE` requires a local
+   certification receipt whose `result` is `READY`; `-Finish` never emitted one, so the transition
+   fails closed before any other consideration.
+5. *Would reverting the triggers be a repair?* NO. It would undo a deployed, proven product fix,
+   reopen USR-1/USR-2/IDENT-2, and require a SECOND Primary mutation to recreate a paper state.
+
+**Five options were weighed, not one:** completing unchanged (illegal — 4); altering frozen authority
+(illegal — `Validate-FrozenAuthority`, and 3); reverting deployed behaviour (legal but destructive,
+maximal database risk, maximal duplication); cancel-and-succeed (legal, truthful, NO database write
+required, history preserved, minimal duplication); and leaving this contract In Progress forever
+(keeps the repository in EXECUTE mode permanently, so no future contract could ever be authored, and
+leaves a false current-state claim standing). Cancellation is the minimum honest route.
+
+**A SECOND defect was found during this review and repaired in this same commit.** `CR_LIFECYCLE.md`
+§9 assigns `Last Completed` and `Next capability` to the **`Complete`** transition, updated together
+with CLEARING `Active Change Request`, precisely "so the manifest can never leave `Next capability`
+naming a capability that is already complete". This contract's frozen **Step 12** required those same
+fields during `In Progress`, immediately after Step 11 — while citing §9 as its authority. The result
+was measured live on `main`: the manifest simultaneously named this contract as the ACTIVE Change
+Request and as `Last Completed: SPEC-203 … Complete (2026-09-20)`, with `Next capability` already
+advanced to Slice 13, and `ai-map.json` mirrored it. Repository Consistency was CLEAN throughout:
+Check 18 only asks whether the active CR is real and still open, and the ai-map comparison only checks
+manifest-to-ai-map agreement, so **nothing compares `Last Completed` against the named contract's
+Status**. A premature-completion projection is invisible to every current guard.
+
+That projection is corrected here rather than carried, because cancellation would otherwise leave the
+manifest naming a CANCELLED contract as the most recently completed capability. `Last Completed` is
+restored to `SPEC-202`, recovered verbatim from `9380bce` rather than rewritten; `Next capability`
+names closing Slice 12 rather than Slice 13, because the capability is deployed but not certified;
+`Active Change Request` returns to `None`. `Batch 6 surface coverage` stays at 13 of 77 because that
+figure is recomputed from the disposition rows by Check 22 and the audit genuinely was performed.
+
+**Nothing about the engineering is withdrawn.** USR-1 and USR-2 were reproduced, repaired, deployed to
+Primary `vrvtsxexkiiiivlkdxzp` and proven by 43 assertions; `222020b` carries them on `main` with four
+green workflows; the migration is applied exactly once and is NOT reapplied by anything that follows.
+What this contract failed to do is certify itself, for a reason that is entirely contract-authoring:
+its Write Scope was one generated file too narrow. This file is now terminal and is preserved as the
+evidence of that, including its failed Finish. A successor may cite it; nothing may edit it.
 
 ## Verification Notes
 
