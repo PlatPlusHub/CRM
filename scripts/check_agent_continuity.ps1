@@ -319,13 +319,37 @@ function Test-SpecIdEverReserved([string]$Ref,[string]$Id){$null-ne(Get-SpecIdRe
 # reserved candidate and hands out the next free one, which is what makes a
 # number burned by a non-contract artifact harmless. The same fact refuses an
 # agent that reaches for a reserved identity by hand.
-function Validate-SpecAllocation([object[]]$Records,[string]$Ref,[switch]$SkipMarkerCheck){
+function Validate-SpecAllocation([object[]]$Records,[string]$Ref,[switch]$SkipMarkerCheck,[switch]$CheckOrigination,[string]$StateRef=''){
     $events=Allocation-Events $Records $Ref
     if(!$events.Count){return}
     if(-not $SkipMarkerCheck){
         $local=Join-Path $Root $script:AllocationAuthority
         $text=if(Test-Path -LiteralPath $local){[IO.File]::ReadAllText($local)}else{$null}
         if((Get-AllocationMarker $text)-lt1){throw 'SPEC_ALLOCATION_MARKER_MISSING'}
+    }
+    # SPEC-202. ORIGINATION STATE. A contract BORN `Approved` is never evidence-checked:
+    # `Evaluate-PreApprovalEvidence` is reached only when the contract exists at the
+    # comparison baseline, and a born contract has none, so `SPEC-196`'s rule that
+    # Approval is admissible only on sufficient evidence went unenforced on that path.
+    # Owner-ratified, forward-only: after the activation boundary a newly originated
+    # contract must first appear as `Draft`. The cutover is the SAME marker gate this
+    # function already stands behind, so pre-activation history keeps its own law and
+    # no second activation authority exists.
+    #
+    # A cross-identity RENAME is deliberately not origination: the contract carries its
+    # existing status, which was already judged under its former identity, and renaming
+    # is how this repository corrects an identity (SPEC-1002 -> SPEC-196).
+    if($CheckOrigination){
+        foreach($r in $Records){
+            if($r.Code-eq'D'-or$r.Code-eq'R'){continue}
+            if($r.Path-notmatch'^changes/SPEC-[0-9]+-.*\.md$'){continue}
+            if($null-ne(Read-GitFile $Ref $r.Path)){continue}
+            $born=if($StateRef){Read-GitFile $StateRef $r.Path}
+                  else{$f=Join-Path $Root $r.Path;if(Test-Path -LiteralPath $f){[IO.File]::ReadAllText($f)}else{$null}}
+            if($null-eq$born){continue}
+            $st=try{Status-FromText $born}catch{$null}
+            if($st-ne'Draft'){throw "ORIGINATION_NOT_DRAFT:$($r.Path):$st"}
+        }
     }
     $cursor=Get-SpecSequenceCursor $Ref
     $candidate=$cursor+1
@@ -693,7 +717,7 @@ function Validate-CommittedRange([string]$Rel){
         # later correction cannot erase the earlier illegal allocation, which a net
         # BASE..HEAD diff can never see.
         if(Allocation-ActiveAt "$commit^"){
-            try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck}catch{throw "$($_.Exception.Message)@$short"}
+            try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck -CheckOrigination -StateRef $commit}catch{throw "$($_.Exception.Message)@$short"}
         }
 
         # A contract that was terminal at an EARLIER commit in this range is
@@ -1528,7 +1552,14 @@ try{
     # base itself was already under enforcement - current rules are never applied
     # retroactively to history that predates the marker. Reservation, unlike
     # allocation, is never gated by it.
-    if(-not $BaseRef){Validate-SpecAllocation $records $base}
+    # SPEC-202. The local call judges origination from the WORKING TREE, where a newly
+    # authored contract sits at exactly the state it is being created in. The range
+    # ENDPOINT call deliberately does NOT check origination: its records are a net
+    # BaseRef..HeadRef diff, so a contract born `Draft` and completed inside the range
+    # appears simply as "added" with endpoint status `Complete`, and judging that state
+    # would refuse a history this repository explicitly calls legal (SPEC-165). Only the
+    # per-commit walk can see the state a contract actually had when it appeared.
+    if(-not $BaseRef){Validate-SpecAllocation $records $base -CheckOrigination}
     elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}
     $m=Manifest
     $rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
@@ -1666,3 +1697,4 @@ try{
     Block $_.Exception.Message
     exit 1
 }
+

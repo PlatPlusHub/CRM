@@ -499,10 +499,10 @@ try{
     Reset-Fixture;Add-Content -LiteralPath (Join-Path $root 'changes/SPEC-801-cancelled.md') -Value probe;$r=Run Gate;Assert '24 attempted modification of BASE Cancelled CR is rejected' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION:changes/SPEC-801-cancelled.md') $r.Text
     Reset-Fixture;Move-Item (Join-Path $root 'changes/SPEC-800-complete.md') (Join-Path $root 'changes/SPEC-802-renamed.md');$r=Run Gate;Assert '25 deletion or rename of BASE closed CR is rejected' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION:changes/SPEC-800-complete.md') $r.Text
     Reset-Fixture;Put 'changes/SPEC-155-reuse.md' (ContractText -Id SPEC-155);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-155-reuse.md');$r=Run Gate;Assert '26 historical product SPEC-155 cannot be reused' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED:SPEC-155') $r.Text
-    # The outgoing contract is committed as Draft first: leaving it In Progress
-    # while the pointer moves to the new one is the orphan state, and editing it in
-    # the working tree would put it outside the new contract's Write Scope.
-    Reset-Fixture;Rebase (ContractText -Status Draft);Put 'changes/SPEC-901-fresh.md' (ContractText -Id SPEC-901 -Scope '_ORVION_CANONICAL/manifest.md');Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-fresh.md');$r=Run Gate;Assert '27 mechanically unused fresh ID is accepted' ($r.Code-eq0-and$r.Text-match'CR: SPEC-901') $r.Text
+    # SPEC-202: a fresh identity is now originated in PLAN, as a Draft, with the pointer
+    # already at None - that is the only shape the origination rule admits, and PLAN mode
+    # permits authoring exactly one thing: a new Draft contract file.
+    PlanBaseline;Put 'changes/SPEC-901-fresh.md' (ContractText -Id SPEC-901 -Status Draft -Scope '_ORVION_CANONICAL/manifest.md');$r=Run Gate;Assert '27 mechanically unused fresh ID is accepted' ($r.Code-eq0-and$r.Text-match'MODE: PLAN') $r.Text
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' ((ContractText)-replace'SPEC-900','SPEC-901');$r=Run;Assert '28 CR heading and file mismatch is rejected' ($r.Code-ne0-and$r.Text-match'CR_ID_PATH_MISMATCH') $r.Text
     Reset-Fixture;Rebase (ContractText -Multiline);$r=Run;Assert '29 multiline Implementation Step is returned in full' ($r.Code-eq0-and$r.Text-match'first line'-and$r.Text-match'continuation line') $r.Text
 
@@ -1097,10 +1097,15 @@ exit 0
     function Pre-Range{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit pre-range}
 
     Reset-Fixture;Pre-Range
+    # SPEC-202: after the activation boundary a contract must be born Draft. The property
+    # SPEC-165 earned - a contract created AND completed inside one range is legal history,
+    # and range validation may not demand it exist at the base - is unchanged. The
+    # pre-activation born-Approved shape is covered by case 219.
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $rangeScope);Commit born-draft
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-approved
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $rangeScope);Commit born-inprogress
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $rangeScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-complete
-    $r=RunRange 'HEAD~3'
+    $r=RunRange 'HEAD~4'
     Assert '111 MUST-ACCEPT: a contract created and completed inside one range is a legal history' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match'CR: SPEC-901') $r.Text
 
     Reset-Fixture;Pre-Range
@@ -1124,8 +1129,12 @@ exit 0
     # Change Request. The report is asserted alongside the code, because a guard that
     # exits 0 while reporting a failure would be the same defect facing the other way.
     Reset-Fixture;Pre-Range
+    # SPEC-202: origination must begin at Draft after the activation boundary, so the
+    # contract is committed as a Draft first. What this case asserts - a Gate that reports
+    # success exits 0 for a contract NEW TO THE RANGE - is unchanged.
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $rangeScope);Commit born-draft
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $rangeScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-first-push
-    $r=RunRange 'HEAD~1'
+    $r=RunRange 'HEAD~2'
     Assert '114 a Gate that reports success exits 0, even when the contract is new to the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY'-and$r.Text-match'CR: SPEC-901'-and$r.Text-notmatch'BLOCKED') $r.Text
 
     # ---- A range hides nothing behind a later revert (SPEC-167) ----
@@ -1209,11 +1218,12 @@ exit 0
     # re-breaks `SPEC-165`, so it is asserted rather than assumed.
     Reset-Fixture;Pre-Range
     $bornScope='_ORVION_CANONICAL/manifest.md;allowed.txt;context.txt'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $bornScope);Commit born-draft
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $bornScope);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit born-a
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $bornScope);Put 'allowed.txt' 'step one';Commit born-b
     Put 'context.txt' 'step two';Commit born-c
     Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $bornScope -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit born-d
-    $r=RunRange 'HEAD~4'
+    $r=RunRange 'HEAD~5'
     Assert '120 MUST-ACCEPT: a contract born in range writing in-scope files across commits is legal' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
 
     # ---- A workflow is expected only on branches it can actually run on (SPEC-168) ----
@@ -2096,7 +2106,7 @@ exit 0
     # per-commit invariant cannot be observed from a working-tree gate at all.
     foreach($m in @(
         @{N='K per-commit range invocation';E='SPEC_ID_NOT_NEXT'
-          F='try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck}catch{throw "$($_.Exception.Message)@$short"}';R=''}
+          F='try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck -CheckOrigination -StateRef $commit}catch{throw "$($_.Exception.Message)@$short"}';R=''}
         @{N='K first-parent activation marker';E='SPEC_ID_NOT_NEXT'
           F='if(Allocation-ActiveAt "$commit^"){';R='if($false){'}
     )){
@@ -2115,6 +2125,79 @@ exit 0
     MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: K cursor chronology' {AllocSetup 1} 'ORVION: READY' `
         'if($ids.Count){return ($ids|Measure-Object -Maximum).Maximum}' 'if($ids.Count){return 0}' 'K-local'
 
+    # ---- ORIGINATION STATE (SPEC-202) ----
+    # A contract BORN `Approved` is never evidence-checked: Evaluate-PreApprovalEvidence
+    # is reached only when the contract exists at the comparison baseline, and a born
+    # contract has none. Owner-ratified correction, forward-only from the existing
+    # `SPEC Allocation Enforcement` marker: after activation a newly originated contract
+    # must first appear as `Draft`. Pre-activation histories keep their own law.
+    $osScope='_ORVION_CANONICAL/manifest.md'
+    function OsDeactivate{Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n";Commit 'os-deactivate'}
+
+    # 213-215. POST-activation origination in a non-Draft state, at the LOCAL Gate.
+    foreach($born in @(
+        @{No='213'; S='Approved';    Extra=@{}},
+        @{No='214'; S='In Progress'; Extra=@{}},
+        @{No='215'; S='Complete';    Extra=@{Resume='DONE';Closeable=$true}})){
+        Reset-Fixture
+        $ex=$born.Extra
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status $born.S -Scope $osScope @ex)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md')
+        $r=Run 'Gate'
+        Assert "$($born.No) ORIGINATION STATE: a post-activation contract born '$($born.S)' is refused locally" ($r.Code-ne0-and$r.Text-match'ORIGINATION_NOT_DRAFT') $r.Text
+        Pop 'ORIGIN' 'reject'
+    }
+
+    # 216. The same history judged as a committed RANGE, with the offending short SHA.
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $osScope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'os-born-approved'
+    $r=RunRange 'HEAD~1'
+    Assert '216 ORIGINATION STATE: a post-activation born-Approved range is refused with the offending SHA' ($r.Code-ne0-and$r.Text-match'ORIGINATION_NOT_DRAFT'-and$r.Text-match'@[0-9a-f]{7}') $r.Text
+    Pop 'ORIGIN' 'reject'
+
+    # 217. POSITIVE. Authoring a post-activation contract as Draft stays legal. PLAN mode
+    # is required: a new contract file authored while another contract still governs is an
+    # OUT_OF_SCOPE_WRITE, which would fail this case for a reason unrelated to origination.
+    PlanBaseline
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $osScope)
+    $r=Run 'Gate'
+    Assert '217 ORIGINATION STATE: a post-activation contract authored as Draft is admitted' ($r.Code-eq0-and$r.Text-match'MODE: PLAN') $r.Text
+    Pop 'ORIGIN' 'accept'
+
+    # 218. POSITIVE. The SPEC-165 property under the new law: a whole lifecycle in one
+    # push is still legal, provided it BEGINS at Draft.
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $osScope);Commit 'os-draft'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $osScope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'os-approve'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $osScope);Commit 'os-ip'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $osScope -Closeable)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'os-complete'
+    $r=RunRange 'HEAD~4'
+    Assert '218 ORIGINATION STATE: a Draft-first whole lifecycle inside one range is admitted' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
+    Pop 'ORIGIN' 'accept'
+
+    # 219. HISTORICAL CONTROL. The pre-activation SPEC-165 shape - a contract born
+    # `Approved` where the originating commit's first parent declares no marker - stays
+    # legal exactly as committed. This is what makes the rule forward-only.
+    Reset-Fixture;OsDeactivate;Pre-Range
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $osScope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'os-pre-activation-born'
+    $r=RunRange 'HEAD~1'
+    Assert '219 ORIGINATION STATE: a PRE-activation born-Approved range (SPEC-165 shape) is still admitted' ($r.Code-eq0) $r.Text
+    Pop 'ORIGIN' 'accept'
+
+    # 220. NON-EMPTY POPULATION for the rule itself: a range with no allocation event must
+    # invoke the origination check zero times, so it cannot pass by never firing. The range
+    # transitions a contract that ALREADY EXISTS at the base, which is not an allocation.
+    Reset-Fixture;Pre-Range
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText);Commit 'os-no-allocation'
+    $r=RunRange 'HEAD~1'
+    Assert '220 ORIGINATION STATE: a range with no allocation event invokes no origination check' ($r.Code-eq0-and$r.Text-notmatch'ORIGINATION_NOT_DRAFT') $r.Text
+    Pop 'ORIGIN' 'accept'
+
     # ---- RANGE-AUTHORITY MUTATION POPULATION (SPEC-200) ----
     # The two halves fail in opposite directions, so each is killed by the one scenario
     # no other guard can rescue. These run through the RANGE, because that is the only
@@ -2126,10 +2209,46 @@ exit 0
     MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the intermediate Approval replay runs' `
         {RaBuildReplay} 'CODE: APPROVAL_EVIDENCE' "                if(`$parentStatus-eq'Draft'-and`$statusAt-eq'Approved'){" '                if($false){'
 
+    # ---- ORIGINATION STATE MUTATION POPULATION (SPEC-202) ----
+    # Three predicates, three scenarios no other guard can rescue: the marker gate that
+    # makes the rule forward-only, the `Draft` requirement itself, and the deliberate
+    # exclusion of the range endpoint.
+    function OsBuildPost{
+        Pre-Range
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'osm-born'
+        (git -C $root rev-parse 'HEAD~1').Trim()
+    }
+    function OsBuildPre{
+        Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n";Commit 'osm-deactivate'
+        Pre-Range
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'osm-pre-born'
+        (git -C $root rev-parse 'HEAD~1').Trim()
+    }
+    function OsBuildLifecycle{
+        $sc='_ORVION_CANONICAL/manifest.md'
+        Pre-Range
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $sc);Commit 'osm-draft'
+        $b=(git -C $root rev-parse 'HEAD~1').Trim()
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $sc)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'osm-approve'
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $sc);Commit 'osm-ip'
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $sc -Closeable)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'osm-complete'
+        $b
+    }
+    MutationKillRangeAt 'ORIGINATION STATE MUTATION: the activation marker keeps the rule forward-only' `
+        {OsBuildPre} 'ORVION: READY' 'if(Allocation-ActiveAt "$commit^"){' 'if($true){' 'ORIGIN'
+    MutationKillRangeAt 'ORIGINATION STATE MUTATION: origination must be Draft' `
+        {OsBuildPost} 'ORIGINATION_NOT_DRAFT' "            if(`$st-ne'Draft'){throw ""ORIGINATION_NOT_DRAFT:`$(`$r.Path):`$st""}" '            if($false){}' 'ORIGIN'
+    MutationKillRangeAt 'ORIGINATION STATE MUTATION: the range endpoint is excluded' `
+        {OsBuildLifecycle} 'MODE: VERIFY' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck -CheckOrigination}' 'ORIGIN'
+
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','RANGE-AUTH','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
@@ -2143,3 +2262,7 @@ exit 0
 }
 Write-Host "AGENT CONTROL TESTS: $($script:pass) passed, $($script:fail) failed"
 if($script:fail){exit 1};exit 0
+
+
+
+
