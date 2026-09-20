@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -199,8 +199,21 @@ Append-only — never edit or delete a prior entry, including a Blocked or Faile
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-20 — owner-authorized cancellation (unsatisfiable frozen obligation)
+
+Verdict: Needs Corrective Change Request
+
+Findings: the ENGINEERING is complete and green — the full control suite reports **258 passed / 0 failed**, CTRL-2A and CTRL-2B are both repaired, and every protection this contract promised to preserve is proven. What is defective is this contract's own frozen text.
+
+Mutation Obligation **(iv)** cannot be satisfied by any legal range. `Evaluate-PreApprovalEvidence` consumes exactly three things from a contract — `Write Scope`, the `Pre-Approval Evidence` section, and `Implementation Steps` — and all three are members of `FrozenSections`, so no post-Approval edit permitted by `CR_LIFECYCLE.md` §8 can change its verdict. `Get-ControlSurface` is a hard-coded list, so derived applicability cannot drift either.
+
+Proved with a clean three-way discriminator on one fixture whose only post-Approval edit was a permitted Runtime-Checkpoint advance: PRISTINE `BLOCKED / APPROVAL_EVIDENCE / INDETERMINATE:UNKNOWN@fdee487`; mutation (iii) disabling the replay `READY`, which proves the replay executes and is load-bearing; mutation (iv) reading endpoint bytes `BLOCKED / APPROVAL_EVIDENCE` with the identical subject — the mutation survives. An earlier probe of the same question was discarded as contaminated: its `Build` helper called `Reset-Fixture`, which discarded the mutant commit before the range was judged.
+
+Obligation (iv) is therefore **PROVEN REDUNDANCY**, not a load-bearing predicate: reading the approving commit's bytes is defensive, and the frozen-authority rule already guarantees the two views agree. The Acceptance Criterion requiring every named mutation to be independently killed consequently cannot be ticked truthfully, and `Complete` requires every criterion ticked. Both the criterion and the obligation are frozen, so neither is legally editable now.
+
+Nothing here weakens the repair. The exact implementation was preserved outside the working tree before cancellation — `git diff --binary` against `3d3c5cf`, 18500 bytes, sha256 `d3777dc9d997673978079df09c4cb910d3c542f060f00447123cd4a0ed66151b`, reverse-checked against the tree and touching only the two paths this contract authorized — and is reapplied verbatim by the successor rather than re-derived.
+
+Recommendation to human: Set Status to Cancelled. The successor carries the identical CTRL-2A/CTRL-2B engineering with exactly three mutation obligations, which are the three real load-bearing predicates.
 
 ## Review Gate
 
