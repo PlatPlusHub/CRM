@@ -83,7 +83,7 @@ None. `changes/SPEC-203-membership-authority-and-audit.md` and `changes/SPEC-205
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -182,23 +182,23 @@ Derived mechanically, not chosen. **`SPEC-204` is RESERVED and was not used**: `
 
 ## Acceptance Criteria
 
-- [ ] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to a fresh run of `scripts/generate-api-contract.ps1` against the local database, and its `users` table row reads trigger `yes` and guard `conditional`.
-- [ ] `scripts/check_database_parity.ps1` reports Check L3 as `MASTER_API_CONTRACT.md matches the live surface` and Check L5 as green, and the Execution Log records its exit code together with the classification of any non-zero exit as `PAR-5`.
-- [ ] No line of `reports/master/MASTER_API_CONTRACT.md` was hand-edited; it was produced by its generator.
-- [ ] `scripts/check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`.
-- [ ] `npx supabase test db` reports 0 failures and the executed assertion count equals the sum of the literal `plan(N)` declarations across `supabase/tests`; `scripts/verify_database.sql` completes with `ALL CHECKS PASSED` and the catalog pair `71/621`.
-- [ ] No file under `supabase/` was created, modified or deleted; no migration was authored; and the repository still holds exactly the migration set recorded in `reports/evidence/primary-ledger-evidence.json`.
-- [ ] The Execution Log records the read-only Primary verification item by item, including that `20260920120000` is present exactly once and the catalog pair is `71/621`, and states that **no write of any kind was issued to Primary** under this contract.
-- [ ] Secondary `brplkqmbzffpxqgkkdzo` is recorded as never contacted.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` marks `USR-5` resolved, preserves its original text, escalates `PAR-5` to a certification blocker with the `DATABASE`-profile consequence stated, and leaves `USR-3` and `USR-4` OPEN and otherwise unchanged.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md`'s `users` row cites `SPEC-206-slice-12-closure` as its `Session`, still names `SPEC-203-membership-authority-and-audit` as where the deployment evidence lives, keeps disposition `AUDITED-OPEN` and assurance `ADVERSARIAL`, and its Coverage summary still reads 13 of 77 and agrees with its rows.
-- [ ] Both Master records carry a NEW dated freshness entry with the previous one demoted to `Previously:`, and Check 21 is green.
-- [ ] **No Implementation Step modified `_ORVION_CANONICAL/manifest.md`'s `Last Completed` or `Next capability`**; both moved only in the `Complete` transition, together with clearing `Active Change Request`, per `CR_LIFECYCLE.md` §9.
-- [ ] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget at every commit of this contract's lifecycle, including the Approve commit that adds the `Active Change Request` pointer.
-- [ ] `ai-map.json`'s `live_state` copies of `Last Completed`, `Active Change Request` and `Next capability` match `_ORVION_CANONICAL/manifest.md` by value, and the file is stored with LF line endings.
-- [ ] `changes/SPEC-203-membership-authority-and-audit.md` and `changes/SPEC-205-slice-12-closure.md` are byte-identical to their state at their respective `Cancel` commits and both still read `Cancelled`.
-- [ ] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to a fresh run of `scripts/generate-api-contract.ps1` against the local database, and its `users` table row reads trigger `yes` and guard `conditional`.
+- [x] `scripts/check_database_parity.ps1` reports Check L3 as `MASTER_API_CONTRACT.md matches the live surface` and Check L5 as green, and the Execution Log records its exit code together with the classification of any non-zero exit as `PAR-5`.
+- [x] No line of `reports/master/MASTER_API_CONTRACT.md` was hand-edited; it was produced by its generator.
+- [x] `scripts/check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`.
+- [x] `npx supabase test db` reports 0 failures and the executed assertion count equals the sum of the literal `plan(N)` declarations across `supabase/tests`; `scripts/verify_database.sql` completes with `ALL CHECKS PASSED` and the catalog pair `71/621`.
+- [x] No file under `supabase/` was created, modified or deleted; no migration was authored; and the repository still holds exactly the migration set recorded in `reports/evidence/primary-ledger-evidence.json`.
+- [x] The Execution Log records the read-only Primary verification item by item, including that `20260920120000` is present exactly once and the catalog pair is `71/621`, and states that **no write of any kind was issued to Primary** under this contract.
+- [x] Secondary `brplkqmbzffpxqgkkdzo` is recorded as never contacted.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` marks `USR-5` resolved, preserves its original text, escalates `PAR-5` to a certification blocker with the `DATABASE`-profile consequence stated, and leaves `USR-3` and `USR-4` OPEN and otherwise unchanged.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md`'s `users` row cites `SPEC-206-slice-12-closure` as its `Session`, still names `SPEC-203-membership-authority-and-audit` as where the deployment evidence lives, keeps disposition `AUDITED-OPEN` and assurance `ADVERSARIAL`, and its Coverage summary still reads 13 of 77 and agrees with its rows.
+- [x] Both Master records carry a NEW dated freshness entry with the previous one demoted to `Previously:`, and Check 21 is green.
+- [x] **No Implementation Step modified `_ORVION_CANONICAL/manifest.md`'s `Last Completed` or `Next capability`**; both moved only in the `Complete` transition, together with clearing `Active Change Request`, per `CR_LIFECYCLE.md` §9.
+- [x] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget at every commit of this contract's lifecycle, including the Approve commit that adds the `Active Change Request` pointer.
+- [x] `ai-map.json`'s `live_state` copies of `Last Completed`, `Active Change Request` and `Next capability` match `_ORVION_CANONICAL/manifest.md` by value, and the file is stored with LF line endings.
+- [x] `changes/SPEC-203-membership-authority-and-audit.md` and `changes/SPEC-205-slice-12-closure.md` are byte-identical to their state at their respective `Cancel` commits and both still read `Cancelled`.
+- [x] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -206,6 +206,75 @@ Derived mechanically, not chosen. **`SPEC-204` is RESERVED and was not used**: `
 IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
 — this file is always implicitly in scope for this section.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+
+### 2026-09-20 — Steps 1-6 executed. Every "Already Applied" observed true in THIS run.
+
+**Step 1 — the generated consumer and the parity verdict.** `reports/master/MASTER_API_CONTRACT.md`
+line 234 reads `| `users` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read,
+scope_update |`, so the regeneration performed under `SPEC-205` at `89bba0b` is **Already Applied**
+— verified by reading the file, not by citing that contract. `scripts/check_database_parity.ps1`
+was then run and its full verdict recorded, including both exit codes:
+
+| Invocation | Check L3 | Check L5 | Overall | Exit |
+| --- | --- | --- | --- | --- |
+| bare | `MASTER_API_CONTRACT.md matches the live surface` | green | `UNPROVEN — PRIMARY WAS NOT CONTACTED` | **2** |
+| with all three values read live FROM Primary | same | green | `1 issue(s) found` — `PRIMARY STRUCTURE DRIFT: Primary reports e17675f7…, local produces 9643df5a…` | **1** |
+
+Ledger and function surface both match Primary exactly in the supplied run. **The required
+conditions hold: Check L3 is green and Check L5 is green.** The non-zero exits are EXPECTED, are
+not reported as a pass, and are classified as **PAR-5** — the sole remaining issue is the
+platform-managed `service_role` grant difference and nothing else. No failure outside that
+classification appeared, so no STOP condition was reached. `check_database_parity.ps1` was not
+edited.
+
+**Step 2 — the database re-proved as it stands now.** Local ledger **219 /
+`dd2427080e9cfb5e8d1d162bf818360f`**, so the reset is Already Applied. Re-proved anyway rather than
+cited: `npx supabase test db` → `Files=118, Tests=1958`, `All tests successful`, `Result: PASS`;
+the sum of literal `plan(N)` declarations across `supabase/tests`, computed independently, is
+**1958**, so executed equals declared; `scripts/verify_database.sql` → `ALL CHECKS PASSED (77
+tables, … 71/621 catalog, …)`. No migration was authored, applied or re-applied.
+
+**Step 3 — READ-ONLY Primary verification.** Through the `supabase-primary` connector, every item
+measured:
+
+- project ref **`vrvtsxexkiiiivlkdxzp`** (`https://vrvtsxexkiiiivlkdxzp.supabase.co`) — Primary, and
+  NOT Secondary `brplkqmbzffpxqgkkdzo`;
+- `20260920120000` present **exactly once** (`target_occurrences = 1`);
+- ledger **219 / `dd2427080e9cfb5e8d1d162bf818360f`** — identical to the local stack and to the
+  repository filename set;
+- `catalog_types` **71**, `catalog_values` **621**;
+- `user_deactivated`, `user_reactivated`, `user_identity_bound` all present;
+- `public.users` carries `users_guard_membership_authority` and `users_emit_membership_change`
+  (alongside `users_enforce_identity_binding` and `users_set_updated_at`);
+- both new `app` functions present;
+- `app.create_tenant_user` contains no `record_event` call.
+
+No divergence from the state `SPEC-203` recorded. **No INSERT, UPDATE, DELETE, DDL or
+migration-apply call was issued to Primary under this contract** — the only calls were
+`get_project_url` and a single read-only `select`. Secondary was not contacted.
+
+**Step 4 — findings.** `USR-5` marked resolved, naming the generator repair at `89bba0b` and
+preserving its original text below the resolution. **`PAR-5` escalated** from Medium/"reporting
+nuisance" to **High / certification blocker**, recording that the bare parity command is MANDATORY
+for the `DATABASE` profile and cannot return 0 by any invocation, so no `DATABASE`-profile contract
+can currently be certified; that its repair is a control change with its own contract and is
+deliberately not made here; and that editing a detector to admit a change is what this repository
+forbids. A new dated freshness entry was added with the previous demoted to `Previously:`.
+`USR-3` and `USR-4` are untouched and remain OPEN.
+
+**Step 5 — disposition.** The `users` row's `Session` cell moves to `SPEC-206-slice-12-closure`,
+with `SPEC-203-membership-authority-and-audit` still named inside the row as where the deployment
+and adversarial evidence lives. Disposition stays `AUDITED-OPEN`, assurance stays `ADVERSARIAL`,
+the findings cell is unchanged, and Coverage stays **13 of 77** — no row added or removed. A new
+dated entry was added with the previous demoted.
+
+**Step 6 — `ai-map.json`** regenerated and normalised to LF.
+
+`pwsh -NoProfile -File scripts/check_repository_consistency.ps1` → **`REPOSITORY CONSISTENCY:
+CLEAN`**, with Check 21 green on both freshly-dated Master records.
+
+**Not touched, by design:** `_ORVION_CANONICAL/manifest.md`'s `Last Completed` and `Next
+capability`. They move only in the `Complete` transition, per `CR_LIFECYCLE.md` §9.
 
 ## Verification Notes
 
