@@ -115,7 +115,7 @@ string `SPEC-209`, which reserves that identity permanently.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -258,35 +258,156 @@ and that mention reserves the identity permanently. 210 is the next free identit
 
 ## Acceptance Criteria
 
-- [ ] `Evaluate-PreApprovalEvidence` derives `Consumer Closure`, `Execution-Boundary Satisfiability` and
+- [x] `Evaluate-PreApprovalEvidence` derives `Consumer Closure`, `Execution-Boundary Satisfiability` and
       `Permanent-Control Admission` independently, and requires a subsection only where derived applicable.
-- [ ] A contract whose Write Scope reaches an authority surface — `scripts/parity_surface.sql` is the
+- [x] A contract whose Write Scope reaches an authority surface — `scripts/parity_surface.sql` is the
       recorded case — no longer reports `APPROVAL_EVIDENCE: NOT APPLICABLE`.
-- [ ] A contract that declares a predicate `NOT APPLICABLE` where the repository derives it applicable is
+- [x] A contract that declares a predicate `NOT APPLICABLE` where the repository derives it applicable is
       still `INDETERMINATE`, and a volunteered predicate is held to the full obligation.
-- [ ] A tracked artifact a mandatory verification regenerates and byte-compares is refused at Approval
+- [x] A tracked artifact a mandatory verification regenerates and byte-compares is refused at Approval
       when absent from Write Scope, is admitted when named, and is not asserted when the artifact does
       not exist.
-- [ ] A repository-only reversible contract still reports `APPROVAL_EVIDENCE: NOT APPLICABLE` and needs
+- [x] A repository-only reversible contract still reports `APPROVAL_EVIDENCE: NOT APPLICABLE` and needs
       no evidence section.
-- [ ] `scripts/test_agent_continuity.ps1` reports `0 failed`, with every family populated and both new
+- [x] `scripts/test_agent_continuity.ps1` reports `0 failed`, with every family populated and both new
       predicates independently mutation-killed.
-- [ ] `changes/TEMPLATE.md` no longer contains `### Derived Applicability` or `### SPEC Identity
+- [x] `changes/TEMPLATE.md` no longer contains `### Derived Applicability` or `### SPEC Identity
       Allocation`, and `ENGINEERING_METHOD.md` §2 and §3 record the rules this contract implements.
-- [ ] Assertion 103's title claims orchestration rather than real-protocol reachability, and no
+- [x] Assertion 103's title claims orchestration rather than real-protocol reachability, and no
       assertion's condition is changed by this contract.
-- [ ] No file outside Write Scope is modified; `supabase/` is untouched and no Supabase project is
+- [x] No file outside Write Scope is modified; `supabase/` is untouched and no Supabase project is
       contacted.
 
 ## Execution Log
 
-None.
+### 2026-09-20 — Steps 1-3: per-predicate derivation and derived write closure
+
+`Test-PermanentControlPath`, `Test-EvidenceAuthorityPath` and `$script:EvidenceWriteClosure` added
+above `Evaluate-PreApprovalEvidence`; the evaluator now derives `$derived` for the three predicates,
+requires a subsection only where derived applicable, honours a volunteered `APPLICABLE` through
+`$due`, compares `Derived Applicability` rows against the derivation, and evaluates write closure on
+Write Scope alone before applicability. Commit `26bb1cb`.
+
+MEASURED, over the 817 tracked files, with `Profiles` unchanged: evidence-applicable files
+**375 -> 397**. The 22 gained are exactly the verification, generation and publication authorities —
+`check_database_parity.ps1`, `check_database_parity_evidence.ps1`, `check_primary_ledger.ps1`,
+`publish_candidate.ps1`, `generate-ai-map.ps1`, `generate-api-contract.ps1`, `parity_surface.sql`,
+the four standalone guard suites, the eight `verify_*` suites, `ENGINEERING_METHOD.md`,
+`CODING_STANDARDS.md` and `PROTOCOL.md` — and nothing else. An earlier count of 146 was WRONG: it
+compared against the control-path trigger alone and ignored that profiles already covered
+`supabase/tests/` and `.github/workflows/`. The corrected figure is the one recorded.
+
+### 2026-09-20 — Step 4: control-suite cases, mutation kills, and two corrections
+
+Cases 221-233 added, plus script-level `EvidenceNoHJ` and `ClosureSetup`. Two new mutation entries
+(`permanent-control surface derivation`, `write closure`) and three existing entries retargeted to
+the lines Steps 1-3 rewrote.
+
+TWO DEFECTS IN THIS CONTRACT'S OWN WORK, both found by the repository's discipline and recorded
+rather than quietly patched:
+
+1. The `NON-EMPTY POPULATIONS` guard enumerates families from a HARDCODED list that did not contain
+   `WC`, so the five `Pop 'WC'` calls recorded counts nothing asserted — the exact vacuous-population
+   shape that guard exists to refuse, reproduced inside the contract that cites it. `WC` added to the
+   list; it now asserts accept=2, reject=3, mutation=1.
+2. Assertion 103's title claimed "a DATABASE change whose whole protocol succeeds reaches
+   LOCAL_CERTIFY READY" while its fixture stubs the parity command to `exit 0`. That is the `PAR-6`
+   false green: it stayed green across nineteen contracts while the real command could not return 0.
+   Retitled to claim ORCHESTRATION and to name 103d-103k as the real-reachability proof. No
+   assertion's condition was changed by this contract.
+
+### 2026-09-20 — Step 5: the control suite
+
+`pwsh -NoProfile -File scripts/test_agent_continuity.ps1` -> **`AGENT CONTROL TESTS: 294 passed,
+0 failed`, exit 0**, on the real repository at `26bb1cb`. Baseline at `37764f4` was 278. All thirteen
+new cases PASS, both new predicates are independently mutation-killed, all three retargeted kills
+still kill, and every family — `D`, `F`, `HJ`, `APPLIC`, `WC`, `RANGE-AUTH`, `ORIGIN`, `K-local`,
+`K-reservation`, `K-activation`, `K-range` — reports non-zero accept, reject and mutation counts.
+
+### 2026-09-20 — Step 6: canon, register, and the replay proof
+
+`changes/TEMPLATE.md` no longer carries `### Derived Applicability` or `### SPEC Identity
+Allocation`, and states when `### Permanent-Control Admission` may be omitted whole.
+`ENGINEERING_METHOD.md` §2 gains per-predicate derivation and derived write closure; §3 gains "a
+stubbed command is not the command" and "measure a verification before you freeze it as mandatory".
+All 18 Check-27 anchors are intact. `CTRL-2` recorded RESOLVED in
+`reports/master/MASTER_GAP_REGISTER.md`, with the `SPEC-205` residual recorded as NOT mechanically
+derivable rather than claimed closed. `ai-map.json` regenerated. Commit `aece447`.
+
+THE REPLAY PROOF, which is why this ordering matters: `Validate-CommittedRange` re-evaluates any
+`Draft -> Approved` commit inside the validated range using the evaluator AS IT NOW EXISTS, so this
+contract's own Approve commit is judged by the rules it introduced.
+`-Gate -BaseRef origin/main` over `37764f4..HEAD` — four commits, `f69a3d8` among them — returned
+**exit 0**. The replay emits nothing and only throws, so exit 0 IS the acceptance. This was proven
+against both evaluators on the frozen text BEFORE Approval, not discovered afterwards.
+
+THE MANIFEST is deliberately untouched by Step 6: `CR_LIFECYCLE.md §9` assigns `Last Completed`,
+`Next capability` and clearing `Active Change Request` to the `Complete` transition, and this
+contract has no other legal manifest change. It is made there.
+
+SCOPE, verified by diff against `origin/main`: exactly the eight Write Scope paths changed.
+`CR_LIFECYCLE.md`, `AGENTS.md`, `GOVERNANCE.md`, `check_repository_consistency.ps1`,
+`check_database_parity.ps1`, `parity_surface.sql`, `check_primary_ledger.ps1`,
+`check_database_parity_evidence.ps1` and `MASTER_API_CONTRACT.md` are all byte-identical to baseline.
+`supabase/` shows zero changed files. No Supabase project was contacted at any point.
 
 ## Verification Notes
 
-None.
+### 2026-09-20 — Review: Confirmed Complete
+
+Verdict: **Confirmed Complete.** Reviewed against the frozen `Objective`, `Risks` and
+`Acceptance Criteria` through the convergence lens — missing, partial, contradictory, unrequested,
+duplicated, more complex than necessary.
+
+MISSING — none. Every clause of the Objective landed: per-predicate derivation, the widened
+authority trigger, derived write closure, `ENGINEERING_METHOD.md` and `changes/TEMPLATE.md` brought
+into agreement, suite cases and mutation kills, and the one retitled assertion.
+
+PARTIAL — one, declared rather than discovered. The `SPEC-205` class (a frozen mandatory command
+that cannot reach its success state) is NOT mechanically derivable at Approval: nothing short of
+executing the command establishes it. The Objective never claimed it, `ENGINEERING_METHOD.md §3`
+carries it as an author obligation, and `MASTER_GAP_REGISTER.md` records it as a residual instead of
+reporting `CTRL-2` as a complete closure of contract satisfiability. Stating it is the finding.
+
+CONTRADICTORY — none. `CR_LIFECYCLE.md §5` already says applicability is derived from repository
+evidence rather than `Change Class`; that is now more true per predicate than it was per contract,
+so §5 was verified and deliberately not edited.
+
+UNREQUESTED — none. Both mid-flight repairs are named in the frozen Implementation Step 4: the `WC`
+family added to the `NON-EMPTY POPULATIONS` list, and assertion 103's retitle. No assertion's
+CONDITION was changed by this contract; only a title that claimed more than it measured.
+
+DUPLICATED — none. No algorithm was re-implemented. Check 7 and Check L3 remain the sole authorities
+for the freshness they own; the evaluator asserts only that their regenerated artifact is inside
+Write Scope, and both files are byte-identical to baseline.
+
+MORE COMPLEX THAN NECESSARY — no. Two predicate helpers, one closure table of two rows, and one
+`$due` map inside the function that already owned this question. No new file, no new authority, no
+new profile, no registry, no DSL.
+
+NO INVARIANT WEAKENED, checked case by case. Self-exemption is still refused where the repository
+derives a predicate (224, 225); a volunteered predicate still binds fully (227); `UNKNOWN`
+dispositions, red-window ordering, frozen-authority and terminal-CR immutability are untouched and
+still pass. The `Derived Applicability` row check moved from "every row must read APPLICABLE" to
+"no row may contradict the derivation", which stops judging the `SPEC Allocation` row —
+`Validate-SpecAllocation` is its sole enforcement authority and is independently proven by
+assertions 180-192 plus its own mutation family.
+
+CERTIFICATION. `-Finish` at `aece447`: all eight verifications PASS —
+`test_agent_continuity.ps1`, the four standalone guards, `check_repository_consistency.ps1`,
+`git diff --check`, `generate-ai-map.ps1` — ending `LOCAL_CERTIFY: READY`, exit 0. The control suite
+reports `294 passed, 0 failed` against a 278 baseline.
+
+FROZEN AUTHORITY. `Objective`, `Risks`, `Write Scope`, `Out of Scope`, `Required Reading`,
+`Required Capabilities`, `Additional Verification`, `Implementation Steps` and `Pre-Approval
+Evidence` are byte-identical to the Draft at `6dbe8c5` after newline normalization; `Acceptance
+Criteria` differs only by unchecked-to-checked, which `Validate-Checklist` permits. `-Gate -BaseRef
+origin/main` over the whole range returns exit 0, which is also the replay of this contract's own
+Approve commit through the evaluator it introduced.
+
+PRIMARY was not contacted. SECONDARY was not contacted. `supabase/` has zero changed files.
 
 ## Review Gate
 
-- [ ] Confirmed Complete — the frozen Objective is met with nothing missing, contradictory, unrequested
+- [x] Confirmed Complete — the frozen Objective is met with nothing missing, contradictory, unrequested
       or duplicated, no existing invariant is weakened, and no second authority was created.
