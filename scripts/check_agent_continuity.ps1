@@ -1244,8 +1244,8 @@ function Get-ProfileEvidence([string]$Profile){
             # Expressed as a PowerShell pipeline: `<` input redirection is reserved and
             # not valid PowerShell, so the shell form documented for bash cannot run here.
             'Get-Content -Raw scripts/verify_database.sql | docker exec -i supabase_db_ORVION psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f -',
-            'pwsh -NoProfile -File scripts/check_database_parity.ps1');Deferred=@(
-            'EXTERNAL: Primary ledger, function-surface and structural-surface hashes read from Primary')}}
+            'pwsh -NoProfile -File scripts/check_database_parity_evidence.ps1');Deferred=@(
+            'EXTERNAL: the three Primary values are read LIVE through supabase-primary at the DATABASE execution boundary and RECORDED in reports/evidence/primary-ledger-evidence.json; this run validated that record and did NOT contact Primary')}}
         default{[pscustomobject]@{Local=@();Deferred=@()}}
     }
 }

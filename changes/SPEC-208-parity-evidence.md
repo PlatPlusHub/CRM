@@ -92,7 +92,7 @@ None. `SPEC-207` closed `PAR-5` and recorded `PAR-6`; it is terminal and is neit
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -237,6 +237,51 @@ Post-Implementation Proof Obligation: the disposable DATABASE-profile contract t
 IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
 — this file is always implicitly in scope for this section.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+
+### 2026-09-20 — Steps 1-5, 7 and 8 executed. Step 6 follows in its own entry.
+
+**STEP 1 — the adapter.** `scripts/check_database_parity_evidence.ps1` created. It computes no hash and compares no surface: it invokes `scripts/check_primary_ledger.ps1` for the ledger portion and `scripts/check_database_parity.ps1` for the comparison, and exits with the engine's exit code unchanged. Its own failures exit 1; the engine's 0/1/2 pass through untouched. The header records the deadlock, the credential constraint that makes evidence the only honest class, the LIVE READ / RECORDED / LOCAL VALIDATION ownership split, and the `GUARD-1` residual it does not close.
+
+**STEP 2 — the profile.** `Get-ProfileEvidence`'s `DATABASE` `Local` list now ends with the adapter instead of the bare `scripts/check_database_parity.ps1`, and its `Deferred` note now reads that the three values are read LIVE through `supabase-primary` at the execution boundary and RECORDED in the evidence file, and that the run validated that record and did **not** contact Primary. No other profile was touched.
+
+**STEP 3 — the control suite.** The DATABASE fixture gains a stub for the adapter; assertions 101 and 103 are retargeted to the command the profile actually runs; and eight new cases were added. **A finding worth recording: assertion 103's MUST-ACCEPT passed before this contract only because the fixture stubs the parity script to `exit 0`.** That is why a profile defect this total stayed latent since `SPEC-189` — the suite proved a shape the real repository could not reach.
+
+**STEP 4 — the evidence record, refreshed from a live READ-ONLY Primary read.** Project ref confirmed `vrvtsxexkiiiivlkdxzp` via `get_project_url` before reading. Ledger `219 / dd2427080e9cfb5e8d1d162bf818360f`; function surface `f791acdba3e91462b1625ab8a723db4d` over 298 functions, read with `check_database_parity.ps1`'s own Check L2/P2 expression; structural surface `0c77972ecf1b45096cda327943a45c00` over 3,029 objects, read with `scripts/parity_surface.sql` — the same file local runs, per `PAR-3`. `schema_version` 1 → 2, `repository_head` set to `f07e654`, which is an ancestor of HEAD. **No INSERT, UPDATE, DELETE, DDL, GRANT, REVOKE or migration-apply call was issued.** Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+**STEP 5 — proof. Accepting case first:**
+
+```
+== PAR-6: Primary parity evidence -> parity engine ==
+  ledger evidence validated by scripts/check_primary_ledger.ps1
+  evidence names project vrvtsxexkiiiivlkdxzp, read 2026-09-20T17:07:48Z at commit f07e654…
+  (evidence class: a RECORDED Primary reading, not a live one -- this script never contacts Primary)
+DATABASE PARITY: CLEAN (local proven; primary ledger, functions and structure proven)
+PRIMARY PARITY EVIDENCE: CLEAN            exit 0
+```
+
+**Nine refusals, each measured in this repository, each restored afterwards:**
+
+| # | Mutation | Exit | Refused because |
+| --- | --- | --- | --- |
+| N1 | evidence file absent | **1** | `MISSING … Primary parity is UNKNOWN, and UNKNOWN IS NOT CLEAN` |
+| N2 | `project_ref` = Secondary | **1** | `WRONG PROJECT: evidence was read from 'brplkqmbzffpxqgkkdzo'` — refused by IDENTITY, not by hoping hashes differ |
+| N3 | `function_surface_hash` removed | **1** | `INCOMPLETE … the Primary function-surface hash is UNPROVEN` |
+| N4 | `structural_surface_hash` = `NOTAHASH` | **1** | `MALFORMED … not a 32-character lowercase md5` |
+| N5 | `ledger_fingerprint` hand-edited | **1** | the ledger authority refused; adapter reports `not usable` |
+| N6 | one ledger entry dropped | **1** | `THE REPOSITORY HAS 1 MIGRATION(S) PRIMARY HAS NOT RUN` — the pre-deploy shape |
+| N7 | `repository_head` not an ancestor | **1** | the ledger authority refused |
+| N8 | recorded function hash wrong | **1** | `PRIMARY FUNCTION DRIFT` from the engine |
+| N9 | recorded structural hash wrong | **1** | `PRIMARY STRUCTURE DRIFT` from the engine |
+
+N1–N4 are the adapter's own admissibility rules, N5–N7 are the composed ledger authority, N8–N9 are the engine. No refusal is credited to an unrelated guard. After the matrix the evidence file was verified **byte-identical** to its pre-mutation state and the accepting case re-measured **exit 0**.
+
+**Semantic freshness, proven causally rather than by a clock.** One existing migration was extended with a trivial function — so every ledger identity stayed the same and `check_primary_ledger.ps1` still passed — and the database was rebuilt with `npx supabase db reset`. Local moved to **299 functions / `ea7e69afa344dcef2b7252cf4769a1a1`** and **3,030 objects / `b830fa5e13004289b1fb18ab90781154`**, and the still-correct recorded Primary values were reported as `PRIMARY FUNCTION DRIFT` and `PRIMARY STRUCTURE DRIFT`, **exit 1**. The migration was restored, the database reset again, and the accepting case re-measured **exit 0**. **This is also the measurement that refutes collapsing ledger parity into structural parity:** the ledger guard alone saw nothing, because identities never changed.
+
+**STEP 7 — documentation and the register.** `ENGINEERING_METHOD.md §4` now states that the three values are read live at the execution boundary **and recorded**, that a deploying contract therefore carries the evidence file in its Write Scope, and that `-Finish` validates that record and runs the one parity engine against it — parity mandatory, fail-closed, with only the source of the values moved. It does **not** say Primary need not be read. `MASTER_GAP_REGISTER.md` marks `PAR-6` ✅ with the reproduction, the refuted alternatives and the residual, preserves the original finding below it, and carries a new dated freshness entry with the previous demoted to `Previously:`. `PAR-5` stays ✅; `PAR-7`, `USR-3` and `USR-4` stay 📋 and otherwise unchanged.
+
+**STEP 8 — ai-map.** Already Applied: the manifest has not changed since the `Approve` commit regenerated it, and Check 7 compares the three `live_state` values and is green.
+
+**Verification at this point.** `REPOSITORY CONSISTENCY: CLEAN` exit 0 with Check 19 green against the extended record; `git diff --check` exit 0; `test_agent_continuity.ps1` **278 passed, 0 failed**; `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1` all exit 0. `test_primary_ledger_guard.ps1` matters specifically: it mutation-tests the ledger validator, which this contract leaves byte-unchanged, and it still passes against the extended `schema_version` 2 record — proving the extension is additive and Check 19 keeps working in CI without Docker.
 
 ## Verification Notes
 

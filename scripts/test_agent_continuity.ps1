@@ -427,6 +427,7 @@ try{
     Put 'scripts/verify_database.sql' 'select 1;'
     Put 'scripts/verify_fixture.ps1' 'Add-Content -LiteralPath $env:ORVION_STUB_LOG -Value "verify_fixture ran";exit 0'
     Put 'scripts/check_database_parity.ps1' 'exit 0'
+    Put 'scripts/check_database_parity_evidence.ps1' 'exit 0'
     Put 'scripts/check_primary_ledger.ps1' 'exit 0'
     Put 'node_modules/.bin/supabase.cmd' 'rem project-local CLI fixture'
     Put 'node_modules/.bin/supabase' 'exit 0'
@@ -912,9 +913,9 @@ try{
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Capabilities 'supabase-local');$r=Run
     Assert '100 a DATABASE change naming no HTTP suite in Additional Verification is rejected' ($r.Code-ne0-and$r.Text-match'DATABASE_HTTP_SUITE_NOT_NAMED') $r.Text
 
-    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope "$dbScope;scripts/check_database_parity.ps1" -Capabilities 'supabase-local' -Additional $dbAdditional)
-    Put 'scripts/check_database_parity.ps1' "Write-Output 'DB_DIAG_SENTINEL';exit 9";$r=Run Finish
-    Assert '101 a failing mandatory DATABASE command keeps command, exit code and evidence' ($r.Code-ne0-and$r.Text-match'FAILED: .*check_database_parity\.ps1 \(exit 9\)'-and$r.Text-match'DB_DIAG_SENTINEL'-and$r.Text-notmatch'LOCAL_CERTIFY: READY') $r.Text
+    Reset-Fixture;Rebase (ContractText -Resume DONE -Scope "$dbScope;scripts/check_database_parity_evidence.ps1" -Capabilities 'supabase-local' -Additional $dbAdditional)
+    Put 'scripts/check_database_parity_evidence.ps1' "Write-Output 'DB_DIAG_SENTINEL';exit 9";$r=Run Finish
+    Assert '101 a failing mandatory DATABASE command keeps command, exit code and evidence' ($r.Code-ne0-and$r.Text-match'FAILED: .*check_database_parity_evidence\.ps1 \(exit 9\)'-and$r.Text-match'DB_DIAG_SENTINEL'-and$r.Text-notmatch'LOCAL_CERTIFY: READY') $r.Text
 
     # Stale DATABASE evidence: certify, then change a migration, then complete.
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope "$dbScope;_ORVION_CANONICAL/manifest.md" -Capabilities 'supabase-local' -Additional $dbAdditional);$f=Run Finish
@@ -923,7 +924,7 @@ try{
     Assert '102 stale DATABASE certification cannot complete a later migration state' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:stale certification receipt') "$($f.Text)`n$($r.Text)"
 
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Capabilities 'supabase-local' -Additional $dbAdditional);$r=Run Finish
-    Assert '103 MUST-ACCEPT: a DATABASE change whose whole protocol succeeds reaches LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'PASS: npx supabase db reset'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_database_parity\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$null-ne(ReceiptJson)) $r.Text
+    Assert '103 MUST-ACCEPT: a DATABASE change whose whole protocol succeeds reaches LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'PASS: npx supabase db reset'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_database_parity_evidence\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$null-ne(ReceiptJson)) $r.Text
 
     # ---- Primary evidence: reuse the existing validator, claim only what it proves ----
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt;scripts/check_primary_ledger.ps1' -Capabilities 'supabase-primary')
@@ -933,6 +934,54 @@ try{
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt' -Capabilities 'supabase-primary');$r=Run Finish
     Assert '103c MUST-ACCEPT: valid recorded Primary evidence certifies, and is never called a live read' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_primary_ledger\.ps1'-and$r.Text-match'CAPABILITY: supabase-primary EXTERNAL_EVIDENCE'-and$r.Text-match'recorded'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
 
+    # ---- PAR-6: the DATABASE profile's parity command is satisfied from RECORDED evidence ----
+    # The deadlock this closes was reproduced on the real repository: every local DATABASE
+    # command passed, the bare `check_database_parity.ps1` still exited 2 (PRIMARY UNPROVEN,
+    # $issues = 0, because a bare call supplies none of the three values it requires), and
+    # `Invoke-Verification` treats that as fatal - so no DATABASE contract could ever write a
+    # receipt. These cases attack the transport, NOT the comparison: the parity engine and the
+    # ledger guard are stubbed so that every failure below is attributable to the adapter's own
+    # evidence handling rather than borrowed from a neighbouring guard.
+    $realAdapter = [IO.File]::ReadAllText((Join-Path $sourceRoot 'scripts/check_database_parity_evidence.ps1'))
+    function EvidenceJson([hashtable]$Override=@{}){
+        $o=[ordered]@{project_ref='vrvtsxexkiiiivlkdxzp';read_at='2026-09-20T08:05:00Z';repository_head='HEAD_PLACEHOLDER'
+                      migration_count=1;ledger_fingerprint='0123456789abcdef0123456789abcdef';ledger=@('20260101_fixture')
+                      function_surface_hash='f791acdba3e91462b1625ab8a723db4d';function_count=298
+                      structural_surface_hash='0c77972ecf1b45096cda327943a45c00';structural_object_count=3029}
+        foreach($k in $Override.Keys){if($null-eq$Override[$k]){$o.Remove($k)}else{$o[$k]=$Override[$k]}}
+        $o|ConvertTo-Json -Depth 5
+    }
+    function RunAdapter{$o=& pwsh -NoProfile -File (Join-Path $root 'scripts/check_database_parity_evidence.ps1') 2>&1;[pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}}
+    function ArmAdapter([string]$ParityStub='exit 0',[string]$LedgerStub='exit 0'){
+        Reset-Fixture
+        Put 'scripts/check_database_parity_evidence.ps1' $realAdapter
+        Put 'scripts/check_database_parity.ps1' $ParityStub
+        Put 'scripts/check_primary_ledger.ps1' $LedgerStub
+    }
+
+    ArmAdapter;Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson);$r=RunAdapter
+    Assert '103d MUST-ACCEPT: well-formed Primary evidence reaches the parity engine and returns its 0' ($r.Code-eq0-and$r.Text-match'PRIMARY PARITY EVIDENCE: CLEAN'-and$r.Text-match'never contacts Primary') $r.Text
+
+    ArmAdapter;$r=RunAdapter
+    Assert '103e missing Primary evidence is refused, never treated as proven' ($r.Code-ne0-and$r.Text-notmatch'PRIMARY PARITY EVIDENCE: CLEAN') $r.Text
+
+    ArmAdapter;Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson @{project_ref='brplkqmbzffpxqgkkdzo'});$r=RunAdapter
+    Assert '103f evidence naming Secondary is refused by IDENTITY, not by hoping the hashes differ' ($r.Code-eq1-and$r.Text-match'WRONG PROJECT'-and$r.Text-match'brplkqmbzffpxqgkkdzo') $r.Text
+
+    ArmAdapter;Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson @{function_surface_hash=$null});$r=RunAdapter
+    Assert '103g a MISSING Primary surface hash is UNPROVEN, and unproven is not clean' ($r.Code-eq1-and$r.Text-match"no 'function_surface_hash'") $r.Text
+
+    ArmAdapter;Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson @{structural_surface_hash='NOTAHASH'});$r=RunAdapter
+    Assert '103h a malformed Primary surface hash is refused before it reaches the engine' ($r.Code-eq1-and$r.Text-match'MALFORMED') $r.Text
+
+    ArmAdapter -LedgerStub "Write-Output 'STALE/FOREIGN: not an ancestor';exit 1";Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson);$r=RunAdapter
+    Assert '103i the ledger authority is COMPOSED: its refusal refuses the whole parity claim' ($r.Code-eq1-and$r.Text-match'not usable') $r.Text
+
+    ArmAdapter -ParityStub 'exit 1';Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson);$r=RunAdapter
+    Assert '103j a DRIFT verdict from the engine is propagated, never swallowed' ($r.Code-eq1-and$r.Text-match'parity engine exited 1') $r.Text
+
+    ArmAdapter -ParityStub 'exit 2';Put 'reports/evidence/primary-ledger-evidence.json' (EvidenceJson);$r=RunAdapter
+    Assert '103k UNPROVEN (2) is propagated EXACTLY, not laundered into 1 or 0' ($r.Code-eq2-and$r.Text-match'parity engine exited 2') $r.Text
     # ---- DEFECT C: -Certify must prove REQUIRED runs, not merely observed ones (SPEC-164) ----
     # The old logic asked only "did anything fail?". A required workflow that silently
     # stopped triggering produced no run at all, so there was nothing to fail, and the
