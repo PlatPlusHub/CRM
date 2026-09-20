@@ -216,9 +216,48 @@ SCOPE. `supabase/` shows zero changed files and no Supabase project was contacte
 
 ## Verification Notes
 
-None.
+### 2026-09-21 — Review
+
+Reviewed against the frozen Objective, Risks and Acceptance Criteria through the convergence lens.
+
+MISSING — none. Headroom restored, both stale current-state facts reconciled.
+
+PARTIAL — none. The EC-1 row is not given a fresh number; it is given a pointer, which is the durable
+form of the same fact and cannot drift again.
+
+CONTRADICTORY — none. `MASTER_SURFACE_DISPOSITION.md` stays the sole authority for the `of 77` count
+and is byte-identical to baseline.
+
+UNREQUESTED — none. No guard, no budget change, no new report, no mechanism change. Check 5 was obeyed,
+never widened.
+
+DUPLICATED — the opposite: this contract REMOVES duplication. The manifest stops restating SPEC-210's
+evidence and the plan stops restating the disposition count.
+
+MORE COMPLEX THAN NECESSARY — no. Five files, a +4/-2 and a +1/-1 diff, and one manifest line replaced.
+
+NO HISTORY REWRITTEN, checked explicitly. The `2026-09-08` plan entry is demoted verbatim to
+`Previously:`; `EC-1 stands at 9 of 77` and the 2026-09-07 `6 of 77` both survive unchanged inside their
+dated entries. Only current-state assertions moved.
+
+MEASUREMENTS. Pre-fix 6995/7000 (headroom 5, next Approval impossible at 7045). Approve state
+6587/7000 (headroom 413). Complete state proven at 6476/7000 (headroom 524) with the next Approval
+simulated at 6508 against a non-reserving placeholder.
+
+CERTIFICATION. `-Finish` on the derived REPOSITORY profile: `check_repository_consistency.ps1`,
+`git diff --check` and `generate-ai-map.ps1` all PASS, `LOCAL_CERTIFY: READY`, exit 0.
+
+PRE-APPROVAL. The evaluator returned `APPROVAL_EVIDENCE: NOT APPLICABLE`, which is the correct derived
+verdict for a REPOSITORY-only contract — no control, authority or permanent-control surface is in Write
+Scope. It is recorded as what it is rather than converted into a `PASS` by adding an unread evidence
+section, which is the vacuous-PASS defect `SPEC-198` closed. Derived write closure still bound and was
+satisfied.
+
+PRIMARY was not contacted. SECONDARY was not contacted. `supabase/` has zero changed files.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Confirmed Complete — the frozen Objective is met with nothing missing, contradictory,
+- [x] Confirmed Complete — the frozen Objective is met with nothing missing, contradictory,
       unrequested or duplicated, no existing invariant is weakened, and no budget was raised.
