@@ -604,6 +604,80 @@ Step 12 bullet that could not be written before the candidate existed.
 `9380bce..222020b  222020b… -> main` — so the deployed work is banked and the local-ahead window is
 zero before the terminal transitions begin. No force, no rewrite, no `--no-verify`, no rebase.
 
+### 2026-09-20 — FINISH ATTEMPTED AND BLOCKED. One verification, and its repair is outside this contract's frozen Write Scope.
+
+`-Finish` was run after `Resume Step: DONE` and all 29 Acceptance Criteria were verified true.
+**Eleven of the twelve mandatory and additional verifications PASS:**
+
+```
+PASS: npx supabase db reset
+PASS: npx supabase test db                      (Pass A)
+PASS: scripts/verify_api_end_to_end.ps1
+PASS: scripts/verify_role_journeys.ps1
+PASS: scripts/verify_care_journeys.ps1
+PASS: scripts/verify_journey_branches.ps1
+PASS: scripts/verify_lifecycle_branches.ps1
+PASS: scripts/verify_storage_end_to_end.ps1
+PASS: npx supabase test db                      (Pass B)
+PASS: scripts/verify_database.sql
+FAILED: scripts/check_database_parity.ps1 (exit 1)
+```
+
+with `REPOSITORY: clean` and `GIT: clean`. The single failure is
+`MANDATORY_VERIFICATION_FAILED: scripts/check_database_parity.ps1`, and inside that script exactly
+one check fails: **Check L3, `CONTRACT STALE: the committed MASTER_API_CONTRACT.md no longer
+matches the live API surface`** — the one line recorded above as **USR-5**.
+
+**One of the two parity issues was repaired here, legally, and it is worth separating from the
+blocker.** Check L5 compares the manifest's published hashes against the LOCAL database while the
+manifest published Primary's structural hash. `_ORVION_CANONICAL/manifest.md` is in Write Scope, so
+the `Live state:` sentence now publishes BOTH values, states that nine of ten surfaces are
+identical and names the tenth, with a PAR-5 pointer. Check L5 passes. This was not a new defect
+either: the delta is 333 rows of `service_role` DML on tables that all predate this slice, so it is
+arithmetically identical before and after, and `SPEC-189` is the contract that made
+`check_database_parity.ps1` mandatory at Finish — after the last DATABASE slice on 2026-09-09.
+**SPEC-203 is therefore the first DATABASE-profile contract ever to run this verification as a
+mandatory gate, which is why two latent conditions surfaced together and now.**
+
+**WHY CHECK L3 CANNOT BE SATISFIED UNDER THIS CONTRACT.** The check regenerates the document and
+byte-compares it, so it passes only if the committed file equals the generated one. Three routes,
+all closed:
+
+1. Regenerate `reports/master/MASTER_API_CONTRACT.md`. It is **not in Write Scope**, so the Gate
+   refuses `OUT_OF_SCOPE_WRITE`; the section is frozen and cannot be widened after Approval; and
+   Acceptance Criterion 29 would become false by the act of doing it.
+2. Make the live database match the committed file. That means removing the two triggers — which
+   are the contract's deliverable and are already applied to Primary.
+3. Author a corrective successor now. Impossible while this contract governs: the manifest's
+   `Active Change Request` names it, so the run is in EXECUTE mode and a new `changes/SPEC-204-*.md`
+   is itself an out-of-scope write.
+
+This is the SPEC-197 shape exactly — *"the repair lay in a file its own frozen Out of Scope forbade,
+and no corrective contract could be authored while it governed"* — reached this time through a
+mandatory verification rather than a range refusal.
+
+**WHAT THE PRE-APPROVAL CHALLENGE MISSED, STATED PLAINLY.** The owner-requested satisfiability
+challenge caught an unreachable `Complete` and four false-record obligations, and it asked whether
+every Acceptance Criterion could become true, whether each mutation obligation discriminates,
+whether a Gate forbids a state a step needs, whether the pre-deploy sequence has a red window, and
+whether the manifest/catalog arithmetic closes. It did **not** ask the question that would have
+caught this: **does any MANDATORY VERIFICATION for the derived profile read or regenerate a file
+that Write Scope excludes?** For a DATABASE contract that question is concrete and cheap —
+`check_database_parity.ps1` regenerates `MASTER_API_CONTRACT.md`, so any contract that changes the
+API surface must hold that file in Write Scope. Recorded here because it is the reusable part.
+
+**NOTHING IS LOST AND NOTHING IS UNSAFE.** The engineering is complete, proven and DEPLOYED:
+Primary is at 219 migrations with the guard, the emitter and the three event codes live; `222020b`
+is on `main` and passed all four workflows; USR-1 and USR-2 are closed and pinned by 43 assertions.
+The outstanding work is **one generator command** against one document. `Runtime Checkpoint` is
+deliberately left at `Blocker: None`: setting it would put every subsequent Gate run into
+`RUNTIME_BLOCKED` and lock the repository, which is wrong when the next move is an owner decision
+rather than an automated recovery attempt. The blocker is recorded here instead.
+
+**STOPPED for an out-of-scope material blocker, which is one of the four conditions this session
+was told to stop for.** No guard was bypassed, no `--no-verify`, no force push, no history rewrite,
+and no file outside Write Scope was touched.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
