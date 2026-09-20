@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -69,7 +69,7 @@ None. `changes/SPEC-165-*` is historical and untouched. `SPEC-196` supplies the 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -168,48 +168,70 @@ Derived mechanically. At allocation the first-parent sequence cursor stands at *
 
 ## Acceptance Criteria
 
-- [ ] `Validate-SpecAllocation` refuses `ORIGINATION_NOT_DRAFT` when a newly originated contract's status at its origination state is anything other than `Draft`.
-- [ ] The rule fires only where allocation enforcement is already active, and no new activation authority, registry, allowlist, date or numeric threshold was introduced.
-- [ ] The rule is applied at local authoring and in the per-commit walk, and is **not** applied at the range-endpoint call, with that reason recorded in a comment there.
-- [ ] `ORIGINATION_NOT_DRAFT` is the only refusal code added, and no existing code's text or meaning changed.
-- [ ] `scripts/test_agent_continuity.ps1` contains the sentinels `ORIGINATION STATE` and `ORIGINATION STATE MUTATION POPULATION`.
-- [ ] The harness proves a post-activation born-`Approved` contract is refused at the local Gate and in the committed range, the latter with an `@<short>` suffix.
-- [ ] The harness proves post-activation origination as `In Progress` and as `Complete` are also refused.
-- [ ] The harness proves a post-activation `Draft` authoring is admitted and a post-activation `Draft -> Approved -> In Progress -> Complete` lifetime inside one range is admitted.
-- [ ] The harness proves a **pre-activation** born-`Approved` range remains admitted, and its assertion text names it as the historical `SPEC-165` shape.
-- [ ] The harness proves a range containing no allocation event invokes the origination check zero times.
-- [ ] Assertion 111 still asserts that a contract created and completed inside one range is a legal history, using a `Draft`-first fixture, and its comment records why the born-`Approved` shape moved to the pre-activation control.
-- [ ] Accept, reject and mutation population counters exist for the new origination family.
-- [ ] Exactly three mutations are declared and each is independently killed by the unchanged focused assertions.
-- [ ] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` reports zero failures.
-- [ ] `changes/SPEC-196-pre-approval-evidence-sufficiency.md`, `changes/SPEC-198-preapproval-applicability-derivation.md`, `changes/SPEC-201-draft-baseline-and-approval-replay.md`, `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md` and `changes/TEMPLATE.md` are byte-identical to their state at the start of this Change Request.
-- [ ] The Execution Log records the ordinary `-Gate` timing before and after the repair on one identical tree.
-- [ ] `_ORVION_CANONICAL/manifest.md` names SPEC-202 as `Last Completed` and is inside Check 5's character budget; `ai-map.json`'s live_state copies match it by value with LF line endings.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `Validate-SpecAllocation` refuses `ORIGINATION_NOT_DRAFT` when a newly originated contract's status at its origination state is anything other than `Draft`.
+- [x] The rule fires only where allocation enforcement is already active, and no new activation authority, registry, allowlist, date or numeric threshold was introduced.
+- [x] The rule is applied at local authoring and in the per-commit walk, and is **not** applied at the range-endpoint call, with that reason recorded in a comment there.
+- [x] `ORIGINATION_NOT_DRAFT` is the only refusal code added, and no existing code's text or meaning changed.
+- [x] `scripts/test_agent_continuity.ps1` contains the sentinels `ORIGINATION STATE` and `ORIGINATION STATE MUTATION POPULATION`.
+- [x] The harness proves a post-activation born-`Approved` contract is refused at the local Gate and in the committed range, the latter with an `@<short>` suffix.
+- [x] The harness proves post-activation origination as `In Progress` and as `Complete` are also refused.
+- [x] The harness proves a post-activation `Draft` authoring is admitted and a post-activation `Draft -> Approved -> In Progress -> Complete` lifetime inside one range is admitted.
+- [x] The harness proves a **pre-activation** born-`Approved` range remains admitted, and its assertion text names it as the historical `SPEC-165` shape.
+- [x] The harness proves a range containing no allocation event invokes the origination check zero times.
+- [x] Assertion 111 still asserts that a contract created and completed inside one range is a legal history, using a `Draft`-first fixture, and its comment records why the born-`Approved` shape moved to the pre-activation control.
+- [x] Accept, reject and mutation population counters exist for the new origination family.
+- [x] Exactly three mutations are declared and each is independently killed by the unchanged focused assertions.
+- [x] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` reports zero failures.
+- [x] `changes/SPEC-196-pre-approval-evidence-sufficiency.md`, `changes/SPEC-198-preapproval-applicability-derivation.md`, `changes/SPEC-201-draft-baseline-and-approval-replay.md`, `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md` and `changes/TEMPLATE.md` are byte-identical to their state at the start of this Change Request.
+- [x] The Execution Log records the ordinary `-Gate` timing before and after the repair on one identical tree.
+- [x] `_ORVION_CANONICAL/manifest.md` names SPEC-202 as `Last Completed` and is inside Check 5's character budget; `ai-map.json`'s live_state copies match it by value with LF line endings.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
+### 2026-09-20 - Claude Opus 5 (executing agent)
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied - cases 213-220 added to the existing harness.
+- Step 2: Applied - `Validate-SpecAllocation` refuses `ORIGINATION_NOT_DRAFT` for a newly originated contract whose status at its origination state is not `Draft`.
+- Step 3: Applied - the rule is wired to local authoring (working tree) and the per-commit walk (state at that commit); the range-endpoint call is unchanged, with the reason recorded in a comment there.
+- Step 4: Applied - all Step-1 cases proven, assertion 111 moved to a `Draft`-first fixture, population counters recorded, three mutations killed.
+- Step 5: Applied - `LOCAL_CERTIFY: READY`; Gate timing recorded below.
+- Step 6: Applied - manifest and `ai-map.json` updated by measurement and normalised to LF.
+
+**RED, against the `SPEC-201`-repaired evaluator at `f0b5af0`.** A contract carrying no `## Pre-Approval Evidence` section at all, born `Approved`: local Gate `ORVION: READY / MODE: EXECUTE / STATUS: Approved`, committed range `ORVION: READY`. The pre-activation control - marker absent from the originating commit's first parent - was admitted and had to remain so.
+
+**GREEN: 270 passed / 0 failed.** 213-215 refuse origination as `Approved`, `In Progress` and `Complete` locally; 216 refuses the same history in a range with the offending short SHA; 217 admits `Draft` authoring; 218 admits a `Draft`-first whole lifecycle inside one range; 219 admits the pre-activation `SPEC-165` shape; 220 proves a range with no allocation event invokes the check zero times.
+
+**Mutations, each on a scenario no other guard can rescue.** Removing the activation gate turns the *pre-activation* control red; removing the `Draft` requirement admits the born-`Approved` case again; additionally applying the rule at the range endpoint falsely refuses a contract born `Draft` and completed inside one range. All three recorded `applied=True` with a green pristine and a red mutant.
+
+**Blast radius was wider than this contract's Step 4 enumerated, and that is recorded rather than hidden.** Step 4 named only assertion 111. Measurement found the rule also reaches assertion 27 (which relied on `ContractText`'s default `In Progress`), 114 and 120 (born-`Approved` range fixtures), and one existing K mutation whose `Find` string targeted the exact line Step 3 edits. All four were corrected inside Write Scope, none changed what its assertion claims - 27 now originates in PLAN as a `Draft`, 114 and 120 commit a `Draft` first, and the K mutation tracks the edited line - and the contract's own criterion that the suite reports zero failures is what required them. Root cause: the blast radius was predicted rather than prototyped against the full suite before freezing, which is the measurement `SPEC-197` did correctly and this contract did not.
+
+**Performance.** Three ordinary `-Gate` runs each on one identical tree: after 15520 / 12629 / 13903 ms against before 15888 / 14853 / 13902 ms. No material slowdown - the check adds a path match per record and one blob read per newly originated contract, and walks no history.
 
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-20 - Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository. `ORIGINATION_NOT_DRAFT` is the only refusal code added. The local call passes `-CheckOrigination`; the per-commit call passes `-CheckOrigination -StateRef $commit`; the range-endpoint call is unchanged and carries the comment explaining that a contract born `Draft` and completed inside one range has endpoint status `Complete`, so judging it there would refuse legal `SPEC-165` history. A cross-identity rename is excluded from origination. No numeric threshold, date, allowlist or second activation authority appears. Both harness sentinels exist and exactly three origination mutations are declared. Against `origin/main`, none of `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md`, `SPEC-196`, `SPEC-198`, `SPEC-201`, `check_repository_consistency.ps1` or `publish_candidate.ps1` differs. `-Finish` reported `LOCAL_CERTIFY: READY` with all five guard suites, repository consistency and `git diff --check` passing.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
