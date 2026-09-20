@@ -285,18 +285,26 @@ against the live repository state. Append-only — never edit or delete a prior 
 
 ---
 
+### 2026-09-20 — executing agent, autonomous completion (`CR_LIFECYCLE.md` §5)
+
+Verdict: Confirmed Complete
+
+Findings: Re-checked against live state rather than against the log. **Scope:** `git diff --name-status origin/main..HEAD` returns exactly five paths — `_ORVION_CANONICAL/manifest.md`, `ai-map.json`, `changes/SPEC-207-grant-parity-ownership-boundary.md`, `reports/master/MASTER_GAP_REGISTER.md`, `scripts/parity_surface.sql` — every one inside Write Scope, and **zero** paths under `supabase/`. `reports/master/MASTER_API_CONTRACT.md` is in Write Scope and was **not** modified, which is the correct outcome: no database object changed, and Check L3 reported it matching the live surface in both parity runs. **Premature-completion check, the defect that cancelled `SPEC-203`:** `Last Completed` and `Next capability` were compared line-for-line against `origin/main` and are **identical**, so no Implementation Step moved them. **Repair:** the `gr` CTE reads `and grantee in ('authenticated','anon')`. **Parity:** re-run with the three Primary values read live in this session — `DATABASE PARITY: CLEAN`, exit **0**, Check L4/P4 `Primary's structural surface matches local (0c77972ecf1b45096cda327943a45c00)`, Check L5 green, Check L3 green. **Manifest:** publishes `0c77972ecf1b45096cda327943a45c00`, 6,967 characters CRLF-normalised against Check 5's 7,000. **Register:** `PAR-5` ✅, `PAR-6` 📋, `PAR-7` 📋, and `USR-3`/`USR-4` still 📋 and otherwise unchanged. **Discrimination:** the four mutations were re-read from the log and their decisive property re-confirmed — the repaired surface still moves on `authenticated` and `anon` drift, so the change narrowed what is compared without weakening whether drift is refused. **Certification:** `-Finish` returned `LOCAL_CERTIFY: READY` with all three verifications PASS. **Batch 6 Slice 13 was not opened, drafted or begun**, and no governance or control file was modified.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
 [Completed by whoever performs the Review — the executing agent under autonomous completion
 (`CR_LIFECYCLE.md` §5), otherwise a human. Do not mark Status as Complete until every item below
 is checked.]
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
