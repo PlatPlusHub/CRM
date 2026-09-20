@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-09-08 (**slices 6, 7 and 8 recorded — EC-1 stands at 9 of 77, and the
+Last updated: 2026-09-21 (**Batch 6 has advanced through slice 12 — leads, invoices, customers and users — and this plan no longer restates the coverage count.** Per-surface disposition and the live `of 77` figure are owned by `reports/master/MASTER_SURFACE_DISPOSITION.md`; per-finding detail is owned by `reports/master/MASTER_GAP_REGISTER.md`. This plan states order and dependencies only, so EC-1 below now points at its SSOT rather than carrying a number that drifts between sessions. Every dated entry below is unchanged and states what was true on its date. Prior entry follows.)
+
+Previously: 2026-09-08 (**slices 6, 7 and 8 recorded — EC-1 stands at 9 of 77, and the
 measuring layer was audited against the rule the slices kept earning.** `otp_challenges`
 (`202607061600`) closed **OTP-1** by REVOKE; `trusted_devices` (`202607061700`) closed **TD-1**/**TD-2**
 by two DOORS, the deliberate opposite, because its RPCs are SECURITY INVOKER and the grant is the
@@ -1630,7 +1632,7 @@ policy (MAIL-1, RET-1).
 
 | # | Criterion | How it is measured today |
 |---|---|---|
-| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** Standing at **6 of 77 recorded** (2026-09-07). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
+| **EC-1** | **Coverage.** All **77** tables carry an explicit recorded audit disposition | **NOW MEASURABLE — `MASTER_SURFACE_DISPOSITION.md`, created 2026-09-05, CI-gated by Check 22 (DISP-1).** The live count is held by that file and is not restated here (One Authority). The surface SET is derived from `supabase/migrations/**`, so a new table turns the build red until it has a row; the disposition and assurance vocabularies are closed so the count means something. The two proxies that read better were rejected on measurement: "all 77 are named in `reports/**`" is saturated, "75 of 77 are named in a pgTAP file" is a floor |
 | **EC-2** | **Authorization.** Every writable surface has a documented authorization rationale; exceptions explicit | Already partly earned and already pinned: `57_write_capability_map_test.sql` and `58_write_grants_and_config_capability_test.sql` carry the 54/17/3 ceilings, and the residual three are the canon-34 Human Identity tables with a stated rationale. Exit = the ceilings hold and every remaining exception names its reason |
 | **EC-3** | **Tenant isolation.** No unresolved tenant-crossing path in scope | Positive+negative HTTP proof exists (`verify_api_end_to_end.ps1` against a fully privileged owner of another agency). Exit = every table in EC-1's record has a stated isolation basis (RLS predicate, structural path prefix, or platform-only) |
 | **EC-4** | **Lifecycle integrity.** No unresolved invalid transition or parent/child contradiction | `54_transition_permission_parity_test` (both directions, all ten functions) and the PARENT-1 class guard in `88_parent_state_on_every_door_test` (seven verified non-defects, each run down against the catalog). Exit = both green with no unexplained entry |
