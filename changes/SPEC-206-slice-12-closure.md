@@ -281,17 +281,65 @@ capability`. They move only in the `Complete` transition, per `CR_LIFECYCLE.md` 
 [Appended by the reviewing agent after independently re-checking the Execution Log
 against the live repository state. Append-only — never edit or delete a prior entry.]
 
+### 2026-09-20 - Claude Opus 5 (reviewing agent)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository rather than against the Execution Log's claims.
+`reports/master/MASTER_API_CONTRACT.md` line 234 reads `yes` / `conditional`, and
+`check_database_parity.ps1` independently reports `MASTER_API_CONTRACT.md matches the live surface`
+with Check L5 green — so the byte-identity criterion is satisfied by the verifier itself, not by
+assertion. Its non-zero exit is reproduced in both forms (2 bare, 1 fully supplied) and the sole
+issue in the supplied run is the `PRIMARY STRUCTURE DRIFT` this contract classifies as `PAR-5`;
+nothing outside that classification appears, so the recorded verdict is accurate and is not
+presented as a pass.
+
+**Scope and terminal integrity, checked mechanically.** `git diff e799cda..HEAD --name-only` lists
+exactly five paths — `_ORVION_CANONICAL/manifest.md`, `ai-map.json`, this contract, and the two
+Master records — every one inside Write Scope. `git diff … -- supabase/` is EMPTY: no migration was
+authored, applied or re-applied. `git diff 71d29fe..HEAD -- changes/SPEC-203-…md` and
+`git diff 432373d..HEAD -- changes/SPEC-205-…md` are both empty, and both files still read
+`[x] Cancelled` — the terminal bytes of both predecessors are byte-identical to their Cancel
+commits, so neither was edited into correctness.
+
+**The criterion this whole recovery turns on.** The complete manifest diff across this contract's
+lifecycle is two lines: `Active Change Request` moving from `None` to this contract's path. Nothing
+else. `Last Completed` and `Next capability` were NOT touched by any Implementation Step, which is
+precisely the defect that made `SPEC-203` publish its own completion while still active. Manifest
+measures 6968 of Check 5's 7000 budget with the pointer in place, so no trim was needed or taken.
+
+**Findings, verified by marker rather than by prose.** `USR-5` is `✅`; `USR-3`, `USR-4` and
+`PAR-5` are all `📋` OPEN. `PAR-5`'s escalation to High is supported by the measurement recorded
+above and by reading `check_database_parity.ps1`'s own exit contract, and its repair is correctly
+deferred to a control change rather than performed here — no detector was edited to admit a change.
+Coverage reads `13 of 77 · 6 AUDITED · 7 AUDITED-OPEN`, which sums correctly and is recomputed from
+the rows by Check 22; the `users` row keeps `AUDITED-OPEN` / `ADVERSARIAL` and now cites this
+contract while still naming `SPEC-203` as where the deployment evidence lives.
+
+**Database and Primary.** pgTAP `Files=118, Tests=1958`, `Result: PASS`, with the independently
+computed `plan(N)` sum also 1958; `verify_database.sql` `ALL CHECKS PASSED … 71/621`. Primary was
+read and not written: `20260920120000` occurs exactly once, ledger `219 /
+dd2427080e9cfb5e8d1d162bf818360f` is identical across repository, local stack and Primary, and only
+`get_project_url` and a single read-only `select` were issued. Secondary `brplkqmbzffpxqgkkdzo` does
+not appear in any call made by this contract.
+
+`-Finish` reported `LOCAL_CERTIFY: READY` with all three of its verifications passing — the same
+three that were executed and proven to return 0 before this contract's text was frozen, which is
+the specific counter-measure taken after `SPEC-205`.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
