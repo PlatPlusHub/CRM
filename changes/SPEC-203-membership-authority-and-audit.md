@@ -567,6 +567,43 @@ is `push`-triggered, so that outcome cannot exist until the candidate bytes have
 manifest's standing OBSERVE ONLY sentence — still literally true at this commit — is therefore
 replaced in the following entry, once the run identified by the exact candidate SHA has been read.
 
+### 2026-09-20 — the Migration CI comparison SPEC-173 deferred, and publication of the candidate
+
+Candidate SHA **`222020b523905ef645595ca9915f6e715bd025a5`**, published to `orvion-preflight` by
+`scripts/publish_candidate.ps1` over the range `9380bce..222020b`. Four workflows ran on those
+exact bytes and **all four succeeded**: `Agent Control`, `Repository Consistency`, `Migration CI`
+(run `35508311642`) and `ORVION Acceptance` (run `35508311638`).
+
+**THE COMPARISON, on one set of bytes, read from the runs rather than inferred from their colour.**
+
+| Step | Local (CLI 2.109.0) | Migration CI (CLI 2.109.1) | ORVION Acceptance | Primary |
+| --- | --- | --- | --- | --- |
+| `supabase db reset` | applied `20260920120000`, 219 migrations | `Applying migration 20260920120000_membership_authority_and_audit.sql...` then `Finished supabase db reset` | same reset path | n/a |
+| pgTAP | `Files=118, Tests=1958` · `Result: PASS` | `Files=118, Tests=1958` · `Result: PASS` | `Files=118, Tests=1958` · `Result: PASS` | n/a |
+| `verify_database.sql` | `ALL CHECKS PASSED (77 tables, … 71/621 catalog, …)` | byte-identical string | byte-identical string | catalog read live: **621 / 71** |
+| ledger | 219 · `dd2427080e9cfb5e8d1d162bf818360f` | n/a | n/a | 219 · `dd2427080e9cfb5e8d1d162bf818360f` |
+
+**ALL SIDES AGREE, so the measured fact is recorded and nothing is changed.** Acceptance
+additionally reported `AGENT CONTROL TESTS: 270 passed, 0 failed`, `FUTURE-DATE GUARD TEST: 18
+passed, 0 failed` and `ORVION: READY` on the same candidate.
+
+**The one hypothesis this slice existed to test, and its answer.** The contract predicted a real
+divergence in the INPUT: `migration-ci.yml` resolves its CLI through `supabase/setup-cli@v3` pinned
+to **2.109.1**, while local and Acceptance resolve it from the lockfile. That divergence is
+CONFIRMED — the CI log prints `currently installed v2.109.1` and the local runs print
+`currently installed v2.109.0`. It produced **no difference in any output**: same migration set,
+same 118/1958, same `ALL CHECKS PASSED` string including the `71/621` pair. Observing a divergence
+is not reproducing a defect from it, so `.github/workflows/migration-ci.yml` is untouched, exactly
+as its Out of Scope requires. Had the two disagreed, the disagreement would have gone to
+`MASTER_GAP_REGISTER.md` rather than being resolved by preferring one side.
+
+`_ORVION_CANONICAL/manifest.md`'s standing sentence is now replaced by that outcome, completing the
+Step 12 bullet that could not be written before the candidate existed.
+
+**PUBLICATION.** `222020b` was promoted to `main` by pushing the exact accepted SHA —
+`9380bce..222020b  222020b… -> main` — so the deployed work is banked and the local-ahead window is
+zero before the terminal transitions begin. No force, no rewrite, no `--no-verify`, no rebase.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
