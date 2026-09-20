@@ -126,20 +126,17 @@ None
 the `### Pre-Approval evidence sufficiency` rule in `ENGINEERING_METHOD.md`; admissibility is owned by
 `CR_LIFECYCLE.md §5`. Every predicate resolves to PASS, FAIL, or INDETERMINATE — there is no score.
 Only PASS permits the human Draft-to-Approved decision. `Change Class` is descriptive input and can
-never exempt work that repository evidence makes applicable. Each class below records
-`Applicability: APPLICABLE` or `NOT APPLICABLE`; a class derived applicable by repository evidence
-but declared otherwise is INDETERMINATE. This section is frozen at Approval.]
+never exempt work that repository evidence makes applicable.
+
+The Gate derives applicability PER PREDICATE from Write Scope and the profiles it derives, and
+derives Write Scope closure for artifacts a mandatory verification regenerates and byte-compares.
+Do not restate machine truth here; a subsection the Gate does not derive as applicable may be
+omitted whole. Volunteering `Applicability: APPLICABLE` adds that obligation and is always legal —
+declaring `NOT APPLICABLE` against the derivation is INDETERMINATE. SPEC identity is not recorded
+here at all: `Validate-SpecAllocation` is its sole authority (`CR_LIFECYCLE.md` §4).
+This section is frozen at Approval.]
 
 Change Class: [Routine | Significant | Owner-Decision]
-
-### Derived Applicability
-
-| Predicate | Repository-derived fact | Result |
-| --- | --- | --- |
-| Consumer Closure | [fact] | [APPLICABLE / NOT APPLICABLE] |
-| Execution-Boundary Satisfiability | [fact] | [APPLICABLE / NOT APPLICABLE] |
-| Permanent-Control Admission | [fact] | [APPLICABLE / NOT APPLICABLE] |
-| SPEC Allocation | [fact] | [APPLICABLE / NOT APPLICABLE] |
 
 ### Consumer Closure
 
@@ -163,6 +160,11 @@ Irreversible Action Step: [NONE / step reference]
 
 ### Permanent-Control Admission
 
+[Derived applicable only where a control that runs FOREVER lives: `scripts/check_*`,
+`scripts/verify_*`, `scripts/test_*`, `scripts/*_surface.sql`, `supabase/tests/`, `.githooks/`,
+`.claude/hooks/`, `.github/workflows/`. Omit this subsection otherwise — nine invented obligations
+about a control the contract is not adding are not evidence.]
+
 Applicability: [APPLICABLE / NOT APPLICABLE]
 
 Existing Mechanism Reusable: [YES / NO]
@@ -182,13 +184,6 @@ Non-Empty Population Obligation: [the population that must be proven non-empty]
 Mutation Obligation: [each load-bearing predicate that must be independently mutation-killed]
 
 Post-Implementation Proof Obligation: [what the certified suite must prove before Complete]
-
-### SPEC Identity Allocation
-
-Applicability: [APPLICABLE / NOT APPLICABLE]
-
-[Allocation, reservation, origination, and activation semantics are owned by `CR_LIFECYCLE.md` §4.
-Record here only what is specific to this contract.]
 
 ---
 
