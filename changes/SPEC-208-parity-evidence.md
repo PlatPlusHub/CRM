@@ -92,7 +92,7 @@ None. `SPEC-207` closed `PAR-5` and recorded `PAR-6`; it is terminal and is neit
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -212,24 +212,24 @@ Post-Implementation Proof Obligation: the disposable DATABASE-profile contract t
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_database_parity_evidence.ps1` exists, computes no hash and compares no surface, invokes `scripts/check_primary_ledger.ps1` and `scripts/check_database_parity.ps1` rather than reimplementing either, and exits with the parity engine's exit code unchanged.
-- [ ] `Get-ProfileEvidence`'s `DATABASE` profile lists the adapter as its mandatory parity verification and no longer lists the bare `scripts/check_database_parity.ps1`.
-- [ ] `scripts/check_database_parity.ps1`, `scripts/parity_surface.sql`, `scripts/check_primary_ledger.ps1` and `scripts/test_primary_ledger_guard.ps1` are byte-identical to their state at this contract's baseline.
-- [ ] `reports/evidence/primary-ledger-evidence.json` carries `function_surface_hash`, `function_count`, `structural_surface_hash` and `structural_object_count`, each read READ-ONLY from `vrvtsxexkiiiivlkdxzp` in this run, with `schema_version` bumped and `repository_head` an ancestor of HEAD.
-- [ ] `pwsh -NoProfile -File scripts/check_database_parity_evidence.ps1` reports `PRIMARY PARITY EVIDENCE: CLEAN` and **exit 0** against the refreshed record, and its output states that it never contacted Primary.
-- [ ] The Execution Log records all nine negative cases with their measured exit codes, each refused for its own stated reason, and records that the accepting case was re-measured to 0 afterwards.
-- [ ] The Execution Log records the semantic-freshness proof with measured hashes: one existing migration changed, ledger identities unchanged, local moving to a different function-surface and structural-surface hash, and the still-correct recorded Primary values reported as drift with exit 1.
-- [ ] The Execution Log records that the disposable DATABASE-profile contract which reproduced `PAR-6` reaches `LOCAL_CERTIFY: READY` with the repair in place, naming the adapter among its PASS lines.
-- [ ] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` passes with zero failures, including the retargeted assertions 101 and 103 and the adapter's own accepting and refusing cases.
-- [ ] `pwsh -NoProfile -File scripts/check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`, proving the extended record is still valid to the unchanged ledger authority.
-- [ ] `ENGINEERING_METHOD.md §4` states that the three Primary values are read live at the execution boundary and recorded, that `-Finish` validates that record and runs the parity engine against it, and that a deploying contract carries the evidence file in its Write Scope — and nowhere states that Primary need not be read.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` marks `PAR-6` resolved with its reproduction and residual recorded, carries a NEW dated freshness entry with the previous one demoted to `Previously:`, and leaves `PAR-7`, `USR-3` and `USR-4` OPEN and otherwise unchanged.
-- [ ] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget, measured CRLF-normalised, at every commit of this contract's lifecycle including the Approve commit.
-- [ ] No Implementation Step modified `_ORVION_CANONICAL/manifest.md`'s `Last Completed` or `Next capability`; both move only in the `Complete` transition.
-- [ ] The Execution Log records that Primary was contacted READ-ONLY only, states that **no INSERT, UPDATE, DELETE, DDL, GRANT, REVOKE or migration-apply call was issued to it**, and records Secondary `brplkqmbzffpxqgkkdzo` as never contacted.
-- [ ] No file under `supabase/` was created, modified or deleted, and no migration was authored or applied.
-- [ ] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`, with Check 19 green against the extended evidence record.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted, and Batch 6 Slice 13 was not opened, drafted or begun.
+- [x] `scripts/check_database_parity_evidence.ps1` exists, computes no hash and compares no surface, invokes `scripts/check_primary_ledger.ps1` and `scripts/check_database_parity.ps1` rather than reimplementing either, and exits with the parity engine's exit code unchanged.
+- [x] `Get-ProfileEvidence`'s `DATABASE` profile lists the adapter as its mandatory parity verification and no longer lists the bare `scripts/check_database_parity.ps1`.
+- [x] `scripts/check_database_parity.ps1`, `scripts/parity_surface.sql`, `scripts/check_primary_ledger.ps1` and `scripts/test_primary_ledger_guard.ps1` are byte-identical to their state at this contract's baseline.
+- [x] `reports/evidence/primary-ledger-evidence.json` carries `function_surface_hash`, `function_count`, `structural_surface_hash` and `structural_object_count`, each read READ-ONLY from `vrvtsxexkiiiivlkdxzp` in this run, with `schema_version` bumped and `repository_head` an ancestor of HEAD.
+- [x] `pwsh -NoProfile -File scripts/check_database_parity_evidence.ps1` reports `PRIMARY PARITY EVIDENCE: CLEAN` and **exit 0** against the refreshed record, and its output states that it never contacted Primary.
+- [x] The Execution Log records all nine negative cases with their measured exit codes, each refused for its own stated reason, and records that the accepting case was re-measured to 0 afterwards.
+- [x] The Execution Log records the semantic-freshness proof with measured hashes: one existing migration changed, ledger identities unchanged, local moving to a different function-surface and structural-surface hash, and the still-correct recorded Primary values reported as drift with exit 1.
+- [x] The Execution Log records that the disposable DATABASE-profile contract which reproduced `PAR-6` reaches `LOCAL_CERTIFY: READY` with the repair in place, naming the adapter among its PASS lines.
+- [x] `pwsh -NoProfile -File scripts/test_agent_continuity.ps1` passes with zero failures, including the retargeted assertions 101 and 103 and the adapter's own accepting and refusing cases.
+- [x] `pwsh -NoProfile -File scripts/check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`, proving the extended record is still valid to the unchanged ledger authority.
+- [x] `ENGINEERING_METHOD.md §4` states that the three Primary values are read live at the execution boundary and recorded, that `-Finish` validates that record and runs the parity engine against it, and that a deploying contract carries the evidence file in its Write Scope — and nowhere states that Primary need not be read.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` marks `PAR-6` resolved with its reproduction and residual recorded, carries a NEW dated freshness entry with the previous one demoted to `Previously:`, and leaves `PAR-7`, `USR-3` and `USR-4` OPEN and otherwise unchanged.
+- [x] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget, measured CRLF-normalised, at every commit of this contract's lifecycle including the Approve commit.
+- [x] No Implementation Step modified `_ORVION_CANONICAL/manifest.md`'s `Last Completed` or `Next capability`; both move only in the `Complete` transition.
+- [x] The Execution Log records that Primary was contacted READ-ONLY only, states that **no INSERT, UPDATE, DELETE, DDL, GRANT, REVOKE or migration-apply call was issued to it**, and records Secondary `brplkqmbzffpxqgkkdzo` as never contacted.
+- [x] No file under `supabase/` was created, modified or deleted, and no migration was authored or applied.
+- [x] `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN`, with Check 19 green against the extended evidence record.
+- [x] No file outside this contract's Write Scope was created, modified or deleted, and Batch 6 Slice 13 was not opened, drafted or begun.
 
 ## Execution Log
 
@@ -282,6 +282,34 @@ N1–N4 are the adapter's own admissibility rules, N5–N7 are the composed ledg
 **STEP 8 — ai-map.** Already Applied: the manifest has not changed since the `Approve` commit regenerated it, and Check 7 compares the three `live_state` values and is green.
 
 **Verification at this point.** `REPOSITORY CONSISTENCY: CLEAN` exit 0 with Check 19 green against the extended record; `git diff --check` exit 0; `test_agent_continuity.ps1` **278 passed, 0 failed**; `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1` all exit 0. `test_primary_ledger_guard.ps1` matters specifically: it mutation-tests the ledger validator, which this contract leaves byte-unchanged, and it still passes against the extended `schema_version` 2 record — proving the extension is additive and Check 19 keeps working in CI without Docker.
+
+### 2026-09-20 — Step 6. The DATABASE lifecycle reaches certification with the repair in place.
+
+The same disposable probe shape that reproduced `PAR-6` was re-run, driven by the repaired `check_agent_continuity.ps1` against a probe tree based on `f07e654` carrying the adapter and the extended evidence record under the probe's own Write Scope:
+
+```
+PASS: npx supabase db reset
+PASS: npx supabase test db
+PASS: pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1
+PASS: npx supabase test db
+PASS: Get-Content -Raw scripts/verify_database.sql | docker exec -i supabase_db_ORVION psql …
+PASS: pwsh -NoProfile -File scripts/check_database_parity_evidence.ps1
+PASS: pwsh -NoProfile -File scripts/check_repository_consistency.ps1
+PASS: git diff --check
+PASS: pwsh -NoProfile -File scripts/check_primary_ledger.ps1
+EVIDENCE: DATABASE EXTERNAL: the three Primary values are read LIVE through supabase-primary at the
+  DATABASE execution boundary and RECORDED in reports/evidence/primary-ledger-evidence.json; this run
+  validated that record and did NOT contact Primary
+LOCAL_CERTIFY: READY                                                                     exit 0
+```
+
+**Before the repair the identical shape ended `MANDATORY_VERIFICATION_FAILED` on the bare parity command with no receipt.** The verification list is otherwise unchanged — same reset, same two pgTAP passes, same HTTP suite, same smoke test — and the parity step is still there, still mandatory, still judged by `check_database_parity.ps1`. Only the source of its three values moved. The deferred note is printed by the profile itself, so the run states in its own output that it did not contact Primary.
+
+**Deployment boundary, per the same mechanism and without a second one.** The pre-deploy state is already refused by the composed ledger authority: negative case N6 above, a repository holding one migration the recorded Primary ledger does not, reports `THE REPOSITORY HAS 1 MIGRATION(S) PRIMARY HAS NOT RUN` and exits 1. So a deploying contract cannot certify before it deploys; it must deploy, re-read Primary READ-ONLY, refresh this record, and then Finish — which is why `ENGINEERING_METHOD.md §4` now states that such a contract carries the evidence file in its Write Scope. One record cannot satisfy both sides of a deployment, and it is not asked to.
+
+**Two guard refusals encountered while staging this probe, both correct and both recorded rather than worked around.** An earlier attempt overlaid the adapter and the evidence file as UNCOMMITTED changes and was refused `OUT_OF_SCOPE_WRITE` — the active contract had not authorised those paths — so the probe was rebuilt with them in its Write Scope and committed under its authority. An attempt to label the probe `SPEC-209` was refused `SPEC_ID_NOT_NEXT:208:209`, because the allocator hands out exactly the next free identity and the probe's base is `f07e654`. The probe therefore carries `208` on a branch that is never published and is deleted afterwards; reservation is anchored to the ref being validated and never `--all`, so the published `SPEC-208` on `main` is unaffected. Neither refusal changed the design.
+
+**Primary and Secondary for this contract.** Primary `vrvtsxexkiiiivlkdxzp` was contacted READ-ONLY: `get_project_url`, and `select` statements over `supabase_migrations.schema_migrations`, `pg_proc`, and the surfaces defined by `scripts/parity_surface.sql`. **No INSERT, UPDATE, DELETE, DDL, GRANT, REVOKE or migration-apply call was issued**, and Primary's ledger is unchanged at 219 / `dd2427080e9cfb5e8d1d162bf818360f`. Secondary `brplkqmbzffpxqgkkdzo` was **never contacted**. No file under `supabase/` was created, modified or deleted in this contract, and no migration was authored. **Batch 6 Slice 13 was not opened, drafted or begun.**
 
 ## Verification Notes
 
