@@ -309,6 +309,264 @@ IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCL
 — this file is always implicitly in scope for this section.
 Append-only — never edit or delete a prior entry, including a Blocked or Failed one.]
 
+### 2026-09-20 — Steps 1-9 (repository implementation), local only. Primary NOT contacted.
+
+**PRE-APPROVAL CHALLENGE (owner-requested, before the Approve commit).** A contract-satisfiability
+challenge was run against the frozen Draft at `92d043e` using local reads only. It found one
+Acceptance Criterion that could never become true and four obligations that would have written
+false statements into permanent records; all were repaired while still Draft at `ac631a0`:
+
+- **Unsatisfiable.** An AC required "its compressed SPEC-198 `Last Completed` entry" in the manifest
+  to still name the applicability repair and the `NOT APPLICABLE` outcome. MEASURED: the manifest
+  contains **no SPEC-198 entry at all** (`grep -c "SPEC-198" _ORVION_CANONICAL/manifest.md` → `0`);
+  `Last Completed` is SPEC-202, and Step 12 replaces it with SPEC-203. The clause could not become
+  true, and frozen text cannot be edited after Approval, so `Complete` was unreachable — the exact
+  shape that cancelled SPEC-200. Replaced with the budget obligation it was guarding.
+- **Contradictory evidence.** The Consumer Closure row asserting a `WRITE` to compress SPEC-198's
+  entry contradicted the MANIFEST-1 paragraph, which had already proved no trim is authorized
+  (6854 + 46 = 6900 of 7000). Re-stated as `UNAFFECTED` with the measurement.
+- **False permanent record.** Step 9 and its AC directed the `users` disposition row to cite
+  `SPEC-197-membership-authority-and-audit` — a Cancelled contract that executed none of this work
+  — while this contract's own Notes say the row cites *this* Change Request. Corrected to SPEC-203.
+- **False canonical state.** Step 12 and its AC made SPEC-197 the manifest's `Last Completed`.
+  SPEC-197 is Cancelled and was never Complete. Corrected to SPEC-203, replacing SPEC-202.
+- **Misattribution.** Steps 4 and 6 attributed this work to SPEC-197 in tracked test comments.
+
+Verdict recorded against the owner's framing: **ACCEPTED**. Cost was ~15 minutes of local reads;
+it caught an unreachable `Complete`. The evaluator was re-run read-only after the repair —
+`DERIVED PROFILES: DATABASE, REPOSITORY`, `PASS`, and `PASS` again under forced applicability, so
+the verdict is non-vacuous. Approve `16d85c1`, In Progress `73d9892`.
+
+**RED — both findings reproduced live at HEAD, on the un-migrated stack.** One actor, one moment,
+`app.has_permission('MANAGE_USERS')` = `t` and `app.mfa_satisfied()` = `f`:
+
+- `app.create_tenant_user` → `ERROR: multi-factor authentication required for this role`
+  (`app.authorize` line 7, via `create_tenant_user` line 10).
+- The equivalent direct `INSERT` → `INSERT 0 1`. Direct deactivation of a colleague → `UPDATE 1`,
+  `is_active` = `f`. Direct identity unbind → `UPDATE 1`, `auth_user_id` = null.
+- **USR-1:** after those three membership mutations the tenant's event count was **2 → 2**. The
+  same `user_created` fact through the RPC at `aal2` moved it **2 → 3**.
+
+**Step 1.** `_ORVION_CANONICAL/27_event_catalog.md`: added `user_deactivated`, `user_reactivated`
+and `user_identity_bound`, each `Severity: security`, between `## user_created` and
+`## user_branch_transfer_started` in `# Organization And User Events`. No existing entry changed.
+
+**Step 2.** Created `supabase/migrations/20260920120000_membership_authority_and_audit.sql` with
+exactly the five declared parts. `sort_order` **932, 933, 934** was re-measured immediately before
+writing, not inherited: `event_type` held **184** rows with `max(sort_order)` = **931**, and the
+three codes were absent from `catalog_values`. `npx supabase db reset` applied all **219**
+migrations cleanly. Post-reset topology on `public.users`, read from `pg_trigger`:
+`users_guard_membership_authority` `tgtype` **23** (ROW + BEFORE + INSERT + UPDATE) and
+`users_emit_membership_change` `tgtype` **21** (ROW + AFTER + INSERT + UPDATE) — the DELETE bit is
+set on neither, verified numerically rather than by reading the DDL.
+
+**GREEN — the same probe re-run against the migrated stack.** The `aal1` direct INSERT now raises
+`42501` from `app.guard_membership_authority()` line 19; the RPC still raises `42501`; the
+session-less fixture writes each emitted `user_created` with a null actor; and the RPC at `aal2`
+produced **exactly one** `user_created`, confirming Step 2(e)'s removal prevents the duplicate the
+prototype had measured.
+
+**Step 3.** Created `supabase/tests/118_membership_authority_and_audit_test.sql` — **43 assertions**,
+`-- ATTACK-CLASSES: AUTH TENANT DOOR PRIVILEGE STATE INPUT OBSERVABILITY BUSINESS REPLAY=N/A
+CONCURRENCY=N/A`, ten `throws_ok`. First run: **39/41 passed**; the two failures were the same
+class and neither was a defect in the repair — both assertions read ground truth *through the
+attacker's own session*, so RLS hid what had actually been recorded. Corrected by reading back as
+the platform, which is the `trusted_devices` slice's own lesson. Final: **43/43 PASS**.
+
+**DISCOVERY — INCIDENTAL DEFENSE ≠ INTENTIONAL CONTROL, a second time.** The frozen Negative Test
+Design predicts `42501` when an administrator rides the self-claim carve-out and also moves
+`email`, `is_active` or `is_platform_user`. MEASURED on the live stack, only the `email` variant
+produces `42501`; the other two produce **`23514`**. ROOT CAUSE: BEFORE triggers fire in
+ALPHABETICAL order, so `users_enforce_identity_binding` runs before
+`users_guard_membership_authority` and refuses first whenever the membership email still diverges
+from the identity being bound. Counting those refusals as proof the guard holds would have measured
+the wrong control — the error the `leads` slice recorded. REPRODUCED in isolation, then re-measured
+with the incidental defence REMOVED inside a savepoint: both variants are then refused **`42501` by
+the authorization model itself**. CLASSIFIED: the contract's authority claim is TRUE and is proven;
+what needed correcting was the observation method, not the repair. `118_...` assertions 11-15 now
+state both facts — which control refuses while everything stands, and which refuses when the
+incidental one is taken away. A third control was found and NAMED rather than credited:
+`users_tenant_auth_key` also stands between an administrator and a second membership.
+
+**Steps 4-6 — blast radius re-measured, not inherited.** The full suite was run against the
+migrated stack BEFORE any fixture was touched. **Exactly three** files moved, which is precisely
+what the contract's Risks section claimed: `10_grant_model_test.sql` assertion 9 (MEAS-2),
+`31_access_revocation_test.sql` (exit 3, aborted at 2 of 10) and
+`35_subscription_write_gate_test.sql` assertion 19. No other file in the suite changed state.
+
+- **Step 4.** `MEAS-2` expected array gained `'users'`, wording NINE → TEN, and the assertion
+  description and comment block now state why the population was allowed to rise and name the two
+  exemptions with the assertions that pin them.
+- **Step 5.** `35_...`: cleared `request.jwt.claims` before the `identity administration still
+  works` assertion. First attempt broke assertions 20-21, which are a *session's* assertions and
+  depend on the claim set above them; the claim is therefore restored immediately after the one
+  session-less write it describes. No assertion's SQL, expected value or plan count changed.
+- **Step 6.** `31_...`: same stale-claim defect, same repair, carrying a `SPEC-203` comment
+  recording that `reset role` clears the SQL role but not the JWT claim. FIXTURE only — plan count,
+  every assertion's SQL, expected value and description, and the claim set afterwards are unchanged.
+
+**Suite after Steps 4-6: `Files=118, Tests=1958`, `All tests successful`, `Result: PASS`.**
+Declared/executed equality independently computed: the sum of literal `plan(N)` across
+`supabase/tests` is **1958**, equal to the number executed. The measured baseline gap (declared
+1915, executed 1907) was caused by `31_...` aborting at assertion 2, which this contract repairs.
+
+**Step 7 — the catalog pin, proven causally in BOTH directions against the same clean-reset state.**
+Independently re-counted first, not incremented on paper: `catalog_values` = **621**,
+`catalog_types` = **71** (CONFIRMED still 71, not assumed), and the difference proven to be exactly
+this contract's three codes, named: `user_deactivated` 932, `user_reactivated` 933,
+`user_identity_bound` 934.
+
+- Pre-change file against that state: `ERROR: CHECK 6b FAILED: expected 618 catalog_values, found 621`.
+- Updated file against that same state: `NOTICE: ALL CHECKS PASSED (77 tables, ... 71/621 catalog,
+  ...)`, exit **0**.
+
+All three living pin sites moved (head comment, the `CHECK 6b` assertion, the `ALL CHECKS PASSED`
+notice), the assertion remains an exact equality on a literal, `CHECK 6a`'s `catalog_types` pin of
+71 is untouched, and the causal-history comment gained one `618 -> 621` line in the file's own
+voice. The two remaining `618` occurrences are that history chain and nothing else.
+
+**Step 8.** `MASTER_GAP_REGISTER.md`: `USR-1` and `USR-2` added as resolved; `IDENT-2` updated to
+resolved, stating it was closed by the SAME emitter rather than separately, with its original text
+preserved below the resolution per the file's never-delete rule; `USR-3` added OPEN, recording the
+sibling-surface step-up gap and preserving the precision that the permission-grant door DOES emit
+an event, so that gap is step-up only; `USR-4` added OPEN as DEFER WITH TRIGGER with its exact
+trigger. Both new OPEN rows carry an EMPTY Owner Decision column, which is that file's own recorded
+convention for non-blocking engineering debt and is what keeps Check 25 (GOV-16) from obliging a
+manifest boot-line entry for a decision nobody is owed.
+
+**Step 9.** `MASTER_SURFACE_DISPOSITION.md`: the `users` row moved to `AUDITED-OPEN` / `ADVERSARIAL`
+citing `SPEC-203-membership-authority-and-audit`, findings `USR-1, USR-2, USR-4`, with `USR-4`'s
+trigger stated in the same words Step 8 wrote into the register. Coverage totals derived from the
+rows: **13 of 77 · 6 AUDITED · 7 AUDITED-OPEN · 0 PARTIAL · 0 EXEMPT · 64 NOT-RECORDED**, and the
+`ADVERSARIAL` sentence updated to 13. The `Session` column definition now names the immutable
+evidence artifact that owns the recorded audit evidence and admits a terminal Change Request where
+the repository deliberately wrote none; `Findings` and `Next` on that line are unchanged.
+
+`git status --porcelain` at this point lists nine paths, every one of them inside Write Scope.
+Primary `vrvtsxexkiiiivlkdxzp` has NOT been contacted. Secondary `brplkqmbzffpxqgkkdzo` has NOT
+been contacted and is never a target of this repository.
+
+### 2026-09-20 — Step 10 (pre-deploy gate), Step 11 (Primary), Steps 12-13 (bookkeeping)
+
+**A measured constraint on commit shape, recorded because it changed how this contract executes.**
+The pre-commit Gate runs `Repo-Guard`, which demands `REPOSITORY CONSISTENCY: CLEAN` on EVERY
+commit. A DATABASE slice's manifest figures cannot be correct until after deployment, so an
+implementation commit made before Step 12 is structurally refused — measured, not assumed: the
+first attempt returned `ORVION: BLOCKED / CODE: REPOSITORY_CONSISTENCY_FAILED`. Checked against
+precedent rather than worked around: the previous DATABASE slice (`b5ae0208`) landed its
+migrations, `manifest.md` and `primary-ledger-evidence.json` in ONE commit after deploying. This
+contract therefore keeps an uncommitted working tree through Steps 1-11, which is exactly the state
+Step 10 describes when it asks for `git status --porcelain`. No guard was bypassed and nothing was
+committed with `--no-verify`.
+
+One real repair came out of that first refusal and it was NOT one of the three admissible classes:
+`Check 21 (STALE-1)` reported `MASTER_GAP_REGISTER.md declares 2026-09-19 but line 277 carries
+2026-09-20`. Repaired inside Write Scope the way that file's own convention requires — a NEW dated
+entry with the previous one demoted to `Previously:`, never an overwritten date. The same entry was
+added to `MASTER_SURFACE_DISPOSITION.md`, whose header still read `slice 11`.
+
+**STEP 10 — PRE-DEPLOY READINESS GATE. Every item measured and recorded.**
+
+| Gate item | Measured result |
+| --- | --- |
+| clean `npx supabase db reset` | completed; 219 migrations applied, last `20260920120000` |
+| pgTAP **Pass A** after that reset | `Files=118, Tests=1958`, `All tests successful`, `Result: PASS` |
+| every `scripts/verify_*` suite in Additional Verification | all six exit 0 — api 33, role 120, care 40, journey 74, lifecycle 122, storage 60 = **449 passed, 0 failed** |
+| pgTAP **Pass B** after those suites | `Files=118, Tests=1958`, `Result: PASS` (Pass A = Pass B) |
+| executed == sum of literal `plan(N)` | **1958 == 1958**, computed independently over `supabase/tests` |
+| `scripts/verify_database.sql` | `ALL CHECKS PASSED (77 tables, … 71/621 catalog, …)`, exit 0 |
+| `31_access_revocation_test.sql` passes AND still proves its own subject | 10 of 10 (was 2 of 10, exit 3). `git diff` shows ONLY additions: eight comment lines and one `set_config` — no assertion, expected value, description or plan count moved |
+| `118_...` passes in full, incl. employee-claimant regression and all four mutation controls | **43/43 PASS** |
+| `git status --porcelain` shows no path outside Write Scope | ten paths, all inside Write Scope |
+| exactly one migration absent from the recorded Primary ledger, byte-identical to Step 2's file | exactly one: `20260920120000_membership_authority_and_audit`; `only on Primary` empty |
+| `check_repository_consistency.ps1` run and recorded | **6 issues, ALL inside the three admissible classes** — 3 × `MIGRATION STATE DRIFT`, 2 × `SUITE FIGURE DRIFT`, 1 × `RECOVER-1 / Check 19` whose `only in repository` set is exactly the one expected entry and whose `only on Primary` set is empty. No `Check 10` result, no `PRIMARY HAS … THE REPOSITORY DOES NOT`, no attribution failure. **Nothing outside those three classes.** |
+
+**STEP 11 — PRIMARY SYNCHRONIZATION. Project `vrvtsxexkiiiivlkdxzp`. Secondary never contacted.**
+
+- **(a)** target confirmed live through the connector: `https://vrvtsxexkiiiivlkdxzp.supabase.co`. It
+  is Primary and is NOT Secondary `brplkqmbzffpxqgkkdzo`.
+- **(b)** pre-deployment ledger read with the exact `read_query` recorded in the evidence file.
+- **(c)** `20260920120000` **ABSENT** (0 rows), and the pre-deployment ledger equalled the recorded
+  evidence exactly: count **218**, fingerprint **70ba44e108ff9936f5d5f1bf8e27e349**. Primary's
+  object state also matched every frozen assumption: 618 catalog_values, 71 catalog_types, the
+  three codes absent, `event_type` max `sort_order` **931**, and `public.users` carrying exactly
+  two triggers (`users_enforce_identity_binding`, `users_set_updated_at`) and neither new function.
+- **(d)** (a)(b)(c) re-confirmed immediately before deploying — 218 / `70ba44e1…` / target absent —
+  then **exactly one** migration applied and nothing else.
+- **(e)** the connector assigned version `20260920103649`; normalised to the repository filename
+  version `20260920120000`, the practice already recorded for `20260909060754` and `20260909114354`.
+- **(f)** full ledger re-read with the same query: **219**, `dd2427080e9cfb5e8d1d162bf818360f`.
+- **(g)** `reports/evidence/primary-ledger-evidence.json` rewritten from that post-deployment
+  reading. GUARD-1 honoured and re-proved rather than asserted: the array was written only after
+  its md5 was computed and proven equal to the fingerprint read FROM Primary.
+- **(h)** three-way identity proven: repository **219** filenames, local stack
+  **219 / dd2427080e9cfb5e8d1d162bf818360f**, Primary **219 / dd2427080e9cfb5e8d1d162bf818360f**.
+  Set equality asserted programmatically, not eyeballed.
+- **(i)** surfaces read FROM Primary: function surface `f791acdba3e91462b1625ab8a723db4d` (**298**
+  functions); structural surface `e17675f70c73be8953b6f057a068a9ff` (**3,624** objects).
+- **POST-DEPLOY PARITY, read from Primary:** catalog **621 / 71**; the three codes present at
+  `sort_order` 932/933/934; `public.users` carrying four triggers with
+  `users_guard_membership_authority` `tgtype` **23** and `users_emit_membership_change` `tgtype`
+  **21** (DELETE bit set on neither); both new functions present; `app.create_tenant_user` no longer
+  containing `record_event`; the four RLS policies unchanged with three calling `has_permission`;
+  `authenticated` holding **no** DELETE on `public.users`; and neither new function executable by
+  `authenticated`.
+- **(j)** `check_primary_ledger.ps1` → **`RECOVER-1 LEDGER EVIDENCE: CLEAN`**.
+  `check_database_parity.ps1` (run with all three Primary values) → **3 issues**, each diagnosed
+  below rather than reported as a number.
+
+**PARITY RESULT, diagnosed rather than counted.** The function surface matches Primary exactly, and
+**nine of the ten structural surfaces are byte-identical** — functions, triggers, policies,
+constraints, columns, views, indexes, status_transitions and rls_enabled. Two issues are one cause
+and one is separate:
+
+- **PAR-5 (new, SUCCESSOR).** The tenth surface, `grants`, differs by exactly **333** rows, and the
+  difference is entirely `service_role` on `public`: Primary holds all 7 privileges on all 85
+  tables (595), local holds three non-DML privileges on all 85 plus DML on 2 (262).
+  `authenticated` — the role SEC-1's whole model is about — is **identical on both** (186 + 8), as
+  is the single grantor (`postgres`). ROOT CAUSE:
+  `202607050200_restore_least_privilege_grant_model` states at line 31 that *"service_role is
+  deliberately untouched: it is the platform/back-office role (rolbypassrls)"*, so ORVION never
+  manages it and the hosting platform grants it everything; `parity_surface.sql` hashes it anyway.
+  **Not a security divergence, and it must not be reported as one:** `rolbypassrls` is `true` for
+  `service_role` on BOTH sides, verified, so an explicit table grant changes nothing it can already
+  do. **Structurally impossible for this contract to have caused it:** `role_table_grants` is about
+  TABLES, this migration adds none, and the 333 rows are DML on 84/83/83/83 pre-existing tables. It
+  is also why `manifest.md` has long published Primary's object total while the local side produces
+  333 fewer. Repair lies in `scripts/parity_surface.sql`, which this contract's frozen Out of Scope
+  forbids, so it is recorded as **PAR-5** and not scope-laundered. Check L5 reports the same single
+  cause from the other side.
+- **USR-5 (new, SUCCESSOR).** `MASTER_API_CONTRACT.md` is stale by **exactly one line** out of 269:
+  the tables-section row for `users`, whose trigger/guard cells move `no`/`no` → `yes`/`conditional`.
+  This contract's Consumer Closure proved the `create_tenant_user` RPC row unaffected cell by cell —
+  which is correct and still holds — but reasoned about that table only, not the per-table section.
+  The file is in frozen Out of Scope, repair is one generator command, and it blocks nothing.
+  **Method note recorded because it outlives the line:** proving one TABLE of a generated document
+  unaffected is not proving the DOCUMENT unaffected.
+
+**STEPS 12-13 — bookkeeping, written from measurement.** `Batch 6 surface coverage` → **13 of 77**,
+all thirteen `ADVERSARIAL`. `Last Completed` → SPEC-203, **REPLACING** the SPEC-202 entry rather
+than chaining it; `Next capability` → Batch 6 Slice 13. Every mutable `Live state:` figure
+re-measured and written from its measurement: 219 migrations, latest `20260920120000`, ledger
+`dd2427080e9cfb5e8d1d162bf818360f`, function surface `f791acdba3e91462b1625ab8a723db4d` (298),
+structural surface `e17675f70c73be8953b6f057a068a9ff` (3,624), 118 files / 1958 assertions, catalog
+`71/621`. The parity claim is **qualified rather than overstated**, per Step 12's own rule: it
+names nine of ten surfaces identical and points at PAR-5 for the tenth. `Narrative:` NOT modified;
+`reports/README.md` untouched; no file under `reports/history/`.
+
+`_ORVION_CANONICAL/manifest.md` first measured **7006** of Check 5's 7000 budget and was brought to
+**6985** by shortening **this contract's own** `Last Completed` entry. No entry belonging to an
+unrelated Change Request was trimmed. `ai-map.json` regenerated and normalised to LF.
+
+**`REPOSITORY CONSISTENCY: CLEAN`** after Steps 12-13 — all three previously-admissible drift
+classes closed by the bookkeeping, and Check 21 green.
+
+**Step 12 is executed in two parts, and the reason is a measured ordering constraint rather than a
+deviation.** Its Migration CI bullet requires "the outcome this slice measured", and Migration CI
+is `push`-triggered, so that outcome cannot exist until the candidate bytes have been pushed. The
+manifest's standing OBSERVE ONLY sentence — still literally true at this commit — is therefore
+replaced in the following entry, once the run identified by the exact candidate SHA has been read.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log

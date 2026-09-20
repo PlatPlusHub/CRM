@@ -72,6 +72,15 @@ select is(app.has_permission('CREATE_CUSTOMER'), true,
 -- The employee leaves.
 -- ---------------------------------------------------------------------------------------------
 reset role;
+-- SPEC-203. `reset role` clears the SQL role but NOT `request.jwt.claims`, which the baseline above
+-- set to the employee. `users_guard_membership_authority` derives the caller from `auth.uid()`
+-- rather than from the SQL role, so the stale claim made this administrative deactivation look
+-- like the EMPLOYEE deactivating themselves, and it was refused 42501 -- aborting this file at
+-- assertion 2 of 10. This is the same stale-claim fixture defect corrected in
+-- `35_subscription_write_gate_test.sql`, and it is a FIXTURE repair only: the subject of this file
+-- is unchanged, and every assertion below still proves that a deactivated employee resolves to no
+-- tenant, no user, sees nothing and holds nothing.
+select set_config('request.jwt.claims', null, true);
 update public.users set is_active = false where id = '32000000-0000-0000-0000-000000000011';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"32000000-0000-0000-0000-0000000000a1"}', true);

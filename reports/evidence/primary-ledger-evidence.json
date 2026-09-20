@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-09T18:46:19Z",
-  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), after the seven ten-decision-closure migrations were applied to Primary and their MCP-assigned versions were normalized to the repository filenames. GUARD-1: the array below is the repository filename list, written only after its md5 was proven equal to the fingerprint read from Primary (70ba44e108ff9936f5d5f1bf8e27e349, count 218) -- it is not a repository value standing in for a Primary one.",
+  "read_at": "2026-09-20T08:05:00Z",
+  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), read AFTER 20260920120000_membership_authority_and_audit was applied to Primary by supabase-primary MCP apply_migration under SPEC-203, and after the connector-assigned version 20260920103649 was normalized to the repository filename version 20260920120000 -- the same practice already recorded for 20260909060754 and 20260909114354. Pre-deployment the ledger was read first and proved equal to the previous recorded evidence (count 218, fingerprint 70ba44e108ff9936f5d5f1bf8e27e349) with 20260920120000 ABSENT, so exactly one migration was pending and exactly one was applied. GUARD-1: the array below was written only after its md5 was proven equal to the fingerprint read FROM Primary (dd2427080e9cfb5e8d1d162bf818360f, count 219) -- it is not a repository value standing in for a Primary one. Secondary brplkqmbzffpxqgkkdzo was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "37849edbfef1935302ecd140bd4de0de8d57b2f7",
-  "migration_count": 218,
-  "ledger_fingerprint": "70ba44e108ff9936f5d5f1bf8e27e349",
+  "repository_head": "73d98920ecac8a540e29a9f0a473931652fa3378",
+  "migration_count": 219,
+  "ledger_fingerprint": "dd2427080e9cfb5e8d1d162bf818360f",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -225,6 +225,7 @@
     "20260909133000_a_manifest_change_is_a_business_event",
     "20260909134000_a_finance_requirement_withdrawn_only_deliberately",
     "20260909135000_a_booked_service_changes_hands_only_with_authority",
-    "20260909180403_a_legal_hold_always_overrides_retention"
+    "20260909180403_a_legal_hold_always_overrides_retention",
+    "20260920120000_membership_authority_and_audit"
   ]
 }

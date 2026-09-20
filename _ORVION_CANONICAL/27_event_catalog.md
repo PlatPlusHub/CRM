@@ -247,6 +247,18 @@ Severity: info
 
 Severity: info
 
+## user_deactivated
+
+Severity: security
+
+## user_reactivated
+
+Severity: security
+
+## user_identity_bound
+
+Severity: security
+
 ## user_branch_transfer_started
 
 Severity: info

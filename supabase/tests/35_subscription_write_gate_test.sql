@@ -211,10 +211,21 @@ select lives_ok(
     values ('35000000-0000-0000-0000-000000000001','customer_created','info','customer','35000000-0000-0000-0000-0000000000d1')$$,
   'suspended: the audit spine still records -- history must not stop because billing did');
 
+-- FIXTURE REPAIR (SPEC-203). `reset role` above clears the SQL role but NOT `request.jwt.claims`,
+-- which line 206 set. `users_guard_membership_authority` derives the caller from `auth.uid()`
+-- rather than from the SQL role, so the stale claim made this look like an administrator's session
+-- and the write was charged MANAGE_USERS it was never meant to pay. The path this assertion names
+-- is the SESSION-LESS one `provision_tenant` uses, so the claim is cleared to actually be on it.
+select set_config('request.jwt.claims', null, true);
+
 select lives_ok(
   $$insert into public.users (tenant_id, full_name, email, is_active)
     values ('35000000-0000-0000-0000-000000000001','Admin Added','added@sub.test',true)$$,
-  'suspended: identity administration still works -- provision_tenant writes users before any subscription exists');
+  'suspended: identity administration still works -- the SESSION-LESS path provision_tenant writes users on, before any subscription or session exists');
+
+-- ...and restored immediately, because the assertions below are a SESSION's assertions and the
+-- claim cleared above is theirs. The clearing is scoped to the one session-less write it describes.
+select set_config('request.jwt.claims','{"sub":"35000000-0000-0000-0000-0000000000a1"}', true);
 
 -- =============================================================================================
 -- 18. MISSING SUBSCRIPTION -- must fail CLOSED for writes, never silently grant them.

@@ -239,11 +239,28 @@ select cmp_ok(
 -- construction rather than by anybody editing a list. That is the intended way for this number to
 -- fall. It may fall further and must never rise.
 --
--- One of the nine is still ALREADY KNOWN to short-circuit and is registered, not silently tolerated:
+-- One of them is still ALREADY KNOWN to short-circuit and is registered, not silently tolerated:
 --   `lead_interactions`    already the named open item of assertion 8's comment above.
 --
--- Adding an eleventh bespoke guard fails this assertion, which is the point: it forces the author to
+-- Adding a bespoke guard fails this assertion, which is the point: it forces the author to
 -- state whether the new guard charges on every path, or to use `guard_write_capability` instead.
+--
+-- IT WENT FROM NINE TO TEN ON 2026-09-20 (SPEC-203, `20260920120000`), and the rule is "may fall
+-- further, must never rise", so this is the case the assertion exists to make somebody justify.
+-- `users` joined the population because it acquired `app.guard_membership_authority`, a bespoke
+-- guard, and `guard_write_capability` was NOT available to it: that guard decides a full bypass
+-- from `new.assigned_user_id` (the LEAD-1 defect) and `public.users` has no such column.
+--
+-- The justification this assertion demands, stated rather than implied: the new guard charges
+-- `app.authorize('MANAGE_USERS')` UNCONDITIONALLY, on every path and every column -- there is no
+-- relationship test, no ownership test and nothing read from the attacking statement's own image
+-- that decides whether the check happens. It has exactly two exemptions, and each is pinned by a
+-- named assertion in `118_membership_authority_and_audit_test.sql` rather than left to be read:
+--   1. the SESSION-LESS platform write (`auth.uid()` is null), which provisioning depends on --
+--      118 assertions 4-5, and mutation control (iii) at 40-41 removes only that branch;
+--   2. the `app.activate_membership()` SELF-CLAIM, without which an ordinary employee could never
+--      claim their own membership -- 118 assertions 30-32, and mutation control (iv) at 42-43.
+-- Both exemptions are from the permission check and NEITHER is an exemption from the audit record.
 -- =============================================================================================
 select set_eq(
   $$select c.relname::text
@@ -260,8 +277,8 @@ select set_eq(
           where t2.tgrelid = c.oid and not t2.tgisinternal and (t2.tgtype & 4) <> 0
             and p2.proname = 'guard_write_capability')$$,
   array['document_versions','invoices','lead_interactions','payment_allocations',
-        'payments','quotation_items','receipts','refunds','user_role_assignments'],
-  'MEAS-2: exactly these NINE tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". Ten until 2026-09-07, when BOOK-3 closed and booking_items left the population by acquiring the unconditional guard');
+        'payments','quotation_items','receipts','refunds','user_role_assignments','users'],
+  'MEAS-2: exactly these TEN tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". Nine until 2026-09-20, when SPEC-203 gave users app.guard_membership_authority -- admissible only because that guard charges app.authorize unconditionally on every path and every column, and its only two exemptions, the session-less platform write and the activate_membership self-claim, are each pinned by a named assertion in 118_membership_authority_and_audit_test.sql');
 
 select * from finish();
 rollback;
