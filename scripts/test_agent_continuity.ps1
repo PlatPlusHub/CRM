@@ -329,6 +329,52 @@ function LaunderHistory{
     Put "changes/$(FxId 1)-corrected.md" (ContractText -Id (FxId 1) -Status Approved -Scope $s)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText "changes/$(FxId 1)-corrected.md");Commit 'approve-the-correction'
 }
+# SPEC-200. Range builders, separated from Reset-Fixture so a mutant can be committed
+# BEFORE the range base - the range under test then carries identical history in both
+# halves and differs only in the evaluator judging it.
+$script:raScopeM='scripts/check_agent_continuity.ps1;_ORVION_CANONICAL/manifest.md'
+function RaBuildBaseline{
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $script:raScopeM -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None');Commit 'ra-base'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $script:raScopeM -Evidence (EvidenceText -Class 'Routine'));Commit 'ra-harden'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $script:raScopeM -Evidence (EvidenceText -Class 'Routine'))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText);Commit 'ra-approve'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $script:raScopeM -Evidence (EvidenceText -Class 'Routine'));Commit 'ra-ip'
+    $b
+}
+# ISOLATED for mutation (ii). A frozen-SECTION mutation is caught twice - once by the
+# endpoint block and again by Validate-CommittedRange's per-commit walk - so inverting the
+# endpoint gate would be killed by the walk and prove nothing about the gate. Acceptance
+# Criteria text is compared by Validate-Checklist at the ENDPOINT ONLY, so it isolates the
+# one predicate under test.
+function RaBuildPostApproval{
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $script:raScopeM -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText);Commit 'ra-approved-base'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $script:raScopeM -Evidence (EvidenceText) -Acceptance 'Silently reworded after Approval.');Commit 'ra-post-acceptance-mutation'
+    $b
+}
+function RaBuildReplay{
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $script:raScopeM -Evidence (EvidenceText -Consumer 'unknown'))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None');Commit 'ra-base-bad'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $script:raScopeM -Evidence (EvidenceText -Consumer 'unknown'))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText);Commit 'ra-approve-bad'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $script:raScopeM -Evidence (EvidenceText -Consumer 'unknown'));Commit 'ra-ip-bad'
+    $b
+}
+function MutationKillRangeAt([string]$Name,[scriptblock]$Build,[string]$Expect,[string]$Find,[string]$Replace,[string]$Family='RANGE-AUTH'){
+    Reset-Fixture;$b=& $Build;$pristine=RunMutantRange $b
+    Reset-Fixture
+    $src=Get-Content -Raw $control
+    $applied=$src.Contains($Find)
+    Put 'scripts/check_agent_continuity.ps1' ($src.Replace($Find,$Replace))
+    CommitOnly 'scripts/check_agent_continuity.ps1' 'mutant'
+    $b2=& $Build;$mutated=RunMutantRange $b2
+    Pop $Family 'mutation'
+    Assert $Name ($applied-and($pristine.Text-match$Expect)-and($mutated.Text-notmatch$Expect)) "applied=$applied pristine-has-expected=$($pristine.Text-match$Expect) mutated-has-expected=$($mutated.Text-match$Expect)`n$($mutated.Text)"
+}
 # One predicate bypassed per run, in a disposable copy of the evaluator. The
 # pristine run must show the expected evidence and the mutated run must not, so a
 # mutation that merely crashes the evaluator cannot be counted as a kill.
@@ -1877,6 +1923,117 @@ exit 0
     Assert '203 APPROVAL-EVIDENCE APPLICABILITY: a non-applicable contract reports NOT APPLICABLE' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
     Pop 'APPLIC' 'accept'
 
+    # ---- RANGE-AUTHORITY BASELINE (SPEC-200) ----
+    # Two defects in one block, failing in opposite directions. CTRL-2A applied a freeze
+    # that had not happened yet: the endpoint compared the governing contract against its
+    # snapshot at the range BASE without consulting $baselineStatus, so a Draft - the one
+    # state CR_LIFECYCLE 8 says may be revised - was treated as frozen authority, and a
+    # legally hardened Draft became permanently unpublishable. CTRL-2B failed to apply a
+    # check that should have happened: the evidence call site was keyed on the range's
+    # ENDPOINT status, so the ordinary push shape (Approve + In Progress together) never
+    # evidence-checked its own Approval.
+    #
+    # Every scope below is CONTROL so the evidence classes are APPLICABLE (SPEC-198);
+    # `allowed.txt` would derive REPOSITORY alone and prove nothing about evidence.
+    $raScope='scripts/check_agent_continuity.ps1;_ORVION_CANONICAL/manifest.md'
+    function RaBase([string]$Ev){
+        Reset-Fixture
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $raScope -Evidence $Ev)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+        Commit 'ra-base-draft'
+        (git -C $root rev-parse HEAD).Trim()
+    }
+    function RaApprove([string]$Ev){
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $raScope -Evidence $Ev)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+        Commit 'ra-approve'
+    }
+    function RaInProgress([string]$Ev){
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $raScope -Evidence $Ev)
+        Commit 'ra-inprogress'
+    }
+
+    # 204. CTRL-2A. A Draft at the base is revised before its own Approval - legal under
+    # CR_LIFECYCLE 8 - and the range must publish.
+    $b=RaBase (EvidenceText)
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $raScope -Evidence (EvidenceText -Class 'Routine'))
+    Commit 'ra-harden-draft'
+    RaApprove (EvidenceText -Class 'Routine')
+    RaInProgress (EvidenceText -Class 'Routine')
+    $r=RunRange $b
+    Assert '204 RANGE-AUTHORITY BASELINE: a Draft revised before its own Approval is publishable' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Pop 'RANGE-AUTH' 'accept'
+
+    # 205-207. CTRL-2B. The base Draft carries the IDENTICAL evidence text, so nothing
+    # mutates and a refusal can only come from the evidence replay - never from a
+    # frozen-authority comparison. Each is asserted on its own predicate's code.
+    foreach($bad in @(
+        @{No='205'; E=(EvidenceText -Consumer 'unknown');    N='an UNKNOWN consumer disposition'},
+        @{No='206'; E=(EvidenceText -Consumer 'unresolved'); N='a named unresolved material consumer'},
+        @{No='207'; E=(EvidenceText -Boundary 'conflict');   N='a gate inside its own red window'})){
+        $b=RaBase $bad.E
+        RaApprove $bad.E
+        RaInProgress $bad.E
+        $r=RunRange $b
+        Assert "$($bad.No) RANGE-AUTHORITY: an intermediate Approval carrying $($bad.N) is refused" `
+            ($r.Code-ne0-and$r.Text-match'CODE: APPROVAL_EVIDENCE'-and$r.Text-notmatch'FROZEN_AUTHORITY_MUTATED') $r.Text
+        Pop 'RANGE-AUTH' 'reject'
+    }
+
+    # 208. POSITIVE. The replay must not become "refuse every intermediate Approval".
+    $b=RaBase (EvidenceText)
+    RaApprove (EvidenceText)
+    RaInProgress (EvidenceText)
+    $r=RunRange $b
+    Assert '208 RANGE-AUTHORITY: a valid intermediate Approval is ADMITTED' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Pop 'RANGE-AUTH' 'accept'
+
+    # 209. NON-EMPTY POPULATION for the replay itself: a range carrying no Draft->Approved
+    # commit must select nothing, so the new code cannot pass by never running.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $raScope -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Commit 'ra-approved-base'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    RaInProgress (EvidenceText)
+    $r=RunRange $b
+    Assert '209 RANGE-AUTHORITY: a range with no Draft-to-Approved commit invokes no replay' ($r.Code-eq0-and$r.Text-notmatch'APPROVAL_EVIDENCE') $r.Text
+    Pop 'RANGE-AUTH' 'accept'
+
+    # 210. The post-Approval freeze is NOT weakened by the baseline gate: from a non-Draft
+    # baseline every existing protection must still fire.
+    Reset-Fixture
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $raScope -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Commit 'ra-approved-baseline'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $raScope -Evidence (EvidenceText -Consumer 'none'))
+    Commit 'ra-post-approval-mutation'
+    $r=RunRange $b
+    Assert '210 RANGE-AUTHORITY: a post-Approval frozen-section mutation is still refused' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED') $r.Text
+    Pop 'RANGE-AUTH' 'reject'
+
+    # 211-212. The ENDPOINT-ONLY protections. Validate-CommittedRange's per-commit walk
+    # compares frozen SECTIONS, so 210 above would still refuse even if the endpoint block
+    # never ran. Acceptance Criteria and Review Gate text are compared by Validate-Checklist
+    # at the endpoint alone, so these two are the only proof that the Draft gate did not
+    # become a post-Approval exemption.
+    foreach($ep in @(
+        @{No='211'; What='Acceptance Criteria'; Arg=@{Acceptance='Silently reworded after Approval.'}; Code='ACCEPTANCE_TEXT_MUTATED'},
+        @{No='212'; What='Review Gate';         Arg=@{Review='Silently reworded after Approval.'};     Code='REVIEW_GATE_TEXT_MUTATED'})){
+        Reset-Fixture
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $raScope -Evidence (EvidenceText))
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+        Commit 'ra-ep-base'
+        $b=(git -C $root rev-parse HEAD).Trim()
+        $epArg=$ep.Arg
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $raScope -Evidence (EvidenceText) @epArg)
+        Commit 'ra-ep-mutation'
+        $r=RunRange $b
+        Assert "$($ep.No) RANGE-AUTHORITY: post-Approval $($ep.What) text is still refused at the endpoint" ($r.Code-ne0-and$r.Text-match$ep.Code) $r.Text
+        Pop 'RANGE-AUTH' 'reject'
+    }
+
     # ---- APPROVAL-EVIDENCE MUTATION POPULATION (SPEC-196) ----
     # A guard that cannot be broken was never load-bearing. Each mutation bypasses
     # exactly ONE predicate in a disposable copy of the evaluator and re-runs the
@@ -1958,10 +2115,21 @@ exit 0
     MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: K cursor chronology' {AllocSetup 1} 'ORVION: READY' `
         'if($ids.Count){return ($ids|Measure-Object -Maximum).Maximum}' 'if($ids.Count){return 0}' 'K-local'
 
+    # ---- RANGE-AUTHORITY MUTATION POPULATION (SPEC-200) ----
+    # The two halves fail in opposite directions, so each is killed by the one scenario
+    # no other guard can rescue. These run through the RANGE, because that is the only
+    # place the repaired predicates live.
+    MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the Draft baseline is not frozen authority' `
+        {RaBuildBaseline} 'MODE: EXECUTE' "        if(`$baselineStatus-ne'Draft'){" '        if($true){'
+    MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the baseline gate is not inverted' `
+        {RaBuildPostApproval} 'ACCEPTANCE_TEXT_MUTATED' "        if(`$baselineStatus-ne'Draft'){" "        if(`$baselineStatus-eq'Draft'){"
+    MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the intermediate Approval replay runs' `
+        {RaBuildReplay} 'CODE: APPROVAL_EVIDENCE' "                if(`$parentStatus-eq'Draft'-and`$statusAt-eq'Approved'){" '                if($false){'
+
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','RANGE-AUTH','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

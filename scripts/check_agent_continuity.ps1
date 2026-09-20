@@ -108,12 +108,18 @@ function Status-FromText([string]$Text){
     $checked[0]
 }
 
+# SPEC-200. Split from `Contract` so the committed-range walk can parse a contract as it
+# stood at a COMMIT rather than as it stands in the working tree. Same parser, same
+# refusals, same codes - a second parser would be a second authority on contract shape.
 function Contract([string]$Path){
     if(!(Test-Path -LiteralPath $Path)){throw "STALE_ACTIVE_CR:$Path"}
-    $t=Get-Content -Raw -LiteralPath $Path
+    Contract-FromText (Get-Content -Raw -LiteralPath $Path) ([IO.Path]::GetFileName($Path)) $Path
+}
+function Contract-FromText([string]$Text,[string]$BaseName,[string]$Path=''){
+    $t=$Text
     $headings=@([regex]::Matches($t,'(?m)^# Change Request — (?<id>SPEC-[0-9]+)\s*$'))
     if($headings.Count-ne1){throw "INVALID_CR_HEADING:count=$($headings.Count)"}
-    $id=$headings[0].Groups['id'].Value.ToUpperInvariant();$base=[IO.Path]::GetFileName($Path)
+    $id=$headings[0].Groups['id'].Value.ToUpperInvariant();$base=$BaseName
     if($base-notmatch('^'+[regex]::Escape($id)+'-')){throw "CR_ID_PATH_MISMATCH:${base}:${id}"}
     $status=Status-FromText $t
 
@@ -709,6 +715,22 @@ function Validate-CommittedRange([string]$Rel){
                 # it supplies the baseline every later commit is judged against.
                 if(-not$frozenBound-and$statusAt-and$statusAt-ne'Draft'){$FrozenBaseline=$text;$frozenBound=$true}
                 if($frozenBound){try{Validate-FrozenAuthority $FrozenBaseline $text}catch{throw "$($_.Exception.Message)@$short"}}
+                # SPEC-200 (CTRL-2B). The evidence call site at the endpoint is keyed on the
+                # RANGE'S final status, so a push carrying `Approve` and `In Progress`
+                # together - the ordinary shape - ended at `In Progress` and never judged
+                # its own Approval. The transition is a property of a COMMIT, so it is
+                # replayed here, on the commit that actually performs it, reading that
+                # commit's own contract text and deriving applicability from that
+                # contract's own Write Scope. A later commit therefore cannot launder an
+                # invalid Approval. The evaluator itself is reused unchanged.
+                $parentText=Read-GitFile "$commit^" $governing
+                $parentStatus=if($null-ne$parentText){try{Status-FromText $parentText}catch{$null}}else{$null}
+                if($parentStatus-eq'Draft'-and$statusAt-eq'Approved'){
+                    try{
+                        $atCommit=Contract-FromText $text ([IO.Path]::GetFileName($governing)) $governing
+                        Evaluate-PreApprovalEvidence $atCommit (Profiles $atCommit.Scope)|Out-Null
+                    }catch{throw "$($_.Exception.Message)@$short"}
+                }
             }
             # Scope comes from the frozen baseline on purpose: a commit that
             # widened its own Write Scope must not thereby authorise its own writes.
@@ -1538,10 +1560,21 @@ try{
     $baselineText=Read-GitFile $base ($rel-replace'\\','/')
     if($null-ne$baselineText){
         $baselineStatus=Status-FromText $baselineText
-        Validate-FrozenAuthority $baselineText $c.Text
-        Validate-EvidenceAppendOnly $baselineText $c
-        Validate-Checklist (ChecklistItems (Section $baselineText 'Acceptance Criteria' -Optional)) $c.Acceptance 'ACCEPTANCE_TEXT_MUTATED'
-        Validate-Checklist (ChecklistItems (Section $baselineText 'Review Gate' -Optional)) $c.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
+        # Authority freezes at APPROVAL (CR_LIFECYCLE.md 8), so a baseline that is still a
+        # DRAFT supplies no approved authority for any of these four to compare against -
+        # a Draft exists precisely to be revised, which is the rule Validate-CommittedRange
+        # already implements through $frozenBound. $baselineStatus was computed here and
+        # never consulted, so a Draft published inside a predecessor's range and then
+        # legally hardened before its own Approval became permanently unpublishable
+        # (CTRL-2A, SPEC-200). Validate-StatusPath and the completion prerequisites stay
+        # OUTSIDE this gate: a transition is always judged, and a Draft base must never
+        # exempt a completion.
+        if($baselineStatus-ne'Draft'){
+            Validate-FrozenAuthority $baselineText $c.Text
+            Validate-EvidenceAppendOnly $baselineText $c
+            Validate-Checklist (ChecklistItems (Section $baselineText 'Acceptance Criteria' -Optional)) $c.Acceptance 'ACCEPTANCE_TEXT_MUTATED'
+            Validate-Checklist (ChecklistItems (Section $baselineText 'Review Gate' -Optional)) $c.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
+        }
         Validate-StatusPath @(Status-Path ($rel-replace'\\','/') $base $c.Status)
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
         # Judged on the Draft -> Approved transition ALONE. That is what freezes
