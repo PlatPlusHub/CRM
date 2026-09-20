@@ -98,7 +98,7 @@ None. `SPEC-193`, `SPEC-194`, `SPEC-195` and `SPEC-197` are terminal `Cancelled`
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -272,35 +272,35 @@ This contract is **originated as a `Draft`**, which `SPEC-202` now requires of e
 
 ## Acceptance Criteria
 
-- [ ] `_ORVION_CANONICAL/27_event_catalog.md` defines `user_deactivated`, `user_reactivated` and `user_identity_bound`, each at `Severity: security`, inside `# Organization And User Events`.
-- [ ] `supabase/migrations/20260920120000_membership_authority_and_audit.sql` exists and registers those three codes in `public.catalog_values` under `event_type` at `sort_order` 932, 933 and 934.
-- [ ] `public.users` carries exactly one `BEFORE INSERT OR UPDATE` trigger executing `app.guard_membership_authority` and exactly one `AFTER INSERT OR UPDATE` trigger executing `app.emit_membership_change`, and neither trigger names `DELETE`.
-- [ ] `app.guard_membership_authority` calls `app.authorize`, `app.emit_membership_change` resolves its actor through `app.current_user_id()`, and neither new function grants `EXECUTE` to `PUBLIC`.
-- [ ] `app.create_tenant_user` no longer contains a `record_event` call, and `app.emit_membership_change` is the only producer of `user_created`.
-- [ ] `users_enforce_identity_binding` and all four RLS policies on `public.users` are byte-identical to their pre-change definitions, and `public.users` carries no `guard_write_capability` trigger.
-- [ ] `supabase/tests/118_membership_authority_and_audit_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, contains at least one `throws_ok`, includes an `activate_membership` regression assertion whose claimant holds the `employee` role, and contains all four mutation controls named in this contract's Mutation Obligation.
-- [ ] That file asserts exactly one `user_created` for the `aal2` RPC call, exactly one each of `user_deactivated`, `user_reactivated` and `user_identity_bound` for their transitions, and zero events for an UPDATE that changes only `full_name`, with each counted population proven non-empty.
-- [ ] That file pins that an administrator deactivating their own membership emits `user_deactivated` with `actor_user_id` null, and states why.
-- [ ] `supabase/tests/10_grant_model_test.sql`'s `MEAS-2` expected array contains `users`, its count wording reads TEN, and its description states why the population was allowed to rise.
-- [ ] `supabase/tests/35_subscription_write_gate_test.sql` clears `request.jwt.claims` before the `identity administration still works` assertion.
-- [ ] `supabase/tests/31_access_revocation_test.sql` clears `request.jwt.claims` immediately before its administrative deactivation, carrying a `SPEC-203` comment explaining why; its plan count, every assertion's SQL, expected value and description, and the claim it sets afterwards are unchanged from their state at the start of this Change Request.
-- [ ] `supabase/tests/75_human_identity_family_test.sql` is byte-identical to its state at the start of this Change Request.
-- [ ] `npx supabase test db` reports **0 failures**, and the number of assertions it executes equals the sum of the literal `plan(N)` declarations across `supabase/tests`.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries `USR-1` and `USR-2` as resolved, `IDENT-2` as resolved by the same emitter, an OPEN `USR-3` row naming `user_permission_grants` and `user_branch_assignments`, and an OPEN `USR-4` row naming `is_platform_user` with its exact reopening trigger.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `users` as `AUDITED-OPEN` / `ADVERSARIAL` citing `SPEC-203-membership-authority-and-audit`, and its Coverage summary agrees with its rows.
-- [ ] `USR-4` is described as DEFER WITH TRIGGER with the same named trigger in `reports/master/MASTER_GAP_REGISTER.md`, in the `users` row's `Next` cell, and in this contract's Notes; no artifact describes it as an owner decision.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md`'s `Session` column definition names the immutable evidence artifact that owns the recorded audit evidence and admits a terminal Change Request where the repository deliberately wrote no session report; the `Findings` and `Next` definitions on that line are unchanged.
-- [ ] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget at every commit of this contract's lifecycle, including the Approve commit that adds the `Active Change Request` pointer and the Complete commit that rewrites `Last Completed`, and no entry belonging to an unrelated Change Request was trimmed to make room.
-- [ ] `reports/README.md` and `_ORVION_CANONICAL/manifest.md`'s `Narrative:` field are byte-identical to their state at the start of this Change Request, and no new file exists under `reports/history/`.
-- [ ] `scripts/verify_database.sql` pins `catalog_values` at **621** in all three places that state it, as an exact equality on a literal, with `CHECK 6a`'s `catalog_types` pin still **71** and every other check unchanged.
-- [ ] The Execution Log records both directions of that repair causally: the pre-change file failing against the new clean-reset state with `expected 618 catalog_values, found 621`, and the updated file passing against the same state, with the three-row difference named as this contract's three `event_type` codes.
-- [ ] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260920120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
-- [ ] The repository migration filename set, the local `supabase_migrations.schema_migrations` set and the Primary ledger recorded in that evidence file contain the same migration identities.
-- [ ] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as `13 of 77`, names SPEC-203 as `Last Completed` in place of SPEC-202, and its `Live state:` sentence publishes the catalog pair as `71/621` with every mutable figure written from a post-deployment measurement.
-- [ ] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match `_ORVION_CANONICAL/manifest.md` by value, and the file is stored with LF line endings.
-- [ ] The Execution Log records the pre-deploy readiness gate's measured result for every one of its items, and records that the only repository-consistency failures standing at that moment were the three bounded classes named in Step 10.
-- [ ] The Execution Log records the Migration CI comparison SPEC-173 deferred to the first Batch-6 database slice: the run identified by the exact candidate SHA, its `db reset`, pgTAP and smoke outcomes, and whether they agree with the local DATABASE evidence and the `orvion-acceptance` run for the same bytes, with any disagreement carried to `reports/master/MASTER_GAP_REGISTER.md` rather than resolved by preferring one side.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted — in particular `changes/SPEC-193-*.md`, `changes/SPEC-194-*.md` and `changes/SPEC-195-*.md` are byte-identical to their state at their respective `Cancel` commits and still `Cancelled`.
+- [x] `_ORVION_CANONICAL/27_event_catalog.md` defines `user_deactivated`, `user_reactivated` and `user_identity_bound`, each at `Severity: security`, inside `# Organization And User Events`.
+- [x] `supabase/migrations/20260920120000_membership_authority_and_audit.sql` exists and registers those three codes in `public.catalog_values` under `event_type` at `sort_order` 932, 933 and 934.
+- [x] `public.users` carries exactly one `BEFORE INSERT OR UPDATE` trigger executing `app.guard_membership_authority` and exactly one `AFTER INSERT OR UPDATE` trigger executing `app.emit_membership_change`, and neither trigger names `DELETE`.
+- [x] `app.guard_membership_authority` calls `app.authorize`, `app.emit_membership_change` resolves its actor through `app.current_user_id()`, and neither new function grants `EXECUTE` to `PUBLIC`.
+- [x] `app.create_tenant_user` no longer contains a `record_event` call, and `app.emit_membership_change` is the only producer of `user_created`.
+- [x] `users_enforce_identity_binding` and all four RLS policies on `public.users` are byte-identical to their pre-change definitions, and `public.users` carries no `guard_write_capability` trigger.
+- [x] `supabase/tests/118_membership_authority_and_audit_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, contains at least one `throws_ok`, includes an `activate_membership` regression assertion whose claimant holds the `employee` role, and contains all four mutation controls named in this contract's Mutation Obligation.
+- [x] That file asserts exactly one `user_created` for the `aal2` RPC call, exactly one each of `user_deactivated`, `user_reactivated` and `user_identity_bound` for their transitions, and zero events for an UPDATE that changes only `full_name`, with each counted population proven non-empty.
+- [x] That file pins that an administrator deactivating their own membership emits `user_deactivated` with `actor_user_id` null, and states why.
+- [x] `supabase/tests/10_grant_model_test.sql`'s `MEAS-2` expected array contains `users`, its count wording reads TEN, and its description states why the population was allowed to rise.
+- [x] `supabase/tests/35_subscription_write_gate_test.sql` clears `request.jwt.claims` before the `identity administration still works` assertion.
+- [x] `supabase/tests/31_access_revocation_test.sql` clears `request.jwt.claims` immediately before its administrative deactivation, carrying a `SPEC-203` comment explaining why; its plan count, every assertion's SQL, expected value and description, and the claim it sets afterwards are unchanged from their state at the start of this Change Request.
+- [x] `supabase/tests/75_human_identity_family_test.sql` is byte-identical to its state at the start of this Change Request.
+- [x] `npx supabase test db` reports **0 failures**, and the number of assertions it executes equals the sum of the literal `plan(N)` declarations across `supabase/tests`.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries `USR-1` and `USR-2` as resolved, `IDENT-2` as resolved by the same emitter, an OPEN `USR-3` row naming `user_permission_grants` and `user_branch_assignments`, and an OPEN `USR-4` row naming `is_platform_user` with its exact reopening trigger.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `users` as `AUDITED-OPEN` / `ADVERSARIAL` citing `SPEC-203-membership-authority-and-audit`, and its Coverage summary agrees with its rows.
+- [x] `USR-4` is described as DEFER WITH TRIGGER with the same named trigger in `reports/master/MASTER_GAP_REGISTER.md`, in the `users` row's `Next` cell, and in this contract's Notes; no artifact describes it as an owner decision.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md`'s `Session` column definition names the immutable evidence artifact that owns the recorded audit evidence and admits a terminal Change Request where the repository deliberately wrote no session report; the `Findings` and `Next` definitions on that line are unchanged.
+- [x] `_ORVION_CANONICAL/manifest.md` is inside Check 5's 7000-character budget at every commit of this contract's lifecycle, including the Approve commit that adds the `Active Change Request` pointer and the Complete commit that rewrites `Last Completed`, and no entry belonging to an unrelated Change Request was trimmed to make room.
+- [x] `reports/README.md` and `_ORVION_CANONICAL/manifest.md`'s `Narrative:` field are byte-identical to their state at the start of this Change Request, and no new file exists under `reports/history/`.
+- [x] `scripts/verify_database.sql` pins `catalog_values` at **621** in all three places that state it, as an exact equality on a literal, with `CHECK 6a`'s `catalog_types` pin still **71** and every other check unchanged.
+- [x] The Execution Log records both directions of that repair causally: the pre-change file failing against the new clean-reset state with `expected 618 catalog_values, found 621`, and the updated file passing against the same state, with the three-row difference named as this contract's three `event_type` codes.
+- [x] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260920120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
+- [x] The repository migration filename set, the local `supabase_migrations.schema_migrations` set and the Primary ledger recorded in that evidence file contain the same migration identities.
+- [x] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as `13 of 77`, names SPEC-203 as `Last Completed` in place of SPEC-202, and its `Live state:` sentence publishes the catalog pair as `71/621` with every mutable figure written from a post-deployment measurement.
+- [x] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match `_ORVION_CANONICAL/manifest.md` by value, and the file is stored with LF line endings.
+- [x] The Execution Log records the pre-deploy readiness gate's measured result for every one of its items, and records that the only repository-consistency failures standing at that moment were the three bounded classes named in Step 10.
+- [x] The Execution Log records the Migration CI comparison SPEC-173 deferred to the first Batch-6 database slice: the run identified by the exact candidate SHA, its `db reset`, pgTAP and smoke outcomes, and whether they agree with the local DATABASE evidence and the `orvion-acceptance` run for the same bytes, with any disagreement carried to `reports/master/MASTER_GAP_REGISTER.md` rather than resolved by preferring one side.
+- [x] No file outside this contract's Write Scope was created, modified or deleted — in particular `changes/SPEC-193-*.md`, `changes/SPEC-194-*.md` and `changes/SPEC-195-*.md` are byte-identical to their state at their respective `Cancel` commits and still `Cancelled`.
 
 ## Execution Log
 
