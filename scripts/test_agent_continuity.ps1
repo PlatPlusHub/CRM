@@ -273,6 +273,23 @@ function ApproveSetup([string]$Evidence,[string]$Scope='scripts/check_agent_cont
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $full -Evidence $Evidence -Capabilities $Capabilities -Additional $Additional)
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
 }
+# SPEC-210. The template shape a contract adopts when the repository does NOT derive
+# Permanent-Control Admission: the subsection is omitted WHOLE, not filled with nine
+# invented obligations about a control it is not adding.
+function EvidenceNoHJ([string]$Consumer='ok'){
+    ((EvidenceText -Consumer $Consumer)-replace'(?ms)\r?\n### Permanent-Control Admission\r?\n.*?(?=\r?\n### SPEC Identity Allocation)','')
+}
+# SPEC-210. Derived write closure. The artifact must EXIST for the closure to bind, so the
+# fixture creates it - a rule that fired on a retired artifact would be a new false red.
+function ClosureSetup([string]$Scope='allowed.txt;_ORVION_CANONICAL/manifest.md',[string]$Artifact='ai-map.json'){
+    Reset-Fixture
+    if($Artifact){Put $Artifact '{}'}
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $Scope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+    Commit 'closure-draft-baseline'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $Scope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+}
 function FrozenEvidenceSetup{
     Reset-Fixture
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope 'scripts/check_agent_continuity.ps1' -Evidence (EvidenceText))
@@ -924,7 +941,12 @@ try{
     Assert '102 stale DATABASE certification cannot complete a later migration state' ($f.Text-match'LOCAL_CERTIFY: READY'-and$r.Code-ne0-and$r.Text-match'COMPLETION_PREREQUISITE:stale certification receipt') "$($f.Text)`n$($r.Text)"
 
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope $dbScope -Capabilities 'supabase-local' -Additional $dbAdditional);$r=Run Finish
-    Assert '103 MUST-ACCEPT: a DATABASE change whose whole protocol succeeds reaches LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'PASS: npx supabase db reset'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_database_parity_evidence\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$null-ne(ReceiptJson)) $r.Text
+    # The protocol commands here are FIXTURES, so this measures ORCHESTRATION - that `-Finish` runs
+    # the profile's commands in order and certifies when each exits 0 - and NOT that the real
+    # protocol can succeed. Titled as reachability, it stayed green across nineteen contracts while
+    # the real parity command was structurally incapable of returning 0 (`PAR-6`). Real reachability
+    # of the parity step is proven by 103d-103k, which run the actual adapter.
+    Assert '103 MUST-ACCEPT ORCHESTRATION: -Finish runs the DATABASE protocol in order and certifies when every (fixture) command exits 0' ($r.Code-eq0-and$r.Text-match'PASS: npx supabase db reset'-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_database_parity_evidence\.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY'-and$null-ne(ReceiptJson)) $r.Text
 
     # ---- Primary evidence: reuse the existing validator, claim only what it proves ----
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope 'allowed.txt;scripts/check_primary_ledger.ps1' -Capabilities 'supabase-primary')
@@ -1729,6 +1751,114 @@ exit 0
     Assert '179 APPROVAL-EVIDENCE: rewriting frozen evidence after approval is refused' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED') $r.Text
     Pop 'HJ' 'reject'
 
+    # ---- PER-PREDICATE APPLICABILITY + DERIVED WRITE CLOSURE (SPEC-210) ----
+    # Applicability used to be ONE answer asserted about THREE questions. These cases fix the
+    # reachable combinations by MEASUREMENT rather than by fixture convenience, and prove both
+    # reproduced directions. Note which combinations are impossible and why: every
+    # permanent-control surface is also an authority surface, so `Test-PermanentControlPath`
+    # is a strict SUBSET of the contract-level trigger. "Permanent Control only", "Consumer
+    # only" and "Boundary only" therefore cannot exist under repository semantics, and
+    # inventing fixtures for them would prove something about the fixture and nothing about
+    # the derivation. That subset relation needs no assertion because it cannot be false:
+    # `Test-EvidenceAuthorityPath` CALLS `Test-PermanentControlPath` in its own `-or` chain, so
+    # a path that derives the expensive predicate derives the trigger by construction. The
+    # three reachable states - {}, {D,F} and {D,F,HJ} - are covered by 228, 221 and 226.
+
+    # 221. THE REPRODUCED FALSE POSITIVE. `AGENTS.md` is a control surface with real consumers
+    # that introduces no permanent control. Before this, its honest omission was refused with
+    # "repository evidence makes it applicable" - a claim about evidence never consulted.
+    $r=ApproveRun (EvidenceNoHJ) 'AGENTS.md'
+    Assert '221 APPLICABILITY: governance prose that adds no permanent control omits H/J and is ADMITTED' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'D;F' 'accept'
+
+    # 222. Consumer Closure still binds on that same contract, so 221 is not "evidence off".
+    $r=ApproveRun (EvidenceNoHJ 'unknown') 'AGENTS.md'
+    Assert '222 APPLICABILITY: omitting H/J does not exempt an UNKNOWN consumer disposition' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'D' 'reject'
+
+    # 223. THE REPRODUCED FALSE NEGATIVE. `scripts/parity_surface.sql` decides what the
+    # structural parity detector MEASURES. It is not a control path and derives no profile,
+    # so SPEC-207 changed it, wrote 68 lines of evidence, and the evaluator returned
+    # NOT APPLICABLE without reading one of them.
+    $r=ApproveRun (EvidenceText -Consumer 'unknown') 'scripts/parity_surface.sql'
+    Assert '223 APPLICABILITY: a detector measurement surface is no longer exempt from evidence' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'D' 'reject'
+
+    # 224. The same surface derives PERMANENT CONTROL, so H/J may not be omitted there.
+    $r=ApproveRun (EvidenceNoHJ) 'scripts/parity_surface.sql'
+    Assert '224 APPLICABILITY: a permanent-control surface may not omit H/J' ($r.Code-ne0-and$r.Text-match'Permanent-Control Admission missing') $r.Text
+    Pop 'HJ' 'reject'
+
+    # 225. Nor may it self-exempt by declaring the subsection NOT APPLICABLE. Omission and
+    # declaration are different acts and both have to be refused.
+    $r=ApproveRun (EvidenceText -Applicability 'subonly') 'scripts/parity_surface.sql'
+    Assert '225 APPLICABILITY: a permanent-control surface may not self-declare H/J not applicable' ($r.Code-ne0-and$r.Text-match'INDETERMINATE') $r.Text
+    Pop 'HJ' 'reject'
+
+    # 226. POSITIVE control for 223-225: the same surface with complete evidence is ADMITTED,
+    # so the refusals above discriminate rather than reject the surface outright.
+    $r=ApproveRun (EvidenceText) 'scripts/parity_surface.sql'
+    Assert '226 APPLICABILITY MUST-ACCEPT: complete evidence on a detector surface is ADMITTED' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'D;F;HJ' 'accept'
+
+    # 227. A predicate the repository does NOT derive may still be VOLUNTEERED, and then binds
+    # fully - a label adds an obligation and never removes one. Declaring H/J APPLICABLE on
+    # `AGENTS.md` with incomplete obligations must fail exactly as it would on a control script.
+    $r=ApproveRun (EvidenceText -HJ 'missing') 'AGENTS.md'
+    Assert '227 APPLICABILITY: a volunteered predicate binds fully' ($r.Code-ne0-and$r.Text-match'permanent-control obligation missing') $r.Text
+    Pop 'HJ' 'reject'
+
+    # 228. LEAN PATH. A trivial reversible repository-only change is not dragged through
+    # evidence that cannot affect it. This is the cost half of the bargain and it must keep
+    # holding, or per-predicate derivation has merely moved ceremony around.
+    Reset-Fixture
+    $lean='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft -Scope $lean)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None');Commit 'lean-draft'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $lean)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    $r=Run 'Gate'
+    Assert '228 APPLICABILITY LEAN PATH: a repository-only change still needs no evidence section' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
+    Pop 'D;F;HJ' 'accept'
+
+    # ---- DERIVED WRITE CLOSURE: the SPEC-203 class, refused at APPROVAL ----
+    # SPEC-203 carried `ai-map.json` and not `MASTER_API_CONTRACT.md`, deployed to Primary, and
+    # only then met mandatory Check L3, which regenerates that file and byte-compares it. A
+    # frozen Write Scope cannot be widened, so the repair lay in a file its own contract
+    # forbade. The artifact must EXIST for the closure to bind, so the fixture creates it -
+    # a rule that fires on a retired artifact would be a new false red.
+    # 229. The reproduced shape: a mandatory verification regenerates a tracked artifact the
+    # frozen Write Scope does not cover.
+    ClosureSetup;$r=Run 'Gate'
+    Assert '229 WRITE-CLOSURE: an artifact a mandatory verification regenerates must be in Write Scope' ($r.Code-ne0-and$r.Text-match'write closure'-and$r.Text-match'ai-map\.json') $r.Text
+    Pop 'WC' 'reject'
+
+    # 230. MUST-ACCEPT: naming it closes the contract. Without this the refusal above could be
+    # satisfied by a guard that simply refused every manifest-writing contract.
+    ClosureSetup 'allowed.txt;_ORVION_CANONICAL/manifest.md;ai-map.json';$r=Run 'Gate'
+    Assert '230 WRITE-CLOSURE MUST-ACCEPT: naming the regenerated artifact is admitted' ($r.Code-eq0-and$r.Text-notmatch'write closure') $r.Text
+    Pop 'WC' 'accept'
+
+    # 231. A closure over an artifact this repository does not have is not a finding. Same
+    # scope as 229, without the file: a retired generator must need no edit here.
+    ClosureSetup 'allowed.txt;_ORVION_CANONICAL/manifest.md' '';$r=Run 'Gate'
+    Assert '231 WRITE-CLOSURE: a closure whose artifact does not exist is not asserted' ($r.Code-eq0-and$r.Text-notmatch'write closure') $r.Text
+    Pop 'WC' 'accept'
+
+    # 232. THE SPEC-203 SHAPE ITSELF. A migration contract that does not carry the API contract
+    # Check L3 regenerates. This is the case the live evaluator ADMITTED.
+    ClosureSetup 'supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md;ai-map.json' 'reports/master/MASTER_API_CONTRACT.md';$r=Run 'Gate'
+    Assert '232 WRITE-CLOSURE SPEC-203: a migration contract without the regenerated API contract is refused' ($r.Code-ne0-and$r.Text-match'write closure'-and$r.Text-match'MASTER_API_CONTRACT') $r.Text
+    Pop 'WC' 'reject'
+
+    # 233. Write closure is judged on Write Scope ALONE and BEFORE applicability, because it is
+    # a property of the write surface: a REPOSITORY-only contract carries the identical Check 7
+    # obligation. Reporting NOT APPLICABLE while the contract cannot finish would be the vacuous
+    # green this whole evidence class exists to refuse.
+    ClosureSetup;$r=Run 'Gate'
+    Assert '233 WRITE-CLOSURE: a NOT-APPLICABLE contract is still held to its write closure' ($r.Code-ne0-and$r.Text-match'write closure'-and$r.Text-notmatch'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
+    Pop 'WC' 'reject'
+
     # ---- SPEC ALLOCATION ----
     # The fixture's own cursor is its baseline commit, which added SPEC-900 alongside two
     # terminal contracts, so the next legal identity is derived - never asserted - below.
@@ -2101,13 +2231,19 @@ exit 0
     # mutated run differs would credit a crash as a kill.
     foreach($m in @(
         @{Fam='D';N='derived applicability / self-exemption (per-class declaration)';S={ApproveSetup (EvidenceText -Class 'Routine' -Applicability 'subonly')};E='CODE: APPROVAL_EVIDENCE'
-          F="if((EvidenceField `$sub 'Applicability')-ne'APPLICABLE'){";R='if($false){'}
+          F="if(`$state-ne'APPLICABLE'){";R='if($false){'}
+        # SPEC-210. The two NEW load-bearing predicates. Each is killed on a scenario only it
+        # can refuse, so no neighbouring guard can supply the kill on its behalf.
+        @{Fam='APPLIC';N='applicability: permanent-control surface derivation';S={ApproveSetup (EvidenceNoHJ) 'scripts/parity_surface.sql'};E='CODE: APPROVAL_EVIDENCE'
+          F="'Permanent-Control Admission'=@(`$Contract.Scope|Where-Object{Test-PermanentControlPath `$_}).Count-gt0";R="'Permanent-Control Admission'=`$false"}
+        @{Fam='WC';N='write closure: regenerated artifact absent from Write Scope';S={ClosureSetup};E='CODE: APPROVAL_EVIDENCE'
+          F="if(`$Contract.Scope-notcontains`$rule.Needs){";R='if($false){'}
         # APPROVAL-EVIDENCE APPLICABILITY POPULATION (SPEC-198). Each scenario below is
         # applicable through exactly ONE arm, so no other arm can kill its mutation for it.
         @{Fam='APPLIC';N='applicability: derived non-REPOSITORY profile';S={ApproveSetup (EvidenceText -Consumer 'unknown') 'supabase/migrations/20260101000000_fixture.sql' 'supabase-local' 'pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1'};E='SUBJECT: INDETERMINATE'
           F="`$applicable=@(`$Profiles|Where-Object{`$_-ne'REPOSITORY'}).Count-gt0";R="`$applicable=(`$Profiles-contains'CONTROL')"}
         @{Fam='APPLIC';N='applicability: Edge Function execution surface';S={ApproveSetup (EvidenceText -Consumer 'unknown') 'supabase/functions/storage-executor/index.ts'};E='SUBJECT: INDETERMINATE'
-          F="if(`$p-match'^supabase/functions/'){`$applicable=`$true;break}";R=''}
+          F="if(Test-EvidenceAuthorityPath `$p){`$applicable=`$true;break}";R=''}
         @{Fam='APPLIC';N='applicability: declared irreversible action';S={ApproveSetup (EvidenceText -Consumer 'unknown' -Irreversible 'Step 2') 'allowed.txt'};E='SUBJECT: INDETERMINATE'
           F="if(`$irr-and`$irr-notmatch'^\s*NONE\b'){`$applicable=`$true}";R='if($false){}'}
         # The vocabulary itself is load-bearing: reporting PASS for a section nobody read
@@ -2166,7 +2302,7 @@ exit 0
     # Both are proven separately; a scenario that trips both would prove neither.
     MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: derived applicability / self-exemption (derived table)' `
         {ApproveSetup (EvidenceText -Class 'Routine' -Applicability 'tableonly')} 'CODE: APPROVAL_EVIDENCE' `
-        "if(`$row[-1]-ne'APPLICABLE'){throw 'APPROVAL_EVIDENCE:INDETERMINATE:derived applicability contradicts repository evidence'}" '' 'D'
+        "if(`$derived.Contains(`$row[0])-and`$derived[`$row[0]]-and`$row[-1]-ne'APPLICABLE'){" 'if($false){' 'D'
 
     # Cursor chronology is proven by an ACCEPTING scenario on purpose. Shifting the
     # cursor would merely move WHICH commit a rejecting scenario blames, which is not
@@ -2297,7 +2433,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
