@@ -83,11 +83,50 @@ con as (select md5(string_agg(h, ',' order by h)) x, count(*) n from (
 
 -- Grants: SEC-1's entire model is "which table can `authenticated` write". A widened grant is a
 -- silent privilege escalation that no function hash can see.
+--
+-- PAR-5 (2026-09-20): `service_role` WAS hashed here and is not any more, because comparing it
+-- measured the hosting platform rather than this repository. The boundary was MEASURED on both
+-- sides, not inferred from the role name -- which matters, because ORVION does author two
+-- `service_role` TABLE grants (`202607059800` on `user_permission_grants`, `202607054900` on
+-- `document_storage_findings`), so "all service_role state is platform-owned" would have been
+-- false. What is actually true:
+--
+--   * `authenticated` was already IDENTICAL on both sides -- 402bf96caafc025268889650138405e8,
+--     194 rows (186 `public` + 8 `reporting`) -- and `anon` holds ZERO rows on both.
+--   * The whole divergence was `service_role`, 333 rows, all DML, all PRIMARY-ONLY. Local was a
+--     strict SUBSET: Primary's matching subset hashed to exactly local's full set
+--     (073ebdf2036022101a3ee09d23f833c9, 262 rows), so the difference contained no local fact
+--     and no repository-authored grant.
+--   * ROOT CAUSE is the `postgres`-owned DEFAULT ACL for schema `public`, which differs by
+--     environment: Primary `service_role=arwdDxtm`, local `service_role=Dxtm`. NO migration in
+--     this repository issues `alter default privileges` for `service_role` at all -- the only two
+--     such statements, in `202607050200`, target `anon` and `authenticated`. Neither baseline is
+--     ours. `202607050200` line 31 says so in words: "service_role is deliberately untouched".
+--
+-- WHY THIS IS NOT "EDITING THE DETECTOR TO MAKE IT GREEN", which is the thing to be suspicious of
+-- here. The 333 rows could not discriminate anything. Primary's default ACL grants `service_role`
+-- every privilege on every `public` table, so those rows are present there whether or not the
+-- migration that grants them ever ran: their absence is UNOBSERVABLE across this bridge, and their
+-- presence proves nothing. Meanwhile the standing red actively HID the drift this surface exists
+-- to catch -- measured: revoking a real `authenticated` privilege moved `grants` from
+-- c921119e7ed28334a27ed5a3e6ed2edf to d0527617e3fec0e793ee17f536bcde10 and left the reported
+-- verdict at `PRIMARY STRUCTURE DRIFT`, exactly as before, because the surface was already red.
+-- After this change the same mutation flips the verdict from CLEAN to DRIFT.
+--
+-- WHAT IS KNOWINGLY GIVEN UP, recorded as PAR-7 rather than left unsaid: drift in those two
+-- repository-authored `service_role` grants is no longer compared. It never was detectable here
+-- (see above), and neither `supabase/tests/10_grant_model_test.sql` nor `verify_database.sql`
+-- CHECK 5e pins them -- both assert `anon` and `authenticated` only.
+--
+-- REOPENING TRIGGER: the first migration that deliberately REVOKES a `service_role` privilege as a
+-- security decision, or any change to the default-ACL state of either environment. At that point
+-- `service_role` becomes a role ORVION manages and must be compared again -- but by then the two
+-- baselines must be reconciled first, or this same false red returns.
 gr as (select md5(string_agg(h, ',' order by h)) x, count(*) n from (
   select md5(grantee || '|' || table_schema || '.' || table_name || '|' || privilege_type) h
   from information_schema.role_table_grants
   where table_schema in ('public','app','reporting')
-    and grantee in ('authenticated','anon','service_role')) t),
+    and grantee in ('authenticated','anon')) t),
 
 -- `ordinal_position` is in the hash on purpose. CUST-1 was a consumer that read the FIRST column of
 -- a key and silently became a no-op when TENANT-1 made those keys composite; position IS meaning to
