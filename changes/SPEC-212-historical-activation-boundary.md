@@ -103,7 +103,7 @@ successor in `scripts/check_agent_continuity.ps1`'s own identity-allocation head
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -219,29 +219,108 @@ assertion — to be the commit that introduced the guard and whose first parent 
 
 ## Acceptance Criteria
 
-- [ ] `Historical-Guard-IsActive` contains no reference to any diagnostic literal, and renaming
+- [x] `Historical-Guard-IsActive` contains no reference to any diagnostic literal, and renaming
       `HISTORICAL_CR_MUTATION` throughout the evaluator does not change whether terminal immutability
       applies.
-- [ ] `CR_LIFECYCLE.md` declares the activation boundary
+- [x] `CR_LIFECYCLE.md` declares the activation boundary
       `5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`, and that commit is proven from git to be the one
       that introduced the guard while its first parent lacks it.
-- [ ] A ref before the declared boundary is not retroactively judged; a ref at the boundary and every
+- [x] A ref before the declared boundary is not retroactively judged; a ref at the boundary and every
       descendant is judged.
-- [ ] A missing declaration throws `HISTORICAL_ACTIVATION_MARKER_MISSING`, a malformed one throws
+- [x] A missing declaration throws `HISTORICAL_ACTIVATION_MARKER_MISSING`, a malformed one throws
       `HISTORICAL_ACTIVATION_MARKER_MALFORMED`, and an unresolvable boundary protects rather than
       disables.
-- [ ] Both the ancestry predicate and the unresolvable-boundary fallback are independently
+- [x] Both the ancestry predicate and the unresolvable-boundary fallback are independently
       mutation-killed, and the `CTRL1` family reports non-zero accept, reject and mutation counts.
-- [ ] Terminal `Complete` and `Cancelled` mutation, closed-contract rename and deletion, the
+- [x] Terminal `Complete` and `Cancelled` mutation, closed-contract rename and deletion, the
       terminal-inside-range path and the reopen/reclose path all remain refused.
-- [ ] `scripts/test_agent_continuity.ps1` reports `0 failed`, and legal lifecycles including
+- [x] `scripts/test_agent_continuity.ps1` reports `0 failed`, and legal lifecycles including
       born-in-range contracts still pass.
-- [ ] No file outside Write Scope is modified; no `DATABASE` profile is derived; `supabase/` is
+- [x] No file outside Write Scope is modified; no `DATABASE` profile is derived; `supabase/` is
       untouched and no Supabase project is contacted; Batch 6 Slice 13 remains unopened.
 
 ## Execution Log
 
-None.
+### 2026-09-21 — Fresh reproduction on the published baseline
+
+Reproduced at `3fc9ca2` in a disposable worktree, NOT inherited from the prior session. The governing
+contract carried BOTH `scripts/check_agent_continuity.ps1` and the terminal contract in its Write
+Scope, so `OUT_OF_SCOPE_WRITE` could not be mistaken for the control under test:
+
+- unmodified evaluator: **exit 1**, `CODE: HISTORICAL_CR_MUTATION`;
+- same range, literal renamed INSIDE it: **exit 0**, terminal tamper ADMITTED.
+
+TWO EARLIER SHAPES WERE DISCARDED rather than reported as evidence. Renaming before the base commit
+moves the activation probe and the emitter together, so the guard stays active and proves nothing.
+A rename left outside the governing Write Scope is refused by `OUT_OF_SCOPE_WRITE`, which is
+incidental defence. Only the third shape isolates the mechanism.
+
+WHY THE EXISTING SUITE NEVER CAUGHT IT, established by reading the callers rather than assumed:
+cases 23/24/25/65 run a LOCAL Gate, where the function returns `$true` before any activation
+decision; 118/119 exercise the separate UNGATED in-range terminal set. No assertion reached the
+activation decision at all.
+
+### 2026-09-21 — Steps 1-3: the repair
+
+`Historical-Guard-IsActive` now reads `Historical CR Immutability Enforcement` from the current
+lifecycle authority and answers by Git ancestry of `$Ref` against it. The function body contains no
+diagnostic literal of any kind. Missing throws `HISTORICAL_ACTIVATION_MARKER_MISSING`, malformed
+throws `HISTORICAL_ACTIVATION_MARKER_MALFORMED`, and a boundary this repository cannot resolve
+returns ACTIVE. The stale claim in the identity-allocation header — that this defect "still carries"
+and is "recorded as a successor rather than repaired here" — is corrected in the same commit.
+
+BOUNDARY, measured from this repository's own history: `5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`
+carries the guard, its first parent `dfcb44a8c233f3e0d88bb2900b21693f2b5091b5` does not, and
+`5d78aac` is on the first-parent history of `main`. The `SPEC Allocation Enforcement` marker was
+REFUSED as the value: it first appears at `fcf065a`, **eight days later**, so reusing it would have
+unprotected every range based between the two commits. Truth table asserted commit by commit —
+`dfcb44a` inactive; `5d78aac`, `fcf065a`, `c801bd5` and `HEAD` active.
+
+ONE REPAIR-TIME DEFECT, caught by that truth table rather than by inspection. Assigning
+`$LASTEXITCODE=0` inside a PowerShell function creates a FUNCTION-SCOPED shadow, so the following
+read returned a stale `0` instead of git's exit code and the guard read ACTIVE for every ref,
+including pre-activation ones. Safe direction, still wrong: it retroactively judges history the
+original boundary never covered. Each exit code is now captured into a distinct local immediately
+and reset only through `$global:`.
+
+### 2026-09-21 — Step 3: proof, and three defects found in this contract's own tests
+
+Cases `119b`-`119i` added, plus script-level `Ctrl1Base`, `Ctrl1Tamper`, `Ctrl1Build`,
+`Ctrl1BuildResolvable` and `Ctrl1Range`, two mutation kills, and `CTRL1` added to the
+`NON-EMPTY POPULATIONS` family list.
+
+1. The first numbering collided with existing cases 120-127; renumbered into the free `119x` band,
+   which also places them beside the terminality family they extend.
+2. The rename case used `RunRange`, which executes the SOURCE evaluator — so the rename landed only
+   in the fixture tree and the case passed for the wrong reason, under the ORIGINAL literal. Switched
+   to `RunMutantRange`, which executes the fixture's own copy. Had the failure text not been read,
+   this would have shipped a test that proves nothing about renaming.
+3. The ancestry mutation killed NOTHING: `Ctrl1Build` declares the real boundary SHA, which does not
+   resolve inside a synthetic fixture, so the guard returned at the fail-closed branch before ever
+   reaching the ancestry line. `Ctrl1BuildResolvable` declares a fixture-local boundary that does
+   resolve, and the mutation now kills.
+
+FOUR PRE-EXISTING FIXTURES replace `CR_LIFECYCLE.md` wholesale to test ALLOCATION-marker absence, and
+so also lost the historical declaration, breaking case 219 and its mutation. The guard was NOT
+softened to make them green — throwing matches the `SPEC_ALLOCATION_MARKER_MISSING` precedent this
+repository already sets, and loud beats silent. The four fixtures now keep the historical boundary
+while still removing the allocation marker, preserving exactly what they were testing. Every
+`Put 'CR_LIFECYCLE.md'` site was audited; the only one without the declaration is case `119d`, which
+exists to prove its absence fails loudly.
+
+### 2026-09-21 — Step 4: verification
+
+`pwsh -NoProfile -File scripts/test_agent_continuity.ps1` -> **`AGENT CONTROL TESTS: 305 passed,
+0 failed`, exit 0**, on the real repository at `aebc5e5`. Baseline at `3fc9ca2` was 294. Eight new
+cases, two new mutation kills, and every family — including the new `CTRL1` — reporting non-zero
+accept, reject and mutation counts.
+
+`CTRL-1` recorded RESOLVED in `reports/master/MASTER_GAP_REGISTER.md` with the original reproduction
+preserved, per the register's never-delete policy. The manifest's only legal change for this contract
+is the `Complete` transition (`CR_LIFECYCLE.md` §9), so it is made there.
+
+SCOPE. No `DATABASE` profile is derived; the contract derives `CONTROL, REPOSITORY` only.
+`supabase/` shows zero changed files and no Supabase project was contacted at any point.
 
 ## Verification Notes
 
