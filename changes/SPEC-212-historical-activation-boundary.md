@@ -324,9 +324,55 @@ SCOPE. No `DATABASE` profile is derived; the contract derives `CONTROL, REPOSITO
 
 ## Verification Notes
 
-None.
+### 2026-09-21 — Review
+
+Reviewed against the frozen Objective, Risks and Acceptance Criteria through the convergence lens.
+
+MISSING — none. Activation is a declared lifecycle fact resolved by ancestry, the original boundary is
+preserved, and the diagnostic literal no longer participates in the decision.
+
+PARTIAL — none.
+
+CONTRADICTORY — none. `HISTORICAL_CR_MUTATION` is still the emitted diagnostic and is still asserted
+by cases 65, 118, 119 and 128; only ACTIVATION stopped reading it, so those cases keep proving exactly
+what they always proved.
+
+UNREQUESTED — none. `ENGINEERING_METHOD.md`, `AGENTS.md`, `GOVERNANCE.md`, `changes/TEMPLATE.md`,
+workflows and every database mechanism are untouched. The one edit beyond the mechanism is the
+identity-allocation header, which asserted this defect was unrepaired and would otherwise have become
+false the moment this contract landed.
+
+DUPLICATED — none. No registry, no second authority, no new file. The declared-marker pattern
+`SPEC-196` already established is reused; only its VALUE is deliberately not shared.
+
+MORE COMPLEX THAN NECESSARY — no. One rewritten function, one small parser, one declared line.
+
+NO PROTECTION WEAKENED, checked case by case rather than asserted. The truth table is identical to the
+one the diagnostic probe produced: `dfcb44a` inactive, `5d78aac` active, every descendant active. The
+local-mode short circuit is unchanged. Missing and malformed declarations throw rather than returning
+false, matching the `SPEC_ALLOCATION_MARKER_MISSING` precedent. When four pre-existing fixtures broke
+because they strip `CR_LIFECYCLE.md` wholesale, the fixtures were corrected and the guard was not
+softened.
+
+INCIDENTAL DEFENCE WAS EXCLUDED BY CONSTRUCTION. Both the renamed evaluator and the tampered contract
+sit inside the governing Write Scope in every CTRL-1 case, so `OUT_OF_SCOPE_WRITE` cannot stand in for
+the control under test. Two earlier reproduction shapes that would have credited the wrong mechanism
+were discarded.
+
+CERTIFICATION. `-Finish` at `b6bbecb`: all eight verifications PASS — the control suite, the four
+standalone guards, `check_repository_consistency.ps1`, `git diff --check` and `generate-ai-map.ps1` —
+ending `LOCAL_CERTIFY: READY`, exit 0. The suite reports `305 passed, 0 failed` against a 294 baseline.
+
+PRE-APPROVAL. `APPROVAL_EVIDENCE: PASS`, genuinely evaluated: the contract derives `CONTROL,
+REPOSITORY`, and Permanent-Control Admission derives applicable because Write Scope reaches
+`scripts/check_*` and `scripts/test_*`. Derived write closure bound and was satisfied.
+
+PRIMARY was not contacted. SECONDARY was not contacted. `supabase/` has zero changed files and no
+`DATABASE` profile is derived.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Confirmed Complete — the frozen Objective is met, the original activation boundary is
+- [x] Confirmed Complete — the frozen Objective is met, the original activation boundary is
       preserved exactly, no existing protection is weakened, and no new authority was created.
