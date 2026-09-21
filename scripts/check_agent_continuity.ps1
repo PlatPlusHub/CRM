@@ -215,8 +215,11 @@ function Base-HasId([string]$Ref,[string]$Id){
 # Activation rides on a DECLARED marker in the identity authority rather than on
 # a diagnostic literal. The previous pattern read an error string out of the
 # evaluator's own source, so a behaviour-preserving rename silently disabled it -
-# reproduced against `HISTORICAL_CR_MUTATION`, which still carries that defect
-# and is recorded as a successor rather than repaired here.
+# reproduced against `HISTORICAL_CR_MUTATION`, which carried the same defect until
+# `CTRL-1` was closed. Terminal-contract immutability now declares its own activation
+# boundary in this same authority and resolves it by ancestry; see
+# `Historical-Guard-IsActive` below, which reuses this pattern but deliberately not
+# this marker's VALUE, because the two activated eight days apart.
 # ---------------------------------------------------------------------------
 $script:AllocationAuthority='CR_LIFECYCLE.md'
 function Get-AllocationMarker([string]$Text){
@@ -365,10 +368,59 @@ function Validate-SpecAllocation([object[]]$Records,[string]$Ref,[switch]$SkipMa
     }
 }
 
+# CTRL-1. HISTORICAL IMMUTABILITY ACTIVATION IS A DECLARED LIFECYCLE FACT, NOT A
+# DIAGNOSTIC STRING.
+#
+# The previous form read the error literal `HISTORICAL_CR_MUTATION` out of the OLD copy of
+# this script at the base ref, so a behaviour-preserving rename landing inside a range made
+# the new evaluator search the base for a literal the base could not contain, and terminal
+# immutability switched itself off in silence. Reproduced before this repair, with the rename
+# and the tamper BOTH inside the governing Write Scope so that no incidental guard could
+# supply the refusal: the control run exits 1 on `HISTORICAL_CR_MUTATION`, and the renamed run
+# exits 0 and ADMITS modification of a contract that was already terminal at the base.
+#
+# The boundary is DECLARED, and it is the ORIGINAL one. Activation began at
+# `5d78aacd5335278c5b03edb0b3f969bd86e6b9c4` (2026-09-11), whose first parent
+# `dfcb44a8c233f3e0d88bb2900b21693f2b5091b5` carries no guard at all. The `SPEC Allocation
+# Enforcement` marker is NOT reused as the cutover even though it is the same pattern: it
+# first appears at `fcf065a` on 2026-09-19, eight days later, so adopting it would move the
+# cutover forward and leave the history between the two boundaries unprotected. That is a
+# weakening, and the point of this repair is that the truth table does not move.
+#
+# The marker is read from the CURRENT authority rather than at `$Ref`, because the boundary is
+# a fixed historical fact that old refs cannot be expected to know about; reading it at `$Ref`
+# would reintroduce exactly the defect being repaired. `CR_LIFECYCLE.md` is a control surface,
+# so moving the declared value requires a contract that names it.
+$script:HistoricalAuthority='CR_LIFECYCLE.md'
+function Get-HistoricalActivationBoundary([string]$Text){
+    if($null-eq$Text){return $null}
+    $m=[regex]::Match($Text,'(?m)^Historical CR Immutability Enforcement:\s*(?<v>\S+)\s*$')
+    if(-not $m.Success){return $null}
+    $m.Groups['v'].Value
+}
 function Historical-Guard-IsActive([string]$Ref){
     if(!$BaseRef){return $true}
-    $old=Read-GitFile $Ref 'scripts/check_agent_continuity.ps1'
-    $null-ne$old-and$old.Contains('HISTORICAL_CR_MUTATION')
+    $local=Join-Path $Root $script:HistoricalAuthority
+    $text=if(Test-Path -LiteralPath $local){[IO.File]::ReadAllText($local)}else{$null}
+    $boundary=Get-HistoricalActivationBoundary $text
+    # Missing or malformed activation evidence FAILS LOUDLY. Returning false here would be the
+    # silent deactivation this repair exists to remove.
+    if($null-eq$boundary){throw 'HISTORICAL_ACTIVATION_MARKER_MISSING'}
+    if($boundary-notmatch'^[0-9a-f]{40}$'){throw "HISTORICAL_ACTIVATION_MARKER_MALFORMED:$boundary"}
+    # `$LASTEXITCODE` is captured into a DISTINCT local immediately, and only ever reset through
+    # `$global:`. Writing `$LASTEXITCODE=0` inside a function creates a function-scoped shadow, so
+    # the next read returns that stale 0 instead of the exit code git actually produced - which
+    # made this guard read ACTIVE for every ref, including pre-activation ones. That direction is
+    # safe but still wrong: it retroactively judges history the original boundary never covered.
+    git -C $Root cat-file -e "$boundary^{commit}" 2>$null|Out-Null
+    $knownCode=$LASTEXITCODE
+    # A boundary this repository does not CONTAIN - a synthetic fixture, a shallow clone - must
+    # never read as "immutability is off". Unprovable pre-activation means protect.
+    if($knownCode-ne0){$global:LASTEXITCODE=0;return $true}
+    git -C $Root merge-base --is-ancestor $boundary $Ref 2>$null|Out-Null
+    $ancestorCode=$LASTEXITCODE
+    $global:LASTEXITCODE=0
+    $ancestorCode-eq0
 }
 
 function Validate-HistoryAndIds([object[]]$Records,[string]$Ref){

@@ -279,6 +279,51 @@ function ApproveSetup([string]$Evidence,[string]$Scope='scripts/check_agent_cont
 function EvidenceNoHJ([string]$Consumer='ok'){
     ((EvidenceText -Consumer $Consumer)-replace'(?ms)\r?\n### Permanent-Control Admission\r?\n.*?(?=\r?\n### SPEC Identity Allocation)','')
 }
+# CTRL-1. A range whose BASE already holds a terminal contract, which is the only shape that
+# reaches `Historical-Guard-IsActive`'s activation decision: 23/24/25/65 run a LOCAL Gate where
+# it is unconditionally active, and 118/119 exercise the separate UNGATED in-range path. Both the
+# script and the terminal contract sit in the governing Write Scope so that `OUT_OF_SCOPE_WRITE`
+# cannot supply an incidental refusal.
+function Ctrl1Base([string]$Marker='5d78aacd5335278c5b03edb0b3f969bd86e6b9c4'){
+    $scope='changes/SPEC-800-complete.md;allowed.txt;scripts/check_agent_continuity.ps1'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $scope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    if($Marker-eq''){Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n"}
+    else{Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: $Marker`n"}
+    Commit 'ctrl1-base'
+    (git -C $root rev-parse HEAD).Trim()
+}
+function Ctrl1Tamper{
+    Add-Content -LiteralPath (Join-Path $root 'changes/SPEC-800-complete.md') -Value 'TAMPERED'
+    Commit 'tamper a contract terminal at the base'
+}
+# Build shape for MutationKillRangeAt: establish the base, tamper, hand back the base ref.
+function Ctrl1Build{ $b=Ctrl1Base; Ctrl1Tamper; $b }
+# The ancestry predicate is only REACHED when the declared boundary RESOLVES in this repository;
+# otherwise the fail-closed branch returns first. Mutating a line that never executes kills
+# nothing, so this build declares a boundary that does exist here - the base commit itself.
+function Ctrl1BuildResolvable{
+    $scope='changes/SPEC-800-complete.md;allowed.txt;CR_LIFECYCLE.md'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $scope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Put 'allowed.txt' 'ctrl1-resolvable';Commit 'ctrl1-resolvable-base'
+    $b=(git -C $root rev-parse HEAD).Trim()
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: $b`n"
+    Commit 'declare a boundary this repository contains'
+    Ctrl1Tamper
+    $b
+}
+function Ctrl1Range([string]$Marker='5d78aacd5335278c5b03edb0b3f969bd86e6b9c4',[switch]$Rename){
+    Reset-Fixture
+    $b=Ctrl1Base $Marker
+    if($Rename){
+        Put 'scripts/check_agent_continuity.ps1' ((Get-Content -Raw $control).Replace('HISTORICAL_CR_MUTATION','TERMINAL_CONTRACT_MUTATION'))
+        Commit 'behaviour-preserving diagnostic rename'
+    }
+    Ctrl1Tamper
+    RunMutantRange $b
+}
+
 # SPEC-210. Derived write closure. The artifact must EXIST for the closure to bind, so the
 # fixture creates it - a rule that fired on a retired artifact would be a new false red.
 function ClosureSetup([string]$Scope='allowed.txt;_ORVION_CANONICAL/manifest.md',[string]$Artifact='ai-map.json'){
@@ -318,7 +363,7 @@ function NonCrOriginSetup{
     PlanBaseline;Put "supabase/migrations/20260102_$(FxId 40)_fixture.sql" 'select 1;';Commit 'non-cr-origin'
     Put "changes/$(FxId 1)-still-next.md" (ContractText -Id (FxId 1) -Status Draft)
 }
-function NoMarkerSetup{PlanBaseline;Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n";Put "changes/$(FxId 1)-no-marker.md" (ContractText -Id (FxId 1) -Status Draft)}
+function NoMarkerSetup{PlanBaseline;Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n";Put "changes/$(FxId 1)-no-marker.md" (ContractText -Id (FxId 1) -Status Draft)}
 # Mutations must be EXECUTED, not merely written: `Run` invokes the source
 # evaluator against the sandbox, so a mutated sandbox copy would never run and
 # every mutation would report a false kill. These invoke the sandbox's own copy.
@@ -430,7 +475,11 @@ try{
     # activation to be testable in both directions. It is placed here, not written by a
     # later commit, for the same reason `publish_candidate.ps1` is: introducing it later
     # would be an OUT_OF_SCOPE_WRITE and the K cases would fail for the wrong reason.
-    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n"
+    # CTRL-1. The historical-immutability boundary is declared here too, carrying the REAL
+    # activation SHA. This synthetic repository does not contain that commit, and the guard
+    # treats an unresolvable boundary as ACTIVE - so every existing range case keeps exactly the
+    # behaviour it had when activation was decided by a diagnostic literal.
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n"
     Put 'context.txt' 'readable';Put 'allowed.txt' 'baseline';Put 'product-history.txt' 'SPEC-155 commission lineage'
     Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
     Put 'changes/SPEC-900-fixture.md' (ContractText)
@@ -1281,6 +1330,80 @@ exit 0
     $r=RunRange 'HEAD~3'
     Assert '119 a terminal contract reopened and re-closed inside one range is rejected' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION|ILLEGAL_STATUS_TRANSITION:Complete->In Progress') $r.Text
 
+    # ---- CTRL-1: terminal immutability ACTIVATION is a declared fact, not a diagnostic ----
+    # 23/24/25/65 protect contracts terminal before a LOCAL Gate, where the guard is
+    # unconditionally active. 118/119 protect contracts that close INSIDE a range, which is the
+    # UNGATED path. Neither reaches `Historical-Guard-IsActive`'s activation decision - which is
+    # exactly why CTRL-1 survived them. These cases attack that decision directly.
+    #
+    # Every case below puts BOTH the renamed script and the tampered contract inside the
+    # governing Write Scope, so `OUT_OF_SCOPE_WRITE` cannot supply an incidental refusal and the
+    # only mechanism that can refuse is the one under test.
+    # 119b. THE CTRL-1 REPRODUCTION, now a regression. Before this repair the same range exited 0
+    # and admitted the tamper; the diagnostic name must be irrelevant to whether the rule applies.
+    $r=Ctrl1Range -Rename
+    Assert '119b CTRL-1: renaming the diagnostic does not disable terminal-contract immutability' ($r.Code-ne0-and$r.Text-match'TERMINAL_CONTRACT_MUTATION') $r.Text
+    Pop 'CTRL1' 'reject'
+
+    # 119c. The same range without the rename. Pairing them proves 120 measures the rename rather
+    # than some property of the fixture.
+    $r=Ctrl1Range
+    Assert '119c CTRL-1: a contract terminal at the base is refused under its original diagnostic' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION') $r.Text
+    Pop 'CTRL1' 'reject'
+
+    # 119d/119e. FAIL LOUDLY. Deleting or corrupting the declared boundary must never read as
+    # "immutability is off" - that silent direction is the defect being repaired.
+    $r=Ctrl1Range -Marker ''
+    Assert '119d CTRL-1: a missing activation boundary fails loudly' ($r.Code-ne0-and$r.Text-match'HISTORICAL_ACTIVATION_MARKER_MISSING') $r.Text
+    Pop 'CTRL1' 'reject'
+
+    $r=Ctrl1Range -Marker 'not-a-sha'
+    Assert '119e CTRL-1: a malformed activation boundary fails loudly' ($r.Code-ne0-and$r.Text-match'HISTORICAL_ACTIVATION_MARKER_MALFORMED') $r.Text
+    Pop 'CTRL1' 'reject'
+
+    # 119f. A boundary this repository does not contain is treated as ACTIVE. Being unable to prove
+    # a ref is pre-activation is not a reason to stop protecting it, and it is what lets synthetic
+    # fixtures and shallow clones keep the protection they always had.
+    $r=Ctrl1Range -Marker '0123456789abcdef0123456789abcdef01234567'
+    Assert '119f CTRL-1: an unresolvable boundary protects rather than disables' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION') $r.Text
+    Pop 'CTRL1' 'reject'
+
+    # 119g/119h. THE ANCESTRY PREDICATE ITSELF, measured on real fixture commits rather than on the
+    # real repository, so the mechanism is proven without depending on this checkout's history.
+    # A ref BEFORE the declared boundary is not retroactively judged; a ref AT it is.
+    Reset-Fixture
+    $scope='changes/SPEC-800-complete.md;allowed.txt;CR_LIFECYCLE.md'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $scope)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText)
+    Put 'allowed.txt' 'pre-activation';Commit 'pre-activation-commit'
+    $preRef=(git -C $root rev-parse HEAD).Trim()
+    Put 'allowed.txt' 'activation';Commit 'activation-commit'
+    $actRef=(git -C $root rev-parse HEAD).Trim()
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: $actRef`n"
+    Commit 'declare the boundary at the activation commit'
+    Add-Content -LiteralPath (Join-Path $root 'changes/SPEC-800-complete.md') -Value 'TAMPERED'
+    Commit 'tamper'
+    $rPre=RunRange $preRef
+    Assert '119g CTRL-1: a ref BEFORE the declared boundary is not retroactively judged' ($rPre.Text-notmatch'HISTORICAL_CR_MUTATION') $rPre.Text
+    Pop 'CTRL1' 'accept'
+    $rAt=RunRange $actRef
+    Assert '119h CTRL-1: a ref AT the declared boundary is judged' ($rAt.Code-ne0-and$rAt.Text-match'HISTORICAL_CR_MUTATION') $rAt.Text
+    Pop 'CTRL1' 'reject'
+
+    # 119i. THE BOUNDARY IS PINNED TO WHERE PROTECTION ACTUALLY BEGAN, measured from this
+    # repository's own history rather than asserted. The declared commit must be the one that
+    # introduced the guard, and its first parent must not carry it - which is what makes moving
+    # the boundary later (for instance to the `SPEC Allocation Enforcement` marker, which appears
+    # eight days after) a detectable weakening rather than a refactor.
+    $declared=[regex]::Match([IO.File]::ReadAllText((Join-Path $sourceRoot 'CR_LIFECYCLE.md')),'(?m)^Historical CR Immutability Enforcement:\s*(?<v>\S+)\s*$').Groups['v'].Value
+    $atBoundary=(& git -C $sourceRoot show "${declared}:scripts/check_agent_continuity.ps1" 2>$null|Out-String)
+    $atParent=(& git -C $sourceRoot show "${declared}^:scripts/check_agent_continuity.ps1" 2>$null|Out-String)
+    $global:LASTEXITCODE=0
+    Assert '119i CTRL-1: the declared boundary is the commit where terminal protection began' `
+        ($declared-match'^[0-9a-f]{40}$'-and$atBoundary.Contains('HISTORICAL_CR_MUTATION')-and-not$atParent.Contains('HISTORICAL_CR_MUTATION')) `
+        "declared=$declared guardAtBoundary=$($atBoundary.Contains('HISTORICAL_CR_MUTATION')) guardAtParent=$($atParent.Contains('HISTORICAL_CR_MUTATION'))"
+    Pop 'CTRL1' 'accept'
+
     # MUST-ACCEPT. The over-strictness this repair could introduce is rejecting a
     # legal history. Cases 83 and 111 already pin the plain lifecycles; what is new
     # here is a contract BORN in the range - which has no text at the base and whose
@@ -1955,7 +2078,7 @@ exit 0
     # 189. SPEC-ALLOCATION ACTIVATION. The marker is the activation signal. With no marker
     # in the working tree the evaluator fails CLOSED rather than silently allocating unchecked.
     PlanBaseline
-    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n"
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker here`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n"
     Put "changes/$(FxId 1)-no-marker.md" (ContractText -Id (FxId 1) -Status Draft)
     $r=Run 'Gate'
     Assert '189 SPEC-ALLOCATION ACTIVATION: a missing allocation marker fails closed' ($r.Code-ne0-and$r.Text-match'SPEC_ALLOCATION_MARKER_MISSING') $r.Text
@@ -2011,7 +2134,7 @@ exit 0
     # 192. SPEC-ALLOCATION ACTIVATION. Pre-marker history is NOT retroactively judged, which
     # is what keeps this contract's own SPEC-1002 creation and correction publishable.
     PlanBaseline
-    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker yet`n";Commit 'pre-marker-state'
+    Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker yet`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n";Commit 'pre-marker-state'
     $base=(git -C $root rev-parse HEAD).Trim()
     Put "changes/$(FxId 50)-premarker.md" (ContractText -Id (FxId 50) -Status Draft);Commit 'pre-marker-allocation'
     git -C $root mv "changes/$(FxId 50)-premarker.md" "changes/$(FxId 1)-premarker-fixed.md";Commit 'pre-marker-correction'
@@ -2298,6 +2421,18 @@ exit 0
         MutationKillRange "APPROVAL-EVIDENCE MUTATION POPULATION: $($m.N)" $m.E $m.F $m.R
     }
 
+    # CTRL-1. The two load-bearing halves of the repaired activation, each killed on a scenario
+    # only it can refuse. Inverting the ancestry test makes every ref read as pre-activation, which
+    # is the silent deactivation the old diagnostic probe produced; refusing to read the declared
+    # boundary at all must not fall back to "off".
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: CTRL-1 ancestry activation predicate' `
+        {Ctrl1BuildResolvable} 'HISTORICAL_CR_MUTATION' `
+        '$ancestorCode-eq0' '$false' 'CTRL1'
+
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: CTRL-1 unresolvable boundary protects' `
+        {Ctrl1Build} 'HISTORICAL_CR_MUTATION' `
+        'if($knownCode-ne0){$global:LASTEXITCODE=0;return $true}' 'if($knownCode-ne0){$global:LASTEXITCODE=0;return $false}' 'CTRL1'
+
     # The derived-applicability TABLE is a second, independent self-exemption door.
     # Both are proven separately; a scenario that trips both would prove neither.
     MutationKill 'APPROVAL-EVIDENCE MUTATION POPULATION: derived applicability / self-exemption (derived table)' `
@@ -2317,7 +2452,10 @@ exit 0
     # `SPEC Allocation Enforcement` marker: after activation a newly originated contract
     # must first appear as `Draft`. Pre-activation histories keep their own law.
     $osScope='_ORVION_CANONICAL/manifest.md'
-    function OsDeactivate{Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n";Commit 'os-deactivate'}
+    # Deactivates the ALLOCATION marker only. The historical-immutability boundary stays declared,
+    # because these cases are about forward-only origination and a lifecycle authority that declares
+    # no boundary at all is a separate, loud failure (CTRL-1).
+    function OsDeactivate{Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n";Commit 'os-deactivate'}
 
     # 213-215. POST-activation origination in a non-Draft state, at the LOCAL Gate.
     foreach($born in @(
@@ -2405,7 +2543,9 @@ exit 0
         (git -C $root rev-parse 'HEAD~1').Trim()
     }
     function OsBuildPre{
-        Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n";Commit 'osm-deactivate'
+        # Allocation marker removed; the historical-immutability boundary stays declared, for the
+        # reason given at `OsDeactivate`.
+        Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nno marker`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n";Commit 'osm-deactivate'
         Pre-Range
         Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
         Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit 'osm-pre-born'
@@ -2433,7 +2573,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
