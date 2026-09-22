@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -78,7 +78,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -215,13 +215,28 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-09-23 — Candidate tournament (before Approval) and Steps 1-4
 
+Outcome: Complete
+
+Evidence gathered before this contract was frozen, all local, synthetic and rolled back:
+
+- **Reproduction** at `a7ff994`: control run 1 conversion for tenant B; with tenant A's owner at `aal2` holding the next 50 `seq` values, 0 — the attacker's tenant held B's key, the cursor advanced past it, no finding was written, a rerun recovered nothing. UPDATE of an existing row onto a future value succeeded. A lapsed tenant's deferral closed as "the conversion was mapped on a later run" with no conversion. Held: `aal1` (MFA), `employee` (permission), cross-tenant INSERT and relocation (RLS), cross-tenant lead reference (FK), unknown event type, DELETE (no grant), lineage rewrite.
+- **Candidate A**, run as a prefix to the 119 file inside one rolled-back transaction: 16/16. Baseline (no guard): 10 of the then-15 assertions red — every refusal plus the outcomes that show the loss (tenant B's conversion, idempotent rerun, recovered deferral, stray provenance).
+- **Mutants against A's text** (then-15-assertion file): M1 trigger removed — 10 red, same set as baseline; M2 INSERT forgotten — INSERT refusals red; M3 UPDATE forgotten — UPDATE refusals red; M4 decision inverted — refusals and mapper outcomes red; M5 session-less exemption removed — mapper outcomes red, session refusals still green. Each red for its own reason; unmutated A none red. The in-file savepoint mutation (assertion 7) was added afterwards and passes on A.
+- **Differential**: the ten existing files naming this surface (`09`, `13`, `36`, `53`, `57`, `58`, `64`, `66`, `78`, `111`) gave identical ok/not-ok counts on baseline and on A, all 0 failures. The whole suite with A prefixed: 118 files, 1958 ok, 0 not ok.
+- **Generated and smoke surfaces** with A applied to the local stack: `MASTER_API_CONTRACT.md` regenerated to a scratch path byte-identical; `verify_database.sql` `ALL CHECKS PASSED (… 71/621 catalog …)`; the six Additional Verification suites each exited 0 (33, 120, 40, 74, 122, 60 passed — `verify_api_end_to_end.ps1` after a clean reset, because it refuses to run over its own earlier fixtures).
+- **B** rejected under WORTH IT and **C** rejected as incomplete, both without being built; reasons in Notes.
+- Local stack reset to the repository after the prototype; trigger count 0 confirmed.
+- Pre-Approval evaluator run read-only on the Draft: `PASS` with profiles `DATABASE,REPOSITORY`; the same table with the Check 9/19 gate moved to Step 5 returned `FAIL:mandatory gate at step 5 lies inside the red window 1..7`. The real Approve commit reported `APPROVAL_EVIDENCE: PASS`.
+
+Step results:
+- Step 1: Applied — migration byte-identical to the prototype that passed (SHA-256 prefix `8EEF18094829247B`).
+- Step 2: Applied — test byte-identical to the prototype that passed 16/16 (SHA-256 prefix `608B9680A510C310`).
+- Step 3: Applied — `CONV-6` row after `USR-5`, empty Owner Decision cell; `Last updated: 2026-09-23`.
+- Step 4: Applied — `offline_conversions` `PARTIAL` / `ADVERSARIAL`; Coverage 14 of 77, one `PARTIAL`, 63 `NOT-RECORDED`; `Last updated: 2026-09-23`. Checks 21, 22 and 24 clean; the only consistency failures are `MIGRATION STATE DRIFT`, `SUITE FIGURE DRIFT` and RECOVER-1 naming exactly `20260923120000_conversion_provenance_is_platform_written` as repository-only.
+
+Commits: the In Progress transition only. Steps 1-4 stand applied in the working tree and are committed together with the post-deployment steps, as SPEC-203 did: the pre-commit hook runs repository consistency, which cannot be green while the migration is undeployed (it refused this commit with `REPOSITORY_CONSISTENCY_FAILED` on exactly the three bounded classes above).
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
