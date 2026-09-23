@@ -78,7 +78,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -237,6 +237,29 @@ Step results:
 - Step 4: Applied — `offline_conversions` `PARTIAL` / `ADVERSARIAL`; Coverage 14 of 77, one `PARTIAL`, 63 `NOT-RECORDED`; `Last updated: 2026-09-23`. Checks 21, 22 and 24 clean; the only consistency failures are `MIGRATION STATE DRIFT`, `SUITE FIGURE DRIFT` and RECOVER-1 naming exactly `20260923120000_conversion_provenance_is_platform_written` as repository-only.
 
 Commits: the In Progress transition only. Steps 1-4 stand applied in the working tree and are committed together with the post-deployment steps, as SPEC-203 did: the pre-commit hook runs repository consistency, which cannot be green while the migration is undeployed (it refused this commit with `REPOSITORY_CONSISTENCY_FAILED` on exactly the three bounded classes above).
+### 2026-09-23 — Pre-deploy readiness gate (Step 5)
+
+Outcome: Blocked
+
+The first attempt was voided when the workstation restarted and Docker Desktop was down; every item below is from the re-run on a freshly started stack.
+
+Step results:
+- Step 5: Applied — every item held:
+  - clean `npx supabase db reset`: exit 0; the reset database carries `offline_conversions_forbid_session_provenance_write` and its latest migration is `20260923120000`.
+  - pgTAP **Pass A**: `Files=119, Tests=1974`, `Result: PASS`; the literal `plan(N)` sum across `supabase/tests` is **1974**.
+  - Additional Verification, in order, each exit 0: `verify_api_end_to_end` 33 passed, `verify_role_journeys` 120, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122, `verify_storage_end_to_end` 60 — 449 in total, 0 failed.
+  - pgTAP **Pass B** after those suites, no reset: `Files=119, Tests=1974`, `Result: PASS`.
+  - `scripts/verify_database.sql`: `ALL CHECKS PASSED (77 tables, … 71/621 catalog …)`.
+  - Mutants of Step 1's text, each in one rolled-back transaction ahead of the 119 body with the real trigger dropped first: unmutated 16/16; M1 protection removed (no-op body) red 4,5,6,7,8,9,10,11,13,14,16; M2 INSERT forgotten red 4,5,7,8,9,10,11,13,14,16 with 6 green; M3 UPDATE forgotten red 6,8,9,10,11,16 with 4,5,13 green; M4 decision inverted red 4-16 except none of 1-3; M5 session-less exemption removed red 8,9,10,11,12,14,15 with every session refusal (4,5,6,13) green. Where 7 turns red it is the duplicate of the value 4 just admitted, and 10-11 under M5 turn red because the mapper never wrote tenant A's row — both consequences of the same missing predicate, not another control. Trigger present again after all six runs.
+  - `scripts/generate-api-contract.ps1`: `MASTER_API_CONTRACT.md` byte-identical.
+  - `git status`: only the four Write Scope paths of Steps 1-4.
+  - Exactly one migration absent from the recorded Primary ledger: `20260923120000_conversion_provenance_is_platform_written` — SHA-256 `475d09cc75fab67705bb39b7ac57503e83c6040a50ce49dca2d3e4ba7fc858c9`. Test SHA-256 `fcafcdeb7261ba166afcd7c4a11224066827c7802cafbdfa5ba4d524a37a9b8f`.
+  - `check_repository_consistency.ps1`: 6 issues, all three admissible classes and nothing else — `MIGRATION STATE DRIFT` (count, latest, fingerprint), `SUITE FIGURE DRIFT` (files, assertions), RECOVER-1 with `only in repository` exactly `20260923120000_conversion_provenance_is_platform_written` and no `only on Primary` set.
+- Step 6: Not started — the owner has not authorized Primary deployment.
+
+Commits: this commit (contract synchronization only; Steps 1-4 remain in the working tree for the reason recorded in the previous entry).
+
+Blocker: Step 6 requires the owner's explicit authorization to deploy `20260923120000` to Primary `vrvtsxexkiiiivlkdxzp`. The owner's standing instruction for this slice withholds it until the local proof is presented. Nothing has been sent to Primary and Secondary has not been contacted.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
