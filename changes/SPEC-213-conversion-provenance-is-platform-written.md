@@ -196,22 +196,22 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Acceptance Criteria
 
-- [ ] `supabase/migrations/20260923120000_conversion_provenance_is_platform_written.sql` exists and contains exactly the function, the revoke and the trigger Step 1 names, with no `security definer`, grant, policy, index or constraint change.
-- [ ] `public.offline_conversions` carries exactly one trigger executing `app.forbid_session_provenance_write`, firing `BEFORE INSERT OR UPDATE`, and `app.forbid_session_provenance_write` grants no `EXECUTE` to `PUBLIC`.
-- [ ] `app.map_outcomes_to_conversions`, every RLS policy and every grant on `public.offline_conversions` are identical to their definitions at the start of this Change Request.
-- [ ] `supabase/tests/119_conversion_provenance_is_platform_written_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 16, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
-- [ ] Every refusal in that file asserts SQLSTATE `42501` and the exact message Step 1 names, and its signed-in actor is an `owner` at `aal2`.
-- [ ] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
-- [ ] The Execution Log records all five mutants of the Mutation Obligation, each turning red exactly the assertions this contract names for it, and the unmutated migration turning none red.
-- [ ] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries a `CONV-6` row, FIXED by SPEC-213, with an empty Owner Decision cell, and its `Last updated:` entry is dated 2026-09-23.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `offline_conversions` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-213-conversion-provenance-is-platform-written` and `CONV-6`, its Next cell names both unswept axes, and its Coverage summary reads 14 of 77 with one `PARTIAL`.
-- [ ] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260923120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
-- [ ] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
-- [ ] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 14 of 77, names SPEC-213 as `Last Completed` in place of SPEC-212, names Batch 6 Slice 14 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
-- [ ] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
-- [ ] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `supabase/migrations/20260923120000_conversion_provenance_is_platform_written.sql` exists and contains exactly the function, the revoke and the trigger Step 1 names, with no `security definer`, grant, policy, index or constraint change.
+- [x] `public.offline_conversions` carries exactly one trigger executing `app.forbid_session_provenance_write`, firing `BEFORE INSERT OR UPDATE`, and `app.forbid_session_provenance_write` grants no `EXECUTE` to `PUBLIC`.
+- [x] `app.map_outcomes_to_conversions`, every RLS policy and every grant on `public.offline_conversions` are identical to their definitions at the start of this Change Request.
+- [x] `supabase/tests/119_conversion_provenance_is_platform_written_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 16, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
+- [x] Every refusal in that file asserts SQLSTATE `42501` and the exact message Step 1 names, and its signed-in actor is an `owner` at `aal2`.
+- [x] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
+- [x] The Execution Log records all five mutants of the Mutation Obligation, each turning red exactly the assertions this contract names for it, and the unmutated migration turning none red.
+- [x] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries a `CONV-6` row, FIXED by SPEC-213, with an empty Owner Decision cell, and its `Last updated:` entry is dated 2026-09-23.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `offline_conversions` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-213-conversion-provenance-is-platform-written` and `CONV-6`, its Next cell names both unswept axes, and its Coverage summary reads 14 of 77 with one `PARTIAL`.
+- [x] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260923120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
+- [x] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
+- [x] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 14 of 77, names SPEC-213 as `Last Completed` in place of SPEC-212, names Batch 6 Slice 14 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
+- [x] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
+- [x] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -284,20 +284,31 @@ No second repair was needed or attempted. Secondary was not contacted.
 Commits: this commit (Steps 1-9).
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-23 — Review
 
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository, the local stack and the recorded Primary reading, not against the Execution Log.
+- The migration contains the function, the revoke and the `BEFORE INSERT OR UPDATE` trigger and nothing else: no `security definer`, grant, policy, index or constraint. It is the only migration added since `a7ff994`, so `app.map_outcomes_to_conversions`, every policy and every grant on the table are untouched; the `grants` surface still hashes `402bf96caafc025268889650138405e8`, the value PAR-5 recorded.
+- The local catalog shows exactly one trigger executing `app.forbid_session_provenance_write`, `BEFORE INSERT OR UPDATE ON public.offline_conversions`, and `PUBLIC` holds no `EXECUTE` on it. Primary's trigger and structural surfaces equal local's.
+- `119_…` declares `-- ATTACK-CLASSES:`, plans 16, and carries six `throws_ok`, each on `42501` with the exact message, as an `owner` at `aal2`, plus the savepoint mutation control.
+- `-Finish` returned `LOCAL_CERTIFY: READY`; pgTAP ran 119 files / 1974 tests against a plan sum of 1974.
+- `MASTER_API_CONTRACT.md` is byte-identical to `a7ff994`. `CONV-6` is registered with an empty Owner Decision cell; the disposition row, the Coverage totals and both freshness headers are as specified.
+- The evidence file names `vrvtsxexkiiiivlkdxzp`, holds 220 identities including `20260923120000`, and equals the repository and local sets. The manifest publishes 14 of 77, SPEC-213 as `Last Completed`, Slice 14 as `Next capability` and the post-deployment figures; `ai-map.json` agrees (Check 7 clean) and is stored LF.
+- Files changed since `a7ff994`: exactly the nine Write Scope paths other than `MASTER_API_CONTRACT.md`, which did not need to change.
+
+Recommendation to human: Set Status to Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
