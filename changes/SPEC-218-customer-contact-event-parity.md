@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -56,7 +56,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -157,6 +157,37 @@ None yet — Draft awaits human approval.
 ### 2026-09-24 — Owner approval
 
 Outcome: Owner approved the exact Draft SHA `ad26396ea746c4a853da939bcc2ebc53d644cb28`, Objective and nine-path Write Scope, with explicit customer-contact event semantics. Primary deployment is separately gated and is not authorized by this approval.
+
+### 2026-09-24 — Steps 1–3: contact event parity materialized
+
+Outcome: One LF migration (`20260924160000_customer_contact_event_parity.sql`) replaces only the RPC's explicit event block, adds one SECURITY INVOKER AFTER INSERT event function with PUBLIC EXECUTE revoked, and attaches one enabled trigger. A byte-normalized comparison with the prior RPC migration confirms its new function definition differs only by removal of that event block. No grant, RLS policy, UPDATE event, shared framework or adjacent function changed. One LF pgTAP file (`124_...`) contains 28 non-vacuous assertions. CM-3 is recorded as Low/fixed and the selected surface as AUDITED / ADVERSARIAL; the disposition summary is 19/77. The migration and test files contain zero CR bytes. The focused migration plus test passed 28/28 inside a transaction and left zero trigger residue.
+
+### 2026-09-24 — Pre-deploy readiness gate (Step 4)
+
+Outcome: Local proof is complete; Step 5 waits for the owner's separate exact Primary authorization. No Primary write occurred. Secondary was not contacted.
+
+- Clean `npx supabase db reset`: exit 0, 225 local migrations, latest `20260924160000_customer_contact_event_parity`, ordered ledger fingerprint `843250602025735f48e8c860ea12557f`. Local file and ledger identities match (parity Check L1). Existing HTTP fixtures were reset.
+- pgTAP Pass A: 124 files / 2106 assertions, all passed. The six HTTP suites in declared order passed 33 + 120 + 40 + 74 + 122 + 60 = 449 assertions, zero failures. pgTAP Pass B ran without reset and passed the same 124 files / 2106 assertions. Literal `plan(N)` sum also measured 124 / 2106. `scripts/verify_database.sql` exited 0 with `ALL CHECKS PASSED` (77 tables, RLS/policies, 71/621 catalog, FK, grants, append-only audit).
+- Permanent focused test on the migrated local stack passed 28/28. Trigger mutant: original `tgenabled=O`; disable applied and observed `D`; authorized direct INSERT persisted one row and emitted zero matching events, while an enabled baseline persisted one and emitted one. Trigger restored and observed `O`, including after rollback. RPC mutant: original `pg_proc.prosrc` MD5 `2763e394a3a841fb244fd3476b434b02` with no RPC event call; installed source MD5 `f64c37ef996adbf690ee6cd89bcb716a` with the call; a real RPC INSERT persisted one row and emitted two matching events. Rollback restored exact original MD5 and removed the call. Every mutation apply and restore returned exit 0; no mutant was inferred from an apply failure.
+- Generated `MASTER_API_CONTRACT.md`: 79 RPC endpoints, 8 views, 73 tables, byte-identical to Git. `git diff --check` passed. New SQL files are LF. The only implementation/report changes are in the approved Write Scope.
+- Local function surface 304 / `f7acd08a065f71038bb570f131971f03`; structural surface 3042 / `2af308fab1c55f2fe3f984ca2d0ae655`. Compared with a fresh Primary read, delta is +1 function and +1 trigger, with the existing RPC definition replaced; all eight other structural categories retain their Primary hash/count. The new RPC is SECURITY INVOKER, `search_path=''`, source MD5 `2763e394a3a841fb244fd3476b434b02`. The new emitter is SECURITY INVOKER, `search_path=''`, source MD5 `0d553daf881f8ad5c4c9eca0fa5c185b`; the enabled AFTER INSERT row trigger has `tgtype=5`.
+- Fresh read-only Primary `vrvtsxexkiiiivlkdxzp`: project ORVION / ACTIVE_HEALTHY / PostgreSQL 17; full ordered ledger 224, latest `20260924150000_refund_door_integrity`, fingerprint `9526e5cf461c7e9fa72d83ade08afa54`. Repo has exactly one additional identity (`20260924160000_customer_contact_event_parity`) and no Primary-only identity; target migration is absent. Primary contact-method row count is zero. Fresh Primary function surface is 303 / `dc9b784927aacedc4e4b46225866633e`; structural surface 3040 / `5fd7e60510aec6059ed9b2aadaeadc9a`, including all ten category hashes. These match the prior recorded Primary baseline, but this entry relies on the new live reads.
+- `check_database_parity.ps1` exits 1 because Primary arguments are deliberately absent and the manifest still publishes its 224-migration/303-function/3040-object state; its local L1 and API contract checks passed. `check_primary_ledger.ps1` exits 1 solely because the repository's one new migration is undeployed. `check_repository_consistency.ps1` exits 1 with six expected undeployed items only: migration count/latest/fingerprint, test-file/assertion totals, and RECOVER-1 ledger evidence. Check 22 validates all 77 disposition rows and Check 24 validates all 19 adversarial rows. No guard or invariant was weakened to turn these expected pre-deploy reds green.
+- Frozen file hashes: migration SHA-256 `1c77d775b39afc086e01f46470d0bb562c177ce35673c575e651cd38dba3e76b` (3805 bytes); permanent test SHA-256 `17c24c0af4eef46ee6f2c0f1570f38bd54a323afa1ee771f7f4d0477ab348e53` (10218 bytes). HEAD before Primary authorization is the approved-state commit `6b9cc94b233e823efe31cb6e8868cd773be29f5b`; implementation remains an in-scope worktree change because the pre-commit Gate correctly refuses the intentionally undeployed migration.
+
+Blocker: Step 5 requires separate owner authorization for this exact migration SHA-256 and test SHA-256 on Primary `vrvtsxexkiiiivlkdxzp`. Immediately before any write, recheck exact target, HEAD, file hashes, full ledger, target absence and contact-method data precondition. Do not contact Secondary.
+
+### 2026-09-24 — Step 5: exact Primary authorization received
+
+Outcome: Owner authorized Primary `vrvtsxexkiiiivlkdxzp` only, at HEAD `6b9cc94b233e823efe31cb6e8868cd773be29f5b`, for migration `20260924160000_customer_contact_event_parity.sql` SHA-256 `1c77d775b39afc086e01f46470d0bb562c177ce35673c575e651cd38dba3e76b` and permanent test `124_customer_contact_event_parity_test.sql` SHA-256 `17c24c0af4eef46ee6f2c0f1570f38bd54a323afa1ee771f7f4d0477ab348e53`. Authorization requires a fresh exact-target, HEAD, hash, complete-ledger and zero-row check immediately before the sole migration write. It permits normalization only of the newly inserted migration-ledger row if the connector assigns a temporary version. Secondary remains forbidden.
+
+### 2026-09-24 — Steps 5–6: Primary deployment and fresh parity
+
+Outcome: Immediately before the sole Primary write, the live project identified as ORVION / `vrvtsxexkiiiivlkdxzp` / ACTIVE_HEALTHY, HEAD and both authorized SQL hashes matched, the complete ordered Primary ledger was 224 / `9526e5cf461c7e9fa72d83ade08afa54`, latest `20260924150000`, target absent, repository exactly one migration ahead, and `customer_contact_methods` held zero rows. The connector applied only `customer_contact_event_parity` and returned success. It assigned `20260924173622`; a guarded update normalized only that newly inserted row to `20260924160000`. Secondary was not contacted; no production business DML was performed.
+
+Fresh Primary reads after normalization: complete ledger 225 / `843250602025735f48e8c860ea12557f`, latest `20260924160000`, identical to repository and local; function surface 304 / `f7acd08a065f71038bb570f131971f03`; structural surface 3,042 / `2af308fab1c55f2fe3f984ca2d0ae655`. All ten category hashes and counts matched the local clean reset. Direct definition inspection found exactly one `app.emit_customer_contact_added()` (source MD5 `0d553daf881f8ad5c4c9eca0fa5c185b`), SECURITY INVOKER, `search_path=''`, no PUBLIC or authenticated direct EXECUTE; one enabled row-level AFTER INSERT trigger (`tgtype=5`) on `public.customer_contact_methods`. The RPC retained its signature, authenticated EXECUTE and non-event logic, source MD5 `2763e394a3a841fb244fd3476b434b02`, with no explicit event call. The emitter targets `NEW.customer_id`, derives the actor from the matching session user, and carries the contact ID/type payload. Other existing table triggers remain enabled, and no other function source contains `customer_contact_added`. Exact installed-definition parity with the previously behavior-tested local stack avoids production business DML.
+
+The fresh Primary ledger and hashes were written to `reports/evidence/primary-ledger-evidence.json`; manifest figures now state 225 migrations, 304 functions, 3,042 structural objects, 124 pgTAP files / 2,106 assertions, and 19/77 adversarial surfaces. The API contract and ai-map generators ran. `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, and `check_repository_consistency.ps1` all exited 0. Awaiting canonical `-Finish`, Review and completion.
 
 ## Verification Notes
 
