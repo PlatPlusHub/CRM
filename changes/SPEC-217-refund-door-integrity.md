@@ -60,7 +60,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -171,6 +171,48 @@ Post-Implementation Proof Obligation: The permanent pgTAP file, focused tests, f
 ## Execution Log
 
 None yet — Draft awaits human approval.
+
+### 2026-09-24 — Steps 1–4: refund-only repair materialized
+
+Outcome: Applied within Write Scope. `20260924150000_refund_door_integrity.sql` adds only `app.guard_refund_integrity()` and `refunds_guard_integrity` on `public.refunds`; `123_refund_door_integrity_test.sql` adds 28 rolled-back assertions. RFD-1 and RFD-2 are recorded fixed, RFD-3 separately OPEN, and the `refunds` instance of ENTRY-1 closed. The disposition is `AUDITED-OPEN` / `ADVERSARIAL`, 18 of 77 recorded. The shared financial guard, refund RPCs, other finance tables and existing grants/policies/triggers were not changed.
+
+### 2026-09-24 — Pre-deploy readiness gate (Step 5)
+
+Outcome: Local proof complete; Step 6 waits for separate owner authorization. No Primary write occurred and Secondary was not contacted.
+
+- Clean `npx supabase db reset`: exit 0, local ledger 224 migrations, latest `20260924150000_refund_door_integrity`, fingerprint `9526e5cf461c7e9fa72d83ade08afa54`. Local migration filenames and ledger match exactly, 224/224, zero differences.
+- pgTAP Pass A: 123 files / 2078 assertions, all pass. Six HTTP suites in contract order: API 33, role 120, care 40, journey branches 74, lifecycle branches 122, storage 60; 449/449 pass. pgTAP Pass B without reset: 123 files / 2078 assertions, all pass. Literal `plan(N)` sum: 123 files / 2078 assertions. `scripts/verify_database.sql`: `ALL CHECKS PASSED` (77 tables, 71/621 catalog, RLS/policies, grants and schema checks).
+- Mutation proof on the local stack: four distinct function-source mutants were applied with psql exit 0 and an observed changed `pg_proc.prosrc` MD5, then killed by the permanent test: entry-state refusal removal red assertion 17; UPDATE authorization removal red 4, 5, 6, 25, 26; positive-amount refusal removal red 19, 20, 21; completion timestamp assignment removal red 13, 15, 16. Each mutant was restored with psql exit 0 and the exact pre-mutation source MD5 `3fe2f57dc75652dc1994b71ccc8ee3e3` observed again. The focused 28/28 test then passed. A second clean reset after all mutations reapplied the migration from repository bytes (exit 0), and the focused test again passed 28/28.
+- `scripts/generate-api-contract.ps1`: exit 0; 79 RPC endpoints with HTTP evidence, 8 reporting views, 73 tables; `MASTER_API_CONTRACT.md` byte-identical to Git. `git diff --check`: exit 0. Modified/created implementation paths are exactly the migration, test, gap register and disposition; the only additional changed path is this governing CR's mutable checkpoint/log.
+- `check_database_parity.ps1`: local L1 ledger matched files; local function surface 303 / `dc9b784927aacedc4e4b46225866633e`, structure 3040 / `5fd7e60510aec6059ed9b2aadaeadc9a`; API contract matched. Exit 1 solely because Primary was deliberately undeployed/unpassed and the manifest still publishes the 223-migration Primary baseline. This is not a local/Primary parity pass.
+- `check_repository_consistency.ps1`: exit 1, six expected undeployed items only: migration count 223→224, latest `20260924140000`→`20260924150000`, fingerprint `6b346033368ea9439a1119a5af5d3fc2`→`9526e5cf461c7e9fa72d83ade08afa54`; suite figures 122→123 and 2050→2078; RECOVER-1 records the one migration absent from Primary. Disposition, adversarial-evidence, CR-state and other checks had no additional failures. `check_agent_continuity.ps1 -Gate` consequently reports `REPOSITORY_CONSISTENCY_FAILED`; no guard was weakened or bypassed. Manifest and Primary evidence await Step 7.
+- Fresh read-only Primary `vrvtsxexkiiiivlkdxzp` (`ORVION`, `ACTIVE_HEALTHY`): 223 migrations, latest `20260924140000_document_door_parity`, ledger fingerprint `6b346033368ea9439a1119a5af5d3fc2`, new migration absent, 0 refunds. Full function surface 302 / `7395d3f8edbb2a34e6f8c90b74940eb6`; structural surface 3038 / `ec4590824e36ece4e9edb62b65540fb6`. The post-migration local difference is exactly one function and one trigger; all eight other structural categories retain their Primary hashes. Expected new Primary fingerprint is `9526e5cf461c7e9fa72d83ade08afa54` only after Step 6 is explicitly authorized and applied.
+- Frozen bytes at this gate: migration SHA-256 `82c847fc1de587246125f3cc0e296c239c8d716326df670bf43104fbb508fa8a`; permanent test SHA-256 `f31af57ed26f70a96bab8f98fdc2646416ff1e1372bde1bc0bd0c22530282952`. HEAD before Step 6: `602a6fbb31f1801f97665786b65c1afbbdbd44fd`. The pre-approval lifecycle commits are local; this implementation remains an in-scope working-tree change because the required pre-commit Gate correctly refuses the undeployed migration.
+
+Blocker: Step 6 requires the owner's separate authorization for this exact migration and SHA-256 on Primary `vrvtsxexkiiiivlkdxzp`. Resume at Step 6; re-read project, HEAD, file hash, ledger and zero-refund condition before any write. Do not contact Secondary.
+
+### 2026-09-24 — Step 6: owner authorization received
+
+Outcome: Authorization received for Primary `vrvtsxexkiiiivlkdxzp`, HEAD `602a6fbb31f1801f97665786b65c1afbbdbd44fd`, migration `20260924150000_refund_door_integrity.sql` SHA-256 `82c847fc1de587246125f3cc0e296c239c8d716326df670bf43104fbb508fa8a`, and permanent test `123_refund_door_integrity_test.sql` SHA-256 `f31af57ed26f70a96bab8f98fdc2646416ff1e1372bde1bc0bd0c22530282952`. The owner requires fresh target, full ledger, zero-refund, HEAD and hash checks immediately before the single migration apply; any mismatch stops the write. The authorization excludes Secondary, unrelated migrations and finance changes. Post-deployment state must be read fresh and compared to repository/local across ledger, functions and all ten structural surfaces.
+
+### 2026-09-24 — Steps 6–7: Primary deployment and synchronization
+
+Outcome: Applied and read back from Primary; no business DML was used for verification.
+
+- Immediately before the write, fresh connector reads confirmed target `vrvtsxexkiiiivlkdxzp` / ORVION / `ACTIVE_HEALTHY`; full Primary ledger 223, latest `20260924140000_document_door_parity`, fingerprint `6b346033368ea9439a1119a5af5d3fc2`, target row absent; `public.refunds` 0 rows. Repository held 224 migration identities, Primary lacked exactly `20260924150000_refund_door_integrity`, and Primary had no extra identity. Recomputed HEAD `602a6fbb31f1801f97665786b65c1afbbdbd44fd`, migration and permanent-test SHA-256 values exactly matched authorization.
+- `supabase-primary` `apply_migration` succeeded with the exact 1621-byte migration text and nothing else. Primary's stored single statement has MD5 `a2845dafef688b84d6051f3566d43d0f`, equal to the repository file MD5, and length 1621. The connector assigned `20260924132052`; one row matching that version and `refund_door_integrity` was normalized to `20260924150000` and returned that identity. No older ledger row was edited.
+- The canonical ledger `read_query`, executed fresh after normalization, returned all 224 ordered identities, fingerprint `9526e5cf461c7e9fa72d83ade08afa54`, latest `20260924150000_refund_door_integrity`; the full repository list, local ledger and Primary list agree identity-for-identity, zero differences.
+- Primary `app.guard_refund_integrity()` is `plpgsql` SECURITY INVOKER, `search_path=''`, `prosrc` MD5 `3fe2f57dc75652dc1994b71ccc8ee3e3`, full definition MD5 `564cc8699a0235db4068c6917471c394`, and no `authenticated` or `anon` EXECUTE privilege; these values equal local. Its source has the approved session-less exemption, positive-amount and requested/null-completion INSERT guards, unconditional `app.authorize('RECORD_REFUND')` on authenticated UPDATE, and server-derived immutable completion time. Exactly one enabled row-level BEFORE INSERT OR UPDATE `refunds_guard_integrity` trigger executes it (`tgtype=23`), with identical Primary/local definition. `app.customer_balance`, refund RPCs and existing guards were not modified by the sole migration; their complete function/structural surfaces equal local, where pgTAP and HTTP tested the normal customer RPC and direct supplier paths, tenant, catalog, subscription and status controls. No synthetic business row was written to Primary.
+- Fresh Primary full-function surface: 303 / `dc9b784927aacedc4e4b46225866633e`; structural `_combined`: 3040 / `5fd7e60510aec6059ed9b2aadaeadc9a`. All ten categories equal `scripts/parity_surface.sql` run on the clean local database, including unchanged policy, constraint, grant, column, view, index, status-transition and RLS-enabled categories. Relative to the pre-deployment Primary reading, only function count 302→303 and trigger count 291→292 changed.
+- `reports/evidence/primary-ledger-evidence.json` was rewritten from these fresh Primary results (read 2026-09-24T13:22:57Z); the manifest now publishes the measured 224 migration, 303 function, 3040 structural-object, 123-file / 2078-assertion and 18-of-77 coverage values. `MASTER_API_CONTRACT.md` regenerated byte-identically; `ai-map.json` regenerated with LF. Secondary was not contacted.
+
+### 2026-09-24 — Post-deploy verification (Step 8, before Finish)
+
+Outcome: `check_primary_ledger.ps1` exit 0 (`RECOVER-1 LEDGER EVIDENCE: CLEAN`); `check_database_parity_evidence.ps1` exit 0 (`DATABASE PARITY: CLEAN`, `PRIMARY PARITY EVIDENCE: CLEAN`); `check_repository_consistency.ps1` exit 0 (`REPOSITORY CONSISTENCY: CLEAN`, including Checks 22 and 24 for 18 surfaces); `git diff --check` exit 0. Next: run `-Finish`, independent Review, Complete transition, candidate publication, exact-SHA CI, promotion and remote certification.
+
+The first `-Finish` attempt returned `FINISH_NOT_READY:EXECUTE` before running certification: the checkpoint still named numeric Step 8. The control script requires `Resume Step: DONE` to enter VERIFY before `-Finish`; the implementation and post-deploy prechecks above were already complete, so the checkpoint was synchronized to DONE and certification is retried. No guard was bypassed.
+
+The retried `check_agent_continuity.ps1 -Finish` exited 0 with `LOCAL_CERTIFY: READY`: clean reset, pgTAP Pass A, all six HTTP suites, pgTAP Pass B, `verify_database.sql`, parity evidence, repository consistency, `git diff --check` and Primary ledger evidence all reported PASS. The local certification receipt is bound to this implementation state. Review and publication remain separate.
 
 ## Verification Notes
 
