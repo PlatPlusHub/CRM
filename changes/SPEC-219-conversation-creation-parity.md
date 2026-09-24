@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -59,7 +59,7 @@ None.
 ## Runtime Checkpoint
 
 Resume Step: 1
-Blocker: CR_APPROVAL_REQUIRED
+Blocker: None
 Recovery Attempt: 0
 
 ## Required Capabilities
@@ -154,6 +154,10 @@ Post-Implementation Proof Obligation: Focused permanent pgTAP, two full passes, 
 - [ ] Migration/test identities, generated artifacts, local and fresh Primary evidence agree; no unauthorized file changes.
 
 ## Execution Log
+
+### 2026-09-24 — Owner approval
+
+Owner approved exact Draft commit `c86634cb62e2c9d67edd93a698d748ee05752f4b` after independently confirming the bounded creation defect and nine-path Write Scope. Approval covers local implementation and proof; it expressly excludes Primary deployment until separate authorization for the final migration and test SHA-256 values. CHAT-2 remains open and Secondary remains out of scope.
 
 ### 2026-09-24 — Live selection and pre-approval audit
 
