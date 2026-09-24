@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-23T19:05:17Z",
-  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), read AFTER 20260923120000_conversion_provenance_is_platform_written was applied to Primary by supabase-primary MCP apply_migration under SPEC-203's practice for SPEC-213, on the owner's explicit authorization of 2026-09-23, and after the connector-assigned version 20260923190332 was normalized to the repository filename version 20260923120000 -- the same practice recorded for 20260909060754, 20260909114354 and 20260920120000. Pre-deployment the ledger was read first and proved equal to the previous recorded evidence (count 219, fingerprint dd2427080e9cfb5e8d1d162bf818360f) with 20260923120000 ABSENT, so exactly one migration was pending and exactly one was applied. GUARD-1: the array below was written only after its md5 was proven equal to the fingerprint read FROM Primary (3ab05c984755ffbca5b44ba9557b83dd, count 220), and equal as a set to both the repository migration filenames and the local stack's ledger -- it is not a repository value standing in for a Primary one. The function-surface and structural-surface values were read FROM Primary in the same session, after deployment, with the queries named in surface_read_queries, and all ten structural surfaces equal the local stack's. Secondary brplkqmbzffpxqgkkdzo was not contacted.",
+  "read_at": "2026-09-24T07:04:44Z",
+  "read_via": "supabase-primary MCP execute_sql (READ-ONLY select over supabase_migrations.schema_migrations), read AFTER 20260924120000_quotation_door_parity was applied to Primary by supabase-primary MCP apply_migration under SPEC-203's practice for SPEC-214, on the owner's explicit authorization of 2026-09-24, and after the connector-assigned version 20260924070315 was normalized to the repository filename version 20260924120000 -- the same practice recorded for 20260909060754, 20260909114354, 20260920120000 and 20260923120000. Pre-deployment the ledger was read first and proved equal to the previous recorded evidence (count 220, fingerprint 3ab05c984755ffbca5b44ba9557b83dd) with 20260924120000 ABSENT, so exactly one migration was pending and exactly one was applied. GUARD-1: the array below was written only after its md5 was proven equal to the fingerprint read FROM Primary (17d4e308e52b70cc2747527c9bb757ed, count 221), and equal as a set to both the repository migration filenames and the local stack's ledger -- it is not a repository value standing in for a Primary one. The function-surface and structural-surface values were read FROM Primary in the same session, after deployment, with the queries named in surface_read_queries, and all ten structural surfaces equal the local stack's. Secondary brplkqmbzffpxqgkkdzo was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "09e3114a061619b79156200caca49d9ac16cf284",
-  "migration_count": 220,
-  "ledger_fingerprint": "3ab05c984755ffbca5b44ba9557b83dd",
-  "function_surface_hash": "36eb361586ebcc6cbd0398b691e2111a",
-  "function_count": 299,
-  "structural_surface_hash": "1d5093214909ed9638c928f02e959a12",
-  "structural_object_count": 3031,
+  "repository_head": "60450ba5048a102b7083065f3b26acf7f5b7f06d",
+  "migration_count": 221,
+  "ledger_fingerprint": "17d4e308e52b70cc2747527c9bb757ed",
+  "function_surface_hash": "5e3e7959400d6857756f7079b2624eee",
+  "function_count": 300,
+  "structural_surface_hash": "d639d3c61d761f14f70a77c7e5cdd350",
+  "structural_object_count": 3033,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -232,6 +232,7 @@
     "20260909135000_a_booked_service_changes_hands_only_with_authority",
     "20260909180403_a_legal_hold_always_overrides_retention",
     "20260920120000_membership_authority_and_audit",
-    "20260923120000_conversion_provenance_is_platform_written"
+    "20260923120000_conversion_provenance_is_platform_written",
+    "20260924120000_quotation_door_parity"
   ]
 }

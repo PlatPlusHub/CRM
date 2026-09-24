@@ -87,7 +87,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -264,6 +264,27 @@ Commits: this commit (contract synchronization only; Steps 1-4 remain in the wor
 
 Blocker: Step 6 requires the owner's explicit authorization to deploy `20260924120000_quotation_door_parity.sql` to Primary `vrvtsxexkiiiivlkdxzp`. The owner's instruction for this slice withholds it until the local proof is presented. Nothing has been sent to Primary and Secondary has not been contacted.
 
+### 2026-09-24 — Step 6: owner authorization and pre-deployment preconditions
+
+Outcome: Complete
+
+- **Owner authorization**, given after Step 5 was recorded: continue SPEC-214 and "deploy the already-proven migration to Primary if all preconditions still hold", limited to `20260924120000_quotation_door_parity.sql` with SHA-256 `2ab982d1a98225a095ce2cd62226b9094ad6b1f9a94480e57c9cf616c36ff808`, target `vrvtsxexkiiiivlkdxzp`, from local HEAD `60450ba`; Secondary excluded.
+- Local state re-verified before any Primary contact: HEAD `60450ba5048a102b7083065f3b26acf7f5b7f06d`, four commits ahead of `origin/main` = `orvion-preflight` = `795d6bc`; working tree exactly the four Step 1-4 paths; migration SHA-256 `2ab982d1…f808` and test SHA-256 `bbe12ba7…f6dc`, both LF; no stash.
+- (a) Target read live through the `supabase-primary` connector: `https://vrvtsxexkiiiivlkdxzp.supabase.co` — Primary, not Secondary `brplkqmbzffpxqgkkdzo`.
+- (b)(c) Primary ledger read before deployment with the recorded `read_query`: count **220**, fingerprint `3ab05c984755ffbca5b44ba9557b83dd`, latest `20260923120000`, `20260924120000` ABSENT; `quotations_guard_integrity` and `app.guard_quotation_integrity` absent — equal to the recorded evidence, so exactly one migration is pending.
+### 2026-09-24 — Steps 6-9: Primary deployment and post-deploy verification
+
+Outcome: Complete
+
+Step results:
+- Step 6: Applied — before writing, one Primary-only precondition was read: `app.recompute_quotation_total` and `app.merge_customer_identity` are SECURITY DEFINER owned by `postgres` on Primary as locally, so the guard's `current_user = 'postgres'` admission holds there. (d) `supabase-primary` `apply_migration` with the exact text of Step 1's file (SHA-256 `2ab982d1…f808`) and nothing else: success. (e) The connector assigned `20260924070315`; that one row was normalised to `20260924120000`. (f) Full ledger re-read with the recorded `read_query`: count **221**, fingerprint `17d4e308e52b70cc2747527c9bb757ed`, `20260924120000_quotation_door_parity` present once. (g) Function surface read FROM Primary with the Check L2/P2 expression: `5e3e7959400d6857756f7079b2624eee`, 300 functions; `scripts/parity_surface.sql`'s statement run on Primary: `_combined` `d639d3c61d761f14f70a77c7e5cdd350`, 3033 objects, and all ten per-surface hashes equal the local stack's. Evidence file rewritten from those readings; the 221-entry ledger array was admitted only after its ordered md5 equalled Primary's fingerprint. (h) Repository filenames, local ledger and Primary ledger are the same 221 identities. (i) `check_database_parity_evidence.ps1` first exited 1 on Check L5 alone — the manifest still published the pre-deployment hashes, which Step 7 exists to replace; P1, P2, P4 and L3 all matched.
+- Step 7: Applied — remeasured and rewritten: 221 migrations, latest `20260924120000`, ledger `17d4e308…`, function surface `5e3e7959…` (300), structural surface `d639d3c6…` (3,033), 77 tables, 71/621 catalog, 8 reporting views, 79 client RPCs, suite 120 files / 2004 assertions, 449 HTTP assertions; coverage 15 of 77; `Last Completed` SPEC-214 replacing SPEC-213; `Next capability` Batch 6 Slice 15. Manifest 6747 characters. (A bare-LF line left by an earlier edit made the first rewrite drop one blank line; restored before any check ran.)
+- Step 8: Applied — `ai-map.json` regenerated and stored LF.
+- Step 9: Applied — Post-deploy verification: `check_database_parity_evidence.ps1` exit 0 (`DATABASE PARITY: CLEAN`; `PRIMARY PARITY EVIDENCE: CLEAN`), `check_primary_ledger.ps1` exit 0 (`RECOVER-1 LEDGER EVIDENCE: CLEAN`), `check_repository_consistency.ps1` exit 0 (`REPOSITORY CONSISTENCY: CLEAN`).
+
+No second repair was needed or attempted. Secondary was not contacted.
+
+Commits: this commit (Steps 1-9).
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
