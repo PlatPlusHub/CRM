@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -189,6 +189,10 @@ Fresh Primary reads after normalization: complete ledger 225 / `843250602025735f
 
 The fresh Primary ledger and hashes were written to `reports/evidence/primary-ledger-evidence.json`; manifest figures now state 225 migrations, 304 functions, 3,042 structural objects, 124 pgTAP files / 2,106 assertions, and 19/77 adversarial surfaces. The API contract and ai-map generators ran. `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, and `check_repository_consistency.ps1` all exited 0. Awaiting canonical `-Finish`, Review and completion.
 
+### 2026-09-24 — Step 7: local certification and completion
+
+Outcome: `-Finish` exited 0 with `LOCAL_CERTIFY: READY`: clean local reset, both 124-file / 2,106-assertion pgTAP passes, six HTTP suites, database smoke, Primary parity evidence, repository consistency, scope and Git checks passed. Independent Review of committed implementation `70e28ac29176fa014f881f8bf1be15712274932f` recorded `Verdict: Confirmed Complete` in the separate Review commit `ce8e7b208cfbffb3f64d3f3bd487835f86cea764`; every acceptance and Review Gate item is checked. No new architecture decision was introduced. Closing SPEC-218 and clearing the manifest pointer; exact-SHA candidate/CI/promotion remain post-commit publication obligations.
+
 ## Verification Notes
 
 None yet.
@@ -198,6 +202,8 @@ None yet.
 Verdict: Confirmed Complete.
 
 Reviewed committed implementation `70e28ac29176fa014f881f8bf1be15712274932f` against the frozen Objective, nine-path Write Scope, Implementation Steps, acceptance criteria and live Primary definitions. The eight changed paths are all scoped; the generated API contract is byte-identical to the local database and needed no change. The single migration and test retain the exact owner-authorized SHA-256 identities. The new pgTAP test proves both real authorized doors produce one event each, a customer timeline entry, correct owner/actor/contact payload and server time, while denied and duplicate paths produce none; it also proves normalization, per-channel primary handling, and no direct authenticated emitter EXECUTE. Existing full-suite customer merge tests passed in both 124-file / 2,106-assertion pgTAP passes. The two installed mutation probes positively established zero direct events with the trigger disabled and two RPC events with the old explicit event call restored; both mutants were rolled back and exact installed definitions rechecked. Six HTTP suites passed 449 assertions. Fresh Primary full ledger, function and all ten structural surfaces matched local after deployment; no production business DML or Secondary access was used. `-Finish` exited 0 and issued `LOCAL_CERTIFY: READY`. `check_primary_ledger`, parity evidence, repository consistency, and `git diff --check` passed. There was no new architecture decision or unresolved blocker. The committed worktree was clean at Review.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
