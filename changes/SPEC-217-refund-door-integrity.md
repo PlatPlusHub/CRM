@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -101,7 +101,9 @@ Applicability: APPLICABLE
 | New migration and test | `MASTER_API_CONTRACT.md`; Primary evidence; manifest; `ai-map.json` | WRITE | The generated API contract is in Write Scope by Check L3; after deployment all measurements come from Primary, then manifest and map are regenerated. |
 | Findings RFD-1, RFD-2, RFD-3 and ENTRY-1's refund instance | gap register; refund disposition and Batch 6 coverage | WRITE | Register owns findings; disposition owns the audit state. Check 22 recomputes 18/77 and Check 24 requires a real negative pgTAP assertion. |
 
-Unresolved Material Consumers: None. RFD-3 is an independently owned event-production defect, not an unresolved reader of the changed rule.
+Unresolved Material Consumers: None
+
+RFD-3 is an independently owned event-production defect, not an unresolved reader of the changed rule.
 
 ### Execution-Boundary Satisfiability
 
