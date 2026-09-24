@@ -220,22 +220,22 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Acceptance Criteria
 
-- [ ] `supabase/migrations/20260924140000_document_door_parity.sql` exists and contains exactly the guard function, the revoke, the trigger and the CHECK constraint Step 1 names, and no grant, policy, index, other-constraint, other-trigger or other-function change.
-- [ ] `public.documents` carries exactly one trigger executing `app.guard_document_integrity`, `documents_guard_integrity`, firing `BEFORE INSERT OR UPDATE` for each row; the function is SECURITY INVOKER and grants no `EXECUTE` to `PUBLIC`; and `documents_archived_status_is_archived_check` is present.
-- [ ] Every RLS policy, grant and other trigger on `public.documents`, and every function other than `app.guard_document_integrity`, is identical to its definition at the start of this Change Request.
-- [ ] `supabase/tests/122_document_door_parity_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 25 and contains `throws_ok`; its signed-in actors are at `aal2` and include an `employee` holding neither ARCHIVE_DOCUMENT nor MANAGE_TENANT_SETTINGS and a `finance_manager` holding no MANAGE_TENANT_SETTINGS.
-- [ ] `supabase/tests/69_document_lifecycle_test.sql` differs from its state at the start of this Change Request only in the 18-19 comment block, assertion 18 becoming a `throws_ok` with SQLSTATE `23514`, and assertion 19 expecting `archived/true`.
-- [ ] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
-- [ ] The Execution Log records all nine mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
-- [ ] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries `DOC-4`, `DOC-5` and `DOC-6` rows, FIXED by SPEC-216 with empty Owner Decision cells; `DOC-LC-3` is FIXED by SPEC-216; the `ARCH-2` and `ENTRY-1` rows record the `documents` closure; and its `Last updated:` entry is dated 2026-09-24.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `documents` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-216-document-door-parity` and `DOC-4, DOC-5, DOC-6, DOC-LC-3`, its Next cell names the closed class instances, the swept non-defects and the two unclassified axes, and its Coverage summary reads 17 of 77 with three `PARTIAL`.
-- [ ] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924140000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
-- [ ] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
-- [ ] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 17 of 77, names SPEC-216 as `Last Completed` in place of SPEC-215, names Batch 6 Slice 17 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
-- [ ] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
-- [ ] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `supabase/migrations/20260924140000_document_door_parity.sql` exists and contains exactly the guard function, the revoke, the trigger and the CHECK constraint Step 1 names, and no grant, policy, index, other-constraint, other-trigger or other-function change.
+- [x] `public.documents` carries exactly one trigger executing `app.guard_document_integrity`, `documents_guard_integrity`, firing `BEFORE INSERT OR UPDATE` for each row; the function is SECURITY INVOKER and grants no `EXECUTE` to `PUBLIC`; and `documents_archived_status_is_archived_check` is present.
+- [x] Every RLS policy, grant and other trigger on `public.documents`, and every function other than `app.guard_document_integrity`, is identical to its definition at the start of this Change Request.
+- [x] `supabase/tests/122_document_door_parity_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 25 and contains `throws_ok`; its signed-in actors are at `aal2` and include an `employee` holding neither ARCHIVE_DOCUMENT nor MANAGE_TENANT_SETTINGS and a `finance_manager` holding no MANAGE_TENANT_SETTINGS.
+- [x] `supabase/tests/69_document_lifecycle_test.sql` differs from its state at the start of this Change Request only in the 18-19 comment block, assertion 18 becoming a `throws_ok` with SQLSTATE `23514`, and assertion 19 expecting `archived/true`.
+- [x] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
+- [x] The Execution Log records all nine mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
+- [x] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries `DOC-4`, `DOC-5` and `DOC-6` rows, FIXED by SPEC-216 with empty Owner Decision cells; `DOC-LC-3` is FIXED by SPEC-216; the `ARCH-2` and `ENTRY-1` rows record the `documents` closure; and its `Last updated:` entry is dated 2026-09-24.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `documents` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-216-document-door-parity` and `DOC-4, DOC-5, DOC-6, DOC-LC-3`, its Next cell names the closed class instances, the swept non-defects and the two unclassified axes, and its Coverage summary reads 17 of 77 with three `PARTIAL`.
+- [x] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924140000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
+- [x] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
+- [x] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 17 of 77, names SPEC-216 as `Last Completed` in place of SPEC-215, names Batch 6 Slice 17 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
+- [x] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
+- [x] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -302,17 +302,32 @@ Commits: this commit (Steps 1-10).
 
 ## Verification Notes
 
+### 2026-09-24 — Review
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository, the local stack and the recorded Primary readings, not against the Execution Log. No suite was rerun for Review: `-Finish` had just certified this exact tree (`LOCAL_CERTIFY: READY`, 384 s — reset, pgTAP Pass A, the six HTTP suites, Pass B, `verify_database.sql`, parity evidence, repository consistency, `git diff --check`, primary ledger).
+- Files changed since `2c907cd`: exactly nine of the ten Write Scope paths; `MASTER_API_CONTRACT.md` did not need to change and its diff is empty. The only migration added is `20260924140000_document_door_parity.sql`, whose committed blob hashes to `4c50fa43…3676c` — the authorized bytes — and whose only statements are the guard function, its revoke, the trigger and the CHECK. The committed `122_…` and `69_…` blobs hash to the authorized `e599ffad…83af` and `8bddf6b1…1a13`.
+- Local catalog: the function surface with `app.guard_document_integrity` excluded is `ea6275626ffc1ddc20f886ecb1f4584e` / 301 — exactly the pre-CR value — so no other function changed. `public.documents` carries its ten earlier triggers unchanged plus `documents_guard_integrity`, its one `scope_isolation` policy, and `authenticated` INSERT, SELECT, UPDATE as before. The guard is SECURITY INVOKER with no `PUBLIC` or `authenticated` EXECUTE, tgtype 23, and its definition md5 `4d197e40…` is identical on Primary; all ten structural surfaces equal Primary's (`_combined` `ec459082…`, 3038).
+- `122_…`: declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 25, carries 11 `throws_ok` (4-10, 12, 15, 16, 19); its signed-in actors are at `aal2` and include an `employee` holding neither ARCHIVE_DOCUMENT nor MANAGE_TENANT_SETTINGS (asserted in 1) and a `finance_manager` holding no MANAGE_TENANT_SETTINGS. `69_…` differs from `2c907cd` only in lines 184-212, as frozen. Assertions executed equal the plan sum: pg_prove fails any file whose plan is not met, `-Finish` passed both runs, Check 15 is clean at 2050, and Step 6 measured 2050 = 2050 on the same bytes.
+- Mutation: the nine mutants are recorded in Step 6 with verified applications, including the corrected account of M1 — the earlier scripted result was invalid because the mutant never applied; the harness now fails visibly on an apply error; the correctly-formed mutant is killed by 4 and 5.
+- Register: `DOC-4` (Medium), `DOC-5` (Low), `DOC-6` (Medium) FIXED by SPEC-216 with empty Owner Decision cells; `DOC-LC-3` FIXED; `ARCH-2` (eleven remain) and `ENTRY-1` (eight remain) record the `documents` closure; `Last updated: 2026-09-24`. Disposition: `documents` `PARTIAL` / `ADVERSARIAL` citing `DOC-4, DOC-5, DOC-6, DOC-LC-3`, the Next cell naming the closed class instances, the swept non-defects and the two unclassified axes; Coverage 17 of 77 with three `PARTIAL` (Check 22 clean, Check 24 clean for all 17).
+- Evidence file names `vrvtsxexkiiiivlkdxzp`, holds 223 identities including `20260924140000`, count and fingerprint consistent (`check_primary_ledger.ps1` CLEAN), equal to the repository and local sets. The manifest publishes 17 of 77, SPEC-216 as `Last Completed`, Slice 17 as `Next capability` and the post-deployment figures; `ai-map.json` agrees (Check 7 clean) and is stored LF.
+- Nothing was absorbed: no ENTRY-1 or ARCH-2 class mechanism, no change to `app.guard_write_capability`, no `created_at` hardening, no event-parity mechanism; the two unclassified axes stay named in the disposition row only. The pre-deploy gate and `-Finish` again ran the same database protocol on identical bytes (gate ≈ 6 min, `-Finish` 384 s); that duplication was already rejected under WORTH IT in SPEC-214, and nothing measured here changes that decision.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
