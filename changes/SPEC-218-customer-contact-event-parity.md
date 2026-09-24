@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -57,7 +57,7 @@ None.
 ## Runtime Checkpoint
 
 Resume Step: 1
-Blocker: HUMAN_CR_APPROVAL
+Blocker: None
 Recovery Attempt: 0
 
 ## Required Capabilities
@@ -153,6 +153,10 @@ Post-Implementation Proof Obligation: Permanent focused pgTAP, two full passes, 
 ## Execution Log
 
 None yet — Draft awaits human approval.
+
+### 2026-09-24 — Owner approval
+
+Outcome: Owner approved the exact Draft SHA `ad26396ea746c4a853da939bcc2ebc53d644cb28`, Objective and nine-path Write Scope, with explicit customer-contact event semantics. Primary deployment is separately gated and is not authorized by this approval.
 
 ## Verification Notes
 
