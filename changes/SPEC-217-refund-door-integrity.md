@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -161,12 +161,12 @@ Post-Implementation Proof Obligation: The permanent pgTAP file, focused tests, f
 
 ## Acceptance Criteria
 
-- [ ] One refund-only trigger guards authenticated INSERT and UPDATE as Step 1 states, with no change to the existing refund RPCs, grants, policies or triggers.
-- [ ] The permanent pgTAP file proves positive and negative paths with real rows and exact failures; every declared assertion executes and the stated mutants are positively installed, killed and restored.
-- [ ] RFD-1 and RFD-2 are fixed; RFD-3 remains explicitly open; ENTRY-1 records the refund instance closure without promoting a generic rule.
-- [ ] `refunds` is `AUDITED-OPEN` / `ADVERSARIAL`, and the disposition authority and manifest both report 18 of 77.
-- [ ] Repository, local and Primary migration ledgers and structural/function surfaces match the fresh Primary evidence; generated artifacts match their sources.
-- [ ] No file outside Write Scope has changed and all scratch data was rolled back or removed.
+- [x] One refund-only trigger guards authenticated INSERT and UPDATE as Step 1 states, with no change to the existing refund RPCs, grants, policies or triggers.
+- [x] The permanent pgTAP file proves positive and negative paths with real rows and exact failures; every declared assertion executes and the stated mutants are positively installed, killed and restored.
+- [x] RFD-1 and RFD-2 are fixed; RFD-3 remains explicitly open; ENTRY-1 records the refund instance closure without promoting a generic rule.
+- [x] `refunds` is `AUDITED-OPEN` / `ADVERSARIAL`, and the disposition authority and manifest both report 18 of 77.
+- [x] Repository, local and Primary migration ledgers and structural/function surfaces match the fresh Primary evidence; generated artifacts match their sources.
+- [x] No file outside Write Scope has changed and all scratch data was rolled back or removed.
 
 ## Execution Log
 
@@ -218,15 +218,23 @@ The retried `check_agent_continuity.ps1 -Finish` exited 0 with `LOCAL_CERTIFY: R
 
 None yet.
 
+### 2026-09-24 — Review
+
+Verdict: Confirmed Complete
+
+Independently checked the committed implementation at `7c2c239` against every frozen step and criterion. The eight changed paths since the authorized HEAD are all in Write Scope; `MASTER_API_CONTRACT.md` was regenerated but byte-identical. The committed migration and test SHA-256 values remain the owner-authorized `82c847fc1de587246125f3cc0e296c239c8d716326df670bf43104fbb508fa8a` and `f31af57ed26f70a96bab8f98fdc2646416ff1e1372bde1bc0bd0c22530282952`. The migration has one refund-local function, its revoke and one refund trigger; local and Primary definitions, ACLs, full function hash and all ten structural surface hashes agree. The 28-assertion permanent file exercised the positive/negative doors; all four independently installed mutants turned their targeted assertions red and were restored; `-Finish` reran all 2078 pgTAP assertions twice, 449 HTTP checks and the required parity/guard checks to `LOCAL_CERTIFY: READY`.
+
+RFD-1 and RFD-2 are fixed by the deployed door guard; RFD-3 remains OPEN without an event-parity claim; ENTRY-1 names only the refund instance closure with seven remaining. Disposition and manifest agree on 18 of 77, and Checks 22 and 24 passed. The recorded 224-entry Primary ledger was read live, matched the repository and local identities, and the ten live structural categories matched local. The implementation commit left a clean tree, with no out-of-scope path, no persistent test fixture and no unresolved blocker. `Supersedes / Depends On` is None. No new architecture or owner decision was introduced.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
