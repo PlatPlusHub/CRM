@@ -83,7 +83,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -256,6 +256,28 @@ Step results:
 Commits: this commit (contract synchronization only; Steps 1-4 remain in the working tree for the reason recorded in the previous entry).
 
 Blocker: Step 6 requires the owner's explicit authorization to deploy `20260924130000_supplier_creation_is_recorded.sql` to Primary `vrvtsxexkiiiivlkdxzp`. The owner's approval of this contract withholds it until the local proof is presented. Nothing has been sent to Primary and Secondary has not been contacted.
+### 2026-09-24 — Step 6: owner authorization and pre-deployment preconditions
+
+Outcome: Complete
+
+- **Owner authorization**, given after Step 5 was recorded: "AUTHORIZED: proceed with SPEC-215 / SUP-5 Primary deployment", limited to `20260924130000_supplier_creation_is_recorded.sql` with SHA-256 `257e63d60e98947c2d488319f29ec94b614f34cdd22f699507345687c25d9b44` and test SHA-256 `8880a97c94d7662e2521230d46eecb6cb71b02df802acdf46e32607dfd8be09e`, target `vrvtsxexkiiiivlkdxzp`, from HEAD `a5231ddfcf6c0e058c748eaf771b7688979c7ddf`; Secondary excluded; fail-closed on any difference.
+- Local state re-verified before any Primary contact: HEAD `a5231ddfcf6c0e058c748eaf771b7688979c7ddf`; working tree exactly the four Step 1-4 paths; migration SHA-256 `257e63d6…9b44` and test SHA-256 `8880a97c…e09e`, both LF, equal to the authorization.
+- (a) Target read live through the `supabase-primary` connector: `https://vrvtsxexkiiiivlkdxzp.supabase.co` — Primary, not Secondary `brplkqmbzffpxqgkkdzo`.
+- (b)(c) Primary ledger read before deployment with the recorded `read_query`: count **221**, fingerprint `17d4e308e52b70cc2747527c9bb757ed`, latest `20260924120000`, `20260924130000` ABSENT; `suppliers_emit_created` and `app.emit_supplier_created` absent, and `app.create_supplier` still naming `supplier_created` — equal to the recorded evidence, so exactly one migration was pending.
+
+### 2026-09-24 — Steps 6-9: Primary deployment and post-deploy verification
+
+Outcome: Complete
+
+Step results:
+- Step 6: Applied — (d) `supabase-primary` `apply_migration` with the exact text of Step 1's file and nothing else: success. The single statement Primary stored for it has md5 `9d07e091c4d37298aae877cf6365218a`, the md5 of the repository file's bytes, and `app.emit_supplier_created` and `app.create_supplier` hash identically to the local stack's. (e) The connector assigned `20260924083412`; that one row, matched by version and name, was normalised to `20260924130000`; no other row was touched. (f) Full ledger re-read with the recorded `read_query`: count **222**, fingerprint `c12c7a06c9d6d9199f56bccc03456bfd`, `20260924130000_supplier_creation_is_recorded` present once — the fresh reading, which equals the value predicted locally. On Primary: exactly one trigger executes `app.emit_supplier_created`, `suppliers_emit_created`, tgtype 5 (AFTER INSERT, row) and nothing else; the function is SECURITY DEFINER and neither `PUBLIC` nor `authenticated` holds `EXECUTE`; `app.create_supplier` no longer calls `record_event`; and the only function in `app`/`public` naming `supplier_created` is `app.emit_supplier_created()` — one producer. (g) Function surface read FROM Primary with the Check L2/P2 expression: `ea6275626ffc1ddc20f886ecb1f4584e`, 301 functions; `scripts/parity_surface.sql`'s statement run on Primary: `_combined` `6c888a130e60a0b65f7eefa2a5a97968`, 3035 objects, and all ten per-surface hashes equal the local stack's. Evidence file rewritten from those readings; the 222-entry ledger array was admitted only after its ordered md5 equalled Primary's fingerprint. (h) Repository filenames, local ledger and Primary ledger are the same 222 identities. (i) `check_database_parity_evidence.ps1` first exited 1 on Check L5 alone — the manifest still published the pre-deployment hashes, which Step 7 exists to replace; P1, P2, P4 and L3 all matched.
+- Step 7: Applied — remeasured and rewritten: 222 migrations, latest `20260924130000`, ledger `c12c7a06…`, function surface `ea627562…` (301), structural surface `6c888a13…` (3,035), 77 tables, 71/621 catalog, 8 reporting views, 79 client RPCs, suite 121 files / 2025 assertions, 449 HTTP assertions; coverage 16 of 77, supported by the disposition rows (Check 22 clean); `Last Completed` SPEC-215 replacing SPEC-214; `Next capability` Batch 6 Slice 16. Manifest 6715 characters.
+- Step 8: Applied — `ai-map.json` regenerated and stored LF.
+- Step 9: Applied — Post-deploy verification: `check_database_parity_evidence.ps1` exit 0 (`DATABASE PARITY: CLEAN`; `PRIMARY PARITY EVIDENCE: CLEAN`), `check_primary_ledger.ps1` exit 0 (`RECOVER-1 LEDGER EVIDENCE: CLEAN`), `check_repository_consistency.ps1` exit 0 (`REPOSITORY CONSISTENCY: CLEAN`).
+
+No second repair was needed or attempted. Secondary was not contacted.
+
+Commits: this commit (Steps 1-9).
 ## Verification Notes
 
 ## Review Gate
