@@ -212,22 +212,22 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Acceptance Criteria
 
-- [ ] `supabase/migrations/20260924120000_quotation_door_parity.sql` exists and contains exactly the function, the revoke and the trigger Step 1 names, with no `security definer`, no `auth.uid()` exemption, and no grant, policy, index, constraint, other-trigger or RPC change.
-- [ ] `public.quotations` carries exactly one trigger executing `app.guard_quotation_integrity`, firing `BEFORE INSERT OR UPDATE`, and `app.guard_quotation_integrity` grants no `EXECUTE` to `PUBLIC`.
-- [ ] `app.create_quotation`, `app.advance_quotation`, `app.recompute_quotation_total`, `app.merge_customer_identity`, every RLS policy and every grant on `public.quotations` are identical to their definitions at the start of this Change Request.
-- [ ] `supabase/tests/120_quotation_door_parity_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 30, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
-- [ ] Every guard refusal in that file asserts SQLSTATE `23514` and the exact message Step 1 names, and its signed-in actors are an `employee` carrying DENY overrides on SEND_QUOTATION and ACCEPT_QUOTATION and a `branch_manager`, both at `aal2`.
-- [ ] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
-- [ ] The Execution Log records all nine mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
-- [ ] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries `QUO-5`, `QUO-6`, `QUO-7` and `QUO-8` rows, each FIXED by SPEC-214 with an empty Owner Decision cell; the `ENTRY-1` row records the third instance and the declined promotion; and its `Last updated:` entry is dated 2026-09-24.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `quotations` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-214-quotation-door-parity` and `QUO-5, QUO-6, QUO-7, QUO-8`, its Next cell names all four unclassified axes, and its Coverage summary reads 15 of 77 with two `PARTIAL`.
-- [ ] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
-- [ ] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
-- [ ] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 15 of 77, names SPEC-214 as `Last Completed` in place of SPEC-213, names Batch 6 Slice 15 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
-- [ ] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
-- [ ] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `supabase/migrations/20260924120000_quotation_door_parity.sql` exists and contains exactly the function, the revoke and the trigger Step 1 names, with no `security definer`, no `auth.uid()` exemption, and no grant, policy, index, constraint, other-trigger or RPC change.
+- [x] `public.quotations` carries exactly one trigger executing `app.guard_quotation_integrity`, firing `BEFORE INSERT OR UPDATE`, and `app.guard_quotation_integrity` grants no `EXECUTE` to `PUBLIC`.
+- [x] `app.create_quotation`, `app.advance_quotation`, `app.recompute_quotation_total`, `app.merge_customer_identity`, every RLS policy and every grant on `public.quotations` are identical to their definitions at the start of this Change Request.
+- [x] `supabase/tests/120_quotation_door_parity_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 30, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
+- [x] Every guard refusal in that file asserts SQLSTATE `23514` and the exact message Step 1 names, and its signed-in actors are an `employee` carrying DENY overrides on SEND_QUOTATION and ACCEPT_QUOTATION and a `branch_manager`, both at `aal2`.
+- [x] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
+- [x] The Execution Log records all nine mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
+- [x] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries `QUO-5`, `QUO-6`, `QUO-7` and `QUO-8` rows, each FIXED by SPEC-214 with an empty Owner Decision cell; the `ENTRY-1` row records the third instance and the declined promotion; and its `Last updated:` entry is dated 2026-09-24.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `quotations` as `PARTIAL` / `ADVERSARIAL` citing `SPEC-214-quotation-door-parity` and `QUO-5, QUO-6, QUO-7, QUO-8`, its Next cell names all four unclassified axes, and its Coverage summary reads 15 of 77 with two `PARTIAL`.
+- [x] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924120000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
+- [x] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
+- [x] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 15 of 77, names SPEC-214 as `Last Completed` in place of SPEC-213, names Batch 6 Slice 15 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
+- [x] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
+- [x] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -287,20 +287,31 @@ No second repair was needed or attempted. Secondary was not contacted.
 Commits: this commit (Steps 1-9).
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-09-24 — Review
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository, the local stack and Primary, not against the Execution Log. No suite was rerun for Review: `-Finish` had just certified this exact tree (`LOCAL_CERTIFY: READY`, 371 s — reset, pgTAP Pass A, the six HTTP suites, Pass B, `verify_database.sql`, parity evidence, repository consistency, `git diff --check`, primary ledger).
+- Files changed since `795d6bc`: exactly eight of the nine Write Scope paths; `MASTER_API_CONTRACT.md` did not need to change and its diff is empty. The only migration added is `20260924120000_quotation_door_parity.sql`, whose committed blob hashes to `2ab982d1…f808` — the authorized bytes — and which names no grant, policy, index, constraint, other trigger or RPC outside comments; so `create_quotation`, `advance_quotation`, `recompute_quotation_total`, `merge_customer_identity` and every policy and grant on `quotations` are as they were.
+- Local catalog: exactly one trigger executes `app.guard_quotation_integrity`, `BEFORE INSERT OR UPDATE ON public.quotations`; the function is SECURITY INVOKER and `PUBLIC` holds no `EXECUTE`. Primary's structural surface equals local's on all ten surfaces (`_combined` `d639d3c6…`, 3033), so the same holds there.
+- `120_…`: declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 30, carries 14 `throws_ok`, of which the 10 guard refusals assert `23514` with the exact Step 1 messages; all 7 session claims are `aal2`; actors are an `employee` with DENY overrides and a `branch_manager`; the savepoint mutation control drops the trigger. Assertions executed equal the plan sum: pg_prove fails any file whose plan is not met and `-Finish` passed both runs, Check 15 is clean at 2004, and Step 5 measured 2004 = 2004 on the same bytes.
+- Register: QUO-5 (High), QUO-6 (High), QUO-7 (Medium), QUO-8 (Low), each FIXED by SPEC-214 with an empty Owner Decision cell; ENTRY-1 records the third instance and the declined promotion, Updated `09-24`; `Last updated: 2026-09-24`. Disposition: `quotations` `PARTIAL` / `ADVERSARIAL`, the four unclassified axes named; Coverage 15 of 77 with two `PARTIAL`.
+- Evidence file names `vrvtsxexkiiiivlkdxzp`, holds 221 identities including `20260924120000`, count and fingerprint consistent (`check_primary_ledger.ps1` CLEAN), equal to the repository and local sets. The manifest publishes 15 of 77, SPEC-214 as `Last Completed`, Slice 15 as `Next capability` and the post-deployment figures; `ai-map.json` agrees (Check 7 clean) and is stored LF.
+- Observation, not a defect and not acted on: Step 5's readiness gate and `-Finish` each run the same ~6-minute database protocol, and between them no migration or test byte changed (hash-proven). They sit on opposite sides of the irreversible Primary write and certify different trees, and reusing one for the other would need an evidence cache in the control plane — rejected under WORTH IT for this slice.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
