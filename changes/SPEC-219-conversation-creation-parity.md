@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -162,6 +162,10 @@ Owner approved exact Draft commit `c86634cb62e2c9d67edd93a698d748ee05752f4b` aft
 ### 2026-09-24 — Live selection and pre-approval audit
 
 Outcome: Drafted after live selector chose `conversations` (Exposure 11, coverage 66) over `payments` (11/84). Local rollback probes established the creation defect, customer-timeline omission, false owner, separate direct-reopen gap and exact prototype behavior. A further rolled-back RLS probe moved the named colleague to another department: the unguarded forged-owner row was visible to that colleague (one row), while the guarded row derived the actual creator and was invisible to the colleague (zero rows). Prototype mutation states were positively observed: disabled guard `D` admitted closed entry and false owner, restored `O`; disabled emitter `D` made a persisted direct row emit zero events, restored `O`; restored old RPC event block produced two events, then the no-event prototype source was restored. Final ROLLBACK left zero prototype triggers and fixture rows and restored original RPC source MD5 `f3446078bb45487952da2057eaed115e`. Read-only Primary `vrvtsxexkiiiivlkdxzp` was ACTIVE_HEALTHY at 225 migrations, fingerprint `843250602025735f48e8c860ea12557f`, latest `20260924160000`, with zero conversation rows. An additional rollback prototype moved the entry-state check ahead of the sessionless bypass: a session-less `closed` INSERT was refused with 23514, while an `open` INSERT retained null owner. No Primary write or Secondary contact occurred. Awaiting owner Draft approval.
+
+### 2026-09-24 — Execution started
+
+Owner-approved SPEC-219 entered In Progress after the approval commit. Resume Step 1; Primary deployment remains separately gated.
 
 ## Verification Notes
 
