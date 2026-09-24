@@ -181,35 +181,34 @@ select is(
   'NON-MUTATION: after both refusals the document is untouched -- the throws are not hiding a partial write');
 
 -- =============================================================================================
--- 18-19. DOC-LC-3, PINNED AS KNOWN STATE -- not fixed here, and deliberately so.
---        `documents` carries TWO representations of one concept: `lifecycle_status_code` (now
---        governed by canon 26's machine) and the older `is_archived` boolean (governed by
+-- 18-19. DOC-LC-3, FIXED by SPEC-216 (`20260924140000`).
+--        `documents` carries TWO representations of one concept: `lifecycle_status_code` (governed
+--        by canon 26's machine) and the older `is_archived` boolean (governed by
 --        `app.enforce_archive_authority`). Both cost ARCHIVE_DOCUMENT, so no unauthorized path
---        splits them any more -- but an AUTHORIZED holder still can, by moving the boolean alone.
---        The result is `archived/false`: a document nothing can re-version (both write paths read
---        the STATUS) while everything reading the BOOLEAN reports it as not archived.
+--        splits them -- but an AUTHORIZED holder could, by moving the boolean alone, leaving
+--        `archived/false`: a document nothing can re-version (both write paths read the STATUS)
+--        while everything reading the BOOLEAN reports it as not archived.
 --
---        Not fixed in this package because the fix requires deciding whether un-archiving exists
---        at all, and the two authorities disagree: canon 26 lists NO transition back into `active`,
---        while `enforce_archive_authority` says in terms that "restoring is the same authority as
---        archiving". Synchronizing the fields in either direction removes one of them. That is a
---        canonical contradiction, not an engineering choice, so it is recorded as DOC-LC-3 and
---        pinned here instead -- a defect that is asserted cannot change silently.
+--        These two assertions pinned that split while it was open. The resolution was not a choice
+--        between the authorities, which govern different columns: `lifecycle_status_code =
+--        'archived'` IMPLIES `is_archived`, now a constraint. Canon 26 keeps its no-way-back rule
+--        and the boolean stays bidirectional on a document still `active` (122 asserts that).
 -- =============================================================================================
 reset role;
 select set_config('request.jwt.claims','{"sub":"69000000-0000-0000-0000-0000000000a1"}', true);
 set local role authenticated;
 
-select lives_ok(
+select throws_ok(
   $$update public.documents set is_archived = false
      where tenant_id = '69000000-0000-0000-0000-000000000001' and title = 'Nour Passport'$$,
-  'DOC-LC-3 (KNOWN, BLOCKED): an ARCHIVE_DOCUMENT holder can still move the BOOLEAN alone -- the machine governs the status column only');
+  '23514', null,
+  'DOC-LC-3: an ARCHIVE_DOCUMENT holder can no longer move the BOOLEAN alone on an archived document');
 
 select is(
   (select lifecycle_status_code || '/' || is_archived::text from public.documents
     where tenant_id = '69000000-0000-0000-0000-000000000001' and title = 'Nour Passport'),
-  'archived/false',
-  '...producing the split state, pinned so it cannot change unnoticed while the canon contradiction is open');
+  'archived/true',
+  '...so the split state is unreachable and the document stays archived/true');
 
 select finish();
 rollback;

@@ -93,7 +93,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 7
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -275,6 +275,30 @@ Step results:
 Commits: this commit (contract synchronization only; Steps 1-5 remain in the working tree for the reason recorded in the previous entry).
 
 Blocker: Step 7 requires the owner's explicit authorization to deploy `20260924140000_document_door_parity.sql` to Primary `vrvtsxexkiiiivlkdxzp`. Nothing has been sent to Primary and Secondary has not been contacted.
+
+### 2026-09-24 — Step 7: owner authorization and pre-deployment preconditions
+
+Outcome: Complete
+
+- **Owner authorization**, given after Step 6 was recorded: "AUTHORIZED: proceed with SPEC-216 Primary deployment", limited to `20260924140000_document_door_parity.sql` with SHA-256 `4c50fa437a3ed9c8cbaec4fcb5477454d07041c70d133c6fffea58baf9b3676c`, permanent test SHA-256 `e599ffad5a6ffcd2558e1f20ab6bf74e6e78067092bbba0abd50989d34d183af` and `69_…` SHA-256 `8bddf6b17de15e440ab8bef9663fc48e36bca8e05fa9cf2540972980aa7f1a13`, target `vrvtsxexkiiiivlkdxzp`, from HEAD `c93a7cb827d9f2d0b456acc36c9e2bd75a45cead`; closing DOC-4, DOC-5, DOC-6, DOC-LC-3 and the `documents` instances of ARCH-2 and ENTRY-1 only; the two unclassified axes excluded; Secondary excluded; fail-closed on any difference. The owner also directed that the mutation-harness correction recorded in Step 6 stays part of the permanent evidence: the earlier scripted M1 result was invalid because the mutant SQL never executed; the harness was repaired to fail visibly on an apply error; the correctly-formed mutant was then applied and killed by 4 and 5; the final 9/9 rests only on verified applications.
+- Local state re-verified before any Primary write: HEAD `c93a7cb827d9f2d0b456acc36c9e2bd75a45cead`; working tree exactly the five Step 1-5 paths; the three SHA-256 values equal to the authorization; 223 migration files.
+- (a) Target read live through the `supabase-primary` connector: `https://vrvtsxexkiiiivlkdxzp.supabase.co` — Primary, not Secondary `brplkqmbzffpxqgkkdzo`.
+- (b)(c) Primary ledger read before deployment with the recorded `read_query`: count **222**, fingerprint `c12c7a06c9d6d9199f56bccc03456bfd`, latest `20260924130000`, no row for `20260924140000` or `document_door_parity`; `app.guard_document_integrity`, `documents_guard_integrity` and `documents_archived_status_is_archived_check` absent; 0 `documents` rows, so 0 `archived/false` — equal to the recorded evidence, so exactly one migration was pending.
+
+### 2026-09-24 — Steps 7-10: Primary deployment and post-deploy verification
+
+Outcome: Complete
+
+Step results:
+- Step 7: Applied — (d) `supabase-primary` `apply_migration` with the exact text of Step 1's file and nothing else: success. The single statement Primary stored for it has md5 `66ab7aca5c790e191c9f5394158b773e` and length 6012, the md5 and length of the repository file's bytes. (e) The connector assigned `20260924110601`; that one row, matched by version and name, was normalised to `20260924140000`; no other row was touched. (f) Full ledger re-read with the recorded `read_query`: count **223**, fingerprint `6b346033368ea9439a1119a5af5d3fc2`, `20260924140000_document_door_parity` present once and last — the fresh reading, equal to the value predicted locally. On Primary: `app.guard_document_integrity()` is SECURITY INVOKER, neither `PUBLIC` nor `authenticated` holds `EXECUTE`, exactly one trigger executes it, `documents_guard_integrity`, tgtype 23 (BEFORE INSERT OR UPDATE, row), and its `pg_get_functiondef` md5 is `4d197e4028f55b5e8fc5b8647169ed71`, identical to the local definition every assertion of `122_…` ran against; `documents_archived_status_is_archived_check` reads `CHECK (((lifecycle_status_code <> 'archived'::text) OR is_archived))`. (g) Function surface read FROM Primary with the Check L2/P2 expression: `7395d3f8edbb2a34e6f8c90b74940eb6`, 302 functions; `scripts/parity_surface.sql`'s statement run on Primary: `_combined` `ec4590824e36ece4e9edb62b65540fb6`, 3038 objects (triggers 291, constraints 511), and all ten per-surface hashes equal the local stack's. Evidence file rewritten from those readings; the 223-entry ledger array was admitted only after its md5 equalled Primary's fingerprint. (h) Repository filenames, local ledger and Primary ledger are the same 223 identities (0 differences each way). (i) `check_database_parity_evidence.ps1` first exited 1 on Check L5 alone — the manifest still published the pre-deployment hashes, which Step 8 exists to replace; P1, P2, P4 and L3 all matched.
+- **How the deployed semantics were verified on Primary, stated rather than implied:** by definitional identity, not by executing DML there. The authorization covered applying one migration; exercising the guard on Primary would have meant writing synthetic `auth.users`, tenants, documents and events into the production project, even inside a rolled-back transaction. Instead: the guard's definition on Primary is byte-equal (md5) to the one the 25 assertions of `122_…` proved — every entry-state arm (active, unarchived, no hold and no hold evidence, no pointer), the frozen type and the own-current-version pointer rule — and the constraint text is the one 69 18-19 and 122 19-20 proved. The five legitimate RPCs (`app.upload_document`, `app.upload_subscription_payment_proof`, `app.add_document_version`, `app.archive_document`, `app.set_document_legal_hold`) are covered by the whole function-surface hash equalling local's, where 122 2, 11, 14, 18, 22-23 and the six HTTP suites exercised them.
+- Step 8: Applied — remeasured and rewritten: 223 migrations, latest `20260924140000`, ledger `6b346033…`, function surface `7395d3f8…` (302), structural surface `ec459082…` (3,038); 77 tables, 71/621 catalog, 8 reporting views and 79 client RPCs unchanged and re-measured by the gate (`verify_database.sql`, `generate-api-contract.ps1`); suite 122 files / 2050 assertions, 449 HTTP assertions; coverage 17 of 77, supported by the disposition rows (Check 22 clean); `Last Completed` SPEC-216 replacing SPEC-215; `Next capability` Batch 6 Slice 17. Manifest 6710 characters.
+- Step 9: Applied — `ai-map.json` regenerated and stored LF.
+- Step 10: Applied — Post-deploy verification: `check_database_parity_evidence.ps1` exit 0 (`DATABASE PARITY: CLEAN`; `PRIMARY PARITY EVIDENCE: CLEAN`), `check_primary_ledger.ps1` exit 0 (`RECOVER-1 LEDGER EVIDENCE: CLEAN`), `check_repository_consistency.ps1` exit 0 (`REPOSITORY CONSISTENCY: CLEAN`).
+
+No second repair was needed or attempted. Secondary was not contacted.
+
+Commits: this commit (Steps 1-10).
 
 ## Verification Notes
 
