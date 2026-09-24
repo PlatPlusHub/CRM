@@ -204,22 +204,22 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Acceptance Criteria
 
-- [ ] `supabase/migrations/20260924130000_supplier_creation_is_recorded.sql` exists and contains exactly the function, the revoke, the trigger and the `app.create_supplier` replacement Step 1 names, and no grant, policy, index, constraint, other-trigger or other-function change.
-- [ ] `public.suppliers` carries exactly one trigger executing `app.emit_supplier_created`, firing `AFTER INSERT` only; the function is SECURITY DEFINER and grants no `EXECUTE` to `PUBLIC`.
-- [ ] `app.create_supplier` differs from its `202607059900` definition only by the removed `record_event` statement and the comment that replaces it, and every RLS policy, grant and other trigger on `public.suppliers` is identical to its definition at the start of this Change Request.
-- [ ] `supabase/tests/121_supplier_creation_is_recorded_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 21, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
-- [ ] That file's observability assertions compare exact event count, actor and payload per named supplier, and its signed-in actors are a `senior_employee` holding ASSIGN_SUPPLIER without ARCHIVE_RECORD or MANAGE_SUPPLIER_CREDIT and an `owner`, both at `aal2`.
-- [ ] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
-- [ ] The Execution Log records all three mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
-- [ ] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
-- [ ] `reports/master/MASTER_GAP_REGISTER.md` carries a `SUP-5` row, FIXED by SPEC-215 with an empty Owner Decision cell, and its `Last updated:` entry is dated 2026-09-24.
-- [ ] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `suppliers` as `AUDITED-OPEN` / `ADVERSARIAL` citing `SPEC-215-supplier-creation-is-recorded` and `SUP-5, ARCH-2`, its Next cell names ARCH-2's instance, the swept non-defects and the archived-supplier assignment question, and its Coverage summary reads 16 of 77 with eight `AUDITED-OPEN`.
-- [ ] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924130000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
-- [ ] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
-- [ ] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 16 of 77, names SPEC-215 as `Last Completed` in place of SPEC-214, names Batch 6 Slice 16 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
-- [ ] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
-- [ ] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
-- [ ] No file outside this contract's Write Scope was created, modified or deleted.
+- [x] `supabase/migrations/20260924130000_supplier_creation_is_recorded.sql` exists and contains exactly the function, the revoke, the trigger and the `app.create_supplier` replacement Step 1 names, and no grant, policy, index, constraint, other-trigger or other-function change.
+- [x] `public.suppliers` carries exactly one trigger executing `app.emit_supplier_created`, firing `AFTER INSERT` only; the function is SECURITY DEFINER and grants no `EXECUTE` to `PUBLIC`.
+- [x] `app.create_supplier` differs from its `202607059900` definition only by the removed `record_event` statement and the comment that replaces it, and every RLS policy, grant and other trigger on `public.suppliers` is identical to its definition at the start of this Change Request.
+- [x] `supabase/tests/121_supplier_creation_is_recorded_test.sql` exists, declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 21, contains `throws_ok`, and contains the in-file mutation control that drops the trigger inside a savepoint.
+- [x] That file's observability assertions compare exact event count, actor and payload per named supplier, and its signed-in actors are a `senior_employee` holding ASSIGN_SUPPLIER without ARCHIVE_RECORD or MANAGE_SUPPLIER_CREDIT and an `owner`, both at `aal2`.
+- [x] `npx supabase test db` reports 0 failures and the assertions executed equal the sum of the literal `plan(N)` declarations across `supabase/tests`.
+- [x] The Execution Log records all three mutants of the Mutation Obligation, each turning red the assertions this contract names for it, and the unmutated migration turning none red.
+- [x] `reports/master/MASTER_API_CONTRACT.md` is byte-identical to its state at the start of this Change Request.
+- [x] `reports/master/MASTER_GAP_REGISTER.md` carries a `SUP-5` row, FIXED by SPEC-215 with an empty Owner Decision cell, and its `Last updated:` entry is dated 2026-09-24.
+- [x] `reports/master/MASTER_SURFACE_DISPOSITION.md` records `suppliers` as `AUDITED-OPEN` / `ADVERSARIAL` citing `SPEC-215-supplier-creation-is-recorded` and `SUP-5, ARCH-2`, its Next cell names ARCH-2's instance, the swept non-defects and the archived-supplier assignment question, and its Coverage summary reads 16 of 77 with eight `AUDITED-OPEN`.
+- [x] `reports/evidence/primary-ledger-evidence.json` names `project_ref` `vrvtsxexkiiiivlkdxzp`, contains `20260924130000` in its `ledger` array, and its `migration_count` and `ledger_fingerprint` are consistent with that array.
+- [x] The repository migration filename set, the local migration set and the Primary ledger recorded in that evidence file contain the same migration identities.
+- [x] `_ORVION_CANONICAL/manifest.md` records Batch 6 coverage as 16 of 77, names SPEC-215 as `Last Completed` in place of SPEC-214, names Batch 6 Slice 16 as `Next capability`, and writes every mutable `Live state:` figure from a post-deployment measurement.
+- [x] `ai-map.json`'s live_state copies of `Last Completed`, `Active Change Request` and `Next capability` match the manifest by value, and the file is stored with LF line endings.
+- [x] The Execution Log records the owner's explicit Primary deployment authorization before the deployment, and the pre-deploy readiness gate's measured result for every item.
+- [x] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -280,17 +280,30 @@ No second repair was needed or attempted. Secondary was not contacted.
 Commits: this commit (Steps 1-9).
 ## Verification Notes
 
+### 2026-09-24 — Review
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository, the local stack and Primary, not against the Execution Log. No suite was rerun for Review: `-Finish` had just certified this exact tree (`LOCAL_CERTIFY: READY`, 295 s — reset, pgTAP Pass A, the six HTTP suites, Pass B, `verify_database.sql`, parity evidence, repository consistency, `git diff --check`, primary ledger).
+- Files changed since `4c47832`: exactly eight of the nine Write Scope paths; `MASTER_API_CONTRACT.md` did not need to change and its diff is empty. The only migration added is `20260924130000_supplier_creation_is_recorded.sql`, whose committed blob hashes to `257e63d6…9b44` — the authorized bytes — and whose only statements are the emitter function, its revoke, the trigger and the `app.create_supplier` replacement. That replacement differs from `202607059900`'s body by exactly the removed `record_event` statement and the comment line that replaces it, measured line by line.
+- Local catalog: exactly one trigger executes `app.emit_supplier_created`, `suppliers_emit_created`, tgtype 5 (AFTER INSERT, row); the function is SECURITY DEFINER and `PUBLIC` holds no `EXECUTE`. The seven earlier triggers on `suppliers`, the one `tenant_isolation` policy, the table grants (`authenticated` INSERT, UPDATE) and the 52 column grants are as they were. Primary's structural surface equals local's on all ten surfaces (`_combined` `6c888a13…`, 3035), and Step 6 read the same trigger, definer and single-producer facts on Primary directly.
+- `121_…`: declares `-- ATTACK-CLASSES:` from the closed vocabulary, plans 21, carries 4 `throws_ok`, and its savepoint control drops the trigger; the observability assertions compare one exact count/actor/payload string per named supplier; every session claim is `aal2`, and the actors are a `senior_employee` and an `owner`. Assertions executed equal the plan sum: pg_prove fails any file whose plan is not met and `-Finish` passed both runs, Check 15 is clean at 2025, and Step 5 measured 2025 = 2025 on the same bytes.
+- Register: `SUP-5` (Medium), FIXED by SPEC-215 with an empty Owner Decision cell; `Last updated: 2026-09-24`. Disposition: `suppliers` `AUDITED-OPEN` / `ADVERSARIAL` citing `SUP-5, ARCH-2`, the Next cell naming ARCH-2's instance, the swept non-defects and the archived-supplier question; Coverage 16 of 77 with eight `AUDITED-OPEN` (Check 22 clean).
+- Evidence file names `vrvtsxexkiiiivlkdxzp`, holds 222 identities including `20260924130000`, count and fingerprint consistent (`check_primary_ledger.ps1` CLEAN), equal to the repository and local sets. The manifest publishes 16 of 77, SPEC-215 as `Last Completed`, Slice 16 as `Next capability` and the post-deployment figures; `ai-map.json` agrees (Check 7 clean) and is stored LF.
+- Nothing was absorbed: ARCH-2, the archived-supplier assignment question, `created_at` hardening and every other surface are untouched. The pre-deploy gate and `-Finish` again ran the same database protocol on identical bytes; that duplication was already rejected under WORTH IT in SPEC-214, and nothing measured here changes that decision.
+
+Recommendation to human: Set Status to Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
