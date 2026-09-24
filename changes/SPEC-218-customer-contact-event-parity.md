@@ -145,10 +145,10 @@ Post-Implementation Proof Obligation: Permanent focused pgTAP, two full passes, 
 
 ## Acceptance Criteria
 
-- [ ] Both authorized INSERT doors emit exactly one customer-scoped contact event per persisted contact, and refused writes emit none.
-- [ ] Existing RPC normalization, primary-per-type behavior, actor attribution, authorization and customer merge behavior remain proven.
-- [ ] CM-3 is recorded fixed, and `customer_contact_methods` is `AUDITED` / `ADVERSARIAL` with mechanically correct 19/77 coverage.
-- [ ] Migration/test identities, generated artifacts, local and fresh Primary evidence match; no unauthorized file changed.
+- [x] Both authorized INSERT doors emit exactly one customer-scoped contact event per persisted contact, and refused writes emit none.
+- [x] Existing RPC normalization, primary-per-type behavior, actor attribution, authorization and customer merge behavior remain proven.
+- [x] CM-3 is recorded fixed, and `customer_contact_methods` is `AUDITED` / `ADVERSARIAL` with mechanically correct 19/77 coverage.
+- [x] Migration/test identities, generated artifacts, local and fresh Primary evidence match; no unauthorized file changed.
 
 ## Execution Log
 
@@ -193,15 +193,21 @@ The fresh Primary ledger and hashes were written to `reports/evidence/primary-le
 
 None yet.
 
+### 2026-09-24 — Independent Review
+
+Verdict: Confirmed Complete.
+
+Reviewed committed implementation `70e28ac29176fa014f881f8bf1be15712274932f` against the frozen Objective, nine-path Write Scope, Implementation Steps, acceptance criteria and live Primary definitions. The eight changed paths are all scoped; the generated API contract is byte-identical to the local database and needed no change. The single migration and test retain the exact owner-authorized SHA-256 identities. The new pgTAP test proves both real authorized doors produce one event each, a customer timeline entry, correct owner/actor/contact payload and server time, while denied and duplicate paths produce none; it also proves normalization, per-channel primary handling, and no direct authenticated emitter EXECUTE. Existing full-suite customer merge tests passed in both 124-file / 2,106-assertion pgTAP passes. The two installed mutation probes positively established zero direct events with the trigger disabled and two RPC events with the old explicit event call restored; both mutants were rolled back and exact installed definitions rechecked. Six HTTP suites passed 449 assertions. Fresh Primary full ledger, function and all ten structural surfaces matched local after deployment; no production business DML or Secondary access was used. `-Finish` exited 0 and issued `LOCAL_CERTIFY: READY`. `check_primary_ledger`, parity evidence, repository consistency, and `git diff --check` passed. There was no new architecture decision or unresolved blocker. The committed worktree was clean at Review.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
