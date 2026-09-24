@@ -93,7 +93,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 7
 Blocker: None
 Recovery Attempt: 0
 
@@ -238,6 +238,43 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 - [ ] No file outside this contract's Write Scope was created, modified or deleted.
 
 ## Execution Log
+
+### 2026-09-24 — Steps 1-5
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `supabase/migrations/20260924140000_document_door_parity.sql` placed from the prototype; SHA-256 `4c50fa437a3ed9c8cbaec4fcb5477454d07041c70d133c6fffea58baf9b3676c`, equal to the hash recorded in Notes, LF. The guard function, its revoke, the trigger and the CHECK only.
+- Step 2: Applied — `supabase/tests/122_document_door_parity_test.sql` placed from the prototype; SHA-256 `e599ffad5a6ffcd2558e1f20ab6bf74e6e78067092bbba0abd50989d34d183af`, equal to Notes, LF; `plan(25)`.
+- Step 3: Applied — `supabase/tests/69_document_lifecycle_test.sql` replaced by the revised prototype; SHA-256 `8bddf6b17de15e440ab8bef9663fc48e36bca8e05fa9cf2540972980aa7f1a13`, equal to Notes, LF. Its diff from `2c907cd` is confined to lines 184-212: the 18-19 comment block, assertion 18 `lives_ok` → `throws_ok(…, '23514', …)`, and assertion 19's expected value `archived/false` → `archived/true`; `plan(19)` unchanged.
+- Step 4: Applied — `DOC-4` (Medium), `DOC-5` (Low) and `DOC-6` (Medium) after `SUP-5`, FIXED by SPEC-216 with empty Owner Decision cells; `DOC-LC-3` marked `✅` and prefixed FIXED; the `ARCH-2` row records `documents` closed (eleven tables remain) and the `ENTRY-1` row records the fourth instance (eight remain), both updated `09-24`; `Last updated: 2026-09-24`, prior entry demoted to `Previously:`.
+- Step 5: Applied — `documents` `PARTIAL` / `ADVERSARIAL` citing `SPEC-216-document-door-parity` and `DOC-4, DOC-5, DOC-6, DOC-LC-3`, the Next cell naming the closed class instances, the swept non-defects and the two unclassified axes; Coverage 17 of 77 with three `PARTIAL`, 60 `NOT-RECORDED`; `All 17 recorded surfaces`; `Last updated: 2026-09-24`.
+
+Commits: none for Steps 1-5. They stand applied in the working tree and are committed with the post-deployment steps, as SPEC-215 did, because repository consistency cannot be green while the migration is undeployed.
+
+### 2026-09-24 — Pre-deploy readiness gate (Step 6)
+
+Outcome: Blocked
+
+Step results:
+- Step 6: Applied — every item held:
+  - clean `npx supabase db reset`: exit 0 (127 s); the reset database's ledger holds 223 migrations, latest `20260924140000`, and carries `documents_guard_integrity` and `documents_archived_status_is_archived_check`.
+  - pgTAP **Pass A**: `Files=122, Tests=2050`, `Result: PASS` (65 s); the literal `plan(N)` sum across `supabase/tests` is **2050** over 122 files.
+  - Additional Verification, in order, each exit 0: `verify_api_end_to_end` 33 passed, `verify_role_journeys` 120, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122, `verify_storage_end_to_end` 60 — 449 in total, 0 failed (63 s).
+  - pgTAP **Pass B** after those suites, no reset: `Files=122, Tests=2050`, `Result: PASS` (53 s).
+  - `scripts/verify_database.sql`: `ALL CHECKS PASSED (77 tables, … 71/621 catalog …)`.
+  - Mutants of Step 1's text on the clean-reset stack, each restored by re-applying that text, every apply now checked for errors: M1 red 4,5; M2 red 6; M3 red 7; M4 red 8; M5 red 15,16,17; M6 red 9,10,12,13; M7 red 9; M8 red 12,13; M9 red 19,20,25; the restored text 25/25, none red. After the run `app.guard_document_integrity`'s definition has the same md5 as after the reset (`4d197e4028f55b5e8fc5b8647169ed71`), with one trigger and the constraint present.
+  - **Correction to the Notes' account of M1**, measured here: the harness's M1 text was malformed (its first replacement closed the parenthesis the second also closed), so the scripted M1 NEVER applied. The pre-Approval run 1 "survived" because the unmutated guard stayed installed; run 2's "killed by 4, 5" measured a correctly-formed M1 applied by hand just before and still installed. The kill itself was real — that hand-applied M1 turned 4 and 5 red in isolation — but "a full re-run reproduced every result" was the wrong reason. With apply errors now surfaced, the first gate run reported `M1 … APPLY FAILED … mismatched parentheses`; the corrected pair kills 4, 5 as listed above.
+  - `scripts/generate-api-contract.ps1`: `MASTER_API_CONTRACT.md` byte-identical — `git status` shows no change to it.
+  - `git status`: only the five Write Scope paths of Steps 1-5.
+  - Exactly one migration absent from the recorded Primary ledger (evidence: `vrvtsxexkiiiivlkdxzp`, 222, `c12c7a06c9d6d9199f56bccc03456bfd`): `20260924140000_document_door_parity`; nothing only on Primary.
+  - `check_repository_consistency.ps1`: 6 issues, all three admissible classes and nothing else — `MIGRATION STATE DRIFT` (count 222→223, latest, fingerprint → `6b346033368ea9439a1119a5af5d3fc2`), `SUITE FIGURE DRIFT` (files 121→122, assertions 2025→2050), RECOVER-1 with `only in repository` exactly `20260924140000_document_door_parity` and no `only on Primary` set. Checks 20, 21, 22 and 24 clean.
+- Live Primary, read-only before the owner gate: count **222**, fingerprint `c12c7a06c9d6d9199f56bccc03456bfd`, latest `20260924130000`, `20260924140000` absent, `app.guard_document_integrity` and `documents_guard_integrity` absent, 0 `documents` rows (so 0 `archived/false`) — equal to the recorded evidence.
+- Step 7: Not started — the owner has not authorized Primary deployment.
+
+Commits: this commit (contract synchronization only; Steps 1-5 remain in the working tree for the reason recorded in the previous entry).
+
+Blocker: Step 7 requires the owner's explicit authorization to deploy `20260924140000_document_door_parity.sql` to Primary `vrvtsxexkiiiivlkdxzp`. Nothing has been sent to Primary and Secondary has not been contacted.
 
 ## Verification Notes
 
