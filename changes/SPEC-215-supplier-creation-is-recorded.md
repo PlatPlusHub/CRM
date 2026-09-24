@@ -83,7 +83,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -223,6 +223,39 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Execution Log
 
+### 2026-09-24 — Steps 1-4
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `supabase/migrations/20260924130000_supplier_creation_is_recorded.sql` created from the prototype; SHA-256 `257e63d60e98947c2d488319f29ec94b614f34cdd22f699507345687c25d9b44`, equal to the full hash recorded in Notes, LF. The emitter function, the revoke, the AFTER INSERT trigger and the `app.create_supplier` replacement only; its body differs from `202607059900`'s by the removed `record_event` statement and the comment line that replaces it.
+- Step 2: Applied — `supabase/tests/121_supplier_creation_is_recorded_test.sql` created from the prototype; SHA-256 `8880a97c94d7662e2521230d46eecb6cb71b02df802acdf46e32607dfd8be09e`, equal to Notes, LF; `plan(21)`.
+- Step 3: Applied — `SUP-5` (Medium) after `QUO-8` with an empty Owner Decision cell; `Last updated: 2026-09-24`, prior entry demoted to `Previously:`.
+- Step 4: Applied — `suppliers` `AUDITED-OPEN` / `ADVERSARIAL` citing `SPEC-215-supplier-creation-is-recorded` and `SUP-5, ARCH-2`, Next cell naming ARCH-2's instance, the swept non-defects and the archived-supplier question; Coverage 16 of 77, eight `AUDITED-OPEN`, 61 `NOT-RECORDED`; `Last updated: 2026-09-24`.
+
+Commits: none for Steps 1-4. They stand applied in the working tree and are committed with the post-deployment steps, as SPEC-214 did, because repository consistency cannot be green while the migration is undeployed.
+
+### 2026-09-24 — Pre-deploy readiness gate (Step 5)
+
+Outcome: Blocked
+
+Step results:
+- Step 5: Applied — every item held:
+  - clean `npx supabase db reset`: exit 0; the reset database's ledger holds 222 migrations, latest `20260924130000`, and carries `suppliers_emit_created`.
+  - pgTAP **Pass A**: `Files=121, Tests=2025`, `Result: PASS`; the literal `plan(N)` sum across `supabase/tests` is **2025** over 121 files.
+  - Additional Verification, in order, each exit 0: `verify_api_end_to_end` 33 passed, `verify_role_journeys` 120, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122, `verify_storage_end_to_end` 60 — 449 in total, 0 failed.
+  - pgTAP **Pass B** after those suites, no reset: `Files=121, Tests=2025`, `Result: PASS`.
+  - `scripts/verify_database.sql`: `ALL CHECKS PASSED (77 tables, … 71/621 catalog …)`.
+  - Mutants of Step 1's text on the clean-reset stack, each restored by re-applying that text: M0 unmutated 21/21, none red; M1 no-op emitter red 3,5,6,8,16,20,21; M2 RPC keeps its emission red 3,21; M3 AFTER INSERT OR UPDATE red 8,17,21. Identical to the pre-Approval measurement in Notes. After all four runs the file passes 21/21 and exactly one `suppliers_emit_created` trigger (AFTER INSERT, row) is present.
+  - `scripts/generate-api-contract.ps1`: `MASTER_API_CONTRACT.md` byte-identical — `git status` shows no change to it.
+  - `git status`: only the four Write Scope paths of Steps 1-4.
+  - Exactly one migration absent from the recorded Primary ledger (evidence: `vrvtsxexkiiiivlkdxzp`, 221, `17d4e308e52b70cc2747527c9bb757ed`): `20260924130000_supplier_creation_is_recorded`; nothing only on Primary.
+  - `check_repository_consistency.ps1`: 6 issues, all three admissible classes and nothing else — `MIGRATION STATE DRIFT` (count 221→222, latest, fingerprint → `c12c7a06c9d6d9199f56bccc03456bfd`), `SUITE FIGURE DRIFT` (files 120→121, assertions 2004→2025), RECOVER-1 with `only in repository` exactly `20260924130000_supplier_creation_is_recorded` and no `only on Primary` set. Checks 21, 22 and 24 clean.
+- Step 6: Not started — the owner has not authorized Primary deployment.
+
+Commits: this commit (contract synchronization only; Steps 1-4 remain in the working tree for the reason recorded in the previous entry).
+
+Blocker: Step 6 requires the owner's explicit authorization to deploy `20260924130000_supplier_creation_is_recorded.sql` to Primary `vrvtsxexkiiiivlkdxzp`. The owner's approval of this contract withholds it until the local proof is presented. Nothing has been sent to Primary and Secondary has not been contacted.
 ## Verification Notes
 
 ## Review Gate
