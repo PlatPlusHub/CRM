@@ -87,7 +87,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -231,12 +231,38 @@ Post-Implementation Proof Obligation: `npx supabase test db` reports 0 failures 
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-09-24 — Steps 1-4
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — `supabase/migrations/20260924120000_quotation_door_parity.sql` created; SHA-256 `2ab982d1a98225a095ce2cd62226b9094ad6b1f9a94480e57c9cf616c36ff808`, equal to the prototype recorded in Notes. The function, the revoke and the trigger only; `security definer`, `auth.uid()`, grant, policy, index and constraint appear in comments alone.
+- Step 2: Applied — `supabase/tests/120_quotation_door_parity_test.sql` created; SHA-256 `bbe12ba75e9c4a7bfea41558813067efbdc2d4d583f4beaca8c1b41616d9f6dc`, equal to the prototype; `plan(30)`.
+- Step 3: Applied — `QUO-5`, `QUO-6`, `QUO-7`, `QUO-8` after `CONV-6`, each with an empty Owner Decision cell; the `ENTRY-1` sentence inserted after its anchor and its Updated cell set to `09-24`; `Last updated: 2026-09-24`, prior entry demoted to `Previously:`.
+- Step 4: Applied — `quotations` `PARTIAL` / `ADVERSARIAL` citing `SPEC-214-quotation-door-parity` and QUO-5 to QUO-8, Next cell naming the four unclassified axes; Coverage 15 of 77, two `PARTIAL`, 62 `NOT-RECORDED`; `Last updated: 2026-09-24`.
+
+Commits: none for Steps 1-4. They stand applied in the working tree and are committed together with the post-deployment steps, as SPEC-213 did, because the pre-commit hook runs repository consistency, which cannot be green while the migration is undeployed.
+### 2026-09-24 — Pre-deploy readiness gate (Step 5)
+
+Outcome: Blocked
+
+Step results:
+- Step 5: Applied — every item held:
+  - clean `npx supabase db reset`: exit 0; the reset database's latest migration is `20260924120000` (221 applied) and it carries `quotations_guard_integrity`.
+  - pgTAP **Pass A**: `Files=120, Tests=2004`, `Result: PASS`; the literal `plan(N)` sum across `supabase/tests` is **2004** over 120 files.
+  - Additional Verification, in order, each exit 0: `verify_api_end_to_end` 33 passed, `verify_role_journeys` 120, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122, `verify_storage_end_to_end` 60 — 449 in total, 0 failed.
+  - pgTAP **Pass B** after those suites, no reset: `Files=120, Tests=2004`, `Result: PASS`.
+  - `scripts/verify_database.sql`: `ALL CHECKS PASSED (77 tables, … 71/621 catalog …)`.
+  - Mutants of Step 1's text, each in one rolled-back transaction ahead of Step 2's file body, read from the repository files: M0 unmutated 30/30, none red; M1 protection removed red 4,5,6,10,11,13,14,17,18,22,24,29,30 (every guard refusal); M2 INSERT forgotten red 4,5,6,27,29,30 and none of 10,11,13,17,18,22; M3 UPDATE forgotten red 10,11,13,14,17,18,22,24,27,30 and none of 4,5,6; M4 `postgres` admission removed red 7,8,9 (plus the cascade 15,16,19,20,21,23,24); M5 entry arm removed red 4,5 (+29,30); M6 birth-total arm removed red 6; M7 fixed-terms arm removed red 11,17,22 (+24); M8 total arm removed red 10,18; M9 send-precondition arm removed red 13 (+14,30). Identical to the pre-Approval measurement recorded in Notes. Trigger present after all ten runs.
+  - `scripts/generate-api-contract.ps1`: `MASTER_API_CONTRACT.md` byte-identical — `git hash-object --no-filters` of the regenerated file equals the committed blob `7b125622c8fe48b8771c4e605b2b802f23e73560`.
+  - `git status`: only the four Write Scope paths of Steps 1-4.
+  - Exactly one migration absent from the recorded Primary ledger (evidence: `vrvtsxexkiiiivlkdxzp`, 220, `3ab05c984755ffbca5b44ba9557b83dd`): `20260924120000_quotation_door_parity`, SHA-256 `2ab982d1…f808`; nothing only on Primary.
+  - `check_repository_consistency.ps1`: 6 issues, all three admissible classes and nothing else — `MIGRATION STATE DRIFT` (count 220→221, latest, fingerprint → `17d4e308e52b70cc2747527c9bb757ed`), `SUITE FIGURE DRIFT` (files 119→120, assertions 1974→2004), RECOVER-1 with `only in repository` exactly `20260924120000_quotation_door_parity` and no `only on Primary` set. Checks 20, 21, 22 and 24 clean.
+- Step 6: Not started — the owner has not authorized Primary deployment.
+
+Commits: this commit (contract synchronization only; Steps 1-4 remain in the working tree for the reason recorded in the previous entry).
+
+Blocker: Step 6 requires the owner's explicit authorization to deploy `20260924120000_quotation_door_parity.sql` to Primary `vrvtsxexkiiiivlkdxzp`. The owner's instruction for this slice withholds it until the local proof is presented. Nothing has been sent to Primary and Secondary has not been contacted.
 
 ## Verification Notes
 
