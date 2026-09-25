@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -165,6 +165,10 @@ This Draft replaces cancelled SPEC-219 after its approved nine-path Write Scope 
 ### 2026-09-25 — Owner approval of replacement Draft
 
 Owner approved exact Draft SHA `f13ec0784e3c9f18489f48ce04c3c2bda7bcb7a8` and the ten-path Write Scope after the isolated approval Gate returned `APPROVAL_EVIDENCE: PASS`. The approval carries the bounded creation repair and exact one-member assertion-23 inventory correction. It authorizes local execution and proof, not Primary deployment. CHAT-2 remains separately OPEN and Secondary remains forbidden.
+
+### 2026-09-25 — Execution started
+
+Owner-approved SPEC-220 entered In Progress after the approval commit. Resume Step 1; all ten scoped paths are now available for local materialization. Primary deployment remains separately gated.
 
 ## Verification Notes
 
