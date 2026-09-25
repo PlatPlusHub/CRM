@@ -149,12 +149,12 @@ Post-Implementation Proof Obligation: Focused permanent pgTAP, two full passes, 
 
 ## Acceptance Criteria
 
-- [ ] Direct and RPC conversation creation each persist an `open` row and exactly one correctly scoped `conversation_started` event; refused writes emit none.
-- [ ] Authenticated creation derives actual owner and initial branch/department scope; terminal/pre-closed entry is refused for signed-in and session-less writes; valid session-less fixtures keep null actor and permitted shape.
-- [ ] Existing lifecycle, message, tenant, capability, catalog, subscription and external-thread controls remain proven; CHAT-2 stays separately open.
-- [ ] CHAT-1 and the `conversations` ENTRY-1 instance are recorded fixed; `conversations` is `AUDITED-OPEN` / `ADVERSARIAL` at mechanically correct 20/77 coverage.
-- [ ] Assertion 23’s expected inventory drops only the now trigger-derived `conversations.owner_user_id`; assertion 22, the query and all other inventory members are unchanged.
-- [ ] Migration/test identities, generated artifacts, local and fresh Primary evidence agree; no unauthorized file changes.
+- [x] Direct and RPC conversation creation each persist an `open` row and exactly one correctly scoped `conversation_started` event; refused writes emit none.
+- [x] Authenticated creation derives actual owner and initial branch/department scope; terminal/pre-closed entry is refused for signed-in and session-less writes; valid session-less fixtures keep null actor and permitted shape.
+- [x] Existing lifecycle, message, tenant, capability, catalog, subscription and external-thread controls remain proven; CHAT-2 stays separately open.
+- [x] CHAT-1 and the `conversations` ENTRY-1 instance are recorded fixed; `conversations` is `AUDITED-OPEN` / `ADVERSARIAL` at mechanically correct 20/77 coverage.
+- [x] Assertion 23’s expected inventory drops only the now trigger-derived `conversations.owner_user_id`; assertion 22, the query and all other inventory members are unchanged.
+- [x] Migration/test identities, generated artifacts, local and fresh Primary evidence agree; no unauthorized file changes.
 
 ## Execution Log
 
@@ -194,19 +194,25 @@ Initial postdeployment `-Finish` exited `FINISH_NOT_READY:EXECUTE` before runnin
 
 After correcting the two Slice-19 disposition/register `Last updated` dates to 2026-09-25, the canonical `-Finish` reran on final scoped bytes. Clean reset, full pgTAP Pass A, all six declared HTTP suites, full pgTAP Pass B, database smoke, Primary parity evidence, repository consistency, `git diff --check` and Primary ledger evidence all passed; it exited 0 and issued `LOCAL_CERTIFY: READY`. The receipt is bound to the implementation fingerprint. Prior focused 31/31 and positively installed/restored four mutation proofs remain applicable because migration and permanent-test bytes did not change.
 
+### 2026-09-25 — Independent Review of execution commit
+
+Reviewed committed execution HEAD `e9a4fc1` and its nine changed paths against the approved ten-path Write Scope; the working tree was clean. The migration/test bytes and test-83 one-member inventory diff remained frozen. Live Primary ledger, definitions, trigger timing/security/privileges, all ten structural surfaces, local certification receipt, API contract, disposition and gap status agree. SPEC-219 remains Cancelled, CHAT-2 remains OPEN, and no out-of-scope file or unapproved business-data write occurred. Every Acceptance Criterion and Review Gate item is confirmed.
+
+Verdict: Confirmed Complete
+
 ## Verification Notes
 
 None yet.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
