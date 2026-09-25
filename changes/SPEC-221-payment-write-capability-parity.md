@@ -144,10 +144,10 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 
 ## Acceptance Criteria
 
-- [ ] An authenticated employee without `RECORD_PAYMENT` cannot change payment direction, customer, supplier, booking attribution, denomination, account, payment method, paid time or rate through direct UPDATE; a visible row and exact SQLSTATE prove each refusal.
-- [ ] Authorized ordinary payment changes, both payment RPC INSERTs, metadata edits and session-less system paths retain their existing behavior; other tables' `app.guard_financial_capability` mappings are unchanged.
-- [ ] PAY-2 is fixed by the measured guard; PAY-3 and PAY-4 remain separate OPEN findings; `payments` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 21/77.
-- [ ] Migration, test, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
+- [x] An authenticated employee without `RECORD_PAYMENT` cannot change payment direction, customer, supplier, booking attribution, denomination, account, payment method, paid time or rate through direct UPDATE; a visible row and exact SQLSTATE prove each refusal.
+- [x] Authorized ordinary payment changes, both payment RPC INSERTs, metadata edits and session-less system paths retain their existing behavior; other tables' `app.guard_financial_capability` mappings are unchanged.
+- [x] PAY-2 is fixed by the measured guard; PAY-3 and PAY-4 remain separate OPEN findings; `payments` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 21/77.
+- [x] Migration, test, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
 
 ## Execution Log
 
@@ -173,19 +173,29 @@ The owner authorized Primary `vrvtsxexkiiiivlkdxzp` for HEAD `5b3a8945016fd78c10
 
 Fresh postwrite Primary full ordered ledger is 227 migrations through `20260925120000`, fingerprint `b224fabad850e86d7f48a3fb52761b0b`, with the target present exactly once and zero payment rows. Its full function hash is `ebf18ada4617978752b56360676821e8` (306), and all ten structural categories match local, combined hash `4874556d8512c0ee21bb913fecdf9b01` (3046); triggers, policies, constraints, grants, columns, views, indexes, status transitions and RLS flags are unchanged from the prewrite reading. The installed `app.guard_financial_capability()` `pg_get_functiondef` md5 `cff9f92e56f66edf33580d2d2282cedb` equals the locally proven definition, whose only difference from `202607057100` is the payments UPDATE list; it remains SECURITY INVOKER with empty `search_path`, EXECUTE held only by `postgres` (no `authenticated`), six enabled guard triggers, and the nine enabled payment triggers are unchanged. Primary evidence and manifest were reconciled from these readings; `payments` disposition, PAY-2 deployed status and coverage 21/77 recorded; map and API contract regenerated (79 endpoints, contract unchanged). `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0 (CLEAN). PAY-3 and PAY-4 remain OPEN. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status remains In Progress pending Review and the Complete transition.
 
+### 2026-09-25 — Post-deploy local certification
+
+The canonical `-Finish` ran on the final scoped bytes in VERIFY mode. Clean reset, full pgTAP Pass A, all six declared HTTP suites, full pgTAP Pass B, database smoke, Primary parity evidence, repository consistency, `git diff --check` and Primary ledger evidence all passed; it exited 0 and issued `LOCAL_CERTIFY: READY`. It validated the recorded Primary evidence and did not contact Primary. The focused 33/33 and the in-file and external installed/restored mutation proofs remain applicable because the migration and permanent-test bytes did not change.
+
+### 2026-09-25 — Independent Review of execution commit
+
+Reviewed committed execution HEAD `2661bf6` against the approved nine-path Write Scope; the working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range from the approved Draft `be47b2f` changes eight paths, all in scope (`MASTER_API_CONTRACT.md` regenerated unchanged), and touches none of the Out-of-Scope files. Objective, Write Scope, Out of Scope, Implementation Steps and Acceptance Criteria are byte-identical to the approved Draft apart from checkbox state. Committed migration and test bytes hash to the authorized `1f01a2b79eb483d682104b9e38598f8f4135a42eefeefa05fc0b143102b489eb` and `eb99c86e94066e60baafc5730604334958404996860d2f9e8c8ac166d2f9a6fd`. The migration's sole difference from `202607057100` is the payments UPDATE list; no trigger, grant, policy or permission was added and tests 56/68 still pass. A live Primary re-read after the commit shows 227 migrations / `b224fabad850e86d7f48a3fb52761b0b`, guard md5 `cff9f92e56f66edf33580d2d2282cedb`, nine enabled payment triggers and 306 functions / `ebf18ada4617978752b56360676821e8`, matching the recorded evidence. Acceptance: test 126 assertions 2 and 4–13 prove ten visible-row refusals by the guard's own 42501 message; 16–22 prove metadata, same-value, authorized and session-less paths; both payment RPC INSERTs pass in tests 53/87 and `verify_journey_branches.ps1`; PAY-2 is recorded fixed and deployed, PAY-3 and PAY-4 OPEN, `payments` AUDITED-OPEN / ADVERSARIAL at 21/77. No unapproved business-data write occurred and Secondary was never contacted. Every Acceptance Criterion and Review Gate item is confirmed.
+
+Verdict: Confirmed Complete
+
 ## Verification Notes
 
 None yet.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
