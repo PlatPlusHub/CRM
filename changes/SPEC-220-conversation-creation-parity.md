@@ -59,7 +59,7 @@ Supersedes the cancelled `changes/SPEC-219-conversation-creation-parity.md` engi
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -169,6 +169,30 @@ Owner approved exact Draft SHA `f13ec0784e3c9f18489f48ce04c3c2bda7bcb7a8` and th
 ### 2026-09-25 — Execution started
 
 Owner-approved SPEC-220 entered In Progress after the approval commit. Resume Step 1; all ten scoped paths are now available for local materialization. Primary deployment remains separately gated.
+
+### 2026-09-25 — Pre-deploy readiness gate
+
+Re-adopted the cancelled attempt's bounded creation repair under SPEC-220 and changed assertion 23's expected inventory by removing only `conversations.owner_user_id`; its query, assertion 22 and every other expected member are untouched. Clean local reset applied 226 migrations. The focused permanent test passed 31/31; full pgTAP Pass A and Pass B each passed 125 files / 2137 assertions; the six declared HTTP suites passed 33 + 120 + 40 + 74 + 122 + 60 = 449/449; `verify_database.sql` reported ALL CHECKS PASSED (77 tables). Four mutants were positively installed, killed by their expected observed counterexample, and restored in rolled-back transactions: entry-state clause removal admitted a closed row; owner derivation removal persisted a forged owner; disabling the emitter produced a successful row with zero start events; restoring the old RPC event call produced two start events. Generator reported 79 RPC endpoints (all with HTTP evidence), 8 reporting views and 73 tables; `git diff --check` passed. Frozen predeploy SHA-256: migration `43f51851983e55c21cdda05fd8452a2bc70b7c9b2c0f6eee5b7c7d011066b3ee`; test 125 `6100df00e9a68e93c21913bedab377a4defe6da4b1eaa6924d740efb59a767c`; test 83 `51a16d0937fcaed0de1cd640be92f3cd45d880c3be82f4de55408f9e79242b8e`.
+
+Fresh read-only Primary baseline (`vrvtsxexkiiiivlkdxzp`, ACTIVE_HEALTHY) remains 225 migrations through `20260924160000`, ledger `843250602025735f48e8c860ea12557f`, 304 functions/hash `f7acd08a065f71038bb570f131971f03`, 3042 structural objects/hash `2af308fab1c55f2fe3f984ca2d0ae655`, zero conversations and no new creation triggers. The clean local target is 226 migrations/ledger `7c416f13f007cc244fc35ab98a8c105a`, 306 functions/hash `09995ce64a9d2f75896530b3074f0eef`, 3046 structural objects/hash `b7cc89445aadb90e957bfdceb2216a7f`; delta is one migration, two functions and two triggers plus the RPC body replacement. Repository consistency found exactly four expected undeployed-state issues (three manifest migration fields and Primary ledger evidence); Primary parity evidence failed on the same absent migration; the continuity Gate reported `REPOSITORY_CONSISTENCY_FAILED`. These post-deployment invariants cannot be made green before the separately authorized Primary write without falsifying the live state. Primary and Secondary received no write. Step 5 is the next boundary; this CR approval does not authorize Step 6.
+
+### 2026-09-25 — Canonical certification boundary
+
+Ran `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` against these predeploy bytes. It exited 1 with `CERTIFY: FAILED` / `REPOSITORY_CONSISTENCY_FAILED` before issuing any local certification receipt, because the approved migration has not been deployed to Primary. `LOCAL_CERTIFY: READY` is unproven before Step 6/7. No Primary write was attempted.
+
+### 2026-09-25 — Authorized Primary deployment and reconciliation
+
+The owner superseded the first deployment authorization after its Test-125 SHA-256 was found to be 63 characters; the corrected authorization pinned the actual 64-character SHA-256 recorded above and explicitly accepted canonical post-deployment certification sequencing. Immediately before writing, local HEAD and all three file SHA-256 values matched exactly. Fresh Primary read confirmed project `vrvtsxexkiiiivlkdxzp` ACTIVE_HEALTHY, 225 migrations through `20260924160000`, ledger `843250602025735f48e8c860ea12557f`, no target migration or creation triggers, 304 functions and zero conversations. Applied only `20260924170000_conversation_creation_parity.sql` through the Primary connector. The connector assigned temporary version `20260925051328`; a guarded uniqueness check normalized only that new `conversation_creation_parity` row to `20260924170000`. No business-data write; Secondary was not contacted.
+
+Fresh postwrite Primary full ordered ledger is 226 migrations through `20260924170000`, fingerprint `7c416f13f007cc244fc35ab98a8c105a`, with the target present exactly once and zero conversations. Its full function hash is `09995ce64a9d2f75896530b3074f0eef` (306), and all ten structural categories match local, combined hash `b7cc89445aadb90e957bfdceb2216a7f` (3046). Direct definition inspection found one enabled row-level BEFORE INSERT guard (tgtype 7) and one enabled row-level AFTER INSERT emitter (tgtype 5); both functions are SECURITY INVOKER without PUBLIC or authenticated direct EXECUTE; the RPC remains SECURITY INVOKER with authenticated EXECUTE and no explicit `app.record_event` call. The installed guard requires open/unclosed entry and derives authenticated owner/placement, while retaining the session-less return path. Primary evidence and manifest were reconciled from these readings; map and API contract regenerated. `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0. CHAT-2 remains OPEN; Step 8 certification and Review remain.
+
+### 2026-09-25 — Finish runtime routing
+
+Initial postdeployment `-Finish` exited `FINISH_NOT_READY:EXECUTE` before running the verification protocol because the Runtime Checkpoint still named step 8. The canonical runner permits `-Finish` only in VERIFY mode, reached with `Resume Step: DONE`. Implementation and reconciliation steps are complete, so the checkpoint now names DONE for certification; Status remains In Progress pending Review and the Complete transition.
+
+### 2026-09-25 — Post-deploy local certification
+
+After correcting the two Slice-19 disposition/register `Last updated` dates to 2026-09-25, the canonical `-Finish` reran on final scoped bytes. Clean reset, full pgTAP Pass A, all six declared HTTP suites, full pgTAP Pass B, database smoke, Primary parity evidence, repository consistency, `git diff --check` and Primary ledger evidence all passed; it exited 0 and issued `LOCAL_CERTIFY: READY`. The receipt is bound to the implementation fingerprint. Prior focused 31/31 and positively installed/restored four mutation proofs remain applicable because migration and permanent-test bytes did not change.
 
 ## Verification Notes
 

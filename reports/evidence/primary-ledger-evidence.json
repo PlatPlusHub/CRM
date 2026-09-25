@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-24T17:38:13Z",
-  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-218 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite project ORVION ACTIVE_HEALTHY, full ledger 224/9526e5cf461c7e9fa72d83ade08afa54, target absent, zero contact rows, exact authorized HEAD and both SQL hashes; repository exactly one migration ahead. Connector assigned temporary version 20260924173622; only the newly inserted customer_contact_event_parity row was normalized to 20260924160000 after a guarded uniqueness check. Fresh postwrite full ledger, function surface, and all ten structural surface categories match the clean local stack; direct Primary definition inspection confirms the sole AFTER INSERT emitter, no RPC event call, and no PUBLIC/authenticated direct emitter EXECUTE. No production business DML; Secondary was not contacted.",
+  "read_at": "2026-09-25T05:15:44Z",
+  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-220 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite project ORVION ACTIVE_HEALTHY, full ledger 225/843250602025735f48e8c860ea12557f, target absent, zero conversation rows, exact authorized HEAD and migration/test hashes; repository exactly one migration ahead. Connector assigned temporary version 20260925051328; only the newly inserted conversation_creation_parity row was normalized to 20260924170000 after a guarded uniqueness check. Fresh postwrite full ordered ledger, function surface and all ten structural categories match the clean local stack. Direct Primary definition inspection confirms enabled BEFORE INSERT guard and AFTER INSERT emitter, both SECURITY INVOKER with no PUBLIC/authenticated direct EXECUTE, and the SECURITY INVOKER RPC without a duplicate record_event call. No production business DML; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "6b9cc94b233e823efe31cb6e8868cd773be29f5b",
-  "migration_count": 225,
-  "ledger_fingerprint": "843250602025735f48e8c860ea12557f",
-  "function_surface_hash": "f7acd08a065f71038bb570f131971f03",
-  "function_count": 304,
-  "structural_surface_hash": "2af308fab1c55f2fe3f984ca2d0ae655",
-  "structural_object_count": 3042,
+  "repository_head": "119f08d5a280c94c372ee69ef12324ba27920a85",
+  "migration_count": 226,
+  "ledger_fingerprint": "7c416f13f007cc244fc35ab98a8c105a",
+  "function_surface_hash": "09995ce64a9d2f75896530b3074f0eef",
+  "function_count": 306,
+  "structural_surface_hash": "b7cc89445aadb90e957bfdceb2216a7f",
+  "structural_object_count": 3046,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -237,6 +237,7 @@
     "20260924130000_supplier_creation_is_recorded",
     "20260924140000_document_door_parity",
     "20260924150000_refund_door_integrity",
-    "20260924160000_customer_contact_event_parity"
+    "20260924160000_customer_contact_event_parity",
+    "20260924170000_conversation_creation_parity"
   ]
 }
