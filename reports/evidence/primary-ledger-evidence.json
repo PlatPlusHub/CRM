@@ -1,15 +1,15 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-25T05:15:44Z",
-  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-220 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite project ORVION ACTIVE_HEALTHY, full ledger 225/843250602025735f48e8c860ea12557f, target absent, zero conversation rows, exact authorized HEAD and migration/test hashes; repository exactly one migration ahead. Connector assigned temporary version 20260925051328; only the newly inserted conversation_creation_parity row was normalized to 20260924170000 after a guarded uniqueness check. Fresh postwrite full ordered ledger, function surface and all ten structural categories match the clean local stack. Direct Primary definition inspection confirms enabled BEFORE INSERT guard and AFTER INSERT emitter, both SECURITY INVOKER with no PUBLIC/authenticated direct EXECUTE, and the SECURITY INVOKER RPC without a duplicate record_event call. No production business DML; Secondary was not contacted.",
+  "read_at": "2026-09-25T20:42:47Z",
+  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-221 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: authorized HEAD 5b3a8945016fd78c101bf49976d1e9349271f97c, migration SHA-256 1f01a2b79eb483d682104b9e38598f8f4135a42eefeefa05fc0b143102b489eb and test-126 SHA-256 eb99c86e94066e60baafc5730604334958404996860d2f9e8c8ac166d2f9a6fd; project URL vrvtsxexkiiiivlkdxzp; full ledger 226/7c416f13f007cc244fc35ab98a8c105a equal to the repository's first 226 migrations; target absent; zero payment rows; nine enabled payment triggers; live guard payments mapping amount-only. Connector assigned temporary version 20260925204057; only that newly inserted payment_write_capability_parity row was normalized to 20260925120000 after a guarded uniqueness check (source 1, collision 0, updated 1). Fresh postwrite full ordered ledger, function surface and all ten structural categories match the clean local stack; only the function surface changed. Direct Primary inspection: app.guard_financial_capability() pg_get_functiondef md5 cff9f92e56f66edf33580d2d2282cedb equals the locally proven definition, SECURITY INVOKER, search_path empty, EXECUTE held only by postgres, six enabled guard triggers; nine enabled payment triggers unchanged. No production business DML; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "119f08d5a280c94c372ee69ef12324ba27920a85",
-  "migration_count": 226,
-  "ledger_fingerprint": "7c416f13f007cc244fc35ab98a8c105a",
-  "function_surface_hash": "09995ce64a9d2f75896530b3074f0eef",
+  "repository_head": "5b3a8945016fd78c101bf49976d1e9349271f97c",
+  "migration_count": 227,
+  "ledger_fingerprint": "b224fabad850e86d7f48a3fb52761b0b",
+  "function_surface_hash": "ebf18ada4617978752b56360676821e8",
   "function_count": 306,
-  "structural_surface_hash": "b7cc89445aadb90e957bfdceb2216a7f",
+  "structural_surface_hash": "4874556d8512c0ee21bb913fecdf9b01",
   "structural_object_count": 3046,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
@@ -238,6 +238,7 @@
     "20260924140000_document_door_parity",
     "20260924150000_refund_door_integrity",
     "20260924160000_customer_contact_event_parity",
-    "20260924170000_conversation_creation_parity"
+    "20260924170000_conversation_creation_parity",
+    "20260925120000_payment_write_capability_parity"
   ]
 }
