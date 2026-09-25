@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -60,7 +60,7 @@ Supersedes the cancelled `changes/SPEC-219-conversation-creation-parity.md` engi
 ## Runtime Checkpoint
 
 Resume Step: 1
-Blocker: CR_APPROVAL_REQUIRED
+Blocker: None
 Recovery Attempt: 0
 
 ## Required Capabilities
@@ -161,6 +161,10 @@ Post-Implementation Proof Obligation: Focused permanent pgTAP, two full passes, 
 ### 2026-09-25 — Replacement Draft and inherited Slice-19 evidence
 
 This Draft replaces cancelled SPEC-219 after its approved nine-path Write Scope omitted the protected attribution inventory. SPEC-219 is terminal and its frozen authority was never amended. The live selection, rolled-back causal probes, RLS consequence, session-less behavior, and four mutation mechanisms were established under that attempt and are inherited evidence, not new SPEC-220 certification. The previous uncommitted implementation and exact one-member test-83 correction were preserved outside the worktree pending this Draft’s Approval; after approval they must be re-adopted under this ten-path scope and freshly verified. Before cancellation, a clean local reset applied the proposed migration; the focused 31 assertions, full pgTAP Pass A and Pass B (125 files / 2,137 assertions each), six HTTP suites (449/449), database smoke, and four positively installed rolled-back mutations all passed. No Primary write or Secondary contact occurred. CHAT-2 remains OPEN.
+
+### 2026-09-25 — Owner approval of replacement Draft
+
+Owner approved exact Draft SHA `f13ec0784e3c9f18489f48ce04c3c2bda7bcb7a8` and the ten-path Write Scope after the isolated approval Gate returned `APPROVAL_EVIDENCE: PASS`. The approval carries the bounded creation repair and exact one-member assertion-23 inventory correction. It authorizes local execution and proof, not Primary deployment. CHAT-2 remains separately OPEN and Secondary remains forbidden.
 
 ## Verification Notes
 
