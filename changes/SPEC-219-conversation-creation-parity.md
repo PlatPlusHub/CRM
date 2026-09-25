@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -58,7 +58,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -166,6 +166,10 @@ Outcome: Drafted after live selector chose `conversations` (Exposure 11, coverag
 ### 2026-09-24 — Execution started
 
 Owner-approved SPEC-219 entered In Progress after the approval commit. Resume Step 1; Primary deployment remains separately gated.
+
+### 2026-09-25 — Cancelled by owner directive
+
+The owner directed `In Progress -> Cancelled` because the frozen nine-path Write Scope omitted `supabase/tests/83_actor_attribution_test.sql`. Assertion 23 intentionally pins directly writable users-FK columns without a deriving BEFORE trigger; the approved creation guard makes `conversations.owner_user_id` leave that inventory. A full clean local reset applied the proposed migration, focused test passed 31/31, both full pgTAP passes passed 125 files / 2,137 assertions after the single expected inventory correction, six HTTP suites passed 449/449, database smoke passed, and four distinct installed mutations showed the predicted failures. These were local working-tree results, not SPEC-219 certification. The production repair was not disproven. The uncommitted implementation was preserved outside the worktree for a replacement Draft, then removed from this cancellation commit. SPEC-219's frozen authority is unchanged. No Primary write or Secondary contact occurred. The replacement CR must include the protected test in its initial Write Scope; CHAT-2 remains separately OPEN.
 
 ## Verification Notes
 
