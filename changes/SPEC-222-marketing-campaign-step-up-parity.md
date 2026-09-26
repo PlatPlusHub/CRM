@@ -152,10 +152,10 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 
 ## Acceptance Criteria
 
-- [ ] An `owner` at `aal1` holding `MANAGE_MARKETING_CAMPAIGN` cannot directly INSERT a marketing campaign or change a non-status column of one; each refusal is pinned to `multi-factor authentication required for this role` with visible-row and permission controls.
-- [ ] `aal2` holders' direct writes, both campaign RPCs, status transitions and session-less paths keep working; a non-holder is refused by the guard's own message; every other table's guard mapping is unchanged and Test 58 pins 28 attachments.
-- [ ] CAMP-3 is fixed by the measured guard; CAMP-4 is a separate OPEN finding; ENTRY-1 is untouched; `marketing_campaigns` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 22/77.
-- [ ] Migration, tests, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
+- [x] An `owner` at `aal1` holding `MANAGE_MARKETING_CAMPAIGN` cannot directly INSERT a marketing campaign or change a non-status column of one; each refusal is pinned to `multi-factor authentication required for this role` with visible-row and permission controls.
+- [x] `aal2` holders' direct writes, both campaign RPCs, status transitions and session-less paths keep working; a non-holder is refused by the guard's own message; every other table's guard mapping is unchanged and Test 58 pins 28 attachments.
+- [x] CAMP-3 is fixed by the measured guard; CAMP-4 is a separate OPEN finding; ENTRY-1 is untouched; `marketing_campaigns` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 22/77.
+- [x] Migration, tests, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
 
 ## Execution Log
 
@@ -187,19 +187,31 @@ The owner authorized Primary `vrvtsxexkiiiivlkdxzp` for HEAD `9d9fce7067f0d99c38
 
 Fresh postwrite Primary full ordered ledger is 228 migrations through `20260926120000`, fingerprint `65dbbd5a55e241ae3fe667ec986ee35c` (equal to the repository's migration files), target present exactly once, zero campaign rows. Functions `767000c41c5f4c7658f4d1405e364b13` (306); triggers `226a583f3e1d19a40be2f5c54cd2efe2` (296); policies, constraints, grants, columns, views, indexes, status transitions and RLS flags unchanged from the prewrite reading; combined `7be8ca54c6a51369a8bd67d464ab6d74` (3047) — every value equal to the local prediction. The installed `app.guard_write_capability()` `pg_get_functiondef` md5 `a73a00ed20be4e6503b293eff13f0464` equals the local definition (prewrite text plus exactly one arm), still SECURITY DEFINER with empty `search_path` and EXECUTE held only by `postgres`; `marketing_campaigns_guard_write_capability` has `tgtype` 23, enabled `O`, BEFORE INSERT OR UPDATE FOR EACH ROW on `app.guard_write_capability`; the guard now covers 28 tables and the one `marketing_campaigns` policy is unchanged. Primary evidence and manifest reconciled from these readings (228 migrations, suite 127 / 2199, coverage 22/77, Last Completed CAMP-3, next Slice 22); CAMP-3 deployed status recorded; map and API contract regenerated (79 endpoints; only the `marketing_campaigns` guard cell changed). `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0 (CLEAN). CAMP-4 stays OPEN; ENTRY-1, PAY-3 and PAY-4 untouched. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status remains In Progress pending Review and the Complete transition.
 
+### 2026-09-26 — Post-deploy local certification
+
+The canonical `-Finish` ran on the clean committed execution HEAD `c979d2f` in VERIFY mode: clean reset, full pgTAP Pass A, all six declared HTTP suites, full pgTAP Pass B, database smoke, Primary parity evidence, repository consistency, `git diff --check` and the Primary ledger check all PASSED, and it returned `LOCAL_CERTIFY: READY`. It validated the recorded Primary evidence and did not contact Primary.
+
+### 2026-09-26 — Independent Review of execution commit
+
+Reviewed committed execution HEAD `c979d2f` against the approved ten-path Write Scope; the working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range from the approved Draft `cf73223` changes exactly the ten frozen paths and nothing in Out of Scope; every frozen CR section (Objective through Notes, except Status, Runtime Checkpoint and Execution Log) is byte-identical to the approved Draft. Committed blobs hash to the authorized values: migration `fe95deb051cb1557aa9fd8a9b73a5e093f1876af1d36bc5835b118df133f6691`, Test 127 `9456cf4520a91814205c1169d3dfdbfce3f611b654900b4bdb28e3c3295e38da`, Test 58 `70ac2e6f628d07c39eee13a7fa1acaf68116195321217eb1f6454871c18d83f5`. Test 58 differs from `origin/main` only by the count (27 → 28) and the `marketing_campaigns` list entry.
+
+Acceptance: (1) Test 127 assertions 2–9 prove the `aal1` owner holds the permission, lacks step-up, sees the row, is refused by the RPC, and is refused a direct INSERT and a non-status UPDATE with `multi-factor authentication required for this role`, the row and the tenant count unchanged. (2) Assertions 10–21 prove the non-holder is refused by the guard's own message, `aal2` direct INSERT/UPDATE and RPC create/advance still land, the state machine still refuses an undefined transition, permits a defined one and still charges step-up at `aal1`, and the platform path still writes; the Primary guard with the new arm removed hashes to its prewrite md5, so no other table's mapping moved, and Test 58 pins 28 attachments. (3) CAMP-3 is FIXED and DEPLOYED; CAMP-4 is OPEN; ENTRY-1, PAY-3, PAY-4 and CAMP-1/CAMP-2 rows are untouched (the register diff adds only the Slice-21 header and two rows); `marketing_campaigns` is AUDITED-OPEN / ADVERSARIAL with coverage 22/77; assertions 22–23 pin ENTRY-1 and CAMP-4 as still open. (4) Fresh Primary ledger 228 / `65dbbd5a55e241ae3fe667ec986ee35c`, functions `767000c41c5f4c7658f4d1405e364b13`/306 and combined `7be8ca54c6a51369a8bd67d464ab6d74`/3047 equal local; the recorded evidence, manifest, contract and map agree, and `-Finish` is READY. The mutation (assertions 24–29) was positively installed (`tgenabled` D), observed to let both password-only writes land, restored (`O`) and re-refused, with the guard definition byte-identical. No business-data write was made on Primary and Secondary was never contacted.
+
+Verdict: Confirmed Complete
+
 ## Verification Notes
 
 None yet.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
