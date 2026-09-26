@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -168,7 +168,9 @@ Post-Implementation Proof Obligation: A clean reset, pgTAP Pass A, `verify_role_
 
 ## Execution Log
 
-None yet.
+### 2026-09-27 — Owner approval
+
+Owner approved the exact Draft SHA `57777ca5b253cd0d7beca276717dc65070801121` and the frozen eight-path Write Scope. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY; permanent-control path `supabase/tests/130_branch_door_audit_test.sql`). Pre-approval revalidation: HEAD, Draft bytes and SPEC-225's Cancelled bytes unchanged; `origin/main` at `b6a0714`; Primary `vrvtsxexkiiiivlkdxzp` read-only ledger `230` / `be85ed1e62f6504e9b04171677d32bc8` (latest `20260926140000`) and function surface `e387e49f2a68e982ec199c316179f091` / 308, unchanged. Approval authorizes the record-only Slice 24 execution only: no repair, migration, schema change or Primary write.
 
 ## Verification Notes
 
