@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -163,6 +163,10 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 ### 2026-09-26 — Owner approval
 
 Owner approved the exact Draft SHA `33f4d4271bfb19a365cbe1140359829f40ab8b9a` and the frozen ten-path Write Scope. An isolated Draft-to-Approved Gate returned `APPROVAL_EVIDENCE: PASS`. Approval authorizes the PAX-7 snapshot repair (owner decision Option 1) as local implementation and proof, not Primary deployment; PAX-8 is registered OPEN and not repaired; PAX-1 through PAX-6, ENTRY-1, CAMP-4, PAY-3 and PAY-4 stay untouched.
+
+### 2026-09-26 — Execution started
+
+The approved ten-path contract entered In Progress. Resume Step 1; only the PAX-7 local implementation and proof are authorized. Primary deployment remains separately gated.
 
 ## Verification Notes
 
