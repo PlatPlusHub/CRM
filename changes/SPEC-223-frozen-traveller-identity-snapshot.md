@@ -64,7 +64,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -167,6 +167,30 @@ Owner approved the exact Draft SHA `33f4d4271bfb19a365cbe1140359829f40ab8b9a` an
 ### 2026-09-26 — Execution started
 
 The approved ten-path contract entered In Progress. Resume Step 1; only the PAX-7 local implementation and proof are authorized. Primary deployment remains separately gated.
+
+### 2026-09-26 — Pre-deploy readiness gate
+
+Steps 1–4 applied on HEAD `382b02d4da1ed35a966e4207b998136f843c76d3`: the LF migration adds the six `manifest_*` columns, backfills them under the previous enforcer, grants column-level SELECT and UPDATE, restates the enforcer and the guard from their installed definitions with only the measured additions, and adds `app.sync_manifest_identity` with its trigger; Test 128 created; canon 31 at 0.6; PAX-7 and PAX-8 registered; `passengers` AUDITED-OPEN / ADVERSARIAL; coverage 23/77.
+
+One correction made during implementation, inside scope and without changing approved authority: Test 128's first run failed its grant assertion because `authenticated` already holds TABLE-level INSERT and UPDATE on `booking_item_passengers`, which reach new columns, so "never insertable" was false. The migration's grant statement is unchanged (column SELECT and UPDATE, no INSERT granted); its comment now states the table-grant fact, and the assertion was replaced by a behavioral pair proving an INSERT that supplies an identity is born with its traveller's identity instead (plan 41 → 43).
+
+Local proof: clean reset exit 0; focused Test 128 43/43; Tests 104 and 114 (PAX-5) PASS; pgTAP Pass A 128 files / 2242 PASS; HTTP 33 + 120 + 40 + 74 + 122 + 60 = 449 passed, 0 failed; pgTAP Pass B without reset 128 / 2242 PASS; `scripts/verify_database.sql` ALL CHECKS PASSED; plan sum 2242 over 128 files. Mutation (Test 128 assertions 14–20): propagation trigger disabled (`tgenabled` D), a profile edit landed and the draft entry did not follow; re-enabled (O), the next edit reached it; enforcer and guard byte-identical throughout.
+
+Definition proofs: the new guard with its one PAX-7 case removed hashes to `a73a00ed20be4e6503b293eff13f0464`, Primary's current raw md5; the enforcer differs from Primary's current text (raw md5 `5ae9ae2f9085323b85c95b2a30160bb4`, equal to local with CR bytes removed) only by additions plus the inline frozen condition now read from `v_frozen`. New local raw md5s: enforcer `b4083fdea7ef193cd29ddd70e58c0624`, guard `3bdae3e7eb5fbed7c57075789c739d7e`, `app.sync_manifest_identity` `ced2bd6604ff03edadb2390554dccf25` (SECURITY DEFINER, empty `search_path`, EXECUTE only `postgres`).
+
+Generators: API contract unchanged (79 RPC endpoints, 8 views, 73 tables); ai-map regenerated. Scope: every changed path is inside the frozen ten; `git diff --check` clean; both new files LF with no trailing whitespace. Expected undeployed-only reds: repository consistency 6 issues (manifest migration count, latest version, ledger fingerprint; suite figures 127/2199 vs 128/2242; ledger evidence lacks `20260926130000`) and parity evidence FAILED on the same undeployed migration.
+
+Hashes (SHA-256, LF, working tree equals committed form): migration `f9d936abe6e0038dcec69f1caf3a0ae753e0f9d884d95ed9bdc7a08b26cbf50a`; Test 128 `49284f3462c15a7e8fa26ccbaf1ec262bcb801c1268fee6ca56422e48808ca14`.
+
+Fresh Primary baseline (read-only): 228 migrations, ledger `65dbbd5a55e241ae3fe667ec986ee35c`, target absent, enforcer md5 `5ae9ae2f9085323b85c95b2a30160bb4`, guard md5 `a73a00ed20be4e6503b293eff13f0464`, no `sync_manifest_identity`, no `manifest_*` columns, 0 passengers, 0 manifest links; functions `767000c41c5f4c7658f4d1405e364b13`/306, triggers `226a583f3e1d19a40be2f5c54cd2efe2`/296, columns `1c59fd3b11a306c83a5f8bc48e42e321`/1113, other seven surfaces as Slice 21, combined `7be8ca54c6a51369a8bd67d464ab6d74`/3047. Predicted delta: functions → `aa2e2e60a9347f330cf3c2565dbc2c6d`/307, triggers → `ded9439768624beb5794f9d8d4a2cdb4`/297, columns → `52adf0a37f6fa4982a40f08896d88c08`/1119, seven surfaces unchanged (the grants surface hashes table-level grants only, so the column grant is verified directly), combined → `bcf88e3bb43ba43584bbea4836b7e7ee`/3055. Primary deployment awaits separate exact-byte owner authorization.
+
+### 2026-09-26 — Authorized Primary deployment and reconciliation
+
+The owner authorized Primary `vrvtsxexkiiiivlkdxzp` for HEAD `382b02d4da1ed35a966e4207b998136f843c76d3`, migration SHA-256 `f9d936abe6e0038dcec69f1caf3a0ae753e0f9d884d95ed9bdc7a08b26cbf50a` and Test-128 SHA-256 `49284f3462c15a7e8fa26ccbaf1ec262bcb801c1268fee6ca56422e48808ca14`, and accepted the Test-128 grant-assertion correction. Immediately before writing, HEAD and both hashes matched exactly; the connector URL named `vrvtsxexkiiiivlkdxzp`; Primary held 228 migrations through `20260926120000`, ledger `65dbbd5a55e241ae3fe667ec986ee35c`, no target migration, enforcer md5 `5ae9ae2f9085323b85c95b2a30160bb4`, guard md5 `a73a00ed20be4e6503b293eff13f0464`, no `sync_manifest_identity`, no `manifest_*` columns, zero passengers and zero manifest links. Applied only `20260926130000_frozen_traveller_identity_snapshot.sql` through the Primary connector. The connector assigned temporary version `20260926164610`; a guarded uniqueness check normalized only that new row to `20260926130000` (updated 1, temporary rows remaining 0). No business-data write; Secondary was not contacted.
+
+Fresh postwrite Primary full ordered ledger is 229 migrations through `20260926130000`, fingerprint `0264dd3564b040b205f3b340ed7886e9` (equal to the repository's migration files), target present exactly once. Functions `aa2e2e60a9347f330cf3c2565dbc2c6d` (307), triggers `ded9439768624beb5794f9d8d4a2cdb4` (297), columns `52adf0a37f6fa4982a40f08896d88c08` (1119); policies, constraints, grants, views, indexes, status transitions and RLS flags unchanged; combined `bcf88e3bb43ba43584bbea4836b7e7ee` (3055) — every value equal to the local prediction. Enforcer `b4083fdea7ef193cd29ddd70e58c0624`, guard `3bdae3e7eb5fbed7c57075789c739d7e` and `app.sync_manifest_identity` `ced2bd6604ff03edadb2390554dccf25` equal the local definitions, each SECURITY DEFINER with empty `search_path` and EXECUTE held only by `postgres`. `passengers_sync_manifest_identity`: `tgtype` 17, enabled `O`, AFTER UPDATE OF the six identity fields with its WHEN clause, on `app.sync_manifest_identity`; the five `booking_item_passengers` triggers unchanged. Column privileges verified directly because the grants surface hashes table grants only: six nullable `manifest_*` columns whose explicit ACL is `authenticated=rw` (SELECT, UPDATE), identical to local, with the table-level grant unchanged at INSERT, UPDATE. Backfill updated zero rows; zero passengers and zero manifest links remain.
+
+Primary evidence and manifest reconciled from these readings (229 migrations, suite 128 / 2242, coverage 23/77, Last Completed PAX-7, next Slice 23); PAX-7 deployed status recorded; API contract regenerated unchanged (79 endpoints) and map regenerated. `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0 (CLEAN). PAX-8 stays OPEN; PAX-1 through PAX-6, ENTRY-1, CAMP-4, PAY-3 and PAY-4 untouched. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status remains In Progress pending Review and the Complete transition.
 
 ## Verification Notes
 

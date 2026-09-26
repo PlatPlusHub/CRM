@@ -1,6 +1,6 @@
 # Schema Draft
 
-Version: 0.5
+Version: 0.6
 Status: Frozen Baseline
 Canonical: Yes
 
@@ -921,6 +921,7 @@ Notes:
 
 - Passenger relationship improves customer history and future booking context.
 - Add indexes on `passport_expiry_date` and `visa_expiry_date` for operational expiry searches.
+- A passenger row is the traveller's current, reusable profile and stays editable (future travel, passport and visa renewal, corrected data). Once a manifest freezes, editing the profile does not change the identity that manifest entry was ticketed under; see `booking_item_passengers`.
 
 Rules:
 
@@ -1030,6 +1031,12 @@ Core fields:
 - passenger_id
 - selling_amount_override numeric nullable
 - cost_amount_override numeric nullable
+- manifest_first_name nullable
+- manifest_family_name nullable
+- manifest_full_name nullable
+- manifest_date_of_birth nullable
+- manifest_passport_number nullable
+- manifest_passport_issuing_country_code nullable
 - created_at
 
 Unique:
@@ -1040,6 +1047,7 @@ Rules:
 
 - selling_amount_override and cost_amount_override, when populated, represent this passenger's individual price/cost within the shared booking_item. When null, the passenger's share is treated as an even split of the parent booking_item's selling_amount/cost_amount.
 - Where populated, these fields must not be negative, consistent with the equivalent rule on booking_items.
+- The `manifest_*` fields are the traveller identity on this booked service. Until the manifest freezes (the passenger-manifest rule in `28_permissions_matrix.md`) they are derived from the linked `passengers` row and follow its edits; from the freeze point they are the ticketed identity and change only by a traveller swap or a post-issue correction under that same rule.
 
 ## suppliers
 
@@ -2022,6 +2030,7 @@ The following decisions are acceptable for MVP but should be reviewed before SQL
 6. `document_links` now uses explicit nullable target FKs instead of polymorphic target fields. SQL migration should enforce exactly one target per row.
 7. Logical schema is frozen as the working baseline after this review. No additional schema redesign should happen unless implementation reveals a real problem.
 8. Version 0.4 closed the Phase 1 Domain & Schema Audit findings via SPEC-002 and SPEC-003 (see changes/): added `currencies`, `payment_allocations`, and `customer_identity_merges`; added missing columns to `journal_entry_lines`, `invoices`, `booking_item_passengers`, `bookings`, `conversations`, `attribution_clicks`, `offline_conversions`, and `document_links`; documented five previously-unenforced constraints as table-level Rules (journal debit/credit exclusivity, booking_items and booking_item_passengers non-negative amounts, document_links single-target, document_versions single-current-version); and corrected the Table Classification Summary. State machines, events, and permissions for the CRM-extension entities (Task, Quotation, Conversation, Complaint, Service Request, Marketing Campaign) remain open and are explicitly deferred to the Phase 2 Catalog & Lifecycle Audit — no changes to `26_state_machines.md`, `27_event_catalog.md`, or `28_permissions_matrix.md` have been made as of this entry.
+9. Version 0.6 (SPEC-223, PAX-7, owner decision 2026-09-26): `booking_item_passengers` owns the ticketed traveller identity in six `manifest_*` fields, and `passengers` remains the mutable reusable profile. Freeze point and post-issue correction authority are unchanged and stay in `28_permissions_matrix.md`.
 
 ---
 
