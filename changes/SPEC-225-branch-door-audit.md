@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -161,6 +161,10 @@ Post-Implementation Proof Obligation: A clean reset, pgTAP Pass A, `verify_role_
 ### 2026-09-27 — Owner approval
 
 Owner approved the exact Draft SHA `f6a2eb82658468fd23855447a4e1dfeb62adb47f` and the frozen seven-path Write Scope. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY; permanent-control path `supabase/tests/130_branch_door_audit_test.sql`). Approval authorizes the record-only Slice 24 execution: no repair, no migration, no schema change and no Primary write. BRANCH-1 and BRANCH-2 stay Low / OPEN; STEPUP-1 stays a candidate set, with only `branches` reproduced and consequence-classified, and `departments` and `tenants` observed but unclassified; no other surface gains a disposition.
+
+### 2026-09-27 — Execution started
+
+The approved seven-path record-only contract entered In Progress at `e398b8f`. Resume Step 1. No repair, migration, schema change or Primary write is authorized.
 
 ## Verification Notes
 
