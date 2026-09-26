@@ -157,14 +157,14 @@ Post-Implementation Proof Obligation: A clean reset, pgTAP Pass A, `verify_role_
 
 ## Acceptance Criteria
 
-- [ ] `supabase/tests/130_branch_door_audit_test.sql` exists, declares `plan(29)` and the ten attack classes, states that its OPEN assertions record defects rather than desired invariants, does not pin a caller-supplied `created_at`, pins the tenant, permission, grant and uniqueness controls to their messages, pins BRANCH-1 and BRANCH-2 as OPEN with assertions that fail when either is repaired, and mutation-proves each `scope_insert` conjunct with a byte-identical restore.
-- [ ] `MASTER_GAP_REGISTER.md` holds BRANCH-1 and BRANCH-2 as Low, OPEN, reproduced findings, BRANCH-2 owning event parity only and stating that the caller-supplied `created_at` is not part of it, and STEPUP-1 with Status `UNPROVEN` as a structural candidate class that names `branches` as its only reproduced, consequence-classified member and keeps every other member a candidate; no other row changed.
-- [ ] `MASTER_SURFACE_DISPOSITION.md` records `branches` as `AUDITED-OPEN` / `ADVERSARIAL` with findings BRANCH-1, BRANCH-2, Coverage reads 25 of 77, and no other row changed, so no STEPUP-1 candidate gained a disposition.
-- [ ] `_ORVION_CANONICAL/manifest.md`'s Batch 6 surface coverage line reads `**25 of 77 surfaces have a recorded audit disposition**, all twenty-five at` `ADVERSARIAL`, equal to the disposition record's Coverage.
-- [ ] The manifest's suite figure reads `130 files / 2320 assertions`, `ai-map.json` agrees with the manifest by value and is stored LF, and `MASTER_API_CONTRACT.md` is byte-identical to its generator's output.
-- [ ] `changes/SPEC-225-branch-door-audit.md` is byte-identical to its state at `10e8505` and still reads `Cancelled`.
-- [ ] No file under `supabase/migrations/` changed, no database object was created, altered or dropped, Primary was not written, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `supabase/tests/130_branch_door_audit_test.sql` exists, declares `plan(29)` and the ten attack classes, states that its OPEN assertions record defects rather than desired invariants, does not pin a caller-supplied `created_at`, pins the tenant, permission, grant and uniqueness controls to their messages, pins BRANCH-1 and BRANCH-2 as OPEN with assertions that fail when either is repaired, and mutation-proves each `scope_insert` conjunct with a byte-identical restore.
+- [x] `MASTER_GAP_REGISTER.md` holds BRANCH-1 and BRANCH-2 as Low, OPEN, reproduced findings, BRANCH-2 owning event parity only and stating that the caller-supplied `created_at` is not part of it, and STEPUP-1 with Status `UNPROVEN` as a structural candidate class that names `branches` as its only reproduced, consequence-classified member and keeps every other member a candidate; no other row changed.
+- [x] `MASTER_SURFACE_DISPOSITION.md` records `branches` as `AUDITED-OPEN` / `ADVERSARIAL` with findings BRANCH-1, BRANCH-2, Coverage reads 25 of 77, and no other row changed, so no STEPUP-1 candidate gained a disposition.
+- [x] `_ORVION_CANONICAL/manifest.md`'s Batch 6 surface coverage line reads `**25 of 77 surfaces have a recorded audit disposition**, all twenty-five at` `ADVERSARIAL`, equal to the disposition record's Coverage.
+- [x] The manifest's suite figure reads `130 files / 2320 assertions`, `ai-map.json` agrees with the manifest by value and is stored LF, and `MASTER_API_CONTRACT.md` is byte-identical to its generator's output.
+- [x] `changes/SPEC-225-branch-door-audit.md` is byte-identical to its state at `10e8505` and still reads `Cancelled`.
+- [x] No file under `supabase/migrations/` changed, no database object was created, altered or dropped, Primary was not written, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -186,19 +186,31 @@ The approved eight-path record-only contract entered In Progress at `7da341a`. R
 
 Repository consistency exit 0; `git diff --check` exit 0; manifest 6710 characters. No migration, no database object change, no Primary write.
 
+### 2026-09-27 — Local certification
+
+At `cad2371` (Resume Step DONE), canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` derived profiles DATABASE, REPOSITORY and passed every mandatory verification: `npx supabase db reset`; `npx supabase test db` (Pass A); `scripts/verify_role_journeys.ps1`; `npx supabase test db` (Pass B); `scripts/verify_database.sql`; `scripts/check_database_parity_evidence.ps1`; `scripts/check_repository_consistency.ps1`; `git diff --check`; then `LOCAL_CERTIFY: READY`. Finish keeps only PASS lines, so the totals were measured once more at `cad2371` without reset: `Files=130, Tests=2320, Result: PASS`. The same end state measured `verify_role_journeys.ps1` `120 passed, 0 failed` and `verify_database.sql` `ALL CHECKS PASSED` in the pre-approval proof. `-Gate -BaseRef origin/main` over the whole unpublished range (SPEC-225's lifecycle and this contract) returned `ORVION: READY`. Primary was read only (ledger `230` / `be85ed1e62f6504e9b04171677d32bc8`, function surface `e387e49f2a68e982ec199c316179f091` / 308, unchanged) and never written; Secondary was never contacted.
+
 ## Verification Notes
 
 None yet.
 
+### 2026-09-27 — Independent Review of execution commit
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the committed bytes, not this contract's Execution Log. AC1: the test declares `plan(29)` and the ten attack classes, states that assertions 6-8 and 19 record OPEN defects and not desired invariants, pins no `created_at`, carries 7 `throws_ok` and two `scope_insert` mutants with an md5-identical restore, and cites SPEC-226. AC2: the register range diff adds exactly three table rows; BRANCH-1 and BRANCH-2 read Low / OPEN, BRANCH-2's title is event parity only and its text says the caller-supplied `created_at` is not part of it, and STEPUP-1 reads `UNPROVEN — structural candidate class`. AC3: the disposition diff changes only the `branches` row; 25 rows are recorded, matching Coverage `25 of 77`, and `departments`, `tenants`, `catalog_values`, `chart_of_accounts`, `exchange_rates`, `journal_entries`, `journal_entry_lines` and `document_retention_policies` remain `NOT-RECORDED`. AC4: the manifest reads `**25 of 77 surfaces have a recorded audit disposition**, all twenty-five at `ADVERSARIAL``, with no `24 of 77` left. AC5: the manifest reads `Suite **130 files / 2320 assertions**`, measured; `ai-map.json` is stored LF (`git ls-files --eol`) and Check 7 is green; `MASTER_API_CONTRACT.md` is unchanged in the range and a fresh generator run leaves no diff. AC6: SPEC-225 is byte-identical to `10e8505` and reads `Cancelled`. AC7: no path under `supabase/migrations/` changed; Primary was not written; Secondary was not contacted. AC8: the range `origin/main..HEAD` touches seven paths, all in Write Scope, and the range Gate is READY.
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
