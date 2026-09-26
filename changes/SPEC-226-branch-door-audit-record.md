@@ -74,7 +74,7 @@ Supersedes `changes/SPEC-225-branch-door-audit.md`, already `Cancelled` by the o
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
