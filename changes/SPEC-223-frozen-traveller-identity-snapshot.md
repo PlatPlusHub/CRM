@@ -153,10 +153,10 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 
 ## Acceptance Criteria
 
-- [ ] After the freeze, a caller without CORRECT_PASSENGER_MANIFEST cannot change a manifest entry's ticketed identity by editing the profile, by writing or clearing the snapshot, or by swapping; each direct refusal is pinned to its message and the frozen identity is unchanged.
-- [ ] The profile stays editable before and after the freeze; pre-freeze edits reach the entry, post-freeze edits do not; a CORRECT_PASSENGER_MANIFEST holder (including a finance manager) can correct the ticketed identity only with a fresh reason, stamped by the server; swaps and the correction RPC take the new traveller's identity; PAX-5's existing refusals are unchanged.
-- [ ] PAX-7 is fixed; PAX-8 is a separate OPEN finding; `passengers` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 23/77; canon 31 names the profile/snapshot ownership at 0.6; every other finding is untouched.
-- [ ] Migration, test, canon, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
+- [x] After the freeze, a caller without CORRECT_PASSENGER_MANIFEST cannot change a manifest entry's ticketed identity by editing the profile, by writing or clearing the snapshot, or by swapping; each direct refusal is pinned to its message and the frozen identity is unchanged.
+- [x] The profile stays editable before and after the freeze; pre-freeze edits reach the entry, post-freeze edits do not; a CORRECT_PASSENGER_MANIFEST holder (including a finance manager) can correct the ticketed identity only with a fresh reason, stamped by the server; swaps and the correction RPC take the new traveller's identity; PAX-5's existing refusals are unchanged.
+- [x] PAX-7 is fixed; PAX-8 is a separate OPEN finding; `passengers` is `AUDITED-OPEN` / `ADVERSARIAL` and coverage is 23/77; canon 31 names the profile/snapshot ownership at 0.6; every other finding is untouched.
+- [x] Migration, test, canon, generated artifacts, local and fresh Primary evidence agree, with no out-of-scope file changes.
 
 ## Execution Log
 
@@ -192,19 +192,31 @@ Fresh postwrite Primary full ordered ledger is 229 migrations through `202609261
 
 Primary evidence and manifest reconciled from these readings (229 migrations, suite 128 / 2242, coverage 23/77, Last Completed PAX-7, next Slice 23); PAX-7 deployed status recorded; API contract regenerated unchanged (79 endpoints) and map regenerated. `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0 (CLEAN). PAX-8 stays OPEN; PAX-1 through PAX-6, ENTRY-1, CAMP-4, PAY-3 and PAY-4 untouched. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status remains In Progress pending Review and the Complete transition.
 
+### 2026-09-26 — Post-deploy local certification
+
+The canonical `-Finish` ran on the clean committed execution HEAD `fba0205` in VERIFY mode: clean reset, full pgTAP Pass A, all six declared HTTP suites, full pgTAP Pass B, database smoke, Primary parity evidence, repository consistency, `git diff --check` and the Primary ledger check all PASSED, and it returned `LOCAL_CERTIFY: READY`. It validated the recorded Primary evidence and did not contact Primary.
+
+### 2026-09-26 — Independent Review of execution commit
+
+Reviewed committed execution HEAD `fba0205` against the approved ten-path Write Scope; the working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range from the approved Draft `33f4d42` changes nine of the ten frozen paths (`MASTER_API_CONTRACT.md` regenerated identically) and nothing in Out of Scope; every frozen CR section is byte-identical to the approved Draft except Status, Runtime Checkpoint and Execution Log. Committed blobs hash to the authorized values: migration `f9d936abe6e0038dcec69f1caf3a0ae753e0f9d884d95ed9bdc7a08b26cbf50a`, Test 128 `49284f3462c15a7e8fa26ccbaf1ec262bcb801c1268fee6ca56422e48808ca14`.
+
+Acceptance: (1) Test 128 assertions 21–27 prove the employee, holding CREATE_BOOKING_ITEM and not CORRECT_PASSENGER_MANIFEST, is refused rewriting, clearing, reasoned rewriting and swapping a frozen entry, each pinned to `permission denied: CORRECT_PASSENGER_MANIFEST`, with the ticketed identity unchanged; assertions 21–22 prove a post-freeze profile renewal does not reach the frozen entry. (2) Assertions 9–13 prove pre-freeze derivation (forged UPDATE and forged INSERT both re-derived) and propagation (the draft entry follows while the same traveller's issued entry does not); 28–35 prove the branch manager's correction needs a fresh reason and a kept name and is server-stamped without touching the profile, the evidence-only edit and the re-used reason stay refused, and the finance manager corrects; 36–39 prove the reasoned swap and the RPC take the new traveller's identity; 40–42 prove the platform path; Tests 104 and 114 pass unchanged. (3) PAX-7 is FIXED and DEPLOYED; PAX-8 is OPEN and pinned by assertion 43; the register diff adds only the Slice-22 header and the two rows, the disposition diff only the `passengers` row and coverage 23/77; canon 31 is at 0.6 and refers to canon 28 for freeze and correction semantics. (4) Fresh Primary ledger 229 / `0264dd3564b040b205f3b340ed7886e9`, functions `aa2e2e60a9347f330cf3c2565dbc2c6d`/307 and combined `bcf88e3bb43ba43584bbea4836b7e7ee`/3055 equal local; the three changed definitions and the column ACLs are identical on both sides; the recorded evidence, manifest, contract and map agree, and `-Finish` is READY. The mutation (assertions 14–20) was positively installed (`tgenabled` D), observed to stop propagation, restored (`O`) and observed to propagate again, with the enforcer and guard byte-identical. No business-data write was made on Primary and Secondary was never contacted.
+
+Verdict: Confirmed Complete
+
 ## Verification Notes
 
 None yet.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
