@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -162,6 +162,10 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 ### 2026-09-26 — Owner approval
 
 Owner approved the exact Draft SHA `cf7322379b903713664d12be4a20f1e451cb6d76` and the frozen ten-path Write Scope. An isolated Draft-to-Approved Gate returned `APPROVAL_EVIDENCE: PASS`. Approval authorizes CAMP-3 local implementation and proof, not Primary deployment; Test 58 may change only its guarded-table count (27 to 28) and pinned list. CAMP-4 and ENTRY-1 stay separately owned; PAY-3 and PAY-4 are untouched; `campaign_daily_metrics` is an unmeasured hypothesis only.
+
+### 2026-09-26 — Execution started
+
+The approved ten-path contract entered In Progress. Resume Step 1; only CAMP-3 local implementation and proof are authorized. Primary deployment remains separately gated.
 
 ## Verification Notes
 
