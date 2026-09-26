@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -164,7 +164,9 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP A/B, six 
 
 ## Execution Log
 
-None yet.
+### 2026-09-26 — Owner approval
+
+Owner approved the exact Draft SHA `a4a8289294cde60073e56a81bdcebdc5526b5c51` and the frozen twelve-path Write Scope. An isolated Draft-to-Approved Gate returned `APPROVAL_EVIDENCE: PASS`. Approval authorizes the PAX-9 local implementation and proof, not Primary deployment. The canon 27 change is approved only as synchronization of the canon-28 rule on `booking_item_passenger_linked` (severity stays `info`); Tests 114 and 128 are approved for fixture ordering only. BOOK-10 stays OPEN and separate; PAX-8, ENTRY-1, CAMP-4, PAY-3 and PAY-4 are untouched.
 
 ## Verification Notes
 
