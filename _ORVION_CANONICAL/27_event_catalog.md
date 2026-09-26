@@ -443,7 +443,7 @@ Severity: warning
 
 ## booking_item_passenger_linked
 
-Created when a passenger joins a booking-item manifest. Severity: info.
+Created when a passenger joins a booking-item manifest. After issue, requires correction reason and actor. Severity: info.
 
 ## booking_item_passenger_replaced
 

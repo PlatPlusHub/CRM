@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-26T16:46:51Z",
-  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-223 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: authorized HEAD 382b02d4da1ed35a966e4207b998136f843c76d3, migration SHA-256 f9d936abe6e0038dcec69f1caf3a0ae753e0f9d884d95ed9bdc7a08b26cbf50a and test-128 SHA-256 49284f3462c15a7e8fa26ccbaf1ec262bcb801c1268fee6ca56422e48808ca14; project URL vrvtsxexkiiiivlkdxzp; full ledger 228/65dbbd5a55e241ae3fe667ec986ee35c; target absent; enforce_booking_item_passenger_lifecycle md5 5ae9ae2f9085323b85c95b2a30160bb4; guard_write_capability md5 a73a00ed20be4e6503b293eff13f0464; no sync_manifest_identity; no manifest_* columns; zero passengers and zero manifest links. Connector assigned temporary version 20260926164610; only that newly inserted frozen_traveller_identity_snapshot row was normalized to 20260926130000 after a guarded uniqueness check (updated 1, temporary rows remaining 0). Fresh postwrite full ordered ledger 229/0264dd3564b040b205f3b340ed7886e9 equals the repository's migration files; function surface and all ten structural categories match the clean local stack; only functions, triggers and columns changed. Direct Primary inspection: enforcer md5 b4083fdea7ef193cd29ddd70e58c0624, guard md5 3bdae3e7eb5fbed7c57075789c739d7e and app.sync_manifest_identity md5 ced2bd6604ff03edadb2390554dccf25 equal the local definitions, each SECURITY DEFINER, search_path empty, EXECUTE held only by postgres; passengers_sync_manifest_identity tgtype 17, enabled O, AFTER UPDATE OF the six identity fields with its WHEN clause; five booking_item_passengers triggers unchanged; six nullable manifest_* columns whose explicit column ACL is authenticated=rw (SELECT, UPDATE), identical to local, with the table-level grant unchanged at INSERT, UPDATE; backfill updated zero rows (zero passengers, zero manifest links). No production business DML; Secondary was not contacted.",
+  "read_at": "2026-09-26T19:37:07Z",
+  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-224 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: authorized HEAD 80b23230d052c82bab06cf723c7d297be2ff25d7 (approved Draft a4a8289294cde60073e56a81bdcebdc5526b5c51 an ancestor), migration SHA-256 8b8b8f506f90cf445f5866c1772cd2489cfa040aff01386e87b64b6922a18d2a, test-129 SHA-256 e3bc2dd9d32482c2a9f4d173bc3389f506aa6e43f52fc52e995ef14ded7fc1e0, test-114 LF SHA-256 6a7ab0014d1f0a748762e3420edcc96d4ff3e479003e48b7028b10e1861ab417 and test-128 LF SHA-256 ccf0fd76418e94ce1735272064c10aaaa0ee260576022013496136fcf1fdffe5; project URL vrvtsxexkiiiivlkdxzp; full ledger 229/0264dd3564b040b205f3b340ed7886e9; target absent; helper absent; enforce_booking_item_passenger_lifecycle b4083fdea7ef193cd29ddd70e58c0624, enforce_booking_item_lifecycle abeb1edee9dc68080591871e2463704a, guard_write_capability 3bdae3e7eb5fbed7c57075789c739d7e, record_manifest_change_event d0938275c5ade41b9cb822108affb1f5; bookings/items/passengers/manifest links 0/0/0/0. Connector assigned temporary version 20260926193646; only that newly inserted manifest_freeze_cannot_be_left row was normalized to 20260926140000 after a guarded uniqueness check (updated 1, temporary rows remaining 0). Fresh postwrite full ordered ledger 230/be85ed1e62f6504e9b04171677d32bc8 equals the repository's migration files; function surface and all ten structural categories match the clean local stack; only functions changed. Direct Primary inspection: manifest_is_frozen 7a7ced5733bb94421a8a9aed701c28b5 (IMMUTABLE, SECURITY INVOKER, search_path empty, EXECUTE only postgres, not executable by authenticated or anon), enforce_booking_item_passenger_lifecycle d21df4e79574f2bce1093487b11dd484, enforce_booking_item_lifecycle 37599606d522219d2a0af545da0b5118, guard_write_capability e44df31f18903d521a9481149033e392 and record_manifest_change_event 5fde9ba527e8528da1ab045b7ceb3c26 each equal the local definitions and remain SECURITY DEFINER with search_path empty and EXECUTE only postgres; bookings/items/passengers/manifest links still 0/0/0/0. No production business DML; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "382b02d4da1ed35a966e4207b998136f843c76d3",
-  "migration_count": 229,
-  "ledger_fingerprint": "0264dd3564b040b205f3b340ed7886e9",
-  "function_surface_hash": "aa2e2e60a9347f330cf3c2565dbc2c6d",
-  "function_count": 307,
-  "structural_surface_hash": "bcf88e3bb43ba43584bbea4836b7e7ee",
-  "structural_object_count": 3055,
+  "repository_head": "80b23230d052c82bab06cf723c7d297be2ff25d7",
+  "migration_count": 230,
+  "ledger_fingerprint": "be85ed1e62f6504e9b04171677d32bc8",
+  "function_surface_hash": "e387e49f2a68e982ec199c316179f091",
+  "function_count": 308,
+  "structural_surface_hash": "9c0c3de6fbb1f1c6bddc9b0b56010d3a",
+  "structural_object_count": 3056,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -241,6 +241,7 @@
     "20260924170000_conversation_creation_parity",
     "20260925120000_payment_write_capability_parity",
     "20260926120000_marketing_campaign_step_up_parity",
-    "20260926130000_frozen_traveller_identity_snapshot"
+    "20260926130000_frozen_traveller_identity_snapshot",
+    "20260926140000_manifest_freeze_cannot_be_left"
   ]
 }
