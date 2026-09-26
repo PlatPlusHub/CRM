@@ -200,7 +200,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `lead_assignments` | `SIU-` | yes | conditional | scope_isolation |
 | `lead_interactions` | `SI--` | yes | conditional | scope_isolation |
 | `leads` | `SIU-` | yes | conditional | scope_isolation |
-| `marketing_campaigns` | `SIU-` | no | conditional | scope_isolation |
+| `marketing_campaigns` | `SIU-` | yes | conditional | scope_isolation |
 | `nationalities` | `S---` | no | no | read_all_authenticated |
 | `notification_deliveries` | `S---` | no | no | scope_isolation |
 | `notifications` | `S---` | no | no | scope_isolation |

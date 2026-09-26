@@ -62,7 +62,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -166,6 +166,26 @@ Owner approved the exact Draft SHA `cf7322379b903713664d12be4a20f1e451cb6d76` an
 ### 2026-09-26 — Execution started
 
 The approved ten-path contract entered In Progress. Resume Step 1; only CAMP-3 local implementation and proof are authorized. Primary deployment remains separately gated.
+
+### 2026-09-26 — Pre-deploy readiness gate
+
+Steps 1–4 applied on HEAD `9d9fce7067f0d99c38c0aad82448bf624b4ceff5`: the LF migration is the installed `app.guard_write_capability()` definition plus one INSERT-map arm and the BEFORE INSERT OR UPDATE attachment; Test 127 (plan 29) created; Test 58 changed only its count (27 → 28) and pinned list; CAMP-3 and CAMP-4 registered; `marketing_campaigns` AUDITED-OPEN / ADVERSARIAL; coverage 22/77.
+
+Local proof: clean reset exit 0; focused 127 + 58 = 2 files / 56 assertions PASS; pgTAP Pass A 127 files / 2199 PASS; HTTP 33 + 120 + 40 + 74 + 122 + 60 = 449 passed, 0 failed; pgTAP Pass B without reset 127 / 2199 PASS; `scripts/verify_database.sql` ALL CHECKS PASSED; plan sum 2199 over 127 files. Mutation (Test 127 assertions 24–29): attachment disabled with `tgenabled` D, the `aal1` owner INSERT and identity rewrite landed, re-enabled with `tgenabled` O, the same INSERT refused again, guard md5 identical throughout.
+
+One-arm proof: the new local definition with the added arm removed has md5 `a1cd202a3b25a77e9d218334855bcf38`, exactly Primary's current raw `pg_get_functiondef` md5; the new local raw md5 is `a73a00ed20be4e6503b293eff13f0464`. Primary's current guard differs from the previous local text only by CR bytes (identical non-whitespace md5 `197674239e53d6106f338582ee9e3d55`, identical normalized parity md5), so deployment also removes that whitespace-only drift.
+
+Generators: API contract changed one cell (`marketing_campaigns` guard `no` → `yes`), 79 RPC endpoints, 8 views, 73 tables; ai-map regenerated. Scope: every changed path is inside the frozen ten; `git diff --check` clean; both new files LF with no trailing whitespace. Expected undeployed-only reds: repository consistency 6 issues (manifest migration count, latest version, ledger fingerprint; suite figures 126/2170 vs 127/2199; ledger evidence lacks `20260926120000`) and parity evidence FAILED on the same undeployed migration.
+
+Hashes (SHA-256): migration `fe95deb051cb1557aa9fd8a9b73a5e093f1876af1d36bc5835b118df133f6691`; Test 127 `9456cf4520a91814205c1169d3dfdbfce3f611b654900b4bdb28e3c3295e38da`; Test 58 LF-normalized (committed form) `70ac2e6f628d07c39eee13a7fa1acaf68116195321217eb1f6454871c18d83f5`, CRLF working tree `5e1982aa404010edaffb7beedb7de8c09101c983dd0ccc0cf7e14307f6086109`.
+
+Fresh Primary baseline (read-only): 227 migrations, ledger `b224fabad850e86d7f48a3fb52761b0b`, target absent, functions `ebf18ada4617978752b56360676821e8`/306, combined structural `4874556d8512c0ee21bb913fecdf9b01`/3046, guard on 27 tables and not on `marketing_campaigns`, zero campaign rows. Predicted delta: functions hash → `767000c41c5f4c7658f4d1405e364b13` (306), triggers 295 → 296 (`226a583f3e1d19a40be2f5c54cd2efe2`), eight other surfaces unchanged, combined → `7be8ca54c6a51369a8bd67d464ab6d74`/3047. Primary deployment awaits separate exact-byte owner authorization.
+
+### 2026-09-26 — Authorized Primary deployment and reconciliation
+
+The owner authorized Primary `vrvtsxexkiiiivlkdxzp` for HEAD `9d9fce7067f0d99c38c0aad82448bf624b4ceff5`, migration SHA-256 `fe95deb051cb1557aa9fd8a9b73a5e093f1876af1d36bc5835b118df133f6691`, Test-127 SHA-256 `9456cf4520a91814205c1169d3dfdbfce3f611b654900b4bdb28e3c3295e38da` and Test-58 Git/LF-normalized SHA-256 `70ac2e6f628d07c39eee13a7fa1acaf68116195321217eb1f6454871c18d83f5` (the CRLF working-tree hash being checkout evidence only). Immediately before writing, HEAD and all three hashes matched exactly and Git's own blob of Test 58 equals the LF form; the connector URL named `vrvtsxexkiiiivlkdxzp`; Primary held 227 migrations through `20260925120000`, ledger `b224fabad850e86d7f48a3fb52761b0b`, no target migration, zero `marketing_campaigns` rows, guard md5 `a1cd202a3b25a77e9d218334855bcf38` on 27 tables, no `marketing_campaigns` guard trigger, SECURITY DEFINER, empty `search_path`, ACL `{postgres=X/postgres}`. Applied only `20260926120000_marketing_campaign_step_up_parity.sql` through the Primary connector. The connector assigned temporary version `20260926142240`; a guarded uniqueness check normalized only that new row to `20260926120000` (updated 1, temporary rows remaining 0). No business-data write; Secondary was not contacted.
+
+Fresh postwrite Primary full ordered ledger is 228 migrations through `20260926120000`, fingerprint `65dbbd5a55e241ae3fe667ec986ee35c` (equal to the repository's migration files), target present exactly once, zero campaign rows. Functions `767000c41c5f4c7658f4d1405e364b13` (306); triggers `226a583f3e1d19a40be2f5c54cd2efe2` (296); policies, constraints, grants, columns, views, indexes, status transitions and RLS flags unchanged from the prewrite reading; combined `7be8ca54c6a51369a8bd67d464ab6d74` (3047) — every value equal to the local prediction. The installed `app.guard_write_capability()` `pg_get_functiondef` md5 `a73a00ed20be4e6503b293eff13f0464` equals the local definition (prewrite text plus exactly one arm), still SECURITY DEFINER with empty `search_path` and EXECUTE held only by `postgres`; `marketing_campaigns_guard_write_capability` has `tgtype` 23, enabled `O`, BEFORE INSERT OR UPDATE FOR EACH ROW on `app.guard_write_capability`; the guard now covers 28 tables and the one `marketing_campaigns` policy is unchanged. Primary evidence and manifest reconciled from these readings (228 migrations, suite 127 / 2199, coverage 22/77, Last Completed CAMP-3, next Slice 22); CAMP-3 deployed status recorded; map and API contract regenerated (79 endpoints; only the `marketing_campaigns` guard cell changed). `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1` and `git diff --check` all exited 0 (CLEAN). CAMP-4 stays OPEN; ENTRY-1, PAY-3 and PAY-4 untouched. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status remains In Progress pending Review and the Complete transition.
 
 ## Verification Notes
 

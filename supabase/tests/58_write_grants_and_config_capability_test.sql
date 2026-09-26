@@ -243,8 +243,8 @@ select is(
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  27,
-  'twenty-seven tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400 + booking_items, BOOK-3, 202607061500)');
+  28,
+  'twenty-eight tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400 + booking_items, BOOK-3, 202607061500 + marketing_campaigns, CAMP-3, SPEC-222)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -274,7 +274,9 @@ select is(
                             -- entry so far with a SEVEN-permission UPDATE arm, because finance
                             -- legitimately locks, approves, archives and assigns suppliers on items
                             -- it does not own.
-                            'booking_items')),
+                            'booking_items',
+                            -- CAMP-3 (SPEC-222): RLS charged the permission but not the step-up.
+                            'marketing_campaigns')),
   0,
   '...and every one of them is on a table the function has a permission mapping for');
 

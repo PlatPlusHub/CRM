@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-25T20:42:47Z",
-  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-221 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: authorized HEAD 5b3a8945016fd78c101bf49976d1e9349271f97c, migration SHA-256 1f01a2b79eb483d682104b9e38598f8f4135a42eefeefa05fc0b143102b489eb and test-126 SHA-256 eb99c86e94066e60baafc5730604334958404996860d2f9e8c8ac166d2f9a6fd; project URL vrvtsxexkiiiivlkdxzp; full ledger 226/7c416f13f007cc244fc35ab98a8c105a equal to the repository's first 226 migrations; target absent; zero payment rows; nine enabled payment triggers; live guard payments mapping amount-only. Connector assigned temporary version 20260925204057; only that newly inserted payment_write_capability_parity row was normalized to 20260925120000 after a guarded uniqueness check (source 1, collision 0, updated 1). Fresh postwrite full ordered ledger, function surface and all ten structural categories match the clean local stack; only the function surface changed. Direct Primary inspection: app.guard_financial_capability() pg_get_functiondef md5 cff9f92e56f66edf33580d2d2282cedb equals the locally proven definition, SECURITY INVOKER, search_path empty, EXECUTE held only by postgres, six enabled guard triggers; nine enabled payment triggers unchanged. No production business DML; Secondary was not contacted.",
+  "read_at": "2026-09-26T14:23:40Z",
+  "read_via": "Fresh Primary Supabase connector reads after owner-authorized SPEC-222 migration applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: authorized HEAD 9d9fce7067f0d99c38c0aad82448bf624b4ceff5, migration SHA-256 fe95deb051cb1557aa9fd8a9b73a5e093f1876af1d36bc5835b118df133f6691, test-127 SHA-256 9456cf4520a91814205c1169d3dfdbfce3f611b654900b4bdb28e3c3295e38da and test-58 LF-normalized SHA-256 70ac2e6f628d07c39eee13a7fa1acaf68116195321217eb1f6454871c18d83f5; project URL vrvtsxexkiiiivlkdxzp; full ledger 227/b224fabad850e86d7f48a3fb52761b0b; target absent; zero marketing_campaigns rows; app.guard_write_capability() pg_get_functiondef md5 a1cd202a3b25a77e9d218334855bcf38 on 27 tables; no marketing_campaigns guard trigger. Connector assigned temporary version 20260926142240; only that newly inserted marketing_campaign_step_up_parity row was normalized to 20260926120000 after a guarded uniqueness check (updated 1, temporary rows remaining 0). Fresh postwrite full ordered ledger 228/65dbbd5a55e241ae3fe667ec986ee35c equals the repository's migration files; function surface and all ten structural categories match the clean local stack; only functions and triggers changed. Direct Primary inspection: app.guard_write_capability() pg_get_functiondef md5 a73a00ed20be4e6503b293eff13f0464 equals the locally proven definition (the prewrite text plus exactly one marketing_campaigns arm), SECURITY DEFINER, search_path empty, EXECUTE held only by postgres; marketing_campaigns_guard_write_capability tgtype 23, enabled O, BEFORE INSERT OR UPDATE FOR EACH ROW; guard on 28 tables; one marketing_campaigns policy unchanged. No production business DML; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "5b3a8945016fd78c101bf49976d1e9349271f97c",
-  "migration_count": 227,
-  "ledger_fingerprint": "b224fabad850e86d7f48a3fb52761b0b",
-  "function_surface_hash": "ebf18ada4617978752b56360676821e8",
+  "repository_head": "9d9fce7067f0d99c38c0aad82448bf624b4ceff5",
+  "migration_count": 228,
+  "ledger_fingerprint": "65dbbd5a55e241ae3fe667ec986ee35c",
+  "function_surface_hash": "767000c41c5f4c7658f4d1405e364b13",
   "function_count": 306,
-  "structural_surface_hash": "4874556d8512c0ee21bb913fecdf9b01",
-  "structural_object_count": 3046,
+  "structural_surface_hash": "7be8ca54c6a51369a8bd67d464ab6d74",
+  "structural_object_count": 3047,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -239,6 +239,7 @@
     "20260924150000_refund_door_integrity",
     "20260924160000_customer_contact_event_parity",
     "20260924170000_conversation_creation_parity",
-    "20260925120000_payment_write_capability_parity"
+    "20260925120000_payment_write_capability_parity",
+    "20260926120000_marketing_campaign_step_up_parity"
   ]
 }
