@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -282,6 +282,10 @@ Review hypotheses resolved on the local stack before execution. The approved des
 - **Event parity.** `service_role` holds no INSERT or UPDATE on `subscriptions`, so after the repair every writer is an event-emitting definer function. Direct-write event parity has no door.
 
 Approval authorizes local implementation, proof, Review readiness and candidate publication through the pre-deploy readiness gate. It does not authorize a Primary write, which needs separate exact-byte authorization.
+
+### 2026-09-27 — Execution started
+
+The approved nine-path contract entered In Progress at `e06e5aa`. Resume Step 1. Local implementation, proof and candidate publication are authorized; Primary deployment remains separately gated at Step 5.
 
 ## Verification Notes
 
