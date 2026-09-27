@@ -243,14 +243,14 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Acceptance Criteria
 
-- [ ] On every signed-in path, a document version's `uploaded_at` is the server's clock: the employee's backdate and forward-date are pinned to `42501` `a document version's identity is immutable: add a new version instead of rewriting one`, a backdated INSERT is born at `now()`, and the owner's superseded version is no destruction candidate under the tenant's policy.
-- [ ] No two versions share a `storage_path`: a second row at an existing key is refused with `23505`, and `document_versions_storage_path_idx` is unique on that column alone.
-- [ ] With the pre-repair trigger installed and the index dropped in a savepoint, the employee's backdate makes the owner's version claimable and a second row lands on one key; the restored trigger is byte-identical, the index is back and no mutant backdate survives.
-- [ ] Upload, versioning (including the demotion of `is_current`), the session-less platform write of the clock, retention under a policy, the legal hold, every RPC and every policy keep their behaviour; `verify_storage_end_to_end.ps1` passes.
-- [ ] DOC-7 (Medium) and DOC-8 (Low) are registered `FIXED` / `DEPLOYED`. `document_versions` is `AUDITED` / `ADVERSARIAL` with findings DOC-7 and DOC-8. Coverage reads 30 of 77 in both the disposition record and the manifest. Every other row is unchanged.
-- [ ] The migration and Test 135 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (233 migrations; 135 files / 2428 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] On every signed-in path, a document version's `uploaded_at` is the server's clock: the employee's backdate and forward-date are pinned to `42501` `a document version's identity is immutable: add a new version instead of rewriting one`, a backdated INSERT is born at `now()`, and the owner's superseded version is no destruction candidate under the tenant's policy.
+- [x] No two versions share a `storage_path`: a second row at an existing key is refused with `23505`, and `document_versions_storage_path_idx` is unique on that column alone.
+- [x] With the pre-repair trigger installed and the index dropped in a savepoint, the employee's backdate makes the owner's version claimable and a second row lands on one key; the restored trigger is byte-identical, the index is back and no mutant backdate survives.
+- [x] Upload, versioning (including the demotion of `is_current`), the session-less platform write of the clock, retention under a policy, the legal hold, every RPC and every policy keep their behaviour; `verify_storage_end_to_end.ps1` passes.
+- [x] DOC-7 (Medium) and DOC-8 (Low) are registered `FIXED` / `DEPLOYED`. `document_versions` is `AUDITED` / `ADVERSARIAL` with findings DOC-7 and DOC-8. Coverage reads 30 of 77 in both the disposition record and the manifest. Every other row is unchanged.
+- [x] The migration and Test 135 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (233 migrations; 135 files / 2428 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -363,19 +363,54 @@ Primary deployment awaits separate exact-byte owner authorization (Step 5). Seco
 
 `check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` exit 0 and `git diff --check` exit 0. The Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode. Status stays In Progress pending Review and the Complete transition.
 
+### 2026-09-27 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `01ef83e` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, then returned `LOCAL_CERTIFY: READY` on its first run:
+- `npx supabase db reset`;
+- `npx supabase test db` (Pass A);
+- `scripts/verify_storage_end_to_end.ps1`;
+- `npx supabase test db` (Pass B);
+- `scripts/verify_database.sql`;
+- `scripts/check_database_parity_evidence.ps1`;
+- `scripts/check_repository_consistency.ps1`;
+- `git diff --check`;
+- `scripts/check_primary_ledger.ps1`.
+
+Finish keeps only PASS lines. At the pre-deploy gate, the same committed migration and test bytes measured `Files=135, Tests=2428, Result: PASS` in both passes, 60/0 on the declared HTTP suite, and `ALL CHECKS PASSED`. Finish validated the recorded Primary evidence and did not contact Primary. The telemetry retry rule was never needed.
+
+### 2026-09-27 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `01ef83e` against the approved Draft `bb1ac3c` and the frozen nine-path Write Scope. The working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range `669d656..01ef83e` changes eight paths, all inside the frozen nine, and nothing in Out of Scope. `MASTER_API_CONTRACT.md` regenerated byte-identical and is unchanged. The committed blobs hash to the authorized values: migration `26eb722c5706a75d813bcee1aa0830d61cc0b848ab27f92c25510eb2fbfca595`, Test 135 `e1cd9c19efbb5022689c2d2064af86becbe9abbe97100ceae7dd699756928595`.
+
+Acceptance, re-checked against the committed bytes:
+1. Test 135 assertions 5 and 12 refuse the employee's backdate of the owner's superseded version and forward-date of a due one, each with `42501` `a document version's identity is immutable: add a new version instead of rewriting one`. Assertion 7 reads a backdated INSERT born at `now()`, assertion 8 the owner's version at its real upload time, and assertion 9 no destruction candidate for the tenant under its ten-year policy.
+2. Assertion 14 reads `document_versions_storage_path_idx` unique on `storage_path` alone, and assertion 15 refuses a second row on an existing key with `23505`.
+3. Mutation assertions 17-20 install the pre-repair trigger and drop the index, with the md5 proven to differ. They watch the backdate make the owner's version claimable and a second row land on one key, then restore the trigger md5-identical with the index back and no mutant backdate surviving. On the unrepaired stack the same file failed exactly 5, 7, 8, 9, 12, 14 and 15.
+4. Assertions 6, 10, 11 and 13 keep a table-door insert, the session-less write of the clock, retention under the policy and the RPC's demotion of `is_current`. Tests 46, 49, 97, 116 and 122 pass unchanged. No policy, trigger or RPC changed: on Primary the categories other than functions and indexes are unchanged, the function delta is this trigger alone and the index delta is the new index alone. The declared HTTP suite passes, and at the prototype all six passed (449/0).
+5. The register diff adds only the Slice 29 freshness entry and the DOC-7 (Medium) and DOC-8 (Low) rows, both `FIXED` / `DEPLOYED`, Cert `✅`; every other row, including DOC-1/DOC-3, DOC-4, DOC-5, DOC-6 and RET-1, is byte-identical to `669d656`. The disposition diff changes only the `document_versions` row (`AUDITED` / `ADVERSARIAL` / DOC-7, DOC-8), Coverage and its freshness entry. Thirty rows are recorded, matching Coverage `30 of 77`, and the manifest reads `**30 of 77 surfaces have a recorded audit disposition**, all thirty at`.
+6. Fresh Primary 233 / `c641ed4f9faf6b8acb4c1342d311840d`, functions `25c5bce0b252c36d1cb1f04042f0d3a3`/309, indexes `f1135ab423db8ad5d756a2b413aebfc3`/295 and combined `5a0247339f2a182952d3189e68d84edf`/3059 equal local. The function md5 `c77b0aea4878c7be688526d52b69bdc8` equals local. The recorded evidence, the manifest (`Suite **135 files / 2428 assertions**`), the contract and the LF `ai-map.json` agree, and `-Finish` is READY.
+7. Primary received only the authorized migration plus the one guarded ledger-identity correction. There was no business-data write, the exploit was not replayed on Primary, and Secondary was never contacted.
+8. No file outside Write Scope was created, modified or deleted.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
