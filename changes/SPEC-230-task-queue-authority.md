@@ -84,7 +84,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -276,6 +276,94 @@ Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not
 ### 2026-09-27 — Execution started
 
 The approved nine-path contract entered In Progress at `98a5fdc`. Resume Step 1. Local implementation and proof through the Step 4 pre-deploy readiness gate are authorized; Primary deployment remains separately gated at Step 5.
+
+### 2026-09-27 — Steps 1-3 executed
+
+- Step 1: Applied. `supabase/migrations/20260927130000_a_task_changes_queue_only_with_authority.sql` was created LF, SHA-256 `65f91dd79848f8ef25ff7a97616ed368b129052663d70eddbfe89dc97ac42ec5`, exactly the value this step names.
+- Step 2: Applied. `supabase/tests/134_task_queue_authority_test.sql` was created LF, SHA-256 `a1cdd28db4911fa07b4f2107e3388848f09e273c728ddd52365f3a017685dd80`, `plan(30)`, exactly the value this step names.
+- Step 3: Applied.
+  - Register: a Slice 28 freshness entry was added, and the Slice 26 entry was demoted to `Previously:`. TASK-4 was appended after `| SUB-3 |` (Medium, `FIXED locally by SPEC-230`, pending Primary deployment, Cert `📋`). No other row changed, including ENTRY-1, ARCH-2, TASK-1 and TASK-2.
+  - Disposition: `tasks` was set to `AUDITED-OPEN` / `ADVERSARIAL` / `SPEC-230-task-queue-authority` / `TASK-4, ENTRY-1, ARCH-2`. Coverage reads `29 of 77 recorded · 10 AUDITED · 16 AUDITED-OPEN · 3 PARTIAL · 0 EXEMPT · 48 NOT-RECORDED` and `All 29 recorded surfaces`. A freshness entry was added, and no other row changed.
+  - Both files are byte-identical, after LF normalization, to the prototype that was checked before freezing.
+
+### 2026-09-27 — Pre-deploy readiness gate
+
+On HEAD `03dc396`, with Steps 1-3 in the working tree:
+- Clean reset: exit 0, 232 migrations through `20260927130000`.
+- Focused Test 134: 30/30.
+- pgTAP Pass A: `Files=134, Tests=2408, Result: PASS`.
+- `verify_journey_branches.ps1`: 74 passed, 0 failed.
+- pgTAP Pass B without reset: `Files=134, Tests=2408, Result: PASS`.
+- `scripts/verify_database.sql`: `ALL CHECKS PASSED`, exit 0.
+- Plan sum: 2408 over 134 files.
+
+Mutation (Test 134, assertions 26-30): the pre-repair guard (owner column only) was installed in a savepoint, and its md5 was proven to differ. The employee's move out of the queue then landed, and the department manager's view went to 0. After rollback to the savepoint, the guard was md5-identical to the repaired definition and no mutant move survived. On the unrepaired stack at `3b4b5e4`, the same file failed exactly assertions 6-9 and passed the other 26.
+
+Generators:
+- `MASTER_API_CONTRACT.md` regenerated from this stack is byte-identical (79 endpoints, 8 views, 73 tables), so it is left unchanged.
+- `ai-map.json` is regenerated in Step 7, once the manifest moves.
+
+Checks on the working tree:
+- `git diff --check` exited 0. The changed paths are the migration, Test 134, the register and the disposition record, all inside the frozen nine.
+- Repository consistency found 6 issues, all expected at this boundary. Three come from the undeployed migration (manifest migration count, latest version and ledger fingerprint `4d034c995b053b3d7eb8ed2d8455a363`). Two are the suite figures (133/2378 vs 134/2408), which move in Step 7. The last is ledger evidence lacking `20260927130000`.
+
+Under these reds the Gate blocks a commit, so these steps stay uncommitted until deployment, and `-Finish`, `LOCAL_CERTIFY` and candidate publication follow in Steps 7-8, as SPEC-227 did.
+
+Local candidate surfaces (`scripts/check_database_parity.ps1`):
+- ledger 232 / `4d034c995b053b3d7eb8ed2d8455a363`;
+- functions `366a22adb93c1acd53406064b927a908` / 309;
+- triggers `1ee1a1d1fa0b90265a65b044c7eb804c` / 298;
+- policies, constraints, grants, columns, views, indexes, status transitions and RLS flags identical to the recorded Primary values;
+- combined `b6719372293723a6f1ce9cdfcc6c6d04` / 3058.
+
+The repaired guard's `pg_get_functiondef` md5 is `5851a2006654917946e49f5e18c9c63f`. It is SECURITY INVOKER, with `search_path` empty and ACL `{postgres=X/postgres}`.
+
+Fresh Primary `vrvtsxexkiiiivlkdxzp` baseline, read-only, 2026-09-27, through `scripts/parity_surface.sql`'s own queries:
+- ledger 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`, latest `20260927120000`, target absent;
+- functions `49195bca218fe35f12ba1b2959927c99` / 309; triggers `1ee1a1d1fa0b90265a65b044c7eb804c` / 298; combined `0614728aa728d5c0bb0fbf0c8115ad5c` / 3058; all ten categories equal to the recorded evidence;
+- 0 tenants, 0 tasks;
+- the guard md5 is `27c811689f6b3f5d6ea95da523741884` (pre-repair). It is INVOKER, with `search_path` empty and ACL `{postgres=X/postgres}`. `tasks_guard_reassignment` is `tgtype` 19, enabled `O`.
+
+Predicted delta:
+- ledger → 232 / `4d034c995b053b3d7eb8ed2d8455a363`;
+- functions → `366a22adb93c1acd53406064b927a908` / 309;
+- guard md5 → `5851a2006654917946e49f5e18c9c63f`;
+- triggers and the eight other categories unchanged;
+- combined → `b6719372293723a6f1ce9cdfcc6c6d04` / 3058.
+
+Primary deployment awaits separate exact-byte owner authorization (Step 5). Secondary was not contacted.
+
+### 2026-09-27 — Authorized Primary deployment and reconciliation
+
+**Authorization.** The owner authorized one Primary operation on `vrvtsxexkiiiivlkdxzp` (Step 5): `supabase/migrations/20260927130000_a_task_changes_queue_only_with_authority.sql`, SHA-256 `65f91dd79848f8ef25ff7a97616ed368b129052663d70eddbfe89dc97ac42ec5`, bound to Test-134 SHA-256 `a1cdd28db4911fa07b4f2107e3388848f09e273c728ddd52365f3a017685dd80`. It authorizes no business-data, policy, grant, trigger or other function write.
+
+**Recheck immediately before writing.** Everything matched exactly:
+- HEAD `03dc396`, with SPEC-230 In Progress; both hashes; only in-scope paths changed.
+- The connector URL names `vrvtsxexkiiiivlkdxzp`.
+- Primary: 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`, latest `20260927120000`, target absent. Guard md5 `27c811689f6b3f5d6ea95da523741884`, SECURITY INVOKER, `search_path` empty; `tasks_guard_reassignment` enabled. 0 tenants, 0 tasks.
+
+**Deployment (Step 6).** Only that migration was applied, through the Primary connector. The connector created exactly one new row, with temporary version `20260927144253`. Its stored statement md5 `08e5af0260e24bbaf789ae32c4e7893f` equals the migration file's md5. A guarded update then renamed only that row to `20260927130000`: there was no existing `20260927130000`, 1 row was updated, and 0 temporary rows remain. There was no business-data write, the exploit was not replayed on Primary, and Secondary was not contacted.
+
+**Fresh postwrite readings**, every value equal to the local prediction:
+- ledger 232 / `4d034c995b053b3d7eb8ed2d8455a363`, with the target exactly once;
+- functions `366a22adb93c1acd53406064b927a908`/309 and triggers `1ee1a1d1fa0b90265a65b044c7eb804c`/298;
+- policies, constraints, grants, columns, views, indexes, status transitions and RLS flags unchanged;
+- combined `b6719372293723a6f1ce9cdfcc6c6d04`/3058.
+
+**Direct inspection.** `app.guard_task_reassignment()` has `pg_get_functiondef` md5 `5851a2006654917946e49f5e18c9c63f`, equal to local, and carries the TASK-1 / TASK-4 comment. It is SECURITY INVOKER with an empty `search_path` and ACL `{postgres=X/postgres}`, and it is not executable by anon or authenticated. `tasks_guard_reassignment` is `tgtype` 19 (BEFORE UPDATE, row), enabled `O`. 0 tenants, 0 tasks.
+
+**Reconciliation (Step 7).** Every value below comes from those readings:
+- `reports/evidence/primary-ledger-evidence.json` holds the Primary-read ordered ledger of 232 entries, verified to hash to the fingerprint, and the new function and structural hashes.
+- Manifest:
+  - `Live state` moved to 232 / `20260927130000` / `4d034c99…` / `366a22ad…` (309) / `b6719372…` (3,058).
+  - The suite figure moved to 134 files / 2408 assertions, after measuring 134 files with a plan sum of 2408.
+  - The Batch 6 line moved to `**29 of 77 surfaces have a recorded audit disposition**, all twenty-nine at`, after Step 3 set Coverage to 29 of 77.
+  - `Last Completed` moved to Slice 28 / TASK-4 / SPEC-230.
+  - The manifest is 6664 characters.
+- TASK-4 is marked `FIXED` / `DEPLOYED`, with Cert `✅`. No other register row changed.
+- `MASTER_API_CONTRACT.md` regenerated byte-identical, so it is unchanged. `ai-map.json` was regenerated and stored LF; only `generated_at` and `last_completed` moved.
+
+`check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` CLEAN and `git diff --check` all exit 0. The Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode. Status stays In Progress pending Review and the Complete transition.
 
 ## Verification Notes
 

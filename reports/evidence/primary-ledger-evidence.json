@@ -1,15 +1,15 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-27T08:53:28Z",
-  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-227 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD 57dba9d10589fd2c7649b7b7546fedcb1b34d176 (SPEC-227 In Progress); migration SHA-256 dea69945ee1549ceb95e9376dca986ca16b17b21c291fb1ab0effdbdd36d6c72; test-131 SHA-256 f48d48b58027964b3913cebfe09466bdf9e50f4816524feadc3e4a52a3d40c9a; project URL vrvtsxexkiiiivlkdxzp. Primary before the write: full ledger 230/be85ed1e62f6504e9b04171677d32bc8, latest 20260926140000, target absent; functions e387e49f2a68e982ec199c316179f091/308; combined structure 9c0c3de6fbb1f1c6bddc9b0b56010d3a/3056; 0 tenants, 0 subscriptions, 0 user_permission_grants, 0 forbidden grants; guard function and trigger absent. The connector assigned temporary version 20260927085142. Its stored statement md5 087c65eeeaec12986b3d10eac1e5b94c equals the migration file's md5. Only that newly inserted row was renamed to 20260927120000, after a guarded check (no existing 20260927120000; updated 1; temporary rows remaining 0). Fresh postwrite full ordered ledger 231/d7cd1a076c1c81a53ba26c14eef7fd5d equals the repository's migration files. Functions 49195bca218fe35f12ba1b2959927c99/309 and triggers 1ee1a1d1fa0b90265a65b044c7eb804c/298; the other eight structural categories are unchanged; combined 0614728aa728d5c0bb0fbf0c8115ad5c/3058. Every value equals the local prediction. Direct Primary inspection: app.guard_platform_permission_grant pg_get_functiondef md5 71510283a76d40ff1db7707bac350732, equal to local; SECURITY DEFINER; search_path empty; ACL {postgres=X/postgres}; not executable by anon, authenticated or service_role. Trigger user_permission_grants_guard_platform_authority is tgtype 23, enabled O. Afterwards: 0 tenants, 0 subscriptions, 0 user_permission_grants, 0 forbidden grants, and 0 roles holding either key. No production business DML; Secondary was not contacted.",
+  "read_at": "2026-09-27T14:43:57Z",
+  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-230 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD 03dc3962f546152923337ed305d607add2c31d7c (SPEC-230 In Progress); migration SHA-256 65f91dd79848f8ef25ff7a97616ed368b129052663d70eddbfe89dc97ac42ec5; test-134 SHA-256 a1cdd28db4911fa07b4f2107e3388848f09e273c728ddd52365f3a017685dd80; project URL vrvtsxexkiiiivlkdxzp; only in-scope paths changed. Primary before the write: full ledger 231/d7cd1a076c1c81a53ba26c14eef7fd5d, latest 20260927120000, target absent; functions 49195bca218fe35f12ba1b2959927c99/309; combined structure 0614728aa728d5c0bb0fbf0c8115ad5c/3058; 0 tenants, 0 tasks; app.guard_task_reassignment md5 27c811689f6b3f5d6ea95da523741884, SECURITY INVOKER, search_path empty, trigger tasks_guard_reassignment enabled. The connector assigned temporary version 20260927144253 to exactly one new row; its stored statement md5 08e5af0260e24bbaf789ae32c4e7893f equals the migration file md5. Only that row was renamed to 20260927130000, after a guarded check (no existing 20260927130000; updated 1; temporary rows remaining 0). Fresh postwrite full ordered ledger 232/4d034c995b053b3d7eb8ed2d8455a363 equals the repository migration files. Functions 366a22adb93c1acd53406064b927a908/309 and triggers 1ee1a1d1fa0b90265a65b044c7eb804c/298; the other eight structural categories are unchanged; combined b6719372293723a6f1ce9cdfcc6c6d04/3058. Every value equals the local prediction. Direct Primary inspection: app.guard_task_reassignment pg_get_functiondef md5 5851a2006654917946e49f5e18c9c63f, equal to local; SECURITY INVOKER; search_path empty; ACL {postgres=X/postgres}; not executable by anon or authenticated; trigger tgtype 19, enabled O. Afterwards 0 tenants and 0 tasks. The exploit was not replayed on Primary. No production business DML; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "57dba9d10589fd2c7649b7b7546fedcb1b34d176",
-  "migration_count": 231,
-  "ledger_fingerprint": "d7cd1a076c1c81a53ba26c14eef7fd5d",
-  "function_surface_hash": "49195bca218fe35f12ba1b2959927c99",
+  "repository_head": "03dc3962f546152923337ed305d607add2c31d7c",
+  "migration_count": 232,
+  "ledger_fingerprint": "4d034c995b053b3d7eb8ed2d8455a363",
+  "function_surface_hash": "366a22adb93c1acd53406064b927a908",
   "function_count": 309,
-  "structural_surface_hash": "0614728aa728d5c0bb0fbf0c8115ad5c",
+  "structural_surface_hash": "b6719372293723a6f1ce9cdfcc6c6d04",
   "structural_object_count": 3058,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
@@ -243,6 +243,7 @@
     "20260926120000_marketing_campaign_step_up_parity",
     "20260926130000_frozen_traveller_identity_snapshot",
     "20260926140000_manifest_freeze_cannot_be_left",
-    "20260927120000_platform_authority_cannot_be_granted"
+    "20260927120000_platform_authority_cannot_be_granted",
+    "20260927130000_a_task_changes_queue_only_with_authority"
   ]
 }
