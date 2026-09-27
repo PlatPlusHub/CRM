@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -275,6 +275,10 @@ Owner approved the exact Draft SHA `5154cd284b72af9f796f8e0df021b2658b93a0a4` an
 - `origin/main` is at `da2ca21`.
 
 Approval authorizes the record-only Slice 27 execution only. It does not authorize a migration, schema change, Primary write, Gap Register change, new finding, or any work on PAR-5, AUTH-1, EVT-2, LIC-1, LIC-2 or STEPUP-1. The certifying `-Finish` runs first without telemetry opt-outs.
+
+### 2026-09-27 — Execution started
+
+The approved six-path record-only contract entered In Progress at `59eabb3`. Resume Step 1. No migration, schema change, Gap Register change or Primary write is authorized.
 
 ## Verification Notes
 
