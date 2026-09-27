@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -269,6 +269,10 @@ The owner asked for two review hypotheses to be proved or falsified before imple
 2. Stamping `uploaded_at` on signed-in inserts leaves the platform path unchanged. The trigger's session-less branch returns before the new line, and `auth.uid()` is null for `postgres` and for a `service_role` JWT, which carries no `sub`. `verify_storage_end_to_end.ps1` writes historical `uploaded_at` values as the platform (its version inserts at lines 121 and 236) and passed 60/0 on the prototype. No signed-in producer accepts a timestamp, no SECURITY DEFINER function inserts a version, and neither canon nor the integration catalog defines a document import or backfill path.
 
 Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not authorize a Primary write, which needs separate exact-byte authorization at Gate 2.
+
+### 2026-09-27 — Execution started
+
+The approved nine-path contract entered In Progress at `33a23e7`. Resume Step 1. Local implementation and proof through the Step 4 pre-deploy readiness gate are authorized; Primary deployment remains separately gated at Step 5.
 
 ## Verification Notes
 
