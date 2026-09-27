@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -287,7 +287,13 @@ Post-Implementation Proof Obligation: The following all exit 0 on the final byte
 
 ## Execution Log
 
-None yet.
+### 2026-09-27 — Owner approval
+
+Owner approved the exact Draft SHA `e04e2ffd34aa2cf9dfddd2b9e2c167324e7366f3` and the frozen seven-path Write Scope. Before the Draft was committed, a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY). A mutated copy with a gate inside a red window returned FAIL. Pre-approval revalidation:
+- HEAD is the Draft SHA, and the tree is clean;
+- `origin/main` is at `7c80b65`.
+
+Approval authorizes the record-only Slice 26 execution only. It does not authorize a migration, schema change, Primary write, STEPUP-1 repair or new finding.
 
 ## Verification Notes
 
