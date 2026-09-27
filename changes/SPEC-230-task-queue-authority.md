@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -261,7 +261,17 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Execution Log
 
-None.
+### 2026-09-27 — Owner approval
+
+Owner approved the exact Draft SHA `d4ccb1907d6c010cf3863f54383079026dd62844` and the frozen nine-path Write Scope, with TASK-4 as FIX NOW under the approved design. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY). Two mutated copies returned FAIL (a gate inside a red window) and INDETERMINATE (Mutation Obligation removed). Pre-approval revalidation:
+- HEAD was the Draft SHA and the tree was clean;
+- `origin/main` and `origin/orvion-preflight` were at `3b4b5e4`;
+- the prototype migration and Test 134 hash to the frozen values;
+- the local stack is back at 231 migrations after the prototype.
+
+The approval is bound to migration SHA-256 `65f91dd79848f8ef25ff7a97616ed368b129052663d70eddbfe89dc97ac42ec5` and Test-134 SHA-256 `a1cdd28db4911fa07b4f2107e3388848f09e273c728ddd52365f3a017685dd80`. ENTRY-1 and ARCH-2 stay existing OPEN findings, neither repaired nor reclassified, and no unrelated register row changes. During prototyping, a relative-path write briefly altered the main checkout's manifest outside any Write Scope. It was restored from HEAD before the Draft was committed, and it widens nothing.
+
+Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not authorize a Primary write, which needs separate exact-byte authorization at Gate 2.
 
 ## Verification Notes
 
