@@ -251,13 +251,13 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Acceptance Criteria
 
-- [ ] On every signed-in path, a change to a task's department, branch or owner requires ASSIGN_TASK. The employee's table moves (both columns, department alone, branch alone) and its RPC move are pinned to `42501` `permission denied: ASSIGN_TASK`, and the task stays in its department manager's queue.
-- [ ] With the pre-repair guard installed in a savepoint, the same employee moves its task out of the queue and the manager loses sight of it; the restored guard is byte-identical and no mutant move survives.
-- [ ] Editing, re-prioritising, rescheduling and starting one's own task, an ASSIGN_TASK holder's move on both doors, the session-less path, every RPC and every policy keep their behaviour; `verify_journey_branches.ps1` passes.
-- [ ] TASK-4 is registered Medium and `FIXED` / `DEPLOYED`. `tasks` is `AUDITED-OPEN` / `ADVERSARIAL` with findings TASK-4, ENTRY-1 and ARCH-2, the two class instances pinned OPEN by Test 134. Coverage reads 29 of 77 in both the disposition record and the manifest. ENTRY-1, ARCH-2 and every other row are unchanged.
-- [ ] The migration and Test 134 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (232 migrations; 134 files / 2408 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] On every signed-in path, a change to a task's department, branch or owner requires ASSIGN_TASK. The employee's table moves (both columns, department alone, branch alone) and its RPC move are pinned to `42501` `permission denied: ASSIGN_TASK`, and the task stays in its department manager's queue.
+- [x] With the pre-repair guard installed in a savepoint, the same employee moves its task out of the queue and the manager loses sight of it; the restored guard is byte-identical and no mutant move survives.
+- [x] Editing, re-prioritising, rescheduling and starting one's own task, an ASSIGN_TASK holder's move on both doors, the session-less path, every RPC and every policy keep their behaviour; `verify_journey_branches.ps1` passes.
+- [x] TASK-4 is registered Medium and `FIXED` / `DEPLOYED`. `tasks` is `AUDITED-OPEN` / `ADVERSARIAL` with findings TASK-4, ENTRY-1 and ARCH-2, the two class instances pinned OPEN by Test 134. Coverage reads 29 of 77 in both the disposition record and the manifest. ENTRY-1, ARCH-2 and every other row are unchanged.
+- [x] The migration and Test 134 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (232 migrations; 134 files / 2408 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -365,19 +365,53 @@ Primary deployment awaits separate exact-byte owner authorization (Step 5). Seco
 
 `check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` CLEAN and `git diff --check` all exit 0. The Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode. Status stays In Progress pending Review and the Complete transition.
 
+### 2026-09-27 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `01c8646` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, then returned `LOCAL_CERTIFY: READY` on its first run:
+- `npx supabase db reset`;
+- `npx supabase test db` (Pass A);
+- `scripts/verify_journey_branches.ps1`;
+- `npx supabase test db` (Pass B);
+- `scripts/verify_database.sql`;
+- `scripts/check_database_parity_evidence.ps1`;
+- `scripts/check_repository_consistency.ps1`;
+- `git diff --check`;
+- `scripts/check_primary_ledger.ps1`.
+
+Finish keeps only PASS lines. At the pre-deploy gate, the same committed migration and test bytes measured `Files=134, Tests=2408, Result: PASS` in both passes, 74/0 on the declared HTTP suite, and `ALL CHECKS PASSED`. Finish validated the recorded Primary evidence and did not contact Primary. The telemetry retry rule was never needed.
+
+### 2026-09-27 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `01c8646` against the approved Draft `d4ccb19` and the frozen nine-path Write Scope. The working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range `3b4b5e4..01c8646` changes eight paths, all inside the frozen nine, and nothing in Out of Scope. `MASTER_API_CONTRACT.md` regenerated byte-identical and is unchanged. The committed blobs hash to the authorized values: migration `65f91dd79848f8ef25ff7a97616ed368b129052663d70eddbfe89dc97ac42ec5`, Test 134 `a1cdd28db4911fa07b4f2107e3388848f09e273c728ddd52365f3a017685dd80`.
+
+Acceptance, re-checked against the committed bytes:
+1. Test 134 assertions 5-8 refuse the employee's RPC move and the table moves of both columns, the department alone and the branch alone, each with `42501` `permission denied: ASSIGN_TASK`. Assertion 9 reads the task, as the department manager, still in its queue. Assertion 10 keeps TASK-1's refusal.
+2. Mutation assertions 26-30 install the pre-repair guard, with its md5 proven to differ. They watch the move land and the manager's view fall to 0, then restore the guard md5-identical with no mutant move surviving. On the unrepaired stack the same file failed exactly 6-9.
+3. Assertions 11-15 keep the owner's edit, re-prioritisation, rescheduling and start, the ASSIGN_TASK holder's move on both doors, and the session-less path. No policy, trigger or RPC changed: the Primary categories other than functions are unchanged, and the function delta is the guard alone. The declared HTTP suite passes, and at the prototype all six passed (449/0).
+4. The register diff adds only the Slice 28 freshness entry and the TASK-4 row (Medium, `FIXED` / `DEPLOYED`, Cert `✅`). ENTRY-1, ARCH-2, TASK-1 and TASK-2 are byte-identical to `3b4b5e4`. The disposition diff changes only the `tasks` row (`AUDITED-OPEN` / `ADVERSARIAL` / TASK-4, ENTRY-1, ARCH-2), Coverage and its freshness entry. Assertions 22-25 pin ENTRY-1 and ARCH-2 as OPEN. Twenty-nine rows are recorded, matching Coverage `29 of 77`. The manifest reads `**29 of 77 surfaces have a recorded audit disposition**, all twenty-nine at`, with no `28 of 77` left.
+5. Fresh Primary 232 / `4d034c995b053b3d7eb8ed2d8455a363`, functions `366a22adb93c1acd53406064b927a908`/309 and combined `b6719372293723a6f1ce9cdfcc6c6d04`/3058 equal local. The guard md5 `5851a2006654917946e49f5e18c9c63f` equals local. The recorded evidence, the manifest (`Suite **134 files / 2408 assertions**`), the contract and the LF `ai-map.json` agree, and `-Finish` is READY.
+6. Primary received only the authorized migration plus the one guarded ledger-identity correction. There was no business-data write, the exploit was not replayed on Primary, and Secondary was never contacted.
+7. No file outside Write Scope was created, modified or deleted. The pre-approval manifest incident was restored from HEAD before the Draft was committed and left nothing in the range.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
