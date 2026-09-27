@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -254,7 +254,21 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Execution Log
 
-None.
+### 2026-09-27 — Owner approval
+
+Owner approved the exact Draft SHA `bb1ac3cfe2c866fa6b1ec89c36eca7085f33c5e6` and the frozen nine-path Write Scope, with DOC-7 and DOC-8 as FIX NOW under the approved design. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY). Two mutated copies returned FAIL (a gate inside a red window) and INDETERMINATE (Mutation Obligation removed). Pre-approval revalidation:
+- HEAD was the Draft SHA and the tree was clean;
+- `origin/main` and `origin/orvion-preflight` were at `669d656`;
+- the prototype migration and Test 135 hash to the frozen values;
+- the local stack is back at 232 migrations after the prototype.
+
+The approval is bound to migration SHA-256 `26eb722c5706a75d813bcee1aa0830d61cc0b848ab27f92c25510eb2fbfca595` and Test-135 SHA-256 `e1cd9c19efbb5022689c2d2064af86becbe9abbe97100ceae7dd699756928595`. DOC-7 and DOC-8 are the only new findings this contract owns; no other document finding and not RET-1 is absorbed, and no unrelated register row changes.
+
+The owner asked for two review hypotheses to be proved or falsified before implementation; both hold:
+1. `storage_path` is object identity. Its only producers are `app.upload_document`, `app.add_document_version` and `app.upload_subscription_payment_proof`, all INVOKER and all leaving the key to the trigger's `tenant/document/version` derivation (canon R1 in `202607054600`, "the single source of a document version's object key" in `202607054400`). No copy, move, restore or re-point path exists, and the `storage.objects` policies allow INSERT and SELECT only. Every consumer treats one key as one version: the storage executor's `remove([storage_path])`, `app.claim_storage_actions`, and the findings identity key `(tenant_id, finding_type_code, storage_path)`, which can link only one version per path.
+2. Stamping `uploaded_at` on signed-in inserts leaves the platform path unchanged. The trigger's session-less branch returns before the new line, and `auth.uid()` is null for `postgres` and for a `service_role` JWT, which carries no `sub`. `verify_storage_end_to_end.ps1` writes historical `uploaded_at` values as the platform (its version inserts at lines 121 and 236) and passed 60/0 on the prototype. No signed-in producer accepts a timestamp, no SECURITY DEFINER function inserts a version, and neither canon nor the integration catalog defines a document import or backfill path.
+
+Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not authorize a Primary write, which needs separate exact-byte authorization at Gate 2.
 
 ## Verification Notes
 
