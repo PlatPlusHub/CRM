@@ -83,7 +83,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -273,6 +273,95 @@ Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not
 ### 2026-09-27 — Execution started
 
 The approved nine-path contract entered In Progress at `33a23e7`. Resume Step 1. Local implementation and proof through the Step 4 pre-deploy readiness gate are authorized; Primary deployment remains separately gated at Step 5.
+
+### 2026-09-27 — Steps 1-3 executed
+
+- Step 1: Applied. `supabase/migrations/20260927140000_a_document_version_owns_its_clock_and_its_object.sql` was created LF, SHA-256 `26eb722c5706a75d813bcee1aa0830d61cc0b848ab27f92c25510eb2fbfca595`, exactly the value this step names.
+- Step 2: Applied. `supabase/tests/135_document_version_clock_and_object_test.sql` was created LF, SHA-256 `e1cd9c19efbb5022689c2d2064af86becbe9abbe97100ceae7dd699756928595`, `plan(20)`, exactly the value this step names.
+- Step 3: Applied.
+  - Register: a Slice 29 freshness entry was added, and the Slice 28 entry was demoted to `Previously:`. DOC-7 (Medium) and DOC-8 (Low) were appended after `| TASK-4 |`, each `FIXED locally by SPEC-231`, pending Primary deployment, Cert `📋`, Owner Decision `—`. No other row changed, including DOC-1/DOC-3, DOC-4, DOC-5, DOC-6 and RET-1.
+  - Disposition: `document_versions` was set to `AUDITED` / `ADVERSARIAL` / `SPEC-231-document-version-clock-and-object` / `DOC-7, DOC-8`. Coverage reads `30 of 77 recorded · 11 AUDITED · 16 AUDITED-OPEN · 3 PARTIAL · 0 EXEMPT · 47 NOT-RECORDED` and `All 30 recorded surfaces`. A freshness entry was added, and no other row changed.
+  - Both code files are byte-identical to the prototype that was checked before freezing.
+
+### 2026-09-27 — Pre-deploy readiness gate
+
+On HEAD `b01f83f`, with Steps 1-3 in the working tree:
+- Clean reset: exit 0, 233 migrations through `20260927140000`.
+- Focused Test 135: 20/20.
+- pgTAP Pass A: `Files=135, Tests=2428, Result: PASS`.
+- `verify_storage_end_to_end.ps1`: 60 passed, 0 failed.
+- pgTAP Pass B without reset: `Files=135, Tests=2428, Result: PASS`.
+- `scripts/verify_database.sql`: `ALL CHECKS PASSED`, exit 0.
+- Plan sum: 2428 over 135 files.
+
+Mutation (Test 135, assertions 17-20): the pre-repair trigger was installed and `document_versions_storage_path_idx` dropped in a savepoint, and the trigger's md5 was proven to differ. The employee's backdate then landed and made the owner's superseded version claimable under the ten-year policy, and a second row landed on an existing key. After rollback to the savepoint, the trigger was md5-identical to the repaired definition, the index was back and no mutant backdate survived. On the unrepaired stack at `669d656`, the same file failed exactly the repair-owned assertions 5, 7, 8, 9, 12, 14 and 15, passed the controls, and could not install its mutation because the index it drops did not exist.
+
+Generators:
+- `MASTER_API_CONTRACT.md` matches the live surface of this stack (79 endpoints, 8 views, 73 tables), so it is left unchanged.
+- `ai-map.json` is regenerated in Step 7, once the manifest moves.
+
+Checks on the working tree:
+- `git diff --check` exited 0. The changed paths are the CR, the migration, Test 135, the register and the disposition record, all inside the frozen nine.
+- Repository consistency found 6 issues, all expected at this boundary. Three come from the undeployed migration (manifest migration count, latest version and ledger fingerprint `c641ed4f9faf6b8acb4c1342d311840d`). Two are the suite figures (134/2408 vs 135/2428), which move in Step 7. The last is ledger evidence lacking `20260927140000`.
+
+Under these reds the Gate blocks a commit, so these steps stay uncommitted until deployment, and `-Finish`, `LOCAL_CERTIFY` and candidate publication follow in Steps 7-8, as SPEC-230 did.
+
+Local candidate surfaces (`scripts/check_database_parity.ps1`):
+- ledger 233 / `c641ed4f9faf6b8acb4c1342d311840d`;
+- functions `25c5bce0b252c36d1cb1f04042f0d3a3` / 309;
+- indexes `f1135ab423db8ad5d756a2b413aebfc3` / 295;
+- triggers, policies, constraints, grants, columns, views, status transitions and RLS flags identical to the recorded Primary values;
+- combined `5a0247339f2a182952d3189e68d84edf` / 3059.
+
+The repaired function's `pg_get_functiondef` md5 is `c77b0aea4878c7be688526d52b69bdc8`. It is SECURITY INVOKER, with `search_path` empty and ACL `{postgres=X/postgres}`; `document_versions_enforce_integrity` is `tgtype` 23, enabled `O`; the index is `CREATE UNIQUE INDEX document_versions_storage_path_idx ON public.document_versions USING btree (storage_path)`.
+
+Fresh Primary `vrvtsxexkiiiivlkdxzp` baseline, read-only, 2026-09-27, through `scripts/parity_surface.sql`'s own queries:
+- ledger 232 / `4d034c995b053b3d7eb8ed2d8455a363`, latest `20260927130000`, target absent, index absent;
+- functions `366a22adb93c1acd53406064b927a908` / 309; indexes `3973f9c9dab7d4ca8cfc4b3466bd859c` / 294; combined `b6719372293723a6f1ce9cdfcc6c6d04` / 3058; all ten categories equal to the recorded evidence;
+- 0 tenants, 0 document versions, 0 duplicate storage paths, 0 retention policies;
+- the function md5 is `5dc38272dd7eb47584384f8a4171345b` (pre-repair). It is INVOKER, with `search_path` empty and ACL `{postgres=X/postgres}`. `document_versions_enforce_integrity` is `tgtype` 23, enabled `O`.
+
+Predicted delta:
+- ledger → 233 / `c641ed4f9faf6b8acb4c1342d311840d`;
+- functions → `25c5bce0b252c36d1cb1f04042f0d3a3` / 309;
+- function md5 → `c77b0aea4878c7be688526d52b69bdc8`;
+- indexes → `f1135ab423db8ad5d756a2b413aebfc3` / 295;
+- the eight other categories unchanged;
+- combined → `5a0247339f2a182952d3189e68d84edf` / 3059.
+
+Primary deployment awaits separate exact-byte owner authorization (Step 5). Secondary was not contacted.
+
+### 2026-09-27 — Authorized Primary deployment and reconciliation
+
+**Authorization.** The owner authorized one Primary operation on `vrvtsxexkiiiivlkdxzp` (Step 5): `supabase/migrations/20260927140000_a_document_version_owns_its_clock_and_its_object.sql`, SHA-256 `26eb722c5706a75d813bcee1aa0830d61cc0b848ab27f92c25510eb2fbfca595`, bound to Test-135 SHA-256 `e1cd9c19efbb5022689c2d2064af86becbe9abbe97100ceae7dd699756928595`, with the conditions presented at Gate 2. It authorizes no business-data, policy, grant, trigger or other function write.
+
+**Recheck immediately before writing.** Everything matched exactly:
+- HEAD `b01f83f`, with SPEC-231 In Progress; both hashes; only in-scope paths changed.
+- The connector URL names `vrvtsxexkiiiivlkdxzp`.
+- Primary: 232 / `4d034c995b053b3d7eb8ed2d8455a363`, latest `20260927130000`, target and index absent. Function md5 `5dc38272dd7eb47584384f8a4171345b`, SECURITY INVOKER, `search_path` empty; `document_versions_enforce_integrity` 23/`O`. 0 tenants, 0 versions, 0 duplicate keys, 0 retention policies.
+
+**Deployment (Step 6).** Only that migration was applied, through the Primary connector. The connector created exactly one new row, with temporary version `20260927171236`. Its stored statement (5990 bytes, md5 `abfbf7bdd7a0b980725478da54a5f43d`) equals the migration file. A guarded update then renamed only that row to `20260927140000`: there was no existing `20260927140000`, 1 row was updated, and 0 temporary rows remain. There was no business-data write, the exploit was not replayed on Primary, and Secondary was not contacted.
+
+**Fresh postwrite readings**, every value equal to the local prediction:
+- ledger 233 / `c641ed4f9faf6b8acb4c1342d311840d`, with the target exactly once;
+- functions `25c5bce0b252c36d1cb1f04042f0d3a3`/309 and indexes `f1135ab423db8ad5d756a2b413aebfc3`/295;
+- triggers, policies, constraints, grants, columns, views, status transitions and RLS flags unchanged;
+- combined `5a0247339f2a182952d3189e68d84edf`/3059.
+
+**Direct inspection.** `app.enforce_document_version_integrity()` has `pg_get_functiondef` md5 `c77b0aea4878c7be688526d52b69bdc8`, equal to local. It is SECURITY INVOKER with an empty `search_path` and ACL `{postgres=X/postgres}`, and it is not executable by anon or authenticated. `document_versions_enforce_integrity` is `tgtype` 23, enabled `O`. `document_versions_storage_path_idx` is `CREATE UNIQUE INDEX … USING btree (storage_path)`. 0 tenants, 0 versions.
+
+**Reconciliation (Step 7).** Every value below comes from those readings:
+- `reports/evidence/primary-ledger-evidence.json` holds the Primary-read ordered ledger of 233 entries, verified to hash to the fingerprint, and the new function and structural hashes.
+- Manifest:
+  - `Live state` moved to 233 / `20260927140000` / `c641ed4f…` / `25c5bce0…` (309) / `5a024733…` (3,059).
+  - The suite figure moved to 135 files / 2428 assertions, after measuring 135 files with a plan sum of 2428.
+  - The Batch 6 line moved to `**30 of 77 surfaces have a recorded audit disposition**, all thirty at`, after Step 3 set Coverage to 30 of 77.
+  - `Last Completed` moved to Slice 29 / DOC-7 / DOC-8 / SPEC-231.
+  - The manifest is 6659 characters.
+- DOC-7 and DOC-8 are marked `FIXED` / `DEPLOYED`, with Cert `✅`. No other register row changed.
+- `MASTER_API_CONTRACT.md` regenerated byte-identical, so it is unchanged. `ai-map.json` was regenerated and stored LF.
+
+`check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` exit 0 and `git diff --check` exit 0. The Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode. Status stays In Progress pending Review and the Complete transition.
 
 ## Verification Notes
 
