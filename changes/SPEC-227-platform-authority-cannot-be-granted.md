@@ -257,13 +257,13 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, b
 
 ## Acceptance Criteria
 
-- [ ] No write to `public.user_permission_grants` on any path can create or leave a row with effect `grant` for `MANAGE_SUBSCRIPTION` or `REVIEW_SUBSCRIPTION_PAYMENT`. Each refusal (self-grant, colleague grant, re-point, deny-to-grant flip, session-less) is pinned to `42501` and the guard's own message.
-- [ ] With the guard installed, an `owner` at `aal2` on a lapsed tenant cannot change its subscription's state, plan or period, cannot add a subscription row and cannot decide its own payment proof. With the guard disabled in a savepoint, the same actor does all three, and the restored guard is enabled and byte-identical.
-- [ ] Ordinary grants, denies of either key, revocations, proof upload, platform proof review, `app.has_permission`, every policy and every existing function keep their behaviour; `verify_role_journeys.ps1` and `verify_journey_branches.ps1` pass.
-- [ ] SUB-3 is registered High and `FIXED` / `DEPLOYED`. `subscriptions` is `AUDITED` / `ADVERSARIAL` with finding SUB-3. Coverage reads 26 of 77 in both the disposition record and the manifest. CAP-1, USR-3 and every other row are unchanged.
-- [ ] The migration and Test 131 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (231 migrations; 131 files / 2351 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] No write to `public.user_permission_grants` on any path can create or leave a row with effect `grant` for `MANAGE_SUBSCRIPTION` or `REVIEW_SUBSCRIPTION_PAYMENT`. Each refusal (self-grant, colleague grant, re-point, deny-to-grant flip, session-less) is pinned to `42501` and the guard's own message.
+- [x] With the guard installed, an `owner` at `aal2` on a lapsed tenant cannot change its subscription's state, plan or period, cannot add a subscription row and cannot decide its own payment proof. With the guard disabled in a savepoint, the same actor does all three, and the restored guard is enabled and byte-identical.
+- [x] Ordinary grants, denies of either key, revocations, proof upload, platform proof review, `app.has_permission`, every policy and every existing function keep their behaviour; `verify_role_journeys.ps1` and `verify_journey_branches.ps1` pass.
+- [x] SUB-3 is registered High and `FIXED` / `DEPLOYED`. `subscriptions` is `AUDITED` / `ADVERSARIAL` with finding SUB-3. Coverage reads 26 of 77 in both the disposition record and the manifest. CAP-1, USR-3 and every other row are unchanged.
+- [x] The migration and Test 131 match their authorized SHA-256 values. Primary, the recorded evidence, the manifest (231 migrations; 131 files / 2351 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -360,19 +360,53 @@ Predicted delta: ledger → 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`; functions 
 
 `check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` CLEAN and `git diff --check` all exit 0. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status stays In Progress pending Review and the Complete transition.
 
+### 2026-09-27 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `d0b596c` in VERIFY mode and derived profiles DATABASE and REPOSITORY. It passed every mandatory verification, then returned `LOCAL_CERTIFY: READY`:
+- `npx supabase db reset`;
+- `npx supabase test db` (Pass A);
+- `scripts/verify_role_journeys.ps1` and `scripts/verify_journey_branches.ps1`;
+- `npx supabase test db` (Pass B);
+- `scripts/verify_database.sql`;
+- `scripts/check_database_parity_evidence.ps1`;
+- `scripts/check_repository_consistency.ps1`;
+- `git diff --check`;
+- `scripts/check_primary_ledger.ps1`.
+
+Finish keeps only PASS lines. The same committed migration and test bytes measured `Files=131, Tests=2351, Result: PASS` in both passes, 120/0 and 74/0 on the declared HTTP suites, and `ALL CHECKS PASSED` at the pre-deploy gate. The one-off parity L3 psql error seen once just after a reset before approval did not recur. Finish validated the recorded Primary evidence and did not contact Primary.
+
+### 2026-09-27 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `d0b596c` against the approved Draft `c1052c4` and the frozen nine-path Write Scope. The working tree was clean and the pre-commit Gate reported `ORVION: READY`. The range `c1052c4..d0b596c` changes eight paths, all inside the frozen nine, and nothing in Out of Scope; `MASTER_API_CONTRACT.md` regenerated byte-identical and is unchanged. The Gate validated every frozen section against the approved Draft at each commit. The committed blobs hash to the authorized values: migration `dea69945ee1549ceb95e9376dca986ca16b17b21c291fb1ab0effdbdd36d6c72`, Test 131 `f48d48b58027964b3913cebfe09466bdf9e50f4816524feadc3e4a52a3d40c9a`.
+
+Acceptance, re-checked against the committed bytes:
+1. Test 131 assertions 6-10 refuse, each with `42501` and the guard's own message: the self-grant, the colleague grant, the re-point, the deny-to-grant flip and the session-less grant. Assertion 11 finds no forbidden row. Pre-execution probes also refused the combined permission-and-effect UPDATE and inactive or future-dated protected grants.
+2. Assertions 12-15 leave the lapsed owner's subscription `read_only:starter`, its write gate closed, its proof `pending`, and refuse a second subscription row. Mutation assertions 24-30 disable the guard (`tgenabled` D), watch lifetime Enterprise, the open gate and self-approval return, and restore the guard `O` and md5-identical with no residue.
+3. Assertions 5 and 16-18 keep the upload, an ordinary grant, a deny of the protected key and a revocation. Assertion 31 keeps the platform review. No policy or existing function changed: the Primary categories other than functions and triggers are unchanged, and the function delta is exactly the new guard. Both declared HTTP suites pass.
+4. The register diff adds only the Slice-25 freshness entry and the SUB-3 row (High, `FIXED` / `DEPLOYED`, Cert `✅`); CAP-1 and USR-3 are untouched. The disposition diff changes only the `subscriptions` row (`AUDITED` / `ADVERSARIAL` / SUB-3), Coverage and its freshness entry. Twenty-six rows are recorded, matching Coverage `26 of 77`. The manifest reads `**26 of 77 surfaces have a recorded audit disposition**, all twenty-six at`, with no `25 of 77` left.
+5. Fresh Primary 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`, functions `49195bca218fe35f12ba1b2959927c99`/309 and combined `0614728aa728d5c0bb0fbf0c8115ad5c`/3058 equal local. The recorded evidence, manifest (`Suite **131 files / 2351 assertions**`), contract and LF `ai-map.json` agree, and `-Finish` is READY.
+6. Primary received only the authorized migration plus the one guarded ledger-identity correction. There was no business-data write, the exploit was not replayed on Primary, and Secondary was never contacted.
+7. No file outside Write Scope was created, modified or deleted.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
