@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -294,6 +294,10 @@ Owner approved the exact Draft SHA `e04e2ffd34aa2cf9dfddd2b9e2c167324e7366f3` an
 - `origin/main` is at `7c80b65`.
 
 Approval authorizes the record-only Slice 26 execution only. It does not authorize a migration, schema change, Primary write, STEPUP-1 repair or new finding.
+
+### 2026-09-27 — Execution started
+
+The approved seven-path record-only contract entered In Progress at `bf5491b`. Resume Step 1. No migration, schema change or Primary write is authorized.
 
 ## Verification Notes
 
