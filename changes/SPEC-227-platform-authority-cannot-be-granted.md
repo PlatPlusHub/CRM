@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -267,7 +267,21 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, b
 
 ## Execution Log
 
-None yet.
+### 2026-09-27 — Owner approval
+
+Owner approved the exact Draft SHA `c1052c4bacbe54f151ebf65cb6592d3edea90120` and the frozen nine-path Write Scope. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY), and two mutated copies of it returned FAIL (a gate inside a red window) and INDETERMINATE (Mutation Obligation removed). Pre-approval revalidation:
+- HEAD `c1052c4`; `origin/main` and `origin/orvion-preflight` at `691178c`; clean tree; `npx supabase status` and `npx supabase db reset` exit 0.
+- Primary `vrvtsxexkiiiivlkdxzp`, read-only: 230 / `be85ed1e62f6504e9b04171677d32bc8`, latest `20260926140000`; 0 tenants, 0 subscriptions, 0 grants, 0 forbidden grants; no guard function.
+
+Review hypotheses resolved on the local stack before execution. The approved design is unchanged:
+- **Acquisition paths.** `app.has_permission` resolves only user grants and role grants. `permissions`, `roles` and `role_permissions` are SELECT-only for `authenticated`, and no function writes them. Roles are global. `assign_user_role`, `revoke_user_role` and direct `user_role_assignments` assign only existing roles, none of which holds either key. So `user_permission_grants` is the only acquisition path, and permission identity is platform-owned.
+- **Security mode.** A SECURITY INVOKER variant broke a legitimate `service_role` ordinary grant (`permission denied for table permissions`), because `service_role` has no SELECT on `permissions`. DEFINER is therefore earned. Owner `postgres`, `search_path` empty, every object qualified, no dynamic SQL; EXECUTE false for PUBLIC, anon, authenticated and `service_role`; a direct call is refused 42501.
+- **Row shapes.** Refused: one UPDATE setting both a protected permission and `grant`; an inactive protected grant; a future-dated protected grant. Allowed: edits and re-points of a protected deny; ordinary re-points; grant-to-deny; `service_role` ordinary grants and deletes. `service_role` protected grants are refused.
+- **Migration pre-check.** It passes on an empty table and on protected denies plus unrelated grants, and raises on any protected positive grant, including an inactive one.
+- **CAP-1.** SUB-3's second row reproduced CAP-1's consequence: `app.tenant_capabilities()` returned 44 rows with `documents` both false and true while `plan_allows` returned true. The repair closes the only tenant path to that state. The CAP-1 row is not edited; SUB-3's row records this.
+- **Event parity.** `service_role` holds no INSERT or UPDATE on `subscriptions`, so after the repair every writer is an event-emitting definer function. Direct-write event parity has no door.
+
+Approval authorizes local implementation, proof, Review readiness and candidate publication through the pre-deploy readiness gate. It does not authorize a Primary write, which needs separate exact-byte authorization.
 
 ## Verification Notes
 
