@@ -87,7 +87,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -286,6 +286,79 @@ Approval authorizes local implementation, proof, Review readiness and candidate 
 ### 2026-09-27 — Execution started
 
 The approved nine-path contract entered In Progress at `e06e5aa`. Resume Step 1. Local implementation, proof and candidate publication are authorized; Primary deployment remains separately gated at Step 5.
+
+### 2026-09-27 — Steps 1-3 executed
+
+- Step 1: Applied. `supabase/migrations/20260927120000_platform_authority_cannot_be_granted.sql` created, LF, SHA-256 `dea69945ee1549ceb95e9376dca986ca16b17b21c291fb1ab0effdbdd36d6c72`, exactly the value this step names.
+- Step 2: Applied. `supabase/tests/131_platform_authority_cannot_be_granted_test.sql` created, LF, SHA-256 `f48d48b58027964b3913cebfe09466bdf9e50f4816524feadc3e4a52a3d40c9a`, `plan(31)`, exactly the value this step names.
+- Step 3: Applied.
+  - Register: Slice 25 freshness entry added, with the previous one demoted to `Previously:`. SUB-3 appended after `| STEPUP-1 |` (High, `FIXED locally by SPEC-227`, pending Primary deployment). No other row changed; CAP-1 is untouched.
+  - Disposition: `subscriptions` set to `AUDITED` / `ADVERSARIAL` / `SPEC-227-platform-authority-cannot-be-granted` / `SUB-3`. Coverage `26 of 77 recorded · 8 AUDITED · 15 AUDITED-OPEN · 3 PARTIAL · 0 EXEMPT · 51 NOT-RECORDED`, `All 26 recorded surfaces`. Freshness entry added. No other row changed; `user_permission_grants` has no disposition.
+
+### 2026-09-27 — Pre-deploy readiness gate
+
+On HEAD `57dba9d`, with Steps 1-3 in the working tree:
+- Clean reset: exit 0, 231 migrations through `20260927120000`.
+- Focused test 131: 31/31.
+- pgTAP Pass A: `Files=131, Tests=2351, Result: PASS`.
+- `verify_role_journeys.ps1`: 120 passed, 0 failed. `verify_journey_branches.ps1`: 74 passed, 0 failed.
+- pgTAP Pass B without reset: `Files=131, Tests=2351, Result: PASS`.
+- `scripts/verify_database.sql`: `ALL CHECKS PASSED`, exit 0.
+- Plan sum: 2351 over 131 files.
+
+Mutation (Test 131, assertions 24-30): the guard disabled, with `tgenabled` D; the owner granted itself both keys, the subscription read `active:enterprise:lifetime`, the write gate opened and the proof read `approved`; after rollback to the savepoint the guard was `O`, its definition md5-identical, and no mutant row survived.
+
+Generators:
+- `MASTER_API_CONTRACT.md` regenerated from this stack is byte-identical (79 endpoints, 8 views, 73 tables), so it is left unchanged.
+- `ai-map.json` regenerated with only its `generated_at` stamp moved, so it was restored and not written.
+
+Checks on the working tree:
+- `git diff --check` exit 0. The changed paths are the migration, Test 131, the register and the disposition record, all inside the frozen nine.
+- Repository consistency: 6 issues, all undeployed-only and expected at this boundary (manifest migration count, latest version and ledger fingerprint; suite figures 130/2320 vs 131/2351; ledger evidence lacking `20260927120000`).
+- Parity evidence: FAILED on the same undeployed migration.
+
+Under these reds the canonical Gate reads `BLOCKED` / `REPOSITORY_CONSISTENCY_FAILED`. So these steps stay uncommitted, and `-Finish`, `LOCAL_CERTIFY` and candidate publication follow deployment in Steps 7-8, exactly as SPEC-222 did.
+
+Local candidate surfaces (`scripts/check_database_parity.ps1`):
+- ledger 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`;
+- functions `49195bca218fe35f12ba1b2959927c99` / 309;
+- triggers `1ee1a1d1fa0b90265a65b044c7eb804c` / 298;
+- policies, constraints, grants, columns, views, indexes, status transitions and RLS flags identical to the recorded Primary values;
+- combined `0614728aa728d5c0bb0fbf0c8115ad5c` / 3058.
+
+Fresh Primary `vrvtsxexkiiiivlkdxzp` baseline, read-only, 2026-09-27, through `scripts/parity_surface.sql`'s own queries:
+- ledger 230 / `be85ed1e62f6504e9b04171677d32bc8`, latest `20260926140000`, target absent;
+- functions `e387e49f2a68e982ec199c316179f091` / 308; triggers `ded9439768624beb5794f9d8d4a2cdb4` / 297; combined `9c0c3de6fbb1f1c6bddc9b0b56010d3a` / 3056; all ten categories equal to the recorded evidence;
+- 0 tenants, 0 subscriptions, 0 `user_permission_grants`, 0 forbidden grants; guard function and trigger absent.
+
+Predicted delta: ledger → 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`; functions → `49195bca218fe35f12ba1b2959927c99` / 309; triggers → `1ee1a1d1fa0b90265a65b044c7eb804c` / 298; eight other categories unchanged; combined → `0614728aa728d5c0bb0fbf0c8115ad5c` / 3058. Primary deployment awaits separate exact-byte owner authorization (Step 5). Secondary was not contacted.
+
+### 2026-09-27 — Authorized Primary deployment and reconciliation
+
+**Authorization.** The owner authorized one Primary operation on `vrvtsxexkiiiivlkdxzp`: `supabase/migrations/20260927120000_platform_authority_cannot_be_granted.sql`, SHA-256 `dea69945ee1549ceb95e9376dca986ca16b17b21c291fb1ab0effdbdd36d6c72`, bound to Test-131 SHA-256 `f48d48b58027964b3913cebfe09466bdf9e50f4816524feadc3e4a52a3d40c9a` (Step 5).
+
+**Recheck immediately before writing.** Everything matched exactly:
+- HEAD `57dba9d` with SPEC-227 In Progress and the only Active Change Request; both hashes; only in-scope paths changed.
+- Connector URL named `vrvtsxexkiiiivlkdxzp`.
+- Primary: 230 / `be85ed1e62f6504e9b04171677d32bc8`, latest `20260926140000`; functions `e387e49f2a68e982ec199c316179f091`/308 and combined `9c0c3de6fbb1f1c6bddc9b0b56010d3a`/3056, with all ten categories equal to the recorded evidence; 0 tenants, 0 subscriptions, 0 `user_permission_grants`, 0 forbidden grants; target migration, function and trigger absent.
+
+**Deployment.** Applied only that migration through the Primary connector (Step 6). The connector assigned temporary version `20260927085142`. Its stored statement md5 `087c65eeeaec12986b3d10eac1e5b94c` equals the migration file's md5. A guarded update then renamed only that new row to `20260927120000` (no existing `20260927120000`; updated 1; temporary rows remaining 0). No business-data write; Secondary was not contacted.
+
+**Fresh postwrite readings**, every value equal to the local prediction:
+- ledger 231 / `d7cd1a076c1c81a53ba26c14eef7fd5d`, target exactly once;
+- functions `49195bca218fe35f12ba1b2959927c99`/309 and triggers `1ee1a1d1fa0b90265a65b044c7eb804c`/298;
+- policies, constraints, grants, columns, views, indexes, status transitions and RLS flags unchanged;
+- combined `0614728aa728d5c0bb0fbf0c8115ad5c`/3058.
+
+**Direct inspection.** `app.guard_platform_permission_grant()` has `pg_get_functiondef` md5 `71510283a76d40ff1db7707bac350732`, equal to local. It is SECURITY DEFINER with an empty `search_path` and ACL `{postgres=X/postgres}`, and not executable by anon, authenticated or `service_role`. `user_permission_grants_guard_platform_authority` is `tgtype` 23 (BEFORE INSERT OR UPDATE, row), enabled `O`. 0 tenants, 0 subscriptions, 0 grants, 0 forbidden grants, and no role holds either key. The exploit was not replayed on Primary.
+
+**Reconciliation (Step 7).** Every value below comes from those readings:
+- `reports/evidence/primary-ledger-evidence.json` holds the Primary-read ordered ledger of 231 entries, verified to hash to the fingerprint.
+- Manifest: `Live state` moved to 231 / `20260927120000` / `d7cd1a07…` / `49195bca…` (309) / `0614728a…` (3,058), re-read 2026-09-27, and the suite figure to 131 files / 2351 assertions after measuring 131 files with plan sum 2351. The Batch 6 line moved to `**26 of 77 surfaces have a recorded audit disposition**, all twenty-six at`, after Step 3 set Coverage to 26 of 77. `Last Completed` moved to Slice 25 / SUB-3 / SPEC-227. The manifest is 6654 characters, 62 lines.
+- SUB-3 marked `FIXED` / `DEPLOYED`, with Cert `✅`.
+- `MASTER_API_CONTRACT.md` regenerated byte-identical, so it is unchanged. `ai-map.json` regenerated and stored LF; only `generated_at` and `last_completed` moved.
+
+`check_primary_ledger.ps1` CLEAN, `check_database_parity_evidence.ps1` CLEAN, `check_repository_consistency.ps1` CLEAN and `git diff --check` all exit 0. Runtime Checkpoint names DONE so canonical `-Finish` can run in VERIFY mode; Status stays In Progress pending Review and the Complete transition.
 
 ## Verification Notes
 
