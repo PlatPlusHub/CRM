@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -279,6 +279,10 @@ The owner asked for two review hypotheses to be proved or falsified before imple
 2. The clock is stamped only on signed-in inserts. A signed-in manager's insert claiming 2000-01-01 was stored at `now()`. With no claims, and with `{"role":"service_role"}` claims (for which `auth.uid()` is null), the same insert kept 2000-01-01. `service_role` holds no INSERT on `lead_assignments` (its table door is refused `42501`), so the only session-less writers are postgres-level: `app.process_lead_sla` (DEFINER, EXECUTE to postgres and service_role only), migrations and fixtures. The only other inserting functions, `app.assign_lead` and `app.reassign_lead`, are INVOKER and never supply a clock.
 
 Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not authorize a Primary write, which needs separate exact-byte authorization at Gate 2.
+
+### 2026-09-28 — Execution started
+
+The approved nine-path contract entered In Progress at `310fb1c`. Resume Step 1. Local implementation and proof through the Step 4 pre-deploy readiness gate are authorized; Primary deployment remains separately gated at Step 5.
 
 ## Verification Notes
 
