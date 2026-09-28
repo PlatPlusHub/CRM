@@ -106,6 +106,8 @@ Platform-level or tenant technical administrator depending on scope.
 
 High-risk authentication required.
 
+**Reserved (SYSADMIN-1, owner decision 2026-09-01).** The role holds no permission in the seed, and ORVION invents none for it. The `Optional` cells in the Organization Permissions table are not grants: a capability reaches a holder of this role only through an explicit per-user grant (ADR-0027). Asserted by `138_reserved_role_holds_no_permission_test.sql`.
+
 ---
 
 # Feature Access By Plan

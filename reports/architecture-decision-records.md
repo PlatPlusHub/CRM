@@ -295,6 +295,20 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
 ---
 
 
+## ADR-0029 — Money is stored as `numeric(19,4)` beside its currency; a currency's decimal places govern display, never storage
+
+- Date: 2026-09-28 · Status: Accepted (owner-directed 2026-09-01, OWNER-1 / A3: *"write the small ADR for the money-storage standard"*). This ADR **records** a decision already implemented by SPEC-118 (`202607048600`, DC-1) and canon 30/31; it decides nothing new and adds no financial semantics. Register row: **A3**.
+- **Decision.** Every stored monetary amount is `numeric(19,4)`, never floating point. Its currency is stored beside it as a currency-code column referencing `currencies.code`. `currencies.decimal_places` governs display and rounding per currency, never storage. Exchange rates are `numeric(18,8)`. Scale 4 stores the minor unit of three-decimal currencies (KWD/BHD/OMR/JOD) with headroom to ISO 4217's maximum of four; precision 19 keeps at least 15 integer digits.
+- **Why an ADR.** It is the shape every future money column copies, and it was implemented in 2026-07 without one, which A3 recorded.
+- **Consequences, as constraints on future work:**
+  - a new stored money column is `numeric(19,4)` with its currency beside it;
+  - an amount is a pair; amounts in different currencies are never summed or compared without explicit conversion evidence (already ADR-0020/ADR-0021 and FA-2 — restated, not changed);
+  - amounts computed in views and functions may carry unconstrained `numeric`; they are derived, not stored.
+- **Measured state, 2026-09-28** (`information_schema.columns`, local stack): 22 stored amount columns in `public` are `numeric(19,4)`, and `exchange_rates.rate` is `numeric(18,8)`. **One divergence, which this ADR does not ratify:** `payments.account_amount` is `numeric(18,4)`. FA-2's migration (`20260909131000`) records no reason for it — its reasoning about constrained types concerns the rate — while `payments.amount` beside it is `numeric(19,4)`. It is recorded as **MONEY-3** and classified there. The two non-money numerics are `booking_items.commission_rate` `numeric(5,2)` and `quotation_items.quantity` `numeric(14,2)`.
+- **Alternatives rejected:** `numeric(14,2)`, the pre-SPEC-118 standard, truncated three-decimal currencies (the DC-1 defect); floating point cannot represent money exactly (canon 30).
+- **Evidence basis:** SPEC-118; `03_money_currency_precision_test.sql`; canon 30 § Money Standard; canon 31 § Reference Tables (`currencies`).
+- **Revisit trigger:** a supported currency with more than four minor digits, or a stored amount above 10^15.
+
 ## Programme lesson numbering (resolved 2026-08-31)
 
 Migrations `202607058200`, `202607058400` and `202607058600` cite **"LESSON 4"** and **"LESSON 6"** by ordinal, and no file in the repository defined the numbering — a citation a fresh reader could not resolve. The ordinals are retired in favour of the stable homes those rules already had:
