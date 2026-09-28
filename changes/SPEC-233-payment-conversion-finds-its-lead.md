@@ -358,6 +358,21 @@ The owner authorized the smallest recovery, touching unpublished history only: t
 - **Retired identifiers:** SPEC-234 and SPEC-235 stay retired through `416c6dd` and `67e96b6`, which are unchanged.
 - **Separate evaluation:** that the net check cannot see reservations made inside a range is recorded for evaluation on its own. It is not changed here.
 
+### 2026-09-28 — Re-certification of the recovered chain
+
+The certification receipt was bound to the pre-rewrite execution commit, so the first replayed Complete was refused as `COMPLETION_PREREQUISITE: stale certification receipt`. Canonical `-Finish` was then run on the rewritten HEAD `759e674`, in VERIFY mode and with no telemetry opt-outs. It passed every mandatory verification and returned `LOCAL_CERTIFY: READY`:
+- reset;
+- pgTAP Pass A;
+- `verify_lifecycle_branches.ps1`;
+- pgTAP Pass B;
+- smoke;
+- parity evidence;
+- repository consistency;
+- `git diff --check`;
+- the Primary ledger check.
+
+The same checks confirm that the migration and Test 137 blobs hash to their authorized values, that every frozen section of this contract is identical to the approved Draft `c62bd7e`, and that no other contract appears in the range.
+
 ## Verification Notes
 
 None yet.
