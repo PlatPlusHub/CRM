@@ -1,15 +1,15 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-28T11:43:50Z",
-  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-232 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD ef91389409f4a350f0b784ef788fcc841eb87716 (SPEC-232 In Progress); migration SHA-256 235eb4847c18a54aeaff4cbc7c23d76493b210962ee4c8a5cb77116e0f02fab3; test-136 SHA-256 8fbd0532f64f170e3316914a3c0d8df118430cfd33fa281d21a2e7a7a334ddda; project URL vrvtsxexkiiiivlkdxzp; only in-scope paths changed. Primary before the write: full ledger 233/c641ed4f9faf6b8acb4c1342d311840d, latest 20260927140000, target migration, app.enforce_lead_current_assignment and lead_assignments_current_names_the_assignee absent; functions 309, triggers 298, constraints 511; app.derive_assignment_actor md5 b82d76906fbecc0653fee702ca622585, SECURITY INVOKER, search_path empty, ACL {postgres=X/postgres}; 0 tenants, 0 leads, 0 lead assignments, 0 incoherent leads. The connector assigned temporary version 20260928114223. Its single stored statement md5 e23fbe0338da061ba96bb54dfc273c15 (4433 bytes) equals the migration file's md5. Only that newly inserted row was renamed to 20260928120000, after a guarded check (no existing 20260928120000; exactly one row after 20260927140000; statement md5 matched; updated 1). Fresh postwrite full ordered ledger 234/bf26c74e9266431f88ed5a61aa74954f equals the repository's migration files. Functions 36411b98fec434082d8ed6f247348e7e/310, triggers 4d7c099d115fd9c69f30baad533e8069/299 and constraints 3b47f1d13ec80c75b705e3a448ebec27/512; the other seven structural categories are unchanged; combined ac25eb2d5a277885fa662fa4c15d2441/3062. Every value equals the local prediction. Direct Primary inspection: app.derive_assignment_actor pg_get_functiondef md5 de0536caf1bade250661a6660b3984f9, equal to local, SECURITY INVOKER, search_path empty, ACL {postgres=X/postgres}; app.enforce_lead_current_assignment md5 3a175ce181bc1acdcdc2ddeb4ab68529, equal to local, SECURITY DEFINER, search_path empty, ACL {postgres=X/postgres}, not executable by anon or authenticated. Constraint trigger lead_assignments_current_names_the_assignee is tgtype 21, DEFERRABLE, INITIALLY DEFERRED, enabled O, executing app.enforce_lead_current_assignment, with its pg_constraint row (contype t). Afterwards: 0 tenants, 0 leads, 0 lead assignments. No production business DML; the exploit was not replayed on Primary; Secondary was not contacted.",
+  "read_at": "2026-09-28T16:09:12Z",
+  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-233 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD 1fd8b383cf312e30ce776b84044b1f4956f9c23d (SPEC-233 In Progress); migration SHA-256 2e51432515a8f507dc68db738680c7d82abbd5abd91ea4f4856762729c2a50f5; test-137 SHA-256 6f615852ec2210f0fcce7c6f6ee430b1ceb6fbaca25bf52c60d7cbbb8327c8e8; project URL vrvtsxexkiiiivlkdxzp; only in-scope paths changed. Primary before the write: full ledger 234/bf26c74e9266431f88ed5a61aa74954f, latest 20260928120000, target absent; app.map_outcomes_to_conversions md5 7d326cc9fa63e0fc75c6a56985ca35c0, SECURITY DEFINER, search_path empty, ACL {postgres=X/postgres,orvion_integration=X/postgres}; 0 tenants, 0 payments, 0 offline conversions. The connector assigned temporary version 20260928160806. Its single stored statement md5 386f3198b47243b6a2be6bd2f628a32c (10272 bytes) equals the migration file's md5. Only that newly inserted row was renamed to 20260928140000, after a guarded check (no existing 20260928140000; exactly one row after 20260928120000; statement md5 matched; updated 1). Fresh postwrite full ordered ledger 235/782fdc10215971057bf30620050de05e equals the repository's migration files. Functions 666b073e9f2bea6f0cfbf94a650a5d15/310; the other nine structural categories are unchanged; combined 1fbbfffe75ccba93d66057727f2b9d43/3062. Every value equals the local prediction. Direct Primary inspection: app.map_outcomes_to_conversions pg_get_functiondef md5 c7731c53b3709228f5679b44d848d7af, equal to local; SECURITY DEFINER; search_path empty; ACL {postgres=X/postgres,orvion_integration=X/postgres}; not executable by anon or authenticated. Afterwards: 0 tenants, 0 payments, 0 offline conversions, mapper cursor 0. No production business DML; the defect was not replayed on Primary; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "ef91389409f4a350f0b784ef788fcc841eb87716",
-  "migration_count": 234,
-  "ledger_fingerprint": "bf26c74e9266431f88ed5a61aa74954f",
-  "function_surface_hash": "36411b98fec434082d8ed6f247348e7e",
+  "repository_head": "1fd8b383cf312e30ce776b84044b1f4956f9c23d",
+  "migration_count": 235,
+  "ledger_fingerprint": "782fdc10215971057bf30620050de05e",
+  "function_surface_hash": "666b073e9f2bea6f0cfbf94a650a5d15",
   "function_count": 310,
-  "structural_surface_hash": "ac25eb2d5a277885fa662fa4c15d2441",
+  "structural_surface_hash": "1fbbfffe75ccba93d66057727f2b9d43",
   "structural_object_count": 3062,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
@@ -246,6 +246,7 @@
     "20260927120000_platform_authority_cannot_be_granted",
     "20260927130000_a_task_changes_queue_only_with_authority",
     "20260927140000_a_document_version_owns_its_clock_and_its_object",
-    "20260928120000_the_sla_clock_and_the_current_handler_are_not_the_callers"
+    "20260928120000_the_sla_clock_and_the_current_handler_are_not_the_callers",
+    "20260928140000_a_payment_conversion_finds_its_lead_through_its_invoice"
   ]
 }
