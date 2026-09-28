@@ -7,9 +7,10 @@
 -- that column, so `payment_received` -- the one conversion that carries revenue -- never fired on the
 -- sanctioned path. `20260928140000` follows the invoice named by the event instead. A mutation installs
 -- the pre-repair resolution in a savepoint and watches `payment_received` vanish.
--- CONV-8 is recorded OPEN, not repaired: a handler's direct qualification and an employee's direct
--- booking emit no source event, so they produce no conversion. Assertions 15-16 pin that and are
--- written to FAIL when CONV-8 is repaired, so the register cannot drift from the behaviour.
+-- CONV-8: a handler's direct qualification and an employee's direct booking emitted no source event,
+-- so they produced no conversion; assertions 15-16 pinned that and were written to FAIL on repair.
+-- `20260928160000` gave each event a trigger as its single producer, and 15-16 now assert the
+-- repaired behaviour; the door parity itself is `139_...`'s.
 -- PRIVILEGE=N/A: each RPC's capability is its own surface's test; this file proves the pipeline.
 -- TENANT=N/A: conversion provenance across tenants is CONV-6's (`119_...`).
 -- AUTH=N/A: step-up belongs to each RPC and is unchanged.
@@ -99,8 +100,8 @@ select is((select array_agg(c order by t) from (select e.event_type_code t, coun
             where e.tenant_id = '13700000-0000-0000-0000-000000000001'
               and e.event_type_code in ('booking_created','booking_issued','lead_qualified','payment_recorded')
             group by 1) x),
-  array[1, 1, 3, 1],
-  'CONTROL: the sanctioned paths emitted booking_created, booking_issued, three lead_qualified and payment_recorded');
+  array[2, 1, 4, 1],
+  'CONTROL: the sanctioned paths emitted booking_created, booking_issued, three lead_qualified and payment_recorded -- and the table door one more booking_created and lead_qualified (CONV-8)');
 select is((select booking_id from public.payments where id = (select v from s137 where k='pay')::uuid), null,
   'CONTROL: app.record_payment pays the invoice and leaves payments.booking_id NULL -- the premise of CONV-7');
 
@@ -179,8 +180,8 @@ select is((select count(*)::int from public.offline_conversions where lead_id = 
   'BUSINESS: a qualified lead with no attribution click is not a conversion');
 create temp table run2 on commit drop as select app.map_outcomes_to_conversions(100000) as n;
 select is(array[(select n from run2), (select count(*)::int from public.offline_conversions where tenant_id = '13700000-0000-0000-0000-000000000001')],
-  array[0, 5],
-  'REPLAY: a second mapper run adds nothing; the tenant holds five conversions, one per source event');
+  array[0, 7],
+  'REPLAY: a second mapper run adds nothing; the tenant holds seven conversions, one per source event');
 
 -- ================================================================================================
 -- 12-14. Identity, consent and transaction identity at the claim.
@@ -203,16 +204,16 @@ select is((select array_agg(distinct (c.conversion_id = oc.id and c.attempt_numb
   'REPLAY: each claimed row carries its conversion id, the stable transaction identity, on attempt 1');
 
 -- ================================================================================================
--- 15-16. CONV-8, PINNED OPEN: the table door emits no source event. These FAIL when it is repaired.
+-- 15-16. CONV-8, CLOSED: the table door records the same act, so it reaches the pipeline.
 -- ================================================================================================
-select is((select array[l.lead_status_code, (select count(*)::text from public.offline_conversions oc where oc.lead_id = l.id)]
+select is((select array[l.lead_status_code, (select string_agg(oc.conversion_event_type_code, ',') from public.offline_conversions oc where oc.lead_id = l.id)]
              from public.leads l where l.id = '13700000-0000-0000-0000-0000000000e5'),
-  array['qualified','0'],
-  'PINNED OPEN (CONV-8): the handler''s direct qualification leaves the lead qualified and produces no conversion');
-select is((select array[b.booking_status_code, (select count(*)::text from public.offline_conversions oc where oc.lead_id = b.lead_id)]
+  array['qualified','qualified_lead'],
+  'CONV-8 CLOSED: the handler''s direct qualification produces the qualified_lead conversion, exactly once');
+select is((select array[b.booking_status_code, (select string_agg(oc.conversion_event_type_code, ',') from public.offline_conversions oc where oc.lead_id = b.lead_id)]
              from public.bookings b where b.lead_id = '13700000-0000-0000-0000-0000000000e6'),
-  array['draft','0'],
-  'PINNED OPEN (CONV-8): the employee''s direct booking exists and produces no conversion');
+  array['draft','booking_created'],
+  'CONV-8 CLOSED: the employee''s direct booking produces the booking_created conversion, exactly once');
 
 select * from finish();
 rollback;

@@ -51,7 +51,8 @@ join public.roles r on r.code = v.role_code;
 insert into public.customers (id, tenant_id, customer_type_code, full_name, primary_phone) values
   ('27000000-0000-0000-0000-0000000000d1','27000000-0000-0000-0000-000000000001','person','Timeline Customer','+201009998888');
 
--- An Alexandria booking, and an event describing it.
+-- An Alexandria booking. Its `booking_created` event is emitted by `bookings_emit_created` (CONV-8)
+-- when the row is inserted.
 insert into public.bookings (id, tenant_id, branch_id, department_id, customer_id, owner_user_id,
                              owner_branch_id, owner_department_id, booking_status_code, title, booking_reference) values
   ('27000000-0000-0000-0000-0000000000f1','27000000-0000-0000-0000-000000000001',
@@ -60,15 +61,10 @@ insert into public.bookings (id, tenant_id, branch_id, department_id, customer_i
    '27000000-0000-0000-0000-00000000000b','27000000-0000-0000-0000-0000000000c2',
    'draft','Alexandria booking','BK-ALX-0001');
 
--- The `customer_created` event this fixture used to hand-write is now emitted for real by the
--- WP-01 trigger (`202607053300`) when the customer row above is inserted. Writing it again would
--- double the count and make every assertion below wrong for a reason that has nothing to do with
--- visibility -- so the fixture now supplies only the booking event, which has no such producer yet.
-insert into public.events (tenant_id, event_type_code, severity_code, actor_user_id, entity_type, entity_id,
-                           previous_state, new_state, reason, payload) values
-  ('27000000-0000-0000-0000-000000000001','booking_created','info','27000000-0000-0000-0000-000000000012',
-   'booking','27000000-0000-0000-0000-0000000000f1', null, 'draft', 'created in Alexandria',
-   '{"note":"commercially sensitive detail"}'::jsonb);
+-- The `customer_created` and `booking_created` events this fixture used to hand-write are now
+-- emitted for real, by the WP-01 trigger (`202607053300`) and by `bookings_emit_created` (CONV-8),
+-- when the rows above are inserted. Writing either again would double the count and make every
+-- assertion below wrong for a reason that has nothing to do with visibility.
 
 set local role authenticated;
 
