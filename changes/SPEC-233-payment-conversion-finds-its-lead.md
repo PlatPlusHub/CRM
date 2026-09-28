@@ -343,6 +343,21 @@ Verdict: Confirmed Complete
 
 Recommendation to human: Set Status to Complete
 
+### 2026-09-28 — Owner-authorized recovery of the unpublished chain
+
+Before publication, `-Gate -BaseRef origin/main` refused this contract's range as `SPEC_ID_NOT_NEXT:234:236`. The unpublished chain then also carried an unapproved, never-published Draft of a separate governance contract, commit `418cfe2`.
+- The per-commit allocation walk admitted that Draft, because it saw the identifiers this contract's Draft history had retired.
+- The net check judged the range against `origin/main` alone, which could not see them.
+- The Draft could not be withdrawn (`NO_GOVERNING_CR`), and a Draft-only prefix cannot be published by design.
+
+The owner authorized the smallest recovery, touching unpublished history only: the chain after `c62bd7e` was re-applied without commit `418cfe2`. No published commit, no guard, and nothing on Primary changed.
+- **Hashes unchanged:** the migration and Test 137 are byte-identical (`2e51432515a8f507dc68db738680c7d82abbd5abd91ea4f4856762729c2a50f5`, `6f615852ec2210f0fcce7c6f6ee430b1ceb6fbaca25bf52c60d7cbbb8327c8e8`).
+- **Files unchanged:** apart from this contract's own record and the evidence file's commit reference, every file equals the pre-rewrite endpoint, and the Draft is absent.
+- **References updated:** only those the new parents invalidated. Approve `98f4a9a` → `7fb13ec`; Begin `6d9a27e` → `1fd8b38`, including `repository_head` in the Primary evidence; Execute `e7cb5f9` → `8f5cea1`. The Approve entry no longer mentions the removed Draft, and the Review entry keeps only the retirement it records.
+- **Anchor:** the pre-rewrite endpoint `a6f516c` is kept as a local-only recovery reference and is never pushed.
+- **Retired identifiers:** SPEC-234 and SPEC-235 stay retired through `416c6dd` and `67e96b6`, which are unchanged.
+- **Separate evaluation:** that the net check cannot see reservations made inside a range is recorded for evaluation on its own. It is not changed here.
+
 ## Verification Notes
 
 None yet.
