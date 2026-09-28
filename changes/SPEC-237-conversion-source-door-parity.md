@@ -87,7 +87,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -308,6 +308,64 @@ Revalidation before approval:
 ### 2026-09-28 — Execution started
 
 The approved twelve-path contract entered In Progress at `1dfbf876601fe0ff2d9b34fde015861357159426`. Resume Step 1. Primary stays read-only until Human Gate 2.
+
+### 2026-09-28 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration `20260928160000` was created LF, SHA-256 `83a21861ef7f6b4067fc2e49b9bc75109f20d57c39becff6048505bab9ff95fb`.
+- **Step 2: Applied.**
+  - Test 139 was created LF, SHA-256 `14d21b48766cee9fc744fd423a8c19b1ad0c6e69a7a69b4013914877d0b963f5`, `plan(19)`.
+  - Test 137 was edited, SHA-256 `040132386fc9886ce7712f57fa38beebef8a7555f6644e8e99978a04fb4c0f0c`, `plan(16)`.
+  - Test 27 was edited, SHA-256 `af09b98746f866175336e656f7306505dba8542046cc99b9dbecf875df7f2b6e`, `plan(9)`.
+- **Step 3: Applied.**
+  - The register gained a freshness entry and CONV-8's Status was prefixed. The disposition gained a freshness entry, and its `offline_conversions` row's CR and Next cell were updated. §2b item 1 was annotated.
+  - No other row changed.
+  - These three files are byte-identical to the prototype's.
+
+Per the DATABASE sequencing, these seven paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-09-28 — Pre-deploy readiness gate
+
+Run on HEAD `9252855a152fd8643e0ee8876ab453774b44b26d`, with the four files at their approved hashes. Results:
+- **Reset:** clean local reset to 236 migrations, latest `20260928160000`.
+- **Focused tests:** Test 139 19/19, Test 137 16/16, Test 27 9/9.
+- **Out-of-file mutants:** base md5 of the three definitions `7edc1f779aff547e690bf591b300a896`. Each mutant's installation was proven by a changed md5 and each restoration by the base md5.
+  - M-A (duplicate event) is killed at assertion 9.
+  - M-B (reason leakage) is killed at 4, 5 and 17.
+  - M-C (reason loss) is killed at 2 and 6.
+- **In-file mutation:** with both triggers dropped in a savepoint, the door acts are silent and the mapper adds 0. Restored, they are recorded again and the mapper adds 2 (assertions 16-17, inside the suite).
+- **Unrepaired counterfactual,** measured in the prototype on the pre-repair 235-migration stack with the identical Test-139 bytes: assertions 4, 5, 12 and 13 fail, then the file aborts because the emitters do not exist.
+- **pgTAP Pass A:** 139 files / 2485 assertions PASS.
+- **HTTP suites:** 33 + 40 + 74 + 122 + 120 + 60 = 449 passed, 0 failed. The declared `verify_lifecycle_branches.ps1` passed 122/122.
+- **pgTAP Pass B,** without reset: 139 / 2485 PASS.
+- **Smoke:** `ALL CHECKS PASSED`, exit 0.
+- **Plan sum:** 139 files, 2485 assertions.
+- **Local emitters:**
+  - `app.emit_booking_created()` and `app.emit_lead_qualified()` are both SECURITY DEFINER with `search_path=""` and ACL `{postgres=X/postgres}`.
+  - `bookings_emit_created` is tgtype 5 (ROW, INSERT) and `leads_emit_qualified` tgtype 17 (ROW, UPDATE).
+  - Definition md5: `app.create_booking` `956efc534e218c39fad3c8c019d480f6`, `app.advance_lead` `161ec7977308effd22b84a34551fe2c0`.
+- **Generators:** `MASTER_API_CONTRACT.md` is byte-identical (79 RPC endpoints, 8 views, 73 tables). `ai-map.json` differed only in `generated_at` and was restored.
+- **Scope, diff check and consistency:**
+  - The seven changed paths are all in Write Scope, and `git diff --check` exited 0.
+  - Repository consistency reports exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and the undeployed RECOVER-1 migration.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 235 migrations, fingerprint `782fdc10215971057bf30620050de05e`, latest `20260928140000`, target absent.
+- **Function surface:** `666b073e9f2bea6f0cfbf94a650a5d15`, 310 functions.
+- **Structural surface:** `_combined` `1fbbfffe75ccba93d66057727f2b9d43`, 3062 objects, with triggers `4d7c099d115fd9c69f30baad533e8069`/299. This matches the recorded evidence.
+- **Pre-repair definition md5:** `app.create_booking` `1c9fd20fd16d2fd006c50f4f9f1c3d83`, `app.advance_lead` `7ea1f8216112d187180766e6328b74f5`.
+- **Absent:** both emitters and both triggers. `leads` carries 11 triggers and `bookings` 8.
+- **Business rows:** 0 tenants, 0 leads, 0 bookings, 0 events, 0 offline conversions.
+- **ACL:** Primary has no default function ACL for schema `app`, and SPEC-215's emitter there holds `{postgres=X/postgres}`.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 236 migrations, latest `20260928160000`, fingerprint `c97a2a7ad959f19a710830583b36bd89`.
+- **Functions:** `87c960b34aa9347eb4d4a235fef07639`/312.
+- **Triggers:** `7cd58b04207eb5d9f01a8d2eef6eb9c1`/301.
+- **The other eight structural surfaces:** unchanged.
+- **Combined:** `a2f5903d89922eb0442271c312c8c238`/3066.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 
 ## Verification Notes
 
