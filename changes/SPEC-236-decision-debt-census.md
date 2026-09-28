@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -258,6 +258,10 @@ Revalidation before approval:
 - The manifest measured 6619 of 7000 characters.
 
 With the approval, the owner ratified PH8-4 again as recorded in this contract. The owner also delegated technical and operational definitions in the Phase-8 Activation Closure to engineering, reserving legal, commercial and external-account decisions. This contract implements none of the closure.
+
+### 2026-09-28 — Execution started
+
+The approved ten-path contract entered In Progress at `283f54d`. Resume Step 1. The contract makes no Primary write.
 
 ## Verification Notes
 
