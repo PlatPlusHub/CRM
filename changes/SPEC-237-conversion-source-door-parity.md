@@ -264,16 +264,16 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A lead qualified through `app.advance_lead` and a lead qualified by the assigned handler at the table door each record exactly one `lead_qualified`, naming the session's actor. The RPC path carries its caller's reason, the door path carries none, and neither yields a second event on a later edit.
-- [ ] A booking created through `app.create_booking`, at the table door by an `employee`, and on the session-less platform path each record exactly one `booking_created`. Each names the session's actor (null for the platform) and carries the RPC's four payload keys read from the row.
-- [ ] Both door acts reach the real mapper as `qualified_lead` and `booking_created`, each keyed to its own event, and a further run adds nothing. `137_...` 15-16 now assert those conversions.
-- [ ] Every other `app.advance_lead` event is unchanged, and the state machine still refuses what it refused.
-- [ ] Both emitters are SECURITY DEFINER, executable by neither PUBLIC nor `authenticated`, and each fires AFTER ROW on exactly one event.
-- [ ] With both triggers dropped in a savepoint, both door acts are silent and produce nothing, and the rolled-back state records them again. Out-of-file mutants M-A, M-B and M-C are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 139 fail.
-- [ ] CONV-8 is registered fixed and deployed for its two events, with PAY-3 and BOOK-10 still open. The `offline_conversions` row stays `PARTIAL`, §2b item 1 records CONV-8 closed, and every other row and the Coverage totals are unchanged.
-- [ ] The migration and tests match their SHA-256 values. Primary, the recorded evidence, the manifest (236 migrations; 139 files / 2485 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A lead qualified through `app.advance_lead` and a lead qualified by the assigned handler at the table door each record exactly one `lead_qualified`, naming the session's actor. The RPC path carries its caller's reason, the door path carries none, and neither yields a second event on a later edit.
+- [x] A booking created through `app.create_booking`, at the table door by an `employee`, and on the session-less platform path each record exactly one `booking_created`. Each names the session's actor (null for the platform) and carries the RPC's four payload keys read from the row.
+- [x] Both door acts reach the real mapper as `qualified_lead` and `booking_created`, each keyed to its own event, and a further run adds nothing. `137_...` 15-16 now assert those conversions.
+- [x] Every other `app.advance_lead` event is unchanged, and the state machine still refuses what it refused.
+- [x] Both emitters are SECURITY DEFINER, executable by neither PUBLIC nor `authenticated`, and each fires AFTER ROW on exactly one event.
+- [x] With both triggers dropped in a savepoint, both door acts are silent and produce nothing, and the rolled-back state records them again. Out-of-file mutants M-A, M-B and M-C are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 139 fail.
+- [x] CONV-8 is registered fixed and deployed for its two events, with PAY-3 and BOOK-10 still open. The `offline_conversions` row stays `PARTIAL`, §2b item 1 records CONV-8 closed, and every other row and the Coverage totals are unchanged.
+- [x] The migration and tests match their SHA-256 values. Primary, the recorded evidence, the manifest (236 migrations; 139 files / 2485 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and no business-data write, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -425,19 +425,57 @@ No business-data write was made, and Secondary `brplkqmbzffpxqgkkdzo` was not co
 
 Every Implementation Step through Step 7 is applied and evidenced above, so the Runtime Checkpoint is DONE and the contract enters VERIFY for Step 8's canonical `-Finish`. The first `-Finish` returned `FINISH_NOT_READY:EXECUTE` because the checkpoint still read Step 8; nothing was verified or changed by that run.
 
+### 2026-09-28 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `34371e856bbb555dc9d7bd5e53bf9e59c3cb0cdd` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, and returned `LOCAL_CERTIFY: READY`:
+- reset;
+- pgTAP Pass A;
+- the declared `verify_lifecycle_branches.ps1`;
+- pgTAP Pass B;
+- smoke;
+- parity evidence;
+- the Primary ledger;
+- repository consistency;
+- `git diff --check`.
+
+### 2026-09-28 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `34371e856bbb555dc9d7bd5e53bf9e59c3cb0cdd` against the approved Draft `53ee39e` and the frozen twelve-path Write Scope.
+- The working tree was clean and the pre-commit Gate reported `ORVION: READY`.
+- The range `6c6e20e..HEAD` changes eleven paths, all inside the frozen twelve. The twelfth, `MASTER_API_CONTRACT.md`, regenerated byte-identical.
+- The committed migration and Tests 139, 137 and 27 hash to their authorized SHA-256 values.
+
+Acceptance, re-checked against the committed bytes and the recorded evidence:
+1. **Lead.** Test 139 assertions 2-5 prove one `lead_qualified` per qualification on each door, naming the session's actor. The RPC path carries its reason and the door path none; a later edit records nothing. Owner invariants 1, 2, 5 and 6 hold.
+2. **Booking.** Assertions 9-12 and 15 prove one `booking_created` per booking on the RPC, table and platform doors, with the four payload keys read from the row. Invariants 3 and 4 hold.
+3. **Pipeline.** Assertion 13 proves both door acts reach the real mapper, each keyed to its own event, and 18 that a further run adds nothing. `137_...` 15-16 assert the two conversions.
+4. **Unchanged behaviour.** Assertion 6 shows every other `app.advance_lead` event unchanged, and 7-8 show the state machine refusing as before. Invariant 7 holds: no grant, policy, guard, mapper, conversion action, attribution, consent or API change. The only structural delta is two functions and two triggers, measured on Primary.
+5. **Emitters.** Assertion 14 proves both emitters are SECURITY DEFINER, executable by neither PUBLIC nor `authenticated`, and each fires AFTER ROW on exactly one event. Primary shows ACL `{postgres=X/postgres}`.
+6. **Mutation.** The in-file trigger-drop mutation (16-17) holds. Mutants M-A (duplicate), M-B (leakage) and M-C (loss) were each killed, with md5-proven install and restore. On the unrepaired stack, assertions 4, 5, 12 and 13 fail.
+7. **Records.** CONV-8 is `✅` fixed and deployed for its two events, with PAY-3 and BOOK-10 open. The `offline_conversions` row stays `PARTIAL`, §2b item 1 records CONV-8 closed, and no other row or Coverage total moved.
+8. **Agreement.** Primary, the recorded evidence, the manifest (236 migrations; 139 files / 2485 assertions), the API contract and `ai-map.json` agree, and parity, ledger and consistency are CLEAN.
+9. **Primary.** Primary received only the authorized migration and the one guarded ledger rename, with no business-data write. Secondary was never contacted.
+10. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
