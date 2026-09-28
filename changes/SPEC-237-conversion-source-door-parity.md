@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -277,7 +277,33 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-09-28 — Owner approval
+
+The owner approved the exact Draft SHA `53ee39e2c779cf787de37a770f4db821ff293f30` (CR SHA-256 `84e7417d4e708c15b729897e9868c2c25ff2d4e4aa6ba61f5281d04c9a6ef7cc`) and the frozen twelve-path Write Scope. The approval covers Approve, In Progress, Steps 1-4 and full local readiness only. Primary remains read-only and requires Human Gate 2.
+
+The approval is bound to four SHA-256 values:
+- migration `20260928160000`: `83a21861ef7f6b4067fc2e49b9bc75109f20d57c39becff6048505bab9ff95fb`;
+- Test 139: `14d21b48766cee9fc744fd423a8c19b1ad0c6e69a7a69b4013914877d0b963f5`;
+- Test 137: `040132386fc9886ce7712f57fa38beebef8a7555f6644e8e99978a04fb4c0f0c`;
+- Test 27: `af09b98746f866175336e656f7306505dba8542046cc99b9dbecf875df7f2b6e`.
+
+The owner named seven invariants to preserve:
+1. `lead_qualified` has exactly one producer on every legal door.
+2. It fires only on the genuine transition into `qualified`, never on an unrelated update to an already-qualified lead.
+3. `booking_created` has exactly one producer per booking row.
+4. `app.advance_lead` and `app.create_booking` no longer duplicate those events.
+5. An RPC qualification's reason reaches only its own `lead_qualified`.
+6. A direct qualification with no reason inherits no stale transaction or session context.
+7. This contract authorizes no change to authorization, lifecycle semantics, mapper meaning, conversion action, attribution, consent or the API contract.
+
+The three mutation classes (duplicate event, reason leakage, reason loss) must stay load-bearing. PAY-3, BOOK-10, PH8-4 and PH8-9 are not absorbed.
+
+Revalidation before approval:
+- HEAD was the Draft, a direct descendant of the certified `6c6e20e`, and the tree was clean.
+- `origin/main` was at `6c6e20e`.
+- The Draft file hashes to the approved value.
+- A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, three permanent-control paths in scope).
+- Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
 
 ## Verification Notes
 
