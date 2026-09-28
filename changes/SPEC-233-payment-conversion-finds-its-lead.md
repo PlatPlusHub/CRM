@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -222,6 +222,10 @@ Owner approved the exact Draft SHA `c62bd7e46c24ecfa86db1623fb3764c15422453c` an
 - the prototype migration and Test 137 hash to the frozen values.
 
 The approval is bound to migration SHA-256 `2e51432515a8f507dc68db738680c7d82abbd5abd91ea4f4856762729c2a50f5` and Test-137 SHA-256 `6f615852ec2210f0fcce7c6f6ee430b1ceb6fbaca25bf52c60d7cbbb8327c8e8` (`plan(16)`). CONV-7 and CONV-8 are the only new findings this contract owns. The owner's PH8-4 decision (2026-09-28) belongs to a separate contract and changes nothing here: `qualified_phone_call` stays unproduced by this mapper.
+
+### 2026-09-28 — Execution started
+
+The approved nine-path contract entered In Progress at `7fb13ec`. Resume Step 1. Local implementation and proof through the Step 4 pre-deploy readiness gate are authorized; Primary deployment remains separately gated at Step 5.
 
 ## Verification Notes
 
