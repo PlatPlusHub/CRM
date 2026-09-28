@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -304,6 +304,10 @@ Revalidation before approval:
 - The Draft file hashes to the approved value.
 - A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, three permanent-control paths in scope).
 - Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
+
+### 2026-09-28 — Execution started
+
+The approved twelve-path contract entered In Progress at `1dfbf876601fe0ff2d9b34fde015861357159426`. Resume Step 1. Primary stays read-only until Human Gate 2.
 
 ## Verification Notes
 
