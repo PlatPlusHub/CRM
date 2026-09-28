@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -246,7 +246,18 @@ Post-Implementation Proof Obligation: The focused test, clean reset, pgTAP Pass 
 
 ## Execution Log
 
-None.
+### 2026-09-28 — Owner approval
+
+The owner approved the exact Draft SHA `7883f43b18bd2872657d2aaaef2df7dded30d8d7`, Test-138 SHA-256 `8e16df6e49ec66a6ccb671ec2c5053b95f8bbcbfba9f521788bbe0baf466cb4e` and the frozen ten-path Write Scope, with profiles DATABASE and REPOSITORY and no Primary impact, so no Human Gate 2 applies.
+
+Revalidation before approval:
+- HEAD was the Draft, a direct descendant of the certified `23629c1`, and the tree was clean.
+- `origin/main` and `origin/orvion-preflight` were at `23629c1`.
+- Test 138 hashes to the approved value.
+- A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS`. Two mutated copies returned FAIL (a gate at Step 2 inside the red window 1..3) and INDETERMINATE (the Mutation Obligation removed).
+- The manifest measured 6619 of 7000 characters.
+
+With the approval, the owner ratified PH8-4 again as recorded in this contract. The owner also delegated technical and operational definitions in the Phase-8 Activation Closure to engineering, reserving legal, commercial and external-account decisions. This contract implements none of the closure.
 
 ## Verification Notes
 
