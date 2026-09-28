@@ -87,7 +87,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 8
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -420,6 +420,10 @@ No business-data write was made, and Secondary `brplkqmbzffpxqgkkdzo` was not co
   - `check_database_parity_evidence.ps1`: `PRIMARY PARITY EVIDENCE: CLEAN`.
   - Repository consistency: `CLEAN`.
   - `git diff --check`: exit 0.
+
+### 2026-09-28 — Steps 1-7 complete
+
+Every Implementation Step through Step 7 is applied and evidenced above, so the Runtime Checkpoint is DONE and the contract enters VERIFY for Step 8's canonical `-Finish`. The first `-Finish` returned `FINISH_NOT_READY:EXECUTE` because the checkpoint still read Step 8; nothing was verified or changed by that run.
 
 ## Verification Notes
 
