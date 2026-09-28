@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -214,7 +214,14 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Execution Log
 
-None.
+### 2026-09-28 — Owner approval
+
+Owner approved the exact Draft SHA `c62bd7e46c24ecfa86db1623fb3764c15422453c` and the frozen nine-path Write Scope, for Approve, In Progress, Steps 1-4 and local proof only. Primary remains read-only and requires Human Gate 2. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY, one permanent-control path in scope). Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (Mutation Obligation removed). Pre-approval revalidation:
+- the SPEC-233 contract at HEAD is byte-identical to the approved Draft;
+- `origin/main` and `origin/orvion-preflight` were at `3759ef7`;
+- the prototype migration and Test 137 hash to the frozen values.
+
+The approval is bound to migration SHA-256 `2e51432515a8f507dc68db738680c7d82abbd5abd91ea4f4856762729c2a50f5` and Test-137 SHA-256 `6f615852ec2210f0fcce7c6f6ee430b1ceb6fbaca25bf52c60d7cbbb8327c8e8` (`plan(16)`). CONV-7 and CONV-8 are the only new findings this contract owns. The owner's PH8-4 decision (2026-09-28) belongs to a separate contract and changes nothing here: `qualified_phone_call` stays unproduced by this mapper.
 
 ## Verification Notes
 
