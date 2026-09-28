@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-09-27T17:13:55Z",
-  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-231 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD b01f83f6897977f15a8c202e843beff706c50916 (SPEC-231 In Progress); migration SHA-256 26eb722c5706a75d813bcee1aa0830d61cc0b848ab27f92c25510eb2fbfca595; test-135 SHA-256 e1cd9c19efbb5022689c2d2064af86becbe9abbe97100ceae7dd699756928595; project URL vrvtsxexkiiiivlkdxzp; only in-scope paths changed. Primary before the write: full ledger 232/4d034c995b053b3d7eb8ed2d8455a363, latest 20260927130000, target and document_versions_storage_path_idx absent; functions 366a22adb93c1acd53406064b927a908/309; indexes 3973f9c9dab7d4ca8cfc4b3466bd859c/294; combined structure b6719372293723a6f1ce9cdfcc6c6d04/3058; 0 tenants, 0 document versions, 0 duplicate storage paths, 0 retention policies; app.enforce_document_version_integrity md5 5dc38272dd7eb47584384f8a4171345b, SECURITY INVOKER, search_path empty. The connector assigned temporary version 20260927171236. Its stored statement md5 abfbf7bdd7a0b980725478da54a5f43d (5990 bytes) equals the migration file's md5. Only that newly inserted row was renamed to 20260927140000, after a guarded check (no existing 20260927140000; updated 1; temporary rows remaining 0). Fresh postwrite full ordered ledger 233/c641ed4f9faf6b8acb4c1342d311840d equals the repository's migration files. Functions 25c5bce0b252c36d1cb1f04042f0d3a3/309 and indexes f1135ab423db8ad5d756a2b413aebfc3/295; the other eight structural categories are unchanged; combined 5a0247339f2a182952d3189e68d84edf/3059. Every value equals the local prediction. Direct Primary inspection: app.enforce_document_version_integrity pg_get_functiondef md5 c77b0aea4878c7be688526d52b69bdc8, equal to local; SECURITY INVOKER; search_path empty; ACL {postgres=X/postgres}; not executable by anon or authenticated. Trigger document_versions_enforce_integrity is tgtype 23, enabled O. document_versions_storage_path_idx is CREATE UNIQUE INDEX ... USING btree (storage_path). Afterwards: 0 tenants, 0 document versions. No production business DML; the exploit was not replayed on Primary; Secondary was not contacted.",
+  "read_at": "2026-09-28T11:43:50Z",
+  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-232 migration was applied only to vrvtsxexkiiiivlkdxzp. Prewrite recheck matched exactly: HEAD ef91389409f4a350f0b784ef788fcc841eb87716 (SPEC-232 In Progress); migration SHA-256 235eb4847c18a54aeaff4cbc7c23d76493b210962ee4c8a5cb77116e0f02fab3; test-136 SHA-256 8fbd0532f64f170e3316914a3c0d8df118430cfd33fa281d21a2e7a7a334ddda; project URL vrvtsxexkiiiivlkdxzp; only in-scope paths changed. Primary before the write: full ledger 233/c641ed4f9faf6b8acb4c1342d311840d, latest 20260927140000, target migration, app.enforce_lead_current_assignment and lead_assignments_current_names_the_assignee absent; functions 309, triggers 298, constraints 511; app.derive_assignment_actor md5 b82d76906fbecc0653fee702ca622585, SECURITY INVOKER, search_path empty, ACL {postgres=X/postgres}; 0 tenants, 0 leads, 0 lead assignments, 0 incoherent leads. The connector assigned temporary version 20260928114223. Its single stored statement md5 e23fbe0338da061ba96bb54dfc273c15 (4433 bytes) equals the migration file's md5. Only that newly inserted row was renamed to 20260928120000, after a guarded check (no existing 20260928120000; exactly one row after 20260927140000; statement md5 matched; updated 1). Fresh postwrite full ordered ledger 234/bf26c74e9266431f88ed5a61aa74954f equals the repository's migration files. Functions 36411b98fec434082d8ed6f247348e7e/310, triggers 4d7c099d115fd9c69f30baad533e8069/299 and constraints 3b47f1d13ec80c75b705e3a448ebec27/512; the other seven structural categories are unchanged; combined ac25eb2d5a277885fa662fa4c15d2441/3062. Every value equals the local prediction. Direct Primary inspection: app.derive_assignment_actor pg_get_functiondef md5 de0536caf1bade250661a6660b3984f9, equal to local, SECURITY INVOKER, search_path empty, ACL {postgres=X/postgres}; app.enforce_lead_current_assignment md5 3a175ce181bc1acdcdc2ddeb4ab68529, equal to local, SECURITY DEFINER, search_path empty, ACL {postgres=X/postgres}, not executable by anon or authenticated. Constraint trigger lead_assignments_current_names_the_assignee is tgtype 21, DEFERRABLE, INITIALLY DEFERRED, enabled O, executing app.enforce_lead_current_assignment, with its pg_constraint row (contype t). Afterwards: 0 tenants, 0 leads, 0 lead assignments. No production business DML; the exploit was not replayed on Primary; Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "b01f83f6897977f15a8c202e843beff706c50916",
-  "migration_count": 233,
-  "ledger_fingerprint": "c641ed4f9faf6b8acb4c1342d311840d",
-  "function_surface_hash": "25c5bce0b252c36d1cb1f04042f0d3a3",
-  "function_count": 309,
-  "structural_surface_hash": "5a0247339f2a182952d3189e68d84edf",
-  "structural_object_count": 3059,
+  "repository_head": "ef91389409f4a350f0b784ef788fcc841eb87716",
+  "migration_count": 234,
+  "ledger_fingerprint": "bf26c74e9266431f88ed5a61aa74954f",
+  "function_surface_hash": "36411b98fec434082d8ed6f247348e7e",
+  "function_count": 310,
+  "structural_surface_hash": "ac25eb2d5a277885fa662fa4c15d2441",
+  "structural_object_count": 3062,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -245,6 +245,7 @@
     "20260926140000_manifest_freeze_cannot_be_left",
     "20260927120000_platform_authority_cannot_be_granted",
     "20260927130000_a_task_changes_queue_only_with_authority",
-    "20260927140000_a_document_version_owns_its_clock_and_its_object"
+    "20260927140000_a_document_version_owns_its_clock_and_its_object",
+    "20260928120000_the_sla_clock_and_the_current_handler_are_not_the_callers"
   ]
 }
