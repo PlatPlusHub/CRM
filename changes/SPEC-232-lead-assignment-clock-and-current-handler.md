@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -265,7 +265,20 @@ Post-Implementation Proof Obligation: Focused test, clean reset, pgTAP Pass A, t
 
 ## Execution Log
 
-None.
+### 2026-09-28 — Owner approval
+
+Owner approved the exact Draft SHA `e2f547cd8157c4ccf8f19e99bc2f3c114ba8c264` and the frozen nine-path Write Scope, with ASGN-4 and ASGN-5 as FIX NOW under the approved design. A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE, REPOSITORY, one permanent-control path in scope, so the predicates were read). Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (Mutation Obligation removed). Pre-approval revalidation:
+- HEAD was the Draft SHA and the tree was clean;
+- `origin/main` and `origin/orvion-preflight` were at `76e0b6f`;
+- the prototype migration and Test 136 hash to the frozen values.
+
+The approval is bound to migration SHA-256 `235eb4847c18a54aeaff4cbc7c23d76493b210962ee4c8a5cb77116e0f02fab3` and Test-136 SHA-256 `8fbd0532f64f170e3316914a3c0d8df118430cfd33fa281d21a2e7a7a334ddda` (`plan(19)`). ASGN-4 and ASGN-5 are the only new findings this contract owns; CAMP-4 and every other existing finding are not absorbed.
+
+The owner asked for two review hypotheses to be proved or falsified before implementation. Both were tested on the local stack reset with the frozen migration applied (234 migrations), with a committed fixture and real `COMMIT`s, and both hold:
+1. The deferred check judges the final transaction state and admits every legitimate writer and order, with no platform exemption. At real `COMMIT`: five `app.assign_lead` calls, `app.assign_lead_round_robin` and `app.reassign_lead` committed. The session-less `app.process_lead_sla` warned and then reassigned six leads, leaving 0 incoherent leads. A door handover that was incoherent between its statements (close, insert, then move the lead) committed, because its final state is coherent. One that was coherent mid-transaction but closed the current row last was refused `23514` at `COMMIT`, and a close with nothing after it was refused at `COMMIT` with the lead's current row intact. Moving a lead's assignee to someone with no current row is refused immediately by the unchanged `app.require_assignment_history`, so the two directions have one owner each.
+2. The clock is stamped only on signed-in inserts. A signed-in manager's insert claiming 2000-01-01 was stored at `now()`. With no claims, and with `{"role":"service_role"}` claims (for which `auth.uid()` is null), the same insert kept 2000-01-01. `service_role` holds no INSERT on `lead_assignments` (its table door is refused `42501`), so the only session-less writers are postgres-level: `app.process_lead_sla` (DEFINER, EXECUTE to postgres and service_role only), migrations and fixtures. The only other inserting functions, `app.assign_lead` and `app.reassign_lead`, are INVOKER and never supply a clock.
+
+Approval authorizes Approve, In Progress, Steps 1-4 and local proof. It does not authorize a Primary write, which needs separate exact-byte authorization at Gate 2.
 
 ## Verification Notes
 
