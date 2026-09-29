@@ -73,6 +73,10 @@ insert into s137 select 'bk', app.create_booking(p_customer_id=>'13700000-0000-0
 insert into s137 select 'inv', app.create_invoice('13700000-0000-0000-0000-0000000000d1','EGP',5000,(select v from s137 where k='bk')::uuid)::text;
 select app.issue_invoice((select v from s137 where k='inv')::uuid);
 insert into s137 select 'pay', app.record_payment((select v from s137 where k='inv')::uuid, 5000, 'cash')::text;
+-- PAY-3: `payment_recorded` is recorded at COMMIT by a deferred trigger, once the allocation naming the
+-- invoice exists. This file rolls back, so it fires the pending event here, in the payer's session.
+set constraints payments_emit_recorded immediate;
+set constraints payments_emit_recorded deferred;
 select app.advance_booking((select v from s137 where k='bk')::uuid, 'pending_approval');
 select app.advance_booking((select v from s137 where k='bk')::uuid, 'confirmed');
 select app.advance_booking((select v from s137 where k='bk')::uuid, 'in_progress');

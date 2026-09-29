@@ -99,7 +99,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -409,6 +409,55 @@ Run on HEAD `4616893f9e16cf37ca71713d587abdfa8262a949`, with the four files at t
 - **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+
+### 2026-09-29 — Human Gate 2: owner authorization
+
+The owner authorized, exact-byte and bound to the project and to preconditions, only the migration `supabase/migrations/20260928180000_a_payment_is_recorded_on_every_door.sql` with SHA-256 `b696f6aa8ea5619a1a75c456f3a790e785d4f6eacce801ca654f67aa71c2218d`, for Primary `vrvtsxexkiiiivlkdxzp`. The authorization named:
+- the file md5 `ec002eb340b52fed0e8a8c7c05adb261` for the guarded ledger normalization;
+- the frozen Tests 140 (`b6c87308…`), 137 (`eceac068…`) and 126 (`618d3eab…`);
+- twelve pre-write preconditions, any mismatch voiding it;
+- the exact post-write values to require.
+
+It authorized no other migration or DDL, no business-data write and no reproduction on Primary. The rename was permitted only under all three conditions:
+- exactly one new row after `20260928160000`;
+- its name `a_payment_is_recorded_on_every_door` and its stored statement md5 equal to the file's;
+- no existing `20260928180000`.
+
+### 2026-09-29 — Step 6: Primary deployment
+
+**Prewrite recheck, all twelve exact:**
+- SPEC-238 In Progress. HEAD `5ebaa64fa5451fc68609bc3cd0ba1fe16b21c339` on the approved chain.
+- The four SHA-256 values matched, the migration md5 was `ec002eb3…` (10501 bytes), and only the seven in-scope paths were dirty.
+- The project URL was `https://vrvtsxexkiiiivlkdxzp.supabase.co`.
+- The ledger held 236 migrations, `c97a2a7a…`, latest `20260928160000`, target absent.
+- Functions were `87c960b3…`/312 and triggers `7cd58b04…`/301.
+- `app.record_payment` md5 was `86f38be7…` and `app.record_supplier_payment` md5 `4ef3c67a…`.
+- The emitter and trigger were absent, and `payments` had 9 triggers.
+- Tenants, payments, allocations, invoices, events and offline conversions were all 0.
+
+**Write:**
+- The exact file bytes were applied through `apply_migration` as `a_payment_is_recorded_on_every_door`.
+- The connector assigned the temporary version `20260929101147`. Its single stored statement has md5 `ec002eb340b52fed0e8a8c7c05adb261` and 10501 bytes, equal to the file.
+- One guarded UPDATE renamed only that row to `20260928180000`. The guard required the name and statement md5 to match, exactly one row after `20260928160000`, and no existing target. One row was updated.
+
+**Fresh postwrite reads, every value equal to the recorded prediction:**
+- **Ledger:** 237 migrations, `79a420205c451967b72ee0ccae917e0b`, latest `20260928180000`, present once.
+- **Surfaces:** functions `df53eb28ba5cbcffa45e1006d077ed61`/313, triggers `cb10085173eb5a13ceefa6e951bb8fac`/302, constraints `41023bb50efc61b2e139530345ff5908`/513; the other seven surfaces are unchanged; combined `b372e1280a502d2c707713aca76a718e`/3069.
+- **Definitions:** `app.record_payment` `b51c763418c942bcbc4337c880ef7c61` and `app.record_supplier_payment` `6e6b868fbfa4a9c3d631d139281cb867`.
+- **Emitter:** `app.emit_payment_recorded` `75216b2918978f0df444f2821a4e267b`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres}`.
+- **Trigger:** `payments_emit_recorded` exactly once, tgtype 5 (ROW, INSERT), a constraint trigger, DEFERRABLE, INITIALLY DEFERRED and enabled. `payments` has 10 non-internal triggers.
+- **Business rows:** 0 tenants, payments, allocations, invoices, events and offline conversions.
+
+No business-data write and no reproduction were made on Primary, and Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-09-29 — Step 7: evidence and measured state
+
+- `primary-ledger-evidence.json` was rewritten from the fresh readings only: 237 migrations, `79a42020…`, functions `df53eb28…`/313, structural `b372e128…`/3069, commit `5ebaa64`.
+- The manifest's `Live state` now shows 237 migrations, latest `20260928180000`, the same hashes and counts, and verification and live-read dates of 2026-09-29. The suite figure is `Suite **140 files / 2505 assertions**`, confirmed: 140 files, plan sum 2505. `Last Completed` names SPEC-238 / PAY-3.
+- PAY-3 is marked fixed and deployed, with Cert `✅`. PAY-5 stays OPEN.
+- `MASTER_API_CONTRACT.md` and `ai-map.json` were regenerated with the canonical generators, `ai-map.json` stored LF.
+- The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+- The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
 ## Verification Notes
 

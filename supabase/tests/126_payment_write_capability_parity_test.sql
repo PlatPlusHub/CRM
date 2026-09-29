@@ -121,7 +121,7 @@ select lives_ok($$update public.payments set reference_number='SYSTEM-1', paymen
 select is((select payment_method_code from public.payments where id='12600000-0000-0000-0000-0000000000a3'),
   'bank_transfer','the session-less path changed the guarded field, so the null-session exemption is live');
 select is((select count(*)::int from pg_trigger where tgrelid='public.payments'::regclass and not tgisinternal),
-  9,'the installed payment trigger inventory remains unchanged');
+  10,'the installed payment trigger inventory is the nine guards plus PAY-3''s creation-event emitter');
 select ok(position('when ''payment_allocations'' then array[''allocated_amount'']' in pg_get_functiondef('app.guard_financial_capability()'::regprocedure))>0,
   'another financial surface retains its old mapping');
 
