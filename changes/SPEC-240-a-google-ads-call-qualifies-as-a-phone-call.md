@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -483,7 +483,39 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-09-29 — Owner approval (Human Gate 1)
+
+The owner approved the exact Draft SHA `f62a0002590a358964c0f464c84a9c0896fbe260` (CR SHA-256 `79bc18bea8b05aa244c2a8fdf5005ae4fdef5a710f34551988695f071b39d0a0`) and its frozen seventeen-path Write Scope. The approval covers Approve, In Progress, Steps 1-4 and the full local proof only. Primary stays read-only and needs Human Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+The approval is bound to two SHA-256 values:
+- migration `20260929160000`: `4889af581f5759bbd7e9c3a075835942604a374b151624e2916d8132b90ec126`;
+- Test 142: `d858cf644d38945458673623c1af0752e3987ab1ae254ad6a5d37edf7453f2c2`.
+
+The owner's decisions, as the amended Draft states them:
+1. **The consent writer uses CREATE_CUSTOMER.** No consent permission is added. Same-tenant verification, the server-derived actor and time, no direct table write door, and the unauthorized and cross-tenant negative tests are retained.
+2. **Merge: the amended design is approved.** `customer_consents` is an explicit ADR-0019 exception to blind re-pointing. Consent evidence stays immutable and attributed to the identity it was recorded for, and the effective consent of a merged logical customer includes the full history of every identity merged into the survivor, at any depth. The following are permanent requirements:
+   - a merged-away identity refuses new consent;
+   - new consent is recorded against the survivor;
+   - a newer source DENIED beats an older target GRANTED, and a newer target DENIED beats an older source GRANTED;
+   - sequential merges preserve history;
+   - post-merge decisions override older group history;
+   - cross-tenant reads and writes fail.
+3. **Ordering: `seq` is the authority.** `created_at` is evidence only and never decides. Serialization by the customer and merge locks is retained, including the proven property that a transaction which began earlier but records after waiting on the lock takes the later `seq` and governs.
+4. **Click versus customer consent:**
+   - The customer's `ad_user_data` grant authorizes the customer's identity path.
+   - A click whose own consent is denied is never included as an identifier.
+   - Neither decision is read as the other.
+   - A row left with `userData` alone remains subject to PH8-10.
+5. **Billing:** consent grants and withdrawals stay recordable while subscription writes are restricted. The exemption covers consent evidence only.
+6. **PH8-10 stays OPEN**, in the accepted wording: "Data Manager is ORVION's current offline/ECL delivery path. Google's native call-conversion import is a separate mechanism with Google Forwarding Number requirements." No click-less Google attribution is claimed from the schema alone.
+
+Any material architecture or semantic change from this Draft invalidates Gate 1.
+
+Revalidation before approval:
+- HEAD was the Draft, a child of `5caa678`, which is a child of the certified `6c48fbb`. `origin/main` was at `6c48fbb`, and the tree was clean.
+- The committed Draft hashes to the approved value.
+- A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, seven permanent-control paths in scope). Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
+- The prototype files in the scratch worktree hash to the two approved values.
 
 ## Verification Notes
 
