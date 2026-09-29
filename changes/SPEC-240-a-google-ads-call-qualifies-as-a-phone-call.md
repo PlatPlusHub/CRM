@@ -453,23 +453,23 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] Each qualification of an attributed or `google_ads_call` lead becomes exactly one conversion keyed to its own `lead_qualified`: `qualified_phone_call` for a first-touch `google_ads_call` lead with or without a click, and `qualified_lead` otherwise. A logged phone call does not change the type, the source cannot be rewritten, and a rewound mapper re-maps nothing.
-- [ ] `public.customer_consents` is written only through `app.record_customer_consent`. Each record carries the server's actor and time. It refuses `unspecified`, callers without CREATE_CUSTOMER and other tenants' customers, is invisible across tenants, is never rewritten, and is recordable while the tenant is billing-restricted.
-- [ ] `app.customer_consent_status` returns the latest record by `seq` of the logical customer, the same from any member's id: denied-then-granted is `granted`, granted-then-denied is `denied`, and no record is NULL.
-- [ ] A customer merge neither erases nor hides a decision, and succeeds with consent records present:
+- [x] Each qualification of an attributed or `google_ads_call` lead becomes exactly one conversion keyed to its own `lead_qualified`: `qualified_phone_call` for a first-touch `google_ads_call` lead with or without a click, and `qualified_lead` otherwise. A logged phone call does not change the type, the source cannot be rewritten, and a rewound mapper re-maps nothing.
+- [x] `public.customer_consents` is written only through `app.record_customer_consent`. Each record carries the server's actor and time. It refuses `unspecified`, callers without CREATE_CUSTOMER and other tenants' customers, is invisible across tenants, is never rewritten, and is recordable while the tenant is billing-restricted.
+- [x] `app.customer_consent_status` returns the latest record by `seq` of the logical customer, the same from any member's id: denied-then-granted is `granted`, granted-then-denied is `denied`, and no record is NULL.
+- [x] A customer merge neither erases nor hides a decision, and succeeds with consent records present:
   - a source GRANTED into an unrecorded target is `granted`;
   - a source's newer DENIED over a target's older GRANTED is `denied`, including at delivery;
   - a source's older GRANTED under a target's newer DENIED is `denied`;
   - after two sequential merges the newest decision governs;
   - a new decision on the survivor governs, and a merged identity refuses one;
   - every record is unchanged, and another tenant reads nothing.
-- [ ] The effective order is `seq`, never a timestamp. Two concurrent decisions for one customer are serialized by its row lock, and the later-serialized one governs. Measured with two live sessions and pinned by assertion 37.
-- [ ] The claim delivers a `qualified_phone_call` only when it came from a real event, its customer's current consent is `granted`, and it carries an E.164 phone, an email or a consented click id. It keeps a genuine consented click id, needs none, and withholds one whose own consent was denied. It never delivers a withdrawn, never-consented or hand-recorded one, or one with nothing to match on.
-- [ ] Every click-path conversion is claimed on its click's consent exactly as before. The customer's consent never admits one.
-- [ ] No phone leaves the claim unless `app.e164_phone` returns it. `app.e164_phone` never guesses a country, and a conversion that is not eligible stays recorded with its snapshot and no delivery.
-- [ ] `app.record_customer_consent` is SECURITY DEFINER with an empty `search_path`, executable by `authenticated` and through one HTTP endpoint for signed-in callers only. `app.customer_consent_status` and `app.e164_phone` are executable by `postgres` only.
-- [ ] Mutants M1 to M26 are each killed, with installation and restoration md5-proven and no aborted run. On the pre-repair mapper and claim, Test 142 fails assertions 11, 12, 15, 16, 18 and 35.
-- [ ] Register and records:
+- [x] The effective order is `seq`, never a timestamp. Two concurrent decisions for one customer are serialized by its row lock, and the later-serialized one governs. Measured with two live sessions and pinned by assertion 37.
+- [x] The claim delivers a `qualified_phone_call` only when it came from a real event, its customer's current consent is `granted`, and it carries an E.164 phone, an email or a consented click id. It keeps a genuine consented click id, needs none, and withholds one whose own consent was denied. It never delivers a withdrawn, never-consented or hand-recorded one, or one with nothing to match on.
+- [x] Every click-path conversion is claimed on its click's consent exactly as before. The customer's consent never admits one.
+- [x] No phone leaves the claim unless `app.e164_phone` returns it. `app.e164_phone` never guesses a country, and a conversion that is not eligible stays recorded with its snapshot and no delivery.
+- [x] `app.record_customer_consent` is SECURITY DEFINER with an empty `search_path`, executable by `authenticated` and through one HTTP endpoint for signed-in callers only. `app.customer_consent_status` and `app.e164_phone` are executable by `postgres` only.
+- [x] Mutants M1 to M26 are each killed, with installation and restoration md5-proven and no aborted run. On the pre-repair mapper and claim, Test 142 fails assertions 11, 12, 15, 16, 18 and 35.
+- [x] Register and records:
   - PH8-4 is registered fixed and deployed.
   - ADR-0019 records `customer_consents` as its second documented exclusion.
   - PH8-3 and AUDIT-4 record their delivered halves and stay open on their owner decisions.
@@ -477,9 +477,9 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   - `customer_consents` is `NOT-RECORDED`, `offline_conversions` stays `PARTIAL`, and §2b item 2 is closed except PH8-10.
   - The Google Ads registry row stays `NOT OPERATIONAL`.
   - Every other row and the recorded coverage are unchanged.
-- [ ] The migration, the five tests and the two scripts match their SHA-256 values. Primary, the recorded evidence, the manifest (239 migrations; 142 files / 2570 assertions; 78 tables), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] The migration, the five tests and the two scripts match their SHA-256 values. Primary, the recorded evidence, the manifest (239 migrations; 142 files / 2570 assertions; 78 tables), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -739,19 +739,99 @@ Deployment was proven by definition identity plus the locally certified behaviou
 - The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 - The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
+### 2026-09-29 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `824126689dbb4fea99af646fa6a4e2aaa7d82538` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, and returned `LOCAL_CERTIFY: READY`:
+- reset;
+- pgTAP Pass A;
+- the declared `verify_api_end_to_end.ps1`;
+- pgTAP Pass B;
+- smoke;
+- parity evidence;
+- repository consistency;
+- `git diff --check`;
+- the Primary ledger.
+
+### 2026-09-29 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `824126689dbb4fea99af646fa6a4e2aaa7d82538` against the approved Draft `f62a000`, the owner's Gate-1 and Gate-2 decisions, and the frozen seventeen-path Write Scope.
+- The working tree was clean and the pre-commit Gate reported `ORVION: READY`.
+- The range `6c48fbb..HEAD` changes exactly the seventeen frozen paths.
+- The committed migration (SHA-256 `4889af58…`, md5 `fa68ca4c…`, 31537 bytes), Test 142 (`d858cf64…`), tests 35, 53, 89 and 102 and the two scripts hash to their frozen values.
+
+Acceptance, re-checked against the committed bytes and the recorded evidence:
+1. **One qualification fact.** Test 142 assertions 11-14 prove:
+   - a first-touch `google_ads_call` lead becomes `qualified_phone_call` with or without a click, and every other attributed lead `qualified_lead`;
+   - each conversion is keyed to its own `lead_qualified`;
+   - a logged phone call does not change the type;
+   - the source cannot be rewritten;
+   - a rewound mapper re-maps nothing.
+2. **The consent record.** Assertions 1-8 and 20-22 prove:
+   - one writer, with the server's actor and time;
+   - refusals of the forged table door, `unspecified`, a caller without CREATE_CUSTOMER and another tenant's customer;
+   - invisibility across tenants and immutability;
+   - a withdrawal recordable while the tenant is `read_only`.
+3. **The reader.** Assertion 9 proves latest-wins by `seq` and no record as NULL. Assertions 27-30 prove the same answer from any member's id.
+4. **Merge.** Assertions 26-36 prove:
+   - consented customers merge;
+   - a source GRANTED into an unrecorded target is granted;
+   - a newer source DENIED beats an older target GRANTED, also at delivery (L9 not claimed);
+   - a newer target DENIED beats an older source GRANTED;
+   - two sequential merges keep history, and every record is unchanged;
+   - a post-merge decision governs and reaches delivery;
+   - a merged identity refuses a new decision, naming its survivor;
+   - another tenant reads nothing.
+
+   Assertion 38 proves the tenant-qualified customer foreign key.
+5. **Order.** Assertion 37 proves that a later-`seq` DENIED with a two-hour-earlier `created_at` governs. The two-session proof in Business Reason measured the live wait and order, and the deployed mechanism is byte-identical.
+6. **Delivery.** Assertions 15-19 prove:
+   - the phone path is claimed only from a real event, on the customer's granted consent, with something to match on;
+   - a genuine consented click id is kept, and none is required;
+   - a click id whose own consent was denied is withheld;
+   - the withdrawn, never-consented, local-number-only and hand-recorded rows are not delivered and stay recorded;
+   - the click path answers only to its click's consent;
+   - nothing is claimed twice.
+7. **E.164.** Assertions 15 and 23 prove that only `app.e164_phone`'s result leaves the claim and that no country is guessed.
+8. **Authority shape.** Assertions 24-25 and the Primary readback show:
+   - the writer SECURITY DEFINER with an empty `search_path` and one HTTP endpoint for signed-in callers;
+   - the reader and the E.164 authority executable by `postgres` only;
+   - no PUBLIC or `anon` EXECUTE.
+9. **Mutation.** M1-M26 were killed, with md5-proven installation and restoration and no aborted run, and M1b too. The counterfactual fails 11, 12, 15, 16, 18 and 35.
+10. **Records:**
+    - PH8-4 is fixed and deployed. PH8-3 and AUDIT-4 record their delivered halves, deployed, and stay open on their owner decisions.
+    - PH8-10, CONV-9 and CONV-10 are open, and PH8-10 is on the manifest's open-decision line.
+    - ADR-0019 carries the second documented exclusion.
+    - `customer_consents` is `NOT-RECORDED`, `offline_conversions` stays `PARTIAL`, and §2b item 2 is closed except PH8-10.
+    - The Google Ads registry row stays `NOT OPERATIONAL`, and no other row or the coverage count moved.
+11. **Agreement.**
+    - Primary, the evidence and the manifest agree: 239 migrations; 142 files / 2570 assertions; 78 tables; 80 client RPCs; 451 HTTP assertions; 6993 characters, within 7000.
+    - The API contract (80 endpoints, all with HTTP evidence) and `ai-map.json` match their generators.
+    - Parity, ledger and consistency are CLEAN.
+12. **Primary.** Primary received only the authorized migration and the one guarded ledger rename, with no business-data write and no reproduction. Every surface was checked individually against the prediction. Secondary was never contacted.
+13. **Engineering observation.** The Step-7 sync of "pending Primary deployment" in the PH8-3 and AUDIT-4 bullets is inside Write Scope and changes no meaning beyond the deployment fact.
+14. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+The provider boundary holds: no `PHONE`, hashing, payload name, destination, OAuth, acknowledgement or diagnostic entered the CRM, and PH8-9, the workflow and Slice 31 are untouched. No click-less phone conversion is claimed as Google-credited (PH8-10).
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
