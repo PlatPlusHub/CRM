@@ -43,7 +43,11 @@ Migration CI and Agent Control passed. Both failures are the same line in the "A
 ## Risks
 
 - **A pin that must be updated by hand can go stale again.** Intended: the pin exists so that a change to the owner-decision enumeration must be deliberate and visible in a guard. Deriving the expected count from the manifest would compare the guard with the state it tests, and it would pass any enumeration. The recurrence cost is carried by the owner's standing rule that any future change to the enumeration updates this self-test.
-- **The lifecycle writes the manifest and `ai-map.json`.** Approve sets `Active Change Request` to this contract and Complete clears it, as the Gate requires (`ORPHANED_APPROVED_CR`, `MANIFEST_CR_CONTRADICTION`). The write-closure rule requires `ai-map.json` with any manifest write (Check 7). No other manifest field changes: `Last Completed` stays SPEC-240, and `Next capability`, the open-decision enumeration and every state figure are untouched. The manifest's net change across the completed lifecycle is zero, and `ai-map.json`'s is generator metadata only.
+- **The lifecycle writes the manifest and `ai-map.json`.** The Gate requires the pointer to follow the contract's Status (`ORPHANED_APPROVED_CR`, `MANIFEST_CR_CONTRADICTION`), and the write-closure rule requires `ai-map.json` with any manifest write (Check 7).
+  - **Approve** sets `Active Change Request` to this contract and changes nothing else.
+  - **Complete**, per `CR_LIFECYCLE.md`, clears the pointer, sets `Last Completed` to this contract and reaffirms `Next capability` as the Phase-8 Activation Closure. PH8-9 remains its next dependency-ready work.
+
+  The open-decision enumeration and every measured figure are untouched. Measured at `66bf1b2`: the manifest is 6935 characters, the Approve peak with the pointer is 6984, and the projected Complete state is 6825, all within the unchanged 7000 budget. Execution re-measures each.
 - **Primary is ahead of `main` until promotion.** Primary holds 239 migrations while `main`'s recorded evidence says 238. CI never reads Primary live, so `main` stays self-consistent. Promoting the new candidate closes the gap. This contract makes no database write.
 
 ## Supersedes / Depends On
@@ -108,8 +112,8 @@ Applicability: APPLICABLE
 | Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
 | --- | --- | --- | --- |
 | The cold-start guard's pinned open-decision count becomes 3 | CI "Attack the guards themselves" in `orvion-acceptance.yml` and `repository-consistency.yml`; the file's other checks | VERIFY | At `66bf1b2` the suite fails 33 / 1 on this pin alone; with the repair it passes 34 / 0. The other three suites pass unchanged, and the file's other decision checks pass with three ids. Script LF SHA-256 before `3c6415ceff47de87ca1e2b3f13d5ae267b2c066870dea6a1970599f172a61310`, after `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`. |
-| Manifest `Active Change Request` pointer: None → this contract → None | Boot; Checks 5, 7 and 25; `ORPHANED_APPROVED_CR`; `MANIFEST_CR_CONTRADICTION` | WRITE | Lifecycle only. `Last Completed` stays SPEC-240; `Next capability`, the open-decision enumeration and every state figure are unchanged. The net change across the completed lifecycle is zero. |
-| `ai-map.json` regenerated | Check 7 | WRITE | Canonical generator only, stored LF. The net change across the completed lifecycle is `generated_at` only. Any other generated difference stops execution. |
+| Manifest lifecycle fields: the `Active Change Request` pointer (None → this contract → None), and at Complete `Last Completed` → this contract with `Next capability` reaffirmed | Boot; Checks 5, 7 and 25; `ORPHANED_APPROVED_CR`; `MANIFEST_CR_CONTRADICTION` | WRITE | Lifecycle bookkeeping only, per `CR_LIFECYCLE.md` Complete. `Next capability` stays the Phase-8 Activation Closure. The open-decision enumeration `MAIL-1`, `RET-1`, `PH8-10` and every live database and repository figure are unchanged. Measured 6935 → 6984 at Approve → 6825 at Complete, within 7000. |
+| `ai-map.json` regenerated | Check 7 | WRITE | Canonical generator only, stored LF. During execution `live_state.active_change_request` names this contract. At Complete it agrees with the manifest by value: relative to `66bf1b2` it may differ only in `generated_at` and `live_state.last_completed`, and `active_change_request` returns to None. Any other semantic difference stops execution. |
 
 Unresolved Material Consumers: None
 
@@ -168,10 +172,10 @@ Post-Implementation Proof Obligation: All of the following on the final bytes:
    - Run canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` and require `LOCAL_CERTIFY: READY`.
    - Independently Review against every Acceptance Criterion. After `Verdict: Confirmed Complete`:
      - transition to Complete;
-     - clear `Active Change Request`, leaving `Last Completed` as SPEC-240;
+     - in the same commit, clear `Active Change Request`, set `Last Completed: **SPEC-241 corrected the cold-start open-decision self-test pin from 2 to 3; repository-only, no product or database change (2026-09-29).**`, and reaffirm `Next capability` as the Phase-8 Activation Closure;
      - regenerate `ai-map.json` LF with the canonical generator.
 
-     Stop if the generator changes anything but `generated_at` relative to `66bf1b2`, or if the manifest differs from `66bf1b2` at all.
+     Re-measure the manifest at Approve and at Complete, and stop if either exceeds 7000 characters. Relative to `66bf1b2`, stop if the manifest differs anywhere but the `Last Completed` line, or if `ai-map.json` differs anywhere but `generated_at` and `live_state.last_completed`.
    - Prove the range with `-Gate -BaseRef origin/main`, then publish the exact candidate carrying SPEC-240 Complete and this contract.
    - Require all four exact-SHA candidate workflows green, promote the same SHA to `main`, require main CI, run `-Certify` for `REMOTE_CERTIFY: READY`, and verify synchronized clean refs.
 
@@ -180,7 +184,8 @@ Post-Implementation Proof Obligation: All of the following on the final bytes:
 - [ ] `scripts/test_cold_start_state_guard.ps1` differs from `66bf1b2` in exactly the two expectation sites, `2` → `3`, the count still an explicit hardcoded pin, with LF SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`.
 - [ ] All four CI guard self-test suites exit 0 from the repository root, the cold-start suite at 34 passed / 0 failed, and restoring `2` fails exactly its enumeration control.
 - [ ] Repository consistency is CLEAN and reports 3 open ids, `git diff --check` passes, and canonical `-Finish` returns `LOCAL_CERTIFY: READY`.
-- [ ] At completion the manifest is byte-identical to `66bf1b2`: `Last Completed` SPEC-240, `Next capability` and the enumeration `MAIL-1`, `RET-1`, `PH8-10` unchanged. `ai-map.json` differs only in `generated_at`.
+- [ ] At completion the manifest's `Active Change Request` is None, `Last Completed` names SPEC-241, `Next capability` remains the Phase-8 Activation Closure, and the open owner decisions are exactly `MAIL-1`, `RET-1`, `PH8-10`. Every live database and repository figure is unchanged, and no other manifest line differs from `66bf1b2`.
+- [ ] At completion `ai-map.json` agrees with the manifest by value. Relative to `66bf1b2` it differs only in `generated_at` and `live_state.last_completed`, and no other semantic field changed.
 - [ ] No SPEC-240 file, no `supabase/**` path and no other script or workflow changed. There is no database write, and neither Primary nor Secondary was contacted.
 - [ ] The exact candidate carrying SPEC-240 Complete and this contract is green in all four candidate workflows, is promoted as that SHA, and reaches `REMOTE_CERTIFY: READY`. The rejected `66bf1b2` is not promoted itself.
 - [ ] No file outside Write Scope was created, modified or deleted.
