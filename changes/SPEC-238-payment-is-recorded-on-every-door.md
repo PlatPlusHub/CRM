@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -339,6 +339,10 @@ Revalidation before approval:
 - A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, three permanent-control paths in scope).
 - Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
 - The prototype's focused Tests 140, 137 and 126 passed 20, 16 and 33. Mutants M-A to M-E were each killed, with md5-proven install and restore.
+
+### 2026-09-28 — Execution started
+
+The approved twelve-path contract entered In Progress at `564ef71e4178eddd5c1b5cfff126c7d870591156`. Resume Step 1. Primary stays read-only until Human Gate 2.
 
 ## Verification Notes
 
