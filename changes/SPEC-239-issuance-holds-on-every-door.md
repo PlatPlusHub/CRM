@@ -307,18 +307,18 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] An owed booking issued through `app.advance_booking`, and bookings issued at the table door by an owner and by a manager, each record exactly one `booking_issued` naming the session's actor, the state it left and the RPC's payload keys, with the RPC's reason on the RPC path and none inherited on the door.
-- [ ] An issuance before full collection by an override holder records exactly one `booking_item_risk_flag_created` with the permission used and the balance snapshot, on the RPC and on the door; an unowed issuance records none.
-- [ ] A manager denied ALLOW_ISSUE_WITH_NEGATIVE_BALANCE is refused an owed issuance on the RPC and on the door, including when the same UPDATE rebinds the customer, by `42501 permission denied: ALLOW_ISSUE_WITH_NEGATIVE_BALANCE`, and the booking stays `in_progress` with no issuance event.
-- [ ] An archived booking is refused issuance on both doors and cancellation on the door by `booking is archived`. A signed-in caller cannot create a booking at any state but `draft`, by the entry rule's own `23514` message, and can at `draft`.
-- [ ] Remaining in `issued` and an unrelated edit record nothing; `reissue -> issued` records one more `booking_issued` and, still owed, one more risk flag. A session-less issue records one `booking_issued` with no actor and no override.
-- [ ] The real mapper makes exactly one `ticket_issued` per `booking_issued` on the RPC, owner-door, manager-door and platform paths, each keyed to its own event, none for the refused or archived booking, and a further run adds nothing.
-- [ ] The authority is SECURITY INVOKER with an empty `search_path`, executable by neither PUBLIC nor `authenticated`, and fires as one AFTER INSERT OR UPDATE ROW trigger.
-- [ ] With the trigger dropped in a savepoint, a door issue is silent and produces no conversion, and the rolled-back state records it again. Mutants M-A to M-I are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 141 fail.
-- [ ] BOOK-10 is registered fixed and deployed, BOOK-11 and BOOK-12 are registered open with their trigger, and ENTRY-1 records `bookings` closed. The `bookings` row stays `AUDITED-OPEN`, the `offline_conversions` row stays `PARTIAL`, §2b item 1 is closed, and the Google Ads registry row stays `NOT OPERATIONAL`. Every other row and the Coverage totals are unchanged.
-- [ ] The migration and test match their SHA-256 values. Primary, the recorded evidence, the manifest (238 migrations; 141 files / 2532 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] An owed booking issued through `app.advance_booking`, and bookings issued at the table door by an owner and by a manager, each record exactly one `booking_issued` naming the session's actor, the state it left and the RPC's payload keys, with the RPC's reason on the RPC path and none inherited on the door.
+- [x] An issuance before full collection by an override holder records exactly one `booking_item_risk_flag_created` with the permission used and the balance snapshot, on the RPC and on the door; an unowed issuance records none.
+- [x] A manager denied ALLOW_ISSUE_WITH_NEGATIVE_BALANCE is refused an owed issuance on the RPC and on the door, including when the same UPDATE rebinds the customer, by `42501 permission denied: ALLOW_ISSUE_WITH_NEGATIVE_BALANCE`, and the booking stays `in_progress` with no issuance event.
+- [x] An archived booking is refused issuance on both doors and cancellation on the door by `booking is archived`. A signed-in caller cannot create a booking at any state but `draft`, by the entry rule's own `23514` message, and can at `draft`.
+- [x] Remaining in `issued` and an unrelated edit record nothing; `reissue -> issued` records one more `booking_issued` and, still owed, one more risk flag. A session-less issue records one `booking_issued` with no actor and no override.
+- [x] The real mapper makes exactly one `ticket_issued` per `booking_issued` on the RPC, owner-door, manager-door and platform paths, each keyed to its own event, none for the refused or archived booking, and a further run adds nothing.
+- [x] The authority is SECURITY INVOKER with an empty `search_path`, executable by neither PUBLIC nor `authenticated`, and fires as one AFTER INSERT OR UPDATE ROW trigger.
+- [x] With the trigger dropped in a savepoint, a door issue is silent and produces no conversion, and the rolled-back state records it again. Mutants M-A to M-I are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 141 fail.
+- [x] BOOK-10 is registered fixed and deployed, BOOK-11 and BOOK-12 are registered open with their trigger, and ENTRY-1 records `bookings` closed. The `bookings` row stays `AUDITED-OPEN`, the `offline_conversions` row stays `PARTIAL`, §2b item 1 is closed, and the Google Ads registry row stays `NOT OPERATIONAL`. Every other row and the Coverage totals are unchanged.
+- [x] The migration and test match their SHA-256 values. Primary, the recorded evidence, the manifest (238 migrations; 141 files / 2532 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -470,19 +470,61 @@ No business-data write and no reproduction were made on Primary, and Secondary `
 - The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 - The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
+### 2026-09-29 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `5bed926474d33d310679d23bf5d358ea939761f9` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, and returned `LOCAL_CERTIFY: READY`:
+- reset;
+- pgTAP Pass A;
+- the declared `verify_lifecycle_branches.ps1`;
+- pgTAP Pass B;
+- smoke;
+- parity evidence;
+- repository consistency;
+- `git diff --check`;
+- the Primary ledger.
+
+### 2026-09-29 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `5bed926474d33d310679d23bf5d358ea939761f9` against the approved Draft `7264c98`, the owner's two Gate-1 decisions and the frozen ten-path Write Scope.
+- The working tree was clean and the pre-commit Gate reported `ORVION: READY`.
+- The range `2496591..HEAD` changes exactly the ten frozen paths.
+- The committed migration and Test 141 hash to their authorized SHA-256 values.
+
+Acceptance, re-checked against the committed bytes and the recorded evidence:
+1. **Issuance on every door.** Test 141 assertions 2, 4, 5 and 11 prove one `booking_issued` for the RPC, owner-door and manager-door issues, each naming the session's actor, the state it left and the RPC's payload keys, with the RPC's reason on the RPC path and none inherited on the door.
+2. **Risk flag.** Assertions 3 and 5 prove one risk flag with the permission used and the snapshot on the RPC and the door; 4 and 11 prove none when nothing is owed.
+3. **Override refusals.** Assertions 7, 8 and 9 prove the denied manager refused on the RPC, the door and the same-statement customer rebind by `42501 permission denied: ALLOW_ISSUE_WITH_NEGATIVE_BALANCE`, and 10 proves the booking still `in_progress` with no issuance event.
+4. **Archived and entry.** Assertions 12-14 prove the archived refusal on both doors for issuance and on the door for cancellation, the owner's whole-rule decision. Assertions 15-16 prove the `23514` entry refusal and the `draft` birth.
+5. **Edge and platform.** Assertion 17 proves remaining in `issued` records nothing. Assertion 18 proves `reissue -> issued` records one more `booking_issued` and risk flag, the owner's reissue decision. Assertions 19-20 prove the session-less issue records one event with no actor and no override.
+6. **Pipeline.** Assertions 21-23 prove one `ticket_issued` per `booking_issued` on every path, each keyed to its own event, none for the refused or archived booking, and nothing on a second run.
+7. **Authority and trigger.** Assertion 24 and the Primary readback show SECURITY INVOKER, an empty `search_path`, ACL `{postgres=X/postgres}`, and one AFTER INSERT OR UPDATE OF `booking_status_code` ROW trigger, enabled.
+8. **Mutation.** The in-file trigger-drop mutation (25-27) holds. Mutants M-A to M-I were killed with md5-proven install and restore. The unrepaired counterfactual fails assertions 4, 5, 8-11, 13-15, 20 and 21.
+9. **Records.** BOOK-10 is `✅` fixed and deployed. BOOK-11 and BOOK-12 are registered OPEN with their trigger, ENTRY-1 records `bookings` closed, and PH8-9 carries the owner's reissue transaction-identity note. `bookings` stays `AUDITED-OPEN` and `offline_conversions` stays `PARTIAL`, §2b item 1 is closed, and the Google Ads registry row stays `NOT OPERATIONAL`. No other row or Coverage total moved.
+10. **Agreement.** The hashes match. Primary, the evidence, the manifest (238 migrations; 141 files / 2532 assertions), the API contract and `ai-map.json` agree, and parity, ledger and consistency are CLEAN.
+11. **Primary.** Primary received only the authorized migration and the one guarded ledger rename, with no business-data write and no reproduction. Secondary was never contacted.
+12. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+No grant, RLS policy, `app.status_transitions` row, other function or mapper changed. The constraints surface did not move. The Google `transactionId` for a reissue is not changed here and is registered on PH8-9. PH8-4, PH8-9 and the workflow are untouched.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
