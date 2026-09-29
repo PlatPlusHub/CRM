@@ -189,7 +189,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -520,6 +520,134 @@ Revalidation before approval:
 ### 2026-09-29 — Execution started
 
 The approved seventeen-path contract entered In Progress at `973d941e4c920b6e5af8e755bbecf7d8cda84439`. Resume Step 1. Primary stays read-only until Human Gate 2.
+
+### 2026-09-29 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration `20260929160000` was created LF, byte-identical to the approved prototype, SHA-256 `4889af581f5759bbd7e9c3a075835942604a374b151624e2916d8132b90ec126` (md5 `fa68ca4ce4b8645f8bf458a4647bd853`, 31537 bytes).
+- **Step 2: Applied.** Test 142 was created LF, byte-identical to the approved prototype, SHA-256 `d858cf644d38945458673623c1af0752e3987ab1ae254ad6a5d37edf7453f2c2`, `plan(38)`. The four tests and two scripts were edited LF to their frozen SHA-256 values:
+  - 35 `f45669b2c060a7b052801556741ecff623e7911ba0b7363efc6e0ffcbb978e4c`;
+  - 53 `692fe1b53385c29c95c1b5ed7758668ab355c3ae868cd30acc47cd87f83caef0`;
+  - 89 `c9eda44f5d7b5da25749fe1d86c3a880bec05f614fffa1cff56af2a6f34a314e`;
+  - 102 `13810971123cc8ce02934f4facb20cf8557c98c823eff63f51e98b5bca40b562`;
+  - `verify_database.sql` `9d8ebe57306a6f7973d0dc85d3afe65bced8ff08986433ef2e5fba2493d79b98`;
+  - `verify_api_end_to_end.ps1` `5a2b72d159fe7a2f2acbd2155cf30b7b59586c45e73b9009143db15f7cd0b727`.
+- **Step 3: Applied.** The PH8-4 block lacked a `FIXED` line. The register, disposition, catalog and ADR edits produce the frozen LF SHA-256 values:
+  - register `71d9970c532c6bd846678ea2e3afffc6405735ac064c447a61e8d0530f97ce81`;
+  - disposition `e127a6a311ace9bbfc3cf70c1d57dd91f19e48ede29cda57d02dbe480b5f9356`;
+  - catalog `32a50529011fbe3939c48e0b40ee45f07bb2fc150ccdd4918e10cb01e7909ef6`;
+  - ADR `9999e48a137a050cdfc56e89456a19d594c83adc2c5bb239e19a3588fcbb19ae`.
+
+Per the DATABASE sequencing, these twelve paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-09-29 — Pre-deploy readiness gate
+
+Run on HEAD `7270b095513a2ada9d65a61089016eaa97628572` with every file at its frozen hash.
+
+- **Reset:** a clean local reset to 239 migrations, latest `20260929160000`.
+- **Focused test:** Test 142 38/38.
+- **Out-of-file mutants:** base surface md5 `057cb5e80f8f6eb2b3cf0df37cae26e4`, covering the six function definitions, the consent table's triggers, ACL and constraints, and the `offline_conversions` indexes. Every installation was proven by a changed md5 and every restoration by the base md5. No run aborted: 38 planned and 38 ran each time, with no ERROR line. All 26 were killed:
+
+  | Mutant | Failing assertions |
+  | --- | --- |
+  | M1 dual-route, unique key dropped | 11, 12, 13, 15, 16, 18 |
+  | M2 every qualified lead is a phone call | 11, 15, 16 |
+  | M3 a call lead stays `qualified_lead` | 11, 12, 15, 16, 18, 35 |
+  | M4 source from a logged phone call | 11, 15, 16 |
+  | M5 denied deliverable | 15, 16, 32, 35 |
+  | M6 unspecified is granted | 15, 16, 18 |
+  | M7 a phone bypasses consent | 15, 16, 18, 32, 35 |
+  | M8 raw phone leaves the claim | 15 |
+  | M9 a local number gains `+20` | 15, 16, 23 |
+  | M10 click id required | 15, 18, 35 |
+  | M11 genuine click id withheld | 15 |
+  | M12 replay key removed | 13, 15, 16, 18 |
+  | M13 first record wins | 9, 15, 16, 22, 28, 29, 30, 32, 35, 37 |
+  | M14 hand-recorded phone conversion claimable | 18 |
+  | M15 phone path on click consent | 15, 18, 35 |
+  | M16 no identifier required | 15, 16 |
+  | M17 click path on customer consent | 15, 16 |
+  | M18 table door open | 1, 3 |
+  | M19 actor not derived | 2 |
+  | M20 append-only dropped | 8, 9, 15, 16 |
+  | M21 consent billing-gated | 21, 22 |
+  | M22 reader ignores merged identities | 27, 28, 29, 30, 32, 34, 35 |
+  | M23 reader orders by `created_at` | 9, 15, 16, 22, 30, 34, 35, 37 |
+  | M24 merge re-points consent | 26, 27, 28, 29, 30, 33 |
+  | M25 merged identity takes decisions | 33 |
+  | M26 customer foreign key dropped | 38 |
+
+  Only M23's kills vary between runs, since `created_at` ties inside one transaction and a random id breaks them. Its deterministic kill is assertion 37, present in every run. Dual-routing with the unique key intact (M1b) was killed at 11 and 15: one event keeps one row.
+- **Unrepaired counterfactual:** the pre-repair mapper and claim were reinstated at md5 `c7731c53b3709228f5679b44d848d7af` and `5e336b9bbd3c22a482605aaaaa05c818`, equal to Primary's. Test 142 then fails assertions 11, 12, 15, 16, 18 and 35, with no abort. Restoration was md5-proven.
+- **Ordering:** the mechanism is byte-identical to the approved prototype: the customer row lock, the merge's locks and `seq`. The two-session proof in Business Reason stands, and assertion 37 pins it on every run.
+- **pgTAP Pass A:** 142 files / 2570 assertions PASS.
+- **HTTP suites:** 35 + 40 + 74 + 122 + 120 + 60 = 451 passed, 0 failed. This includes the declared `verify_api_end_to_end.ps1`, whose consent endpoint and refused table door are its two new checks.
+- **pgTAP Pass B,** without reset: 142 / 2570 PASS.
+- **Smoke:** `ALL CHECKS PASSED (78 tables, …)`, exit 0.
+- **Plan sum:** 142 files, 2570 assertions.
+- **Local objects:**
+  - `app.record_customer_consent`: SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres,authenticated=X/postgres}`, md5 `564a614ce07312c051f8c10bb30ab364`.
+  - `public.record_customer_consent`: invoker, the same ACL, md5 `2f80b8a4f5ef29f214ffee4cbaf1d7f3`.
+  - `app.customer_consent_status` (md5 `6addfb4cee45f02729b477b0a8b97843`) and `app.e164_phone` (md5 `2be6527e36b36d69032e570aac49ba61`): invoker, `search_path=""`, ACL `{postgres=X/postgres}`.
+  - Replaced bodies: mapper `acb629ec93463698a4b5b53cedc2d00b`, claim `55b47389de51be40a8cd2252126d3f69`, merge `375a663c0b700498b78c029c5ce07e15`. Each keeps its SECURITY DEFINER mode and ACL.
+  - `customer_consents`: RLS on, not forced; ACL `authenticated=r`.
+  - One policy, `tenant_isolation` (SELECT, `authenticated`).
+  - Three triggers: `append_only`, `derive_created_by` and `enforce_catalog_codes`.
+  - Eight constraints: the primary key, `seq` unique, three CHECKs, and three tenant-qualified foreign keys.
+  - 78 public tables.
+- **Generators:** `MASTER_API_CONTRACT.md` gains one endpoint row and one table row. It reports 80 RPC endpoints, 80 with HTTP evidence, 8 views and 74 tables, and was restored until Step 7. `ai-map.json` differed only in `generated_at` and was restored.
+- **Scope, diff check and consistency:**
+  - The twelve changed paths are all in Write Scope, and `git diff --check` exited 0.
+  - Repository consistency reports exactly the seven expected pre-deploy issues:
+    - three migration-state drifts;
+    - two suite-figure drifts;
+    - the undeployed RECOVER-1 migration;
+    - PH8-10 not yet on the manifest's open-decision line.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 238 migrations, fingerprint `8ac45c812287217f9c5ba25859e7348b`, equal to the recorded evidence; latest `20260929120000`. The target is absent by version and by name.
+- **Function surface:** `675e77e6d6f562b004d9eac7ac15505d`/314.
+- **Structural surfaces:**
+
+  | Surface | Hash | Count |
+  | --- | --- | --- |
+  | `_combined` | `ff2aeaf2e753134c44c3f721bfacdacf` | 3071 |
+  | functions | `675e77e6…` | 314 |
+  | triggers | `6bdfd761a4c70e44ec3b74d58882a236` | 303 |
+  | policies | `8e641292a1ab4d54b4decdb58c0dfc06` | 124 |
+  | constraints | `41023bb50efc61b2e139530345ff5908` | 513 |
+  | grants | `402bf96caafc025268889650138405e8` | 194 |
+  | columns | `52adf0a37f6fa4982a40f08896d88c08` | 1119 |
+  | views | `10bb212ab2ffe297c93a6a06f0263389` | 16 |
+  | indexes | `f1135ab423db8ad5d756a2b413aebfc3` | 295 |
+  | status_transitions | `db2165c755f233c0772b6c633e29d39c` | 115 |
+  | rls_enabled | `fbd0240f553f151b9ef55af484eb52b5` | 78 |
+- **Counts:** 77 public tables; 83 public functions (the 79 client RPCs and four other public functions).
+- **Pre-repair definition md5:** mapper `c7731c53b3709228f5679b44d848d7af`, claim `5e336b9bbd3c22a482605aaaaa05c818`, merge `58ce524303afbb2ccb7dd25626a8f6ca`. Each equals the local pre-repair body.
+- **Absent:** `public.customer_consents`, the four new functions, every `customer_consents_*` trigger and every policy on it. There is no default function ACL for schema `app`.
+- **Business rows:** 0 tenants, customers, leads, events, attribution clicks, offline conversions, deliveries and customer merges.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 239 migrations, latest `20260929160000`, fingerprint `66f7ce11526941ed7ab4e675b3fd4e28`.
+- **Surfaces:**
+
+  | Surface | Hash | Count |
+  | --- | --- | --- |
+  | functions | `78339ac07ebd500811850ad5bf04f302` | 318 (+4) |
+  | triggers | `d07aa82d8ce6e3d8b3adba9310ba657f` | 306 (+3) |
+  | policies | `b67d466a39413a56bcbfa071b310b33a` | 125 (+1) |
+  | constraints | `623c6b387599135d0b57b24ee0092257` | 521 (+8) |
+  | grants | `ebdcfde628aee26db112256c36abe885` | 195 (+1) |
+  | columns | `2d54cc2a80736938108df4a0f92b6a5a` | 1129 (+10) |
+  | views | unchanged | 16 |
+  | indexes | `cdaa3b8370c5020f3c9f0830126d9683` | 298 (+3) |
+  | status_transitions | unchanged | 115 |
+  | rls_enabled | `c117cbf7eefc68e5f87b86b89206ca81` | 79 (+1) |
+  | `_combined` | `77bba1da1535be6fcfee07aff2ca118c` | 3102 |
+- **Counts:** 78 public tables and 84 public functions (80 client RPCs).
+- **Replaced bodies:** mapper, claim and merge, to the local md5 values above.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 
 ## Verification Notes
 
