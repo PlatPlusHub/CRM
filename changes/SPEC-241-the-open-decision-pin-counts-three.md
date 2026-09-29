@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -192,7 +192,21 @@ Post-Implementation Proof Obligation: All of the following on the final bytes:
 
 ## Execution Log
 
-None.
+### 2026-09-29 — Owner approval (Human Gate 1)
+
+The owner approved the exact Draft SHA `5a81bbde67de5fb2fbf435e78892934d0a1dd1b8` (CR SHA-256 `e102fc0863c49c43fb35c454e6ffc76a05a4eeb110ebb265ec92ce2a431f111f`) and its frozen four-path Write Scope. The corrective implementation is frozen: in `scripts/test_cold_start_state_guard.ps1`, exactly the two stale enumeration expectations change from `2` to `3`, giving LF SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`. The count stays an explicit pin, and Check 25 and `check_repository_consistency.ps1` are not changed.
+
+The approved lifecycle:
+- **Approve / In Progress:** only the manifest's `Active Change Request` pointer changes, with `ai-map.json` regenerated canonically. `Last Completed` stays SPEC-240, `Next capability` stays the Phase-8 Activation Closure, the open decisions stay `MAIL-1`, `RET-1`, `PH8-10`, and every figure is unchanged. The manifest must stay within 7000 characters.
+- **Complete:** clear the pointer, set `Last Completed` to SPEC-241 and reaffirm `Next capability`. Relative to `66bf1b2`, the manifest may differ only in `Last Completed`, and `ai-map.json` only in `generated_at` and `live_state.last_completed`.
+
+After Complete, a new candidate carrying SPEC-240 Complete and SPEC-241 Complete is published. It needs all four workflows green before it is promoted, then main CI and `REMOTE_CERTIFY: READY`. No Human Gate 2 is needed, since there is no database write. Primary and Secondary are not contacted.
+
+Revalidation before approval:
+- HEAD was the Draft, a child of `6c8f43c`, which is a child of `66bf1b2`. The tree was clean, `orvion-preflight` was at `66bf1b2` and `main` at `6c48fbb`.
+- The committed Draft hashes to the approved value.
+- A read-only evaluation returned `APPROVAL_EVIDENCE: PASS` (profile REPOSITORY, one permanent-control path).
+- Its probes returned INDETERMINATE with the Mutation Obligation removed, and FAIL on write closure with `ai-map.json` removed from Write Scope.
 
 ## Verification Notes
 
