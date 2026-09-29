@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -207,6 +207,10 @@ Revalidation before approval:
 - The committed Draft hashes to the approved value.
 - A read-only evaluation returned `APPROVAL_EVIDENCE: PASS` (profile REPOSITORY, one permanent-control path).
 - Its probes returned INDETERMINATE with the Mutation Obligation removed, and FAIL on write closure with `ai-map.json` removed from Write Scope.
+
+### 2026-09-29 — Execution started
+
+The approved four-path contract entered In Progress at `5c1e55893357433713f840150e9578c7943e21fa`. Resume Step 1.
 
 ## Verification Notes
 
