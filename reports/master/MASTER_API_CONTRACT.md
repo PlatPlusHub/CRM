@@ -56,7 +56,7 @@ call it -- see section 6 for what that does and does not establish.
 | `add_customer_note` | p_customer_id uuid, p_note_text text, p_is_pinned boolean, p_is_confidential boolean | `uuid` | invoker | CREATE_CUSTOMER | customer_notes | - | 3 | yes |
 | `add_document_version` | p_document_id uuid, p_file_name text, p_file_type_code text, p_file_size bigint | `uuid` | invoker | CREATE_DOCUMENT_VERSION | document_versions | document_versions, documents | 4 | yes |
 | `add_quotation_item` | p_quotation_id uuid, p_service_type_code text, p_unit_price numeric, p_quantity numeric... | `uuid` | invoker | CREATE_QUOTATION | quotation_items | - | 5 | yes |
-| `advance_booking` | p_booking_id uuid, p_to_status text, p_reason text | `text` | invoker | ALLOW_ISSUE_WITH_NEGATIVE_BALANCE + per transition: APPROVE_BOOKING, CANCEL_BOOKING, CREATE_BOOKING, ISSUE_BOOKING, REFUND_BOOKING, REISSUE_BOOKING | - | bookings | 5 | yes |
+| `advance_booking` | p_booking_id uuid, p_to_status text, p_reason text | `text` | invoker | per transition: APPROVE_BOOKING, CANCEL_BOOKING, CREATE_BOOKING, ISSUE_BOOKING, REFUND_BOOKING, REISSUE_BOOKING | - | bookings | 4 | yes |
 | `advance_booking_item` | p_booking_item_id uuid, p_to_status text, p_reason text, p_sub_status_code text, p_canc... | `text` | invoker | UPDATE_BOOKING_ITEM_STATUS + per transition: UPDATE_BOOKING_ITEM_STATUS | - | booking_items | 9 | yes |
 | `advance_complaint` | p_complaint_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: RESOLVE_COMPLAINT | - | complaints | 3 | yes |
 | `advance_conversation` | p_conversation_id uuid, p_to_status text, p_reason text | `void` | invoker | per transition: CLOSE_CONVERSATION, ESCALATE_CONVERSATION, SEND_MESSAGE | - | conversations | 3 | yes |

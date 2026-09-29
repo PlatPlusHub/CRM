@@ -112,7 +112,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -419,6 +419,56 @@ Run on HEAD `a266a5be92bab9ef5f4fae43b1028d6de704641b`, with the migration and T
 - **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+
+### 2026-09-29 — Human Gate 2: owner authorization
+
+The owner authorized, exact-byte and bound to the project and to preconditions, only the migration `supabase/migrations/20260929120000_issuance_holds_on_every_door.sql` with SHA-256 `a24f93d31d625eeaced0947c97e7c1e7021911eea45286bd8b2553693ff4d917`, for Primary `vrvtsxexkiiiivlkdxzp`. The authorization named:
+- the file md5 `11574040ad1509e6fd97921a2d1156d6` for the guarded ledger normalization;
+- the frozen Test 141 (`9ab9f11e…`);
+- fifteen pre-write preconditions, any mismatch voiding it;
+- the exact post-write values to require, and the two Gate-1 decisions to preserve (the archived rule whole; `reissue -> issued` a real issuance, with Google transaction identity deferred to PH8-9).
+
+It authorized no other migration or DDL, no business-data write and no reproduction on Primary. The rename was permitted only under all five conditions:
+- exactly one new ledger row;
+- its name exactly `issuance_holds_on_every_door`;
+- its stored statement md5 equal to the file's;
+- no existing `20260929120000`;
+- the UPDATE affecting exactly one row.
+
+### 2026-09-29 — Step 6: Primary deployment
+
+**Prewrite recheck, all fifteen exact:**
+- SPEC-239 In Progress. HEAD `5c5707be9586825dd9cd20932d4d15f2bb1f3a87` on the approved chain.
+- The migration SHA-256 and md5 (`11574040…`, 11323 bytes) and Test 141's SHA-256 matched, and only the five in-scope Step 1-3 paths were dirty.
+- The project URL was `https://vrvtsxexkiiiivlkdxzp.supabase.co`.
+- The ledger held 237 migrations, `79a42020…`, latest `20260928180000`, target absent.
+- Functions were `df53eb28…`/313, triggers `cb100851…`/302, constraints `41023bb5…`/513, combined `b372e128…`/3069.
+- `app.advance_booking` md5 was `270170a9…`, and `bookings` had 9 non-internal triggers.
+- Tenants, bookings, user permission grants, invoices, events and offline conversions were all 0.
+
+**Write:**
+- The exact file bytes were applied through `apply_migration` as `issuance_holds_on_every_door`.
+- The connector assigned the temporary version `20260929133553`. Its single stored statement has md5 `11574040ad1509e6fd97921a2d1156d6` and 11323 bytes, equal to the file.
+- One guarded UPDATE renamed only that row to `20260929120000`. The guard required the name and statement md5 to match, 238 rows with exactly one after `20260928180000`, and no existing target. One row was updated.
+
+**Fresh postwrite reads, every value equal to the recorded prediction:**
+- **Ledger:** 238 migrations, `8ac45c812287217f9c5ba25859e7348b`, latest `20260929120000`, present once.
+- **Surfaces:** functions `675e77e6d6f562b004d9eac7ac15505d`/314, triggers `6bdfd761a4c70e44ec3b74d58882a236`/303, constraints `41023bb50efc61b2e139530345ff5908`/513 unchanged; the other seven surfaces are unchanged; combined `ff2aeaf2e753134c44c3f721bfacdacf`/3071.
+- **Definitions:** `app.advance_booking` `ec850eb7e8aa5c3233a59ef8697f2885`, `app.enforce_booking_lifecycle` `32153975bc13b0e392323ee4ad420273`.
+- **Authority:** SECURITY INVOKER, `search_path=""`, ACL `{postgres=X/postgres}`, returns `trigger`.
+- **Trigger:** `bookings_enforce_lifecycle` exactly once on `public.bookings`, tgtype 21 (ROW, INSERT, UPDATE OF `booking_status_code`), AFTER, not a constraint trigger, enabled, bound to `app.enforce_booking_lifecycle`. `bookings` has 10 non-internal triggers.
+- **Business rows:** 0 tenants, bookings, user permission grants, invoices, events and offline conversions.
+
+No business-data write and no reproduction were made on Primary, and Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-09-29 — Step 7: evidence and measured state
+
+- `primary-ledger-evidence.json` was rewritten from the fresh readings only: 238 migrations, `8ac45c81…`, functions `675e77e6…`/314, structural `ff2aeaf2…`/3071, commit `5c5707b`.
+- The manifest's `Live state` now shows 238 migrations, latest `20260929120000`, and the same hashes and counts. The suite figure is `Suite **141 files / 2532 assertions**`, confirmed: 141 files, plan sum 2532. `Last Completed` names SPEC-239 / BOOK-10.
+- BOOK-10 is marked fixed and deployed, with Cert `✅`. BOOK-11 and BOOK-12 stay OPEN, and PH8-9 keeps the owner's reissue transaction-identity note.
+- `MASTER_API_CONTRACT.md` and `ai-map.json` were regenerated with the canonical generators, `ai-map.json` stored LF.
+- The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+- The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
 ## Verification Notes
 
