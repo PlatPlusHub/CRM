@@ -293,17 +293,17 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A customer payment made through `app.record_payment`, and one made at the table door and allocated to an issued invoice in the same transaction, each record exactly one `payment_recorded` naming the session's actor and that invoice.
-- [ ] A door customer payment naming its booking records one `payment_recorded` with no invoice, and a split payment records one naming no invoice.
-- [ ] A supplier payment made through `app.record_supplier_payment` or at the door records exactly one `supplier_payment_recorded`, and never `payment_recorded`.
-- [ ] The RPC payment, the door payment through its invoice, the door payment through its booking and the platform payment each yield exactly one `payment_received`, keyed to its own event. The split payment and the supplier payments yield none, and a further mapper run adds nothing. The SPEC-233 invoice → booking → lead path still attributes the RPC payment.
-- [ ] A refused door payment leaves nothing to record, and a later edit or allocation records nothing more. Every in-scope `customer_payment` and `supplier_payment` carries exactly one creation event of its own direction. Refund directions remain outside SPEC-238 and remain separately owned by PAY-4.
-- [ ] The emitter is SECURITY DEFINER with an empty `search_path`, executable by neither PUBLIC nor `authenticated`. Its trigger fires once, AFTER INSERT ROW, deferred to commit.
-- [ ] With the trigger dropped in a savepoint, the door payment is silent and produces no conversion, and the rolled-back state records it again. Mutants M-A to M-E are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 140 fail.
-- [ ] PAY-3 is registered fixed and deployed, and PAY-5 is registered open with its trigger. The `payments` row stays `AUDITED-OPEN`, the `offline_conversions` row stays `PARTIAL`, and §2b item 1 records PAY-3 closed. Every other row and the Coverage totals are unchanged.
-- [ ] The migration and tests match their SHA-256 values. Primary, the recorded evidence, the manifest (237 migrations; 140 files / 2505 assertions), the API contract and `ai-map.json` agree.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A customer payment made through `app.record_payment`, and one made at the table door and allocated to an issued invoice in the same transaction, each record exactly one `payment_recorded` naming the session's actor and that invoice.
+- [x] A door customer payment naming its booking records one `payment_recorded` with no invoice, and a split payment records one naming no invoice.
+- [x] A supplier payment made through `app.record_supplier_payment` or at the door records exactly one `supplier_payment_recorded`, and never `payment_recorded`.
+- [x] The RPC payment, the door payment through its invoice, the door payment through its booking and the platform payment each yield exactly one `payment_received`, keyed to its own event. The split payment and the supplier payments yield none, and a further mapper run adds nothing. The SPEC-233 invoice → booking → lead path still attributes the RPC payment.
+- [x] A refused door payment leaves nothing to record, and a later edit or allocation records nothing more. Every in-scope `customer_payment` and `supplier_payment` carries exactly one creation event of its own direction. Refund directions remain outside SPEC-238 and remain separately owned by PAY-4.
+- [x] The emitter is SECURITY DEFINER with an empty `search_path`, executable by neither PUBLIC nor `authenticated`. Its trigger fires once, AFTER INSERT ROW, deferred to commit.
+- [x] With the trigger dropped in a savepoint, the door payment is silent and produces no conversion, and the rolled-back state records it again. Mutants M-A to M-E are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 140 fail.
+- [x] PAY-3 is registered fixed and deployed, and PAY-5 is registered open with its trigger. The `payments` row stays `AUDITED-OPEN`, the `offline_conversions` row stays `PARTIAL`, and §2b item 1 records PAY-3 closed. Every other row and the Coverage totals are unchanged.
+- [x] The migration and tests match their SHA-256 values. Primary, the recorded evidence, the manifest (237 migrations; 140 files / 2505 assertions), the API contract and `ai-map.json` agree.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -459,19 +459,60 @@ No business-data write and no reproduction were made on Primary, and Secondary `
 - The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 - The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
+### 2026-09-29 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `49c61ca61110f05af27e7882b2c1b50be699df8e` in VERIFY mode, with no telemetry opt-outs. It derived profiles DATABASE and REPOSITORY, passed every mandatory verification, and returned `LOCAL_CERTIFY: READY`:
+- reset;
+- pgTAP Pass A;
+- the declared `verify_lifecycle_branches.ps1`;
+- pgTAP Pass B;
+- smoke;
+- parity evidence;
+- repository consistency;
+- `git diff --check`;
+- the Primary ledger.
+
+### 2026-09-29 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `49c61ca61110f05af27e7882b2c1b50be699df8e` against the approved Draft `7127742` and the frozen twelve-path Write Scope.
+- The working tree was clean and the pre-commit Gate reported `ORVION: READY`.
+- The range `73e571c..HEAD` changes eleven paths, all inside the frozen twelve. The twelfth, `MASTER_API_CONTRACT.md`, regenerated byte-identical.
+- The committed migration and Tests 140, 137 and 126 hash to their authorized SHA-256 values.
+
+Acceptance, re-checked against the committed bytes and the recorded evidence:
+1. **RPC and door customer payments.** Test 140 assertions 2 and 5 prove that `app.record_payment` and a door customer payment allocated in the same transaction each record one `payment_recorded`, naming the session's actor and that invoice.
+2. **Booking-named and split payments.** Assertions 6 and 7 prove that a booking-named door payment and a split payment each record one event with no invoice.
+3. **Supplier payments.** Assertions 3, 8 and 20 prove one `supplier_payment_recorded` on both doors, and never `payment_recorded`.
+4. **Pipeline.** Assertion 13 proves exactly one `payment_received`, each keyed to its own event, for the RPC, invoice-door, booking-door and platform payments. The split and supplier payments yield none, and assertion 18 proves a further run adds nothing. The RPC payment's conversion comes through the SPEC-233 invoice → booking → lead path, and `137_...` still yields `payment_received` with revenue.
+5. **Refusals, later writes and completeness.** Assertions 9-12 prove a refused door payment leaves nothing to record, and a later edit or allocation records nothing more. Assertion 19 proves every in-scope `customer_payment` and `supplier_payment` carries exactly one creation event of its direction; refund directions stay PAY-4's.
+6. **Emitter and trigger.** Assertion 14 and the Primary readback show SECURITY DEFINER, an empty `search_path`, ACL `{postgres=X/postgres}`, and one AFTER INSERT ROW constraint trigger, DEFERRABLE INITIALLY DEFERRED.
+7. **Mutation.** The in-file trigger-drop mutation (16-17) holds. Mutants M-A to M-E were killed with md5-proven install and restore. The unrepaired counterfactual fails assertions 2, 3, 5, 6, 7, 8, 11 and 13.
+8. **Records.** PAY-3 is `✅` fixed and deployed, and PAY-5 is registered OPEN with FIN-7's package as its trigger. `payments` stays `AUDITED-OPEN` and `offline_conversions` stays `PARTIAL`, §2b item 1 records PAY-3 closed, and no other row or Coverage total moved.
+9. **Agreement.** The hashes match. Primary, the evidence, the manifest (237 migrations; 140 files / 2505 assertions), the API contract and `ai-map.json` agree, and parity, ledger and consistency are CLEAN.
+10. **Primary.** Primary received only the authorized migration and the one guarded ledger rename, with no business-data write and no reproduction. Secondary was never contacted.
+11. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+No grant, RLS policy, financial guard, invoice-state rule or mapper semantics changed. The constraints surface moved 512 → 513 only through the new constraint trigger's own row. BOOK-10, PH8-4, PH8-9 and the workflow are untouched.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
