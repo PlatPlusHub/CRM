@@ -181,14 +181,14 @@ Post-Implementation Proof Obligation: All of the following on the final bytes:
 
 ## Acceptance Criteria
 
-- [ ] `scripts/test_cold_start_state_guard.ps1` differs from `66bf1b2` in exactly the two expectation sites, `2` → `3`, the count still an explicit hardcoded pin, with LF SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`.
-- [ ] All four CI guard self-test suites exit 0 from the repository root, the cold-start suite at 34 passed / 0 failed, and restoring `2` fails exactly its enumeration control.
-- [ ] Repository consistency is CLEAN and reports 3 open ids, `git diff --check` passes, and canonical `-Finish` returns `LOCAL_CERTIFY: READY`.
-- [ ] At completion the manifest's `Active Change Request` is None, `Last Completed` names SPEC-241, `Next capability` remains the Phase-8 Activation Closure, and the open owner decisions are exactly `MAIL-1`, `RET-1`, `PH8-10`. Every live database and repository figure is unchanged, and no other manifest line differs from `66bf1b2`.
-- [ ] At completion `ai-map.json` agrees with the manifest by value. Relative to `66bf1b2` it differs only in `generated_at` and `live_state.last_completed`, and no other semantic field changed.
-- [ ] No SPEC-240 file, no `supabase/**` path and no other script or workflow changed. There is no database write, and neither Primary nor Secondary was contacted.
-- [ ] The exact candidate carrying SPEC-240 Complete and this contract is green in all four candidate workflows, is promoted as that SHA, and reaches `REMOTE_CERTIFY: READY`. The rejected `66bf1b2` is not promoted itself.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `scripts/test_cold_start_state_guard.ps1` differs from `66bf1b2` in exactly the two expectation sites, `2` → `3`, the count still an explicit hardcoded pin, with LF SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`.
+- [x] All four CI guard self-test suites exit 0 from the repository root, the cold-start suite at 34 passed / 0 failed, and restoring `2` fails exactly its enumeration control.
+- [x] Repository consistency is CLEAN and reports 3 open ids, `git diff --check` passes, and canonical `-Finish` returns `LOCAL_CERTIFY: READY`.
+- [x] At completion the manifest's `Active Change Request` is None, `Last Completed` names SPEC-241, `Next capability` remains the Phase-8 Activation Closure, and the open owner decisions are exactly `MAIL-1`, `RET-1`, `PH8-10`. Every live database and repository figure is unchanged, and no other manifest line differs from `66bf1b2`.
+- [x] At completion `ai-map.json` agrees with the manifest by value. Relative to `66bf1b2` it differs only in `generated_at` and `live_state.last_completed`, and no other semantic field changed.
+- [x] No SPEC-240 file, no `supabase/**` path and no other script or workflow changed. There is no database write, and neither Primary nor Secondary was contacted.
+- [x] The exact candidate carrying SPEC-240 Complete and this contract is green in all four candidate workflows, is promoted as that SHA, and reaches `REMOTE_CERTIFY: READY`. The rejected `66bf1b2` is not promoted itself.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -233,19 +233,45 @@ Run on HEAD `bb0b1c9d5bcb9e0623eb506845b2636e7cc89557` with the Step-1 bytes, ev
 - **Paths:** the paths differing from `66bf1b2` are exactly the four in Write Scope. No `supabase/**` path and no SPEC-240 file changed, and no database was involved.
 - **Runtime Checkpoint:** set to DONE for `-Finish`.
 
+### 2026-09-29 — Post-execution local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `1c7acae690add8efa1643d7ed7b4250650dcd24b` in VERIFY mode. It derived profile REPOSITORY, passed every mandatory verification, and returned `LOCAL_CERTIFY: READY`: the four declared guard suites, repository consistency and `git diff --check`.
+
+### 2026-09-29 — Independent Review of execution commit
+
+Reviewed the committed execution HEAD `1c7acae` against the approved Draft `5a81bbd` and the frozen four-path Write Scope.
+- The working tree was clean and the pre-commit Gate reported `ORVION: READY`.
+- The range `66bf1b2..HEAD` changes exactly the four frozen paths.
+
+Acceptance, re-checked against the committed bytes:
+1. **The repair.** `scripts/test_cold_start_state_guard.ps1` differs from `66bf1b2` in exactly lines 103–104, `2` → `3`, with the count still a hardcoded pin and LF SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`.
+2. **The suites.** All four exit 0 (18 / 33 / 13 / 34 passed, 0 failed), and restoring `2` fails exactly the enumeration control (33 / 1).
+3. **Checks.** Repository consistency is CLEAN with 3 open ids, `git diff --check` passes, and `-Finish` returned `LOCAL_CERTIFY: READY`.
+4. **The manifest.** Completion clears `Active Change Request`, sets `Last Completed` to SPEC-241 and reaffirms `Next capability`, all within this Complete commit. The enumeration stays `MAIL-1`, `RET-1`, `PH8-10`, and every figure is unchanged. The line-level comparison with `66bf1b2` is verified after the commit.
+5. **`ai-map.json`.** It is regenerated at Complete and verified after the commit to differ from `66bf1b2` only in `generated_at` and `live_state.last_completed`.
+6. **No other change.** No SPEC-240 file, `supabase/**` path, other script or workflow changed. There was no database access, and neither Primary nor Secondary was contacted.
+7. **Publication.** It is carried out after Complete: a new candidate with SPEC-240 and SPEC-241 Complete, four green workflows, promotion of that exact SHA, main CI and `-Certify`. The rejected `66bf1b2` is not promoted itself.
+8. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Verification Notes
 
 None yet.
 
+Verdict: Confirmed Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
