@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -307,7 +307,38 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-09-28 — Owner approval
+
+The owner approved the exact Draft SHA `7127742f1e671cdee8a2248e61731eba11e3b32d` (CR SHA-256 `1518d1957c8dea8399db77c68ca10f0fdaa858e620b12227a60d73f65f7c56ef`) and the frozen twelve-path Write Scope. The approval covers Approve, In Progress, Steps 1-4 and full local proof only. Primary remains read-only and requires Human Gate 2.
+
+The approval is bound to four SHA-256 values:
+- migration `20260928180000`: `b696f6aa8ea5619a1a75c456f3a790e785d4f6eacce801ca654f67aa71c2218d`;
+- Test 140: `b6c873085e0f49a6f98561f319a41912f5b827f7dd1c2b19bfd42f7ec99c7d89`;
+- Test 137: `eceac068b979795ed953f428fbcda1eb360b2b690e55457e07850f20a0d7f3fc`;
+- Test 126: `618d3eab8ae51f9204670c80db776a83a5c953e83baa7f8c007381b078964203`.
+
+`7127742` amends the first Draft `fbd64ca`, at the owner's bounded Gate-1 request, in three ways:
+- It scopes every completeness claim, in the CR and in Test 140's completeness assertion, to `customer_payment` and `supplier_payment`; refund directions remain PAY-4's.
+- It renumbers Test 140's section-banner comments.
+- It sets the PAY-3 register row's Updated date to `09-28`.
+
+The migration, the mechanism, the event ownership, PAY-5 and the Write Scope are unchanged.
+
+The owner restated the guarantees to preserve:
+- one producer, the trigger remaining DEFERRABLE INITIALLY DEFERRED;
+- the SPEC-233 invoice → booking → lead attribution;
+- no invoice guessed for a split payment, and no supplier payment as revenue;
+- no grant, policy, financial guard, invoice-state rule or mapper change;
+- Test 140 at `plan(20)`;
+- BOOK-10, PH8-4, PH8-9 and the workflow untouched, and Slice 31 paused.
+
+Revalidation before approval:
+- HEAD was the Draft, a direct descendant of the certified `73e571c`, and the tree was clean.
+- `origin/main` was at `73e571c`.
+- The Draft file hashes to the approved value.
+- A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, three permanent-control paths in scope).
+- Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
+- The prototype's focused Tests 140, 137 and 126 passed 20, 16 and 33. Mutants M-A to M-E were each killed, with md5-proven install and restore.
 
 ## Verification Notes
 
