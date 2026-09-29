@@ -189,7 +189,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -648,6 +648,96 @@ Run on HEAD `7270b095513a2ada9d65a61089016eaa97628572` with every file at its fr
 - **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+
+### 2026-09-29 — Human Gate 2: owner authorization
+
+The owner authorized, exact-byte and conditionally, only the migration `supabase/migrations/20260929160000_a_google_ads_call_qualifies_as_a_phone_call.sql` for Primary `vrvtsxexkiiiivlkdxzp`, with:
+- SHA-256 `4889af581f5759bbd7e9c3a075835942604a374b151624e2916d8132b90ec126`;
+- md5 `fa68ca4ce4b8645f8bf458a4647bd853`;
+- 31537 bytes, LF and ASCII.
+
+The authorization also named:
+- the frozen Test 142 (`d858cf64…`) and every other frozen hash of the Gate-2 package;
+- fifteen pre-write guards, any mismatch voiding it;
+- the complete post-deploy prediction, every surface checked individually;
+- the Gate-1 semantics to preserve.
+
+It authorized no other migration, DDL, business-data write or reproduction on Primary, and Secondary `brplkqmbzffpxqgkkdzo` was never to be contacted. The ledger rename was permitted only under all five conditions:
+- exactly one row outside the 238-row baseline;
+- its name exactly `a_google_ads_call_qualifies_as_a_phone_call`;
+- its stored statement md5 `fa68ca4c…`;
+- no existing `20260929160000`;
+- the UPDATE affecting exactly one row.
+
+The manifest budget of 7000 characters was not to be raised.
+
+### 2026-09-29 — Step 6: Primary deployment
+
+**Prewrite recheck, all fifteen exact:**
+- SPEC-240 In Progress at Resume Step 5. HEAD `9db6dc7bb1c8695ca30d15466276229ce1c263a4`.
+- The migration SHA-256, md5 and 31537 bytes, with 0 non-ASCII bytes, and every frozen test, script and record hash matched. Only the twelve in-scope Step 1-3 paths were dirty.
+- The project URL was `https://vrvtsxexkiiiivlkdxzp.supabase.co`.
+- The ledger held 238 migrations, `8ac45c81…`, latest `20260929120000`. The target was absent by version and by name.
+- The mapper (`c7731c53…`), claim (`5e336b9b…`) and merge (`58ce5243…`) md5 values matched.
+- `customer_consents`, the four functions, its triggers and its policies were absent.
+- Tenants, customers, leads, events, attribution clicks, offline conversions, deliveries and customer merges were all 0.
+
+**Write:**
+- The exact file bytes were applied through `apply_migration` as `a_google_ads_call_qualifies_as_a_phone_call`.
+- The connector assigned the temporary version `20260929163622`. Its single stored statement has md5 `fa68ca4ce4b8645f8bf458a4647bd853` and 31537 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20260929160000`. The guard required 239 rows, the other 238 hashing to the baseline, the name and statement md5 to match, and no existing target. It reported all four conditions true and 1 row renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 239 migrations, `66f7ce11526941ed7ab4e675b3fd4e28`, latest `20260929160000`, present once. The temporary version is gone.
+- **Surfaces, each checked individually:**
+
+  | Surface | Hash | Count |
+  | --- | --- | --- |
+  | functions | `78339ac07ebd500811850ad5bf04f302` | 318 |
+  | triggers | `d07aa82d8ce6e3d8b3adba9310ba657f` | 306 |
+  | policies | `b67d466a39413a56bcbfa071b310b33a` | 125 |
+  | constraints | `623c6b387599135d0b57b24ee0092257` | 521 |
+  | grants | `ebdcfde628aee26db112256c36abe885` | 195 |
+  | columns | `2d54cc2a80736938108df4a0f92b6a5a` | 1129 |
+  | views | `10bb212ab2ffe297c93a6a06f0263389` | 16 |
+  | indexes | `cdaa3b8370c5020f3c9f0830126d9683` | 298 |
+  | status_transitions | `db2165c755f233c0772b6c633e29d39c` | 115 |
+  | rls_enabled | `c117cbf7eefc68e5f87b86b89206ca81` | 79 |
+  | combined | `77bba1da1535be6fcfee07aff2ca118c` | 3102 |
+- **API counts:** 78 public tables; 84 public functions; 80 non-trigger functions executable by `authenticated`, the canonical client-RPC figure.
+- **Replaced definitions:** mapper `acb629ec93463698a4b5b53cedc2d00b`, claim `55b47389de51be40a8cd2252126d3f69`, merge `375a663c0b700498b78c029c5ce07e15`. All equal local, SECURITY DEFINER, owner `postgres`, `search_path=""`, ACLs unchanged. The merge's exclusion list names `customer_consents`.
+- **New functions:**
+  - `app.record_customer_consent` (`564a614ce07312c051f8c10bb30ab364`): SECURITY DEFINER, ACL `{postgres, authenticated}`.
+  - `public.record_customer_consent` (`2f80b8a4f5ef29f214ffee4cbaf1d7f3`): invoker, the HTTP endpoint.
+  - `app.customer_consent_status` (`6addfb4cee45f02729b477b0a8b97843`) and `app.e164_phone` (`2be6527e36b36d69032e570aac49ba61`): invoker, `{postgres}` only.
+  - All are owned by `postgres` with `search_path=""`, and none is executable by PUBLIC or `anon`. `app.record_customer_consent` is the only function that inserts into `customer_consents`.
+- **Table:**
+  - `customer_consents` has RLS enabled and not forced. `authenticated` has SELECT only (no INSERT, UPDATE or DELETE), and `anon` has nothing.
+  - One policy: `tenant_isolation`, SELECT to `authenticated`, `tenant_id = app.current_tenant_id()`.
+  - Three triggers, `append_only`, `derive_created_by` and `enforce_catalog_codes`, all enabled.
+  - Eight constraints: the primary key, `seq` unique, the purpose, status and evidence CHECKs, and three tenant-qualified foreign keys (tenant, customer, `created_by`).
+  - Three indexes: the primary key, `seq` and `customer_consents_current_idx`.
+- **ACL entries beyond local:** the only ones are `service_role`'s, from Primary's `postgres`-owned default ACL for schema `public`. They are identical on the existing endpoint `public.add_customer_contact_method` and the table `customer_identity_merges` (the documented PAR-5 platform difference, not repository-authored). The `anon` and `authenticated` grants match local exactly.
+- **Business rows:** 0 across every table above, `customer_consents` included.
+
+Deployment was proven by definition identity plus the locally certified behaviour. No business-data write and no reproduction were made on Primary, and Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-09-29 — Step 7: evidence and measured state
+
+- `primary-ledger-evidence.json` was rewritten from the fresh readings only: 239 migrations, `66f7ce11…`, functions `78339ac0…`/318, structural `77bba1da…`/3102, commit `9db6dc7`.
+- The manifest's `Live state` now reads:
+  - 239 migrations, latest `20260929160000`, with the same hashes and counts;
+  - 78 tables and 80 client RPCs;
+  - 451 HTTP assertions, last passed 2026-09-29;
+  - `Suite **142 files / 2570 assertions**`, confirmed: 142 files, plan sum 2570;
+  - coverage 31 of 78.
+
+  PH8-10 is on `Open owner decisions`, and `Last Completed` names SPEC-240 / PH8-4. The manifest measures 6993 characters with the Active pointer, within the unchanged 7000 budget.
+- PH8-4 is marked deployed.
+- **Engineering observation:** the Step-3 bullets of PH8-3 and AUDIT-4 carried the same phrase, "pending Primary deployment". Leaving it would have made them false, so they were synced to "deployed" in the same edit. It is inside the register's Write Scope, uses no new mechanism and needs no judgment.
+- `MASTER_API_CONTRACT.md` and `ai-map.json` were regenerated with the canonical generators, `ai-map.json` stored LF.
+- The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+- The results of the ledger, parity, consistency and diff checks are recorded with this commit's verification below.
 
 ## Verification Notes
 

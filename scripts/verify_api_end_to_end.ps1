@@ -125,6 +125,13 @@ Write-Host "`n-- customer and lead --"
 $r = Rpc $jwtEmp 'create_customer' @{ p_customer_type_code = 'person'; p_full_name = 'Ahmed Hassan'; p_primary_phone = '+201001234567'; p_primary_email = 'ahmed@example.com' }
 Check "employee creates a customer over HTTP" ($r.StatusCode -eq 200) "$($r.StatusCode) $($r.Content)"
 $customerId = Val $r
+# PH8-4 / AUDIT-4: the consent record has exactly one door, this RPC; the table has none.
+$r = Rpc $jwtEmp 'record_customer_consent' @{ p_customer_id = $customerId; p_purpose_code = 'ad_user_data'; p_consent_status_code = 'granted'; p_channel_code = 'phone'; p_evidence = 'agreed on the call' }
+Check "employee records the customer's ad_user_data consent over HTTP" ($r.StatusCode -eq 200) "$($r.StatusCode) $($r.Content)"
+$r = Invoke-WebRequest -Uri "$API/rest/v1/customer_consents" -Method Post -SkipHttpErrorCheck `
+    -Headers @{ apikey = $ANON; Authorization = "Bearer $jwtEmp" } -ContentType 'application/json' `
+    -Body (@{ tenant_id = $TA; customer_id = $customerId; purpose_code = 'ad_user_data'; consent_status_code = 'granted'; channel_code = 'phone' } | ConvertTo-Json -Compress)
+Check "...and cannot write one at the table, where its actor and time could be forged" ($r.StatusCode -in 401, 403) "$($r.StatusCode) $($r.Content)"
 
 $r = Rpc $jwtEmp 'create_lead' @{ p_branch_id = '0a710000-0000-0000-0000-00000000aa01'; p_department_id = '0a710000-0000-0000-0000-00000000aa02'; p_lead_source_code = 'manual_entry'; p_title = 'Umrah package for 2'; p_customer_id = $customerId; p_expected_value = 40000 }
 Check "employee creates a lead" ($r.StatusCode -eq 200) "$($r.StatusCode) $($r.Content)"

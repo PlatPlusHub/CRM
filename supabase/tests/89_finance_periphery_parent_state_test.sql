@@ -212,7 +212,7 @@ select throws_ok(
   '...and once the mutation is rolled back the guard is BACK: the identical allocation against the identical draft invoice is refused again');
 
 -- ================================================================================================
--- THE CLASS, re-derived from the catalog on every run. Nine pairs remain and each is CLASSIFIED,
+-- THE CLASS, re-derived from the catalog on every run. Ten pairs remain and each is CLASSIFIED,
 -- which is what makes this an inventory rather than an exemption list:
 --   SAME-TRANSACTION CREATION (7) -- the function creates the parent in the same transaction, so
 --     there is no prior state to refuse on: create_customer -> customer_identity_signals,
@@ -220,8 +220,10 @@ select throws_ok(
 --     record_payment -> payment_allocations (the PAYMENT; the INVOICE rule is PAY-1 above),
 --     upload_document -> documents, and upload_subscription_payment_proof's three, which build
 --     document + version + proof + link in one transaction.
---   READS BUT REFUSES NOTHING (2) -- record_lead_interaction reads `lead_status_code` only to decide
---     the assigned -> contacted transition; record_refund refuses on tenancy alone.
+--   READS BUT REFUSES NOTHING (3) -- record_lead_interaction reads `lead_status_code` only to decide
+--     the assigned -> contacted transition; record_refund refuses on tenancy alone;
+--     map_outcomes_to_conversions reads the first-touch `lead_source_code` only to CLASSIFY a
+--     qualification as qualified_phone_call or qualified_lead (PH8-4), and is session-less.
 -- Counterexample-tested BOTH ways before being trusted: dropping this migration's two triggers takes
 -- the count 9 -> 10 and the reappearing pair is `record_payment -> payment_allocations (invoices)`,
 -- PAY-1 itself; rolling the drop back returns it to 9.
@@ -269,8 +271,8 @@ select is(
                      order by pr.proname || ' -> ' || pr.child || ' (' || pr.parent || ')'), '')
    from pairs pr left join guarded g on g.child = pr.child and g.parent = pr.parent
    where g.child is null)::text,
-  'create_customer -> customer_identity_signals (customers), create_journal_entry -> journal_entry_lines (journal_entries), record_lead_interaction -> lead_interactions (leads), record_payment -> payment_allocations (payments), record_refund -> refunds (payments), upload_document -> documents (document_versions), upload_subscription_payment_proof -> document_links (subscription_payment_proofs), upload_subscription_payment_proof -> documents (document_versions), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
-  'CLASS GUARD (PAY-1): every app function that reads a CATALOG-CODED parent state and INSERTs into a table `authenticated` can write, where the parent is a real FK parent, either has a table-door guard or is one of these nine classified non-defects. Scope stated honestly: boolean-flag state is NOT covered -- JE-1 is that residual and was found by reading, not by this.');
+  'create_customer -> customer_identity_signals (customers), create_journal_entry -> journal_entry_lines (journal_entries), map_outcomes_to_conversions -> offline_conversions (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payment_allocations (payments), record_refund -> refunds (payments), upload_document -> documents (document_versions), upload_subscription_payment_proof -> document_links (subscription_payment_proofs), upload_subscription_payment_proof -> documents (document_versions), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
+  'CLASS GUARD (PAY-1): every app function that reads a CATALOG-CODED parent state and INSERTs into a table `authenticated` can write, where the parent is a real FK parent, either has a table-door guard or is one of these ten classified non-defects. Scope stated honestly: boolean-flag state is NOT covered -- JE-1 is that residual and was found by reading, not by this.');
 
 select * from finish();
 rollback;

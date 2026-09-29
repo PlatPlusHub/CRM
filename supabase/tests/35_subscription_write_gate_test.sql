@@ -254,6 +254,11 @@ select is(
 -- security defect introduced to satisfy a billing rule -- and revocation here is an UPDATE
 -- (`is_active = false`), which the gate would refuse.
 --
+-- `customer_consents` joined the exemption list with PH8-4 on the revocation reasoning above: a
+-- customer's WITHDRAWAL of consent must be recordable whatever the tenant's billing state, and the
+-- delivery claim reads it. Making a withdrawal depend on billing would be a compliance defect
+-- introduced to satisfy a billing rule.
+--
 -- `scheduled_job_findings` joined the exemption list with `202607056900`, and the reason is the
 -- inverse of the usual one: a restricted tenant is precisely the case those rows exist to RECORD.
 -- Gating the table would make a deferral unrecordable for exactly the tenant being deferred, which
@@ -272,7 +277,8 @@ select is(
                                      'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                      'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
-                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings'])
+                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings',
+                                     'customer_consents'])
       and not exists (
         select 1 from pg_trigger tg join pg_class pc on pc.oid = tg.tgrelid
          where pc.relname = c.table_name and not tg.tgisinternal
@@ -288,7 +294,8 @@ select is(
                                   'notification_deliveries','usage_counters','offline_conversion_deliveries',
                                      'documents','document_versions','document_links',
                                   'users','user_role_assignments','user_branch_assignments','user_permission_grants','branches','departments',
-                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings'])),
+                                     'tenant_license_activations','document_storage_findings','scheduled_job_findings',
+                                     'customer_consents'])),
   0,
   '...and NO exempt table carries it -- the exemptions stay narrow rather than drifting wider');
 

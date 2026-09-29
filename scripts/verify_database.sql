@@ -36,7 +36,7 @@ begin
     -- 76 since 202607059800 (RBAC-3): `user_permission_grants` is the per-user grant/deny edge the
     -- role-only model had no way to express. The constant is raised because a table was legitimately
     -- added and is live on Primary, never to make a failing guard pass.
-    if n <> 77 then raise exception 'CHECK 2 FAILED: expected 77 public tables, found %', n; end if;
+    if n <> 78 then raise exception 'CHECK 2 FAILED: expected 78 public tables, found %', n; end if;
 
     -- 3. RLS enabled on every public base table
     select count(*) into n from pg_class c join pg_namespace ns on ns.oid = c.relnamespace
@@ -180,6 +180,6 @@ begin
           and not has_schema_privilege(g.grantee, ns.oid, 'USAGE');
     if bad is not null then raise exception 'CHECK 10 FAILED: role(s) hold function EXECUTE without schema USAGE (unusable grant): %', bad; end if;
 
-    raise notice 'ALL CHECKS PASSED (77 tables, RLS + policies, resolver + read-scope model, 71/621 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
+    raise notice 'ALL CHECKS PASSED (78 tables, RLS + policies, resolver + read-scope model, 71/621 catalog, FK standard, updated_at triggers, append-only audit, grant/schema-usage completeness)';
 end
 $$;

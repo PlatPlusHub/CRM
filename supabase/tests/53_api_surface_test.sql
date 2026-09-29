@@ -84,6 +84,7 @@ insert into _expected_endpoints (name) values
     ('my_memberships'),
     ('my_trusted_devices'),
     ('reassign_lead'),
+    ('record_customer_consent'),
     ('record_lead_interaction'),
     ('record_offline_conversion'),
     ('record_payment'),
@@ -146,11 +147,11 @@ select is(
 
 select is(
   (select count(*)::int from _expected_endpoints),
-  83,
+  84,
   -- The prose said "75" while the assertion compared 76 -- a guard's description drifting from its
   -- own measurement, the MEAS-1 class in miniature. Corrected to 77 alongside RBAC-4's
   -- `effective_permissions`, and the number is now written once so the two cannot disagree again.
-  'POSITIVE CONTROL: 83 public functions are pinned, so the two zeros above are not drawn from an empty set');
+  'POSITIVE CONTROL: 84 public functions are pinned, so the two zeros above are not drawn from an empty set');
 
 -- =============================================================================================
 -- 4-6. THE EXCLUSIONS. Named explicitly, because an absence proves nothing on its own.

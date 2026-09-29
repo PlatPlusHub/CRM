@@ -109,6 +109,7 @@ call it -- see section 6 for what that does and does not establish.
 | `my_trusted_devices` |  | `TABLE(id uuid, device_identifier text, status_code text, first_seen_at timestamp with time zone, last_seen_at timestamp with time zone, verified_at timestamp with time zone, revoked_at timestamp with time zone)` | invoker | - | - | - | 0 | yes |
 | `reassign_booking_item` | p_booking_item_id uuid, p_reason text, p_owner_user_id uuid, p_sales_owner_user_id uuid... | `void` | invoker | - | - | booking_items | 5 | yes |
 | `reassign_lead` | p_lead_id uuid, p_assignee_user_id uuid, p_reason text | `uuid` | invoker | REASSIGN_LEAD | lead_assignments | lead_assignments, leads | 6 | yes |
+| `record_customer_consent` | p_customer_id uuid, p_purpose_code text, p_consent_status_code text, p_channel_code tex... | `uuid` | invoker | CREATE_CUSTOMER | customer_consents | - | 3 | yes |
 | `record_lead_interaction` | p_lead_id uuid, p_interaction_type_code text, p_summary text, p_metadata jsonb | `uuid` | invoker | inline has_permission check | lead_interactions | leads | 5 | yes |
 | `record_offline_conversion` | p_conversion_event_type_code text, p_lead_id uuid, p_booking_id uuid, p_booking_item_id... | `uuid` | invoker | MANAGE_MARKETING_CAMPAIGN | offline_conversions | - | 6 | yes |
 | `record_payment` | p_invoice_id uuid, p_amount numeric, p_payment_method_code text, p_paid_at timestamp wi... | `uuid` | invoker | RECORD_PAYMENT | payment_allocations, payments | invoices | 7 | yes |
@@ -131,7 +132,7 @@ call it -- see section 6 for what that does and does not establish.
 | `void_invoice` | p_invoice_id uuid, p_reason text | `uuid` | invoker | VOID_INVOICE | - | invoices | 4 | yes |
 | `withdraw_finance_approval` | p_booking_item_id uuid, p_reason text | `void` | invoker | - | - | approval_requests, booking_items | 4 | yes |
 
-**79 RPC endpoints executable by `authenticated`; 79 exercised over HTTP by a suite.**
+**80 RPC endpoints executable by `authenticated`; 80 exercised over HTTP by a suite.**
 
 ## 3. Reporting views
 
@@ -176,6 +177,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `conversations` | `SIU-` | yes | conditional | scope_isolation |
 | `countries` | `S---` | no | no | read_all_authenticated |
 | `currencies` | `S---` | no | no | read_all_authenticated |
+| `customer_consents` | `S---` | no | no | tenant_isolation |
 | `customer_contact_methods` | `SIU-` | yes | conditional | tenant_isolation |
 | `customer_identity_merges` | `SIU-` | yes | conditional | tenant_isolation |
 | `customer_identity_signals` | `SIU-` | yes | conditional | tenant_isolation |

@@ -230,8 +230,8 @@ reset role;
 select is(
   (select count(*)::int from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r' and c.relrowsecurity and not c.relforcerowsecurity),
-  77,
-  'PRIVILEGE (measured, not a defect): all 77 tables enable RLS and none FORCES it, so every SECURITY DEFINER function bypasses RLS -- the premise the next assertion exists to bound');
+  78,
+  'PRIVILEGE (measured, not a defect): all 78 tables enable RLS and none FORCES it, so every SECURITY DEFINER function bypasses RLS -- the premise the next assertion exists to bound');
 
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace
