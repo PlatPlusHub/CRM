@@ -15,7 +15,7 @@ Close PH8-4, the fifth Google Ads conversion. When a lead whose immutable first-
 Deliver the three authorities this needs, and nothing more:
 - the mapper's classification;
 - one E.164 authority, `app.e164_phone`;
-- AUDIT-4's first slice, `public.customer_consents`, with one writer and one reader.
+- AUDIT-4's first slice, `public.customer_consents`, with one writer and one merge-aware reader, on ADR-0019's documented exclusion route.
 
 Record PH8-10, the Google attribution prerequisite the owner must verify, and CONV-9 and CONV-10, found on the way and not repaired. This is the fourth contract of the Phase-8 Activation Closure and closes `MASTER_INTEGRATION_CATALOG.md` §2b item 2, except its external prerequisite.
 
@@ -30,15 +30,18 @@ The manifest's next capability is the Phase-8 Activation Closure, and §2b item 
 - fail-closed consent from ORVION's authority, where a call is never itself consent.
 
 - **Google, re-read 2026-09-29 (first-party only).**
-  - **Data Manager is the only path.** Since 15 June 2026, offline and enhanced-conversions-for-leads uploads are blocked in the Google Ads API (`support.google.com/google-ads/answer/15713840`).
+  - **Data Manager is ORVION's current offline/ECL delivery path.** Since 15 June 2026, offline-conversion and enhanced-conversions-for-leads *uploads* are migrated to the Data Manager API and blocked in the Google Ads API for developer tokens not already allowlisted (`support.google.com/google-ads/answer/15713840`). That block applies to the upload path ORVION uses. Google's native call-conversion import (`UploadCallConversions`, by caller ID) is a separate, still-documented Google Ads mechanism with Google Forwarding Number requirements (`google-ads/api/docs/conversions/upload-calls`, updated 2026-09-23); it is not ORVION's route.
   - **An identifier is required, and `userData` alone satisfies the API.** An event needs "at least one of" a click id, session attributes, `userData` or an IP address (`data-manager/api/devguides/events/google-ads/offline/send-events`, updated 2026-09-24).
   - **`PHONE` is current.** The enum describes it as "generated from a phone call"; it was added in v1.2 and is required for offline events (`reference/rpc/google.ads.datamanager.v1`, updated 2026-09-25; release notes 2025-08-06).
   - **Phone format.** `phone_number` is SHA-256 "after normalization (E164 standard)", with the plus sign and country code (`get-started/formatting`).
   - **Consent values.** `Consent.adUserData` is a `ConsentStatus` of `CONSENT_STATUS_UNSPECIFIED`, `CONSENT_GRANTED` or `CONSENT_DENIED`. The processing error `PROCESSING_ERROR_REASON_UNKNOWN_CONSENT` arises when consent "could not be determined".
   - **Transaction id.** `transactionId` deduplicates within a conversion action, and a repeat is handled as an adjustment.
   - **Customer data policy.** It requires disclosure of third-party sharing, consent "where legally required", and the EU user consent policy where it applies.
-  - **The nuance, resolved as far as evidence allows.** Google Ads Help says a GCLID "is required if you are not using a tag to collect user-provided data". ORVION has no front end, tag or GTM container, and a caller from a call ad may never visit a site. Google's native call path, call-conversion import by caller ID with a Google forwarding number, is a Google Ads API service the Data Manager API does not offer.
-  - **Conclusion.** The API accepts a click-less phone conversion. Whether Google Ads attributes one is an account-configuration fact nobody can prove from here. It is **PH8-10**, an owner/UI prerequisite, and nothing in the database depends on it.
+  - **The nuance, resolved as far as evidence allows.** Three things are distinct:
+    - **(A) The Data Manager API schema:** `userData` alone satisfies its identifier requirement.
+    - **(B) Google Ads enhanced conversions for leads:** Help says a GCLID "is required if you are not using a tag to collect user-provided data". ORVION has no front end, tag or GTM container, and a caller from a call ad may never visit a site.
+    - **(C) Google's native call-conversion import:** a separate mechanism that relies on Google Forwarding Numbers, not the ORVION Data Manager/ECL route.
+  - **Conclusion.** ORVION may truthfully create the `qualified_phone_call` candidate and satisfy its own identity and consent rules. Whether Google Ads attributes and credits a click-less one is an account-configuration fact nobody can prove from here. It is **PH8-10**, an owner/provider prerequisite, and nothing in the database depends on it. A schema-valid request is not provider success, and the five-conversion certification must not claim that a click-less call was credited.
 - **PH8-4 (reproduced).** Measured on the local stack at `6c48fbb`, rolled back. Four leads were qualified through `app.advance_lead` by their assigned handler, and the real mapper and claim were run:
 
   | Lead | Today | Owner-decided |
@@ -68,13 +71,21 @@ The manifest's next capability is the Phase-8 Activation Closure, and §2b item 
     - `tenant_id`, `customer_id` and `purpose_code` (`ad_user_data` only);
     - `consent_status_code` (`granted` or `denied`; unspecified is the absence of a record);
     - `channel_code` (the existing `channel_code` catalog) and optional `evidence`;
-    - `created_by` (derived by `app.derive_created_by`) and `created_at` (`now()`);
-    - a `seq` identity.
+    - `created_by` (derived by `app.derive_created_by`) and `created_at` (`now()`, evidence only);
+    - a `seq` identity, the only ordering authority;
+    - tenant-qualified foreign keys to `customers` and `users`.
   - **Consent access.**
     - RLS is `tenant_isolation`, for select only.
     - `authenticated` holds SELECT and nothing else.
-    - The one writer is `app.record_customer_consent`, a SECURITY DEFINER function that takes neither actor nor time, authorizes CREATE_CUSTOMER and locks the customer so `seq` follows commit order. Its one HTTP endpoint is `public.record_customer_consent`.
-    - The one reader is `app.customer_consent_status`: the latest `seq`, or NULL.
+    - The one writer is `app.record_customer_consent`, a SECURITY DEFINER function that takes neither actor nor time. It authorizes CREATE_CUSTOMER, verifies the customer is in the caller's tenant, locks the customer row `FOR NO KEY UPDATE`, refuses a merged-away identity by naming its survivor, and inserts. Its one HTTP endpoint is `public.record_customer_consent`.
+    - The one reader is `app.customer_consent_status`: the latest `seq` among the records of the **logical** customer, or NULL. It walks `customer_identity_merges` up from the given id to the survivor and back down through every identity merged into it, at any depth, so any member's id gives the same answer.
+  - **Merge (Gate-1 amendment; ADR-0019's documented route).** ADR-0019 makes every customer referrer follow the merge by default, and says a referrer that must not be blindly re-pointed goes on the documented exclusion list and is handled explicitly. Consent evidence is append-only and must stay attributable to the identity it was given for, so `customer_consents` joins `customer_identity_merges` on that list. Both are one-name edits in `app.merge_customer_identity`, whose body is otherwise unchanged. The reader handles consent explicitly, as above. Two consequences follow:
+    - A merged identity's newer DENIED beats the survivor's older GRANTED, and a survivor's newer DENIED beats a merged identity's older GRANTED.
+    - After a merge, every new decision is written to the survivor.
+  - **Ordering.** `created_at` defaults to `now()`, the recording transaction's start, so it cannot order decisions. The order is `seq`, a table identity allocated at INSERT:
+    - The writer inserts only after taking the customer's row lock, and the lock is held to commit. So two decisions for one customer are serialized, and the later-serialized one gets the higher `seq`.
+    - A merge takes both customers `FOR UPDATE`, which serializes it against both writers, and a merged-away identity takes no new decision. So after a merge, every decision for the logical customer is serialized on the survivor's row.
+    - Decisions recorded on two identities *before* anyone knew they were one person had no common lock to serialize on. `seq`, allocated in insert order, still orders them deterministically.
   - **Claim eligibility.** A `qualified_phone_call` is claimable only when all three hold:
     - it has a `source_event_seq`;
     - its customer's current `ad_user_data` status is `granted`;
@@ -85,6 +96,12 @@ The manifest's next capability is the Phase-8 Activation Closure, and §2b item 
     - A click's ids travel only under that click's own consent.
     - A phone row reports consent `granted` with personalization NULL.
     - The phone returned for every row is `app.e164_phone(customer_phone)`.
+- **Ordering, measured with two real sessions** (local disposable state, committed, then reset).
+  - **Two writers.** B's transaction began first (`now()` 15:29:43.60). A began at 15:29:44.38 and recorded `granted` under the lock.
+    - B called the writer at 15:29:45.61. While A held the lock, `pg_stat_activity` showed B waiting on `Lock/transactionid`.
+    - B's insert returned at 15:29:47.41, after A's commit at 15:29:47.40.
+    - Result: A has `seq` 48 and a later `created_at`; B (`denied`) has `seq` 49 and a `created_at` 0.8 s earlier. The reader returns `denied`; ordering by `created_at` would have returned `granted`.
+  - **Merge against writer.** An owner merged S into T and held the transaction for 3 s. A writer naming S, started meanwhile, waited on the lock and was then refused: `customer was merged into <T> -- record consent for the surviving customer`. It could only read the merge row after the merge committed, which proves it waited. Nothing was recorded.
 - **Exposure.** Primary holds 0 tenants, leads and offline conversions, and no workflow exists. The defect is latent until the first Google Ads call lead qualifies.
 
 ## Risks
@@ -104,8 +121,10 @@ The manifest's next capability is the Phase-8 Activation Closure, and §2b item 
   - **Test 35:** exempts the table from the subscription write gate on `user_permission_grants`' revocation reasoning. A withdrawal must be recordable whatever the billing state, and assertions 20–22 prove it.
   - **The smoke script** `verify_database.sql` pins the table count (77 → 78). It was found by running it, not by reading it.
   - **The declared HTTP suite** `verify_api_end_to_end.ps1` gains two checks, so the endpoint carries HTTP evidence like the other 79: an employee records a new customer's consent through the RPC, and the same employee's POST to the table is refused.
-- **Consent does not follow a customer merge.** `app.merge_customer_identity` re-points every foreign key to `customers`. The consent record deliberately has none on `customer_id`, so a merge leaves it with the identity it was given for, and the survivor keeps only its own. This fails closed. The alternative is an owner decision below.
-- **Primary deployment adds a table, four functions and three triggers, and replaces two function bodies in production.** It requires separate exact-byte owner authorization (Gate 2). Approving this contract does not authorize it.
+- **A merge hiding a decision.** Ignoring a merged identity's history would not fail closed: a source's newer DENIED would be hidden behind the target's older GRANTED. The reader reads the logical customer instead (assertions 27–30, 32, 34 and 35; mutants M22 and M24). The evidence is never re-pointed or rewritten (assertion 31; M20 and M24), and a merge of consented customers succeeds (assertion 26).
+- **The merge function's body is replaced** to add one name to its exclusion list. Its FK discovery, collision handling, locking, audit row and event are byte-identical. Test 71 (the merge suite), Test 79 and Test 111 pass unchanged.
+- **Ordering by time.** `created_at` is evidence only. Assertion 37 pins that a later-serialized DENIED with an earlier `created_at` governs (mutant M23), and the two-session proof above measured the live case.
+- **Primary deployment adds a table, four functions and three triggers, and replaces three function bodies in production** (the mapper, the claim and the merge). It requires separate exact-byte owner authorization (Gate 2). Approving this contract does not authorize it.
 
 ## Supersedes / Depends On
 
@@ -126,6 +145,7 @@ None.
 - `reports/master/MASTER_SURFACE_DISPOSITION.md`
 - `reports/master/MASTER_INTEGRATION_CATALOG.md`
 - `reports/master/MASTER_API_CONTRACT.md`
+- `reports/architecture-decision-records.md`
 - `reports/evidence/primary-ledger-evidence.json`
 - `_ORVION_CANONICAL/manifest.md`
 - `ai-map.json`
@@ -142,6 +162,8 @@ None.
 - `supabase/tests/14_tenant_qualified_fk_test.sql`
 - `supabase/tests/64_acquisition_lineage_test.sql`
 - `supabase/tests/66_scheduled_job_isolation_test.sql`
+- `supabase/tests/71_customer_identity_merge_test.sql`
+- `supabase/tests/79_customer_data_integrity_test.sql`
 - `supabase/tests/83_actor_attribution_test.sql`
 - `supabase/tests/119_conversion_provenance_is_platform_written_test.sql`
 - `supabase/tests/137_conversion_sources_reach_the_pipeline_test.sql`
@@ -151,7 +173,6 @@ None.
 - `_ORVION_CANONICAL/27_event_catalog.md`
 - `_ORVION_CANONICAL/31_schema_draft.md`
 - `reports/master/MASTER_EXECUTION_PLAN.md`
-- `reports/architecture-decision-records.md`
 - `scripts/verify_lifecycle_branches.ps1`
 - `scripts/check_agent_continuity.ps1`
 - `scripts/check_repository_consistency.ps1`
@@ -161,7 +182,7 @@ None.
 ## Required Reading
 
 - `AGENTS.md`; `CR_LIFECYCLE.md`; `ENGINEERING_METHOD.md` §§1–5
-- `reports/architecture-decision-records.md` ADR-0023, ADR-0024, ADR-0025
+- `reports/architecture-decision-records.md` ADR-0019, ADR-0023, ADR-0024, ADR-0025
 - `reports/master/MASTER_GAP_REGISTER.md` (PH8-2, PH8-3, PH8-4, AUDIT-4, CONV-6, CONV-8); `reports/master/MASTER_INTEGRATION_CATALOG.md` §1, §2a, §2b
 - Current local `app.map_outcomes_to_conversions`, `app.claim_conversion_deliveries`, `app.record_offline_conversion`, `app.normalize_phone`, `app.merge_customer_identity`, `app.derive_created_by`, `app.forbid_mutation`, `app.forbid_acquisition_lineage_rewrite`, `app.emit_lead_qualified`
 - The Google first-party pages named in Business Reason
@@ -193,13 +214,13 @@ Applicability: APPLICABLE
 
 | Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
 | --- | --- | --- | --- |
-| A `lead_qualified` whose lead's first-touch source is `google_ads_call` maps to `qualified_phone_call`, click or no click | `offline_conversions`; the five Google Ads actions (§1); Tests 64, 66, 119, 137 and 139, which map leads | VERIFY | The prototype was applied as a real migration on a clean reset in a scratch worktree at `6c48fbb`: migration SHA-256 `7a7e171544a92b34f148c96325bf4e2367fdcff09f090602f6f94fcf7c38a066`, Test-142 SHA-256 `edf3fcdbaf3406c38e4b712dffacc328b1d818b7726f4c49d146d8db12931584`. Tests 64, 66 and 119 use `google_ads_call` leads and count conversions by lead and by event, never by type, and pass unchanged. Tests 137 and 139 use `google_ads_form` and pass unchanged. |
+| A `lead_qualified` whose lead's first-touch source is `google_ads_call` maps to `qualified_phone_call`, click or no click | `offline_conversions`; the five Google Ads actions (§1); Tests 64, 66, 119, 137 and 139, which map leads | VERIFY | The prototype was applied as a real migration on a clean reset in a scratch worktree at `6c48fbb`: migration SHA-256 `4889af581f5759bbd7e9c3a075835942604a374b151624e2916d8132b90ec126`, Test-142 SHA-256 `d858cf644d38945458673623c1af0752e3987ab1ae254ad6a5d37edf7453f2c2`. Tests 64, 66 and 119 use `google_ads_call` leads and count conversions by lead and by event, never by type, and pass unchanged. Tests 137 and 139 use `google_ads_form` and pass unchanged. |
 | `app.claim_conversion_deliveries`: the phone path's eligibility, the click identifiers under their own consent, the phone through `app.e164_phone` | the future delivery workflow (§2a); Test 09 (lease), Test 119 | VERIFY | The signature and columns are unchanged. Every click-path row is claimed exactly as before, and a click-path row's ids and consent are unchanged, because its click consent is already `granted`. Only its phone becomes E.164 or NULL. §2a correction 3 and a new correction 12 record the workflow's side. |
 | New `public.customer_consents`, `app.record_customer_consent`, `public.record_customer_consent`, `app.customer_consent_status`, `app.e164_phone` | Tests 01, 10, 14, 35, 53, 83, 89, 102 (catalog-driven); `scripts/verify_database.sql`; `scripts/verify_api_end_to_end.ps1`; `MASTER_API_CONTRACT.md`; Check 22 | WRITE | Tests 01, 10, 14 and 83 pass by conformance. Tests 35, 53, 89 and 102, the smoke script and the HTTP suite are edited as Risks states. The disposition record gains a `NOT-RECORDED` row. The API contract gains one endpoint and one table in Step 7. |
-| `customers` may carry consent records that a merge does not move | `app.merge_customer_identity` | VERIFY | No foreign key on `customer_id`, so the merge loop does not see the table, and the merge is unchanged. |
-| Suite, smoke and every HTTP door | full pgTAP; `scripts/verify_database.sql`; all six HTTP suites | VERIFY | On the prototype stack, on a clean reset from a scratch worktree at `6c48fbb`, in `-Finish`'s order: focused Test 142 25/25; pgTAP Pass A 142 files / 2557 assertions PASS (the 2532 existing, four of them re-pinned, plus 25 new); HTTP suites 35 + 40 + 74 + 122 + 120 + 60 = 451 passed, 0 failed; Pass B without reset 142 / 2557 PASS; smoke `ALL CHECKS PASSED (78 tables, …)`, exit 0. The generator reports 80 RPC endpoints, all 80 with HTTP evidence. |
-| Measured state that moves | manifest (`Live state`, suite figure, table and RPC counts, coverage, open decisions, Last Completed, Active pointer); `primary-ledger-evidence.json`; `ai-map.json`; Checks 5, 7, 15, 19, 22, 25 | WRITE | 238 → 239 migrations, latest `20260929160000`; 77 → 78 tables; 79 → 80 client RPCs; 449 → 451 HTTP assertions; 141 → 142 files and 2532 → 2557 assertions; coverage 31 of 77 → 31 of 78. PH8-10 joins the open owner decisions. Primary values are written only from fresh post-deploy readings. |
-| Findings, disposition and the activation list | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; `MASTER_INTEGRATION_CATALOG.md` §1, §2a, §2b; Checks 2, 11, 14, 16, 21, 22, 24, 25 | WRITE | PH8-4 becomes fixed. AUDIT-4 gains its first slice and PH8-3 its engineering half, both staying open on their owner decisions. PH8-10, CONV-9 and CONV-10 are new. §2b item 2 closes except PH8-10, and the registry row stays `NOT OPERATIONAL`. No other row changes. |
+| `app.merge_customer_identity` excludes `customer_consents` from re-pointing, and the consent reader follows `customer_identity_merges` | every merge; Tests 71, 79 and 111; ADR-0019 | WRITE | The only change is one name added to the documented exclusion list. Local definition md5: pre-repair `58ce524303afbb2ccb7dd25626a8f6ca`, repaired `375a663c0b700498b78c029c5ce07e15`. Tests 71, 79 and 111 pass unchanged. ADR-0019 gains an appended bullet recording the second documented exclusion. |
+| Suite, smoke and every HTTP door | full pgTAP; `scripts/verify_database.sql`; all six HTTP suites | VERIFY | On the prototype stack, on a clean reset from a scratch worktree at `6c48fbb`, in `-Finish`'s order, on the final bytes after the Gate-1 amendment: focused Test 142 38/38; pgTAP Pass A 142 files / 2570 assertions PASS (the 2532 existing, four of them re-pinned, plus 38 new); HTTP suites 35 + 40 + 74 + 122 + 120 + 60 = 451 passed, 0 failed; Pass B without reset 142 / 2570 PASS; local surfaces: 239 migrations, ledger `66f7ce11526941ed7ab4e675b3fd4e28`, functions `78339ac07ebd500811850ad5bf04f302`/318, structural `77bba1da1535be6fcfee07aff2ca118c`/3102; smoke `ALL CHECKS PASSED (78 tables, …)`, exit 0. The generator reports 80 RPC endpoints, all 80 with HTTP evidence. |
+| Measured state that moves | manifest (`Live state`, suite figure, table and RPC counts, coverage, open decisions, Last Completed, Active pointer); `primary-ledger-evidence.json`; `ai-map.json`; Checks 5, 7, 15, 19, 22, 25 | WRITE | 238 → 239 migrations, latest `20260929160000`; 77 → 78 tables; 79 → 80 client RPCs; 449 → 451 HTTP assertions; 141 → 142 files and 2532 → 2570 assertions; coverage 31 of 77 → 31 of 78. PH8-10 joins the open owner decisions. Primary values are written only from fresh post-deploy readings. |
+| Findings, disposition, ADR and the activation list | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; `MASTER_INTEGRATION_CATALOG.md` §1, §2a, §2b; `architecture-decision-records.md` ADR-0019; Checks 2, 11, 14, 16, 21, 22, 24, 25 | WRITE | PH8-4 becomes fixed. ADR-0019 gains the appended exclusion bullet. AUDIT-4 gains its first slice and PH8-3 its engineering half, both staying open on their owner decisions. PH8-10, CONV-9 and CONV-10 are new. §2b item 2 closes except PH8-10, and the registry row stays `NOT OPERATIONAL`. No other row changes. |
 
 Unresolved Material Consumers: None
 
@@ -236,23 +257,33 @@ Existing Mechanism: the mapper and claim of ADR-0023's outbox, with the mapper's
 - **Reusing `marketing_opt_in`:** undated, unattributed, not purpose-scoped and not withdrawable as history.
 - **Reusing click consent for the phone path:** a call lead may have no click, and the owner kept the two authorities distinct.
 - **A generic consent, preference or CMP framework:** no second consumer exists.
-- **A foreign key from the consent record to `customers`:** `app.merge_customer_identity` would re-point it, and `app.forbid_mutation` would then abort every merge of a consented customer.
+- **Consent that does not follow a merge (the first Gate-1 draft):** the survivor would ignore a merged identity's newer DENIED, which does not fail closed. Rejected by the owner.
+- **Normal merge participation (re-pointing):** it would make every consent record updatable, weakening append-only. It would need a second, immutable "recorded-for customer" column to stay attributable, and a bespoke trigger admitting only that update.
+- **Copying a merged identity's records onto the survivor:** it fabricates evidence, and fresh `seq` values would let an older GRANTED outrank a newer DENIED.
+- **Omitting the foreign key to keep the table out of the merge:** it hides the exclusion instead of documenting it (ADR-0019) and gives up integrity (assertion 38; M26).
+- **Ordering by `created_at`, or by a timestamp plus a random id:** `now()` is the transaction's start, not its serialization point (assertion 37; M23).
 
 Added Property: Every `lead_qualified` becomes exactly one conversion. A lead whose immutable first-touch source is `google_ads_call` becomes `qualified_phone_call`, click or no click, and any other attributed lead becomes `qualified_lead`. A `qualified_phone_call` reaches delivery only when all three hold:
 - it came from a real event;
 - its customer's latest recorded `ad_user_data` decision is `granted`;
 - it carries an E.164 phone, an email or a click id whose own consent is granted.
 
-No phone leaves the claim unless it is already E.164. A consent decision is recorded only through one writer, with the server's actor and time, is never rewritten, and is always recordable. A future lead writer, qualification door or delivery consumer inherits all of it without knowing it exists.
+No phone leaves the claim unless it is already E.164. A consent decision is recorded only through one writer, with the server's actor and time. It is never rewritten, re-pointed or hidden by a merge, and it is always recordable. The effective decision of a logical customer is its latest by `seq`, across every identity merged into it, and decisions serialized on one customer take `seq` in serial order. A future lead writer, qualification door or delivery consumer inherits all of it without knowing it exists.
 
-Causal Negative: On the local stack at `6c48fbb`, in a rolled-back transaction, four leads were qualified through `app.advance_lead` and the real mapper and claim were run. The consented-click `google_ads_call` lead became `qualified_lead` and was claimed under the Qualified Lead action. The click-less `google_ads_call` leads became nothing. The table stored `01001234567`, `+0100` and `callmemaybe` as phones, which the claim returns raw. No customer-level consent record existed. With the prototype's mapper and claim replaced by their pre-repair bodies, Test 142 fails assertions 11, 12, 15, 16 and 18.
+Causal Negative: On the local stack at `6c48fbb`, in a rolled-back transaction, four leads were qualified through `app.advance_lead` and the real mapper and claim were run. The consented-click `google_ads_call` lead became `qualified_lead` and was claimed under the Qualified Lead action. The click-less `google_ads_call` leads became nothing. The table stored `01001234567`, `+0100` and `callmemaybe` as phones, which the claim returns raw. No customer-level consent record existed. With the prototype's mapper and claim replaced by their pre-repair bodies, Test 142 fails assertions 11, 12, 15, 16, 18 and 35. With the first draft's merge-blind reader (M22), it fails 27–30, 32, 34 and 35.
 
 Positive Test Design: As the tenant's owner at `aal2`, assign eight leads to an `employee` handler. The handler logs a phone call on each, records consent decisions through `app.record_customer_consent`, and qualifies seven leads through `app.advance_lead` and the eighth at the table door. Then run the real mapper and claim. The leads are:
 - two `google_ads_form` leads with a click, one consented and one denied;
 - two `google_ads_call` leads with a click, one consented and one denied;
 - four click-less `google_ads_call` leads, whose customers have, in turn: denied then granted; a local number only; granted then withdrawn; and no record.
 
-Later, record the unrecorded customer's consent and claim again, and record a withdrawal while the tenant is `read_only`.
+Later, record the unrecorded customer's consent and claim again, and record a withdrawal while the tenant is `read_only`. Then, with the tenant writable again, record decisions on nine further customers and let the owner merge them:
+- S1 (granted) into T1 (nothing);
+- S2 (a newer denied) into T2 (an older granted), where S2 carries a qualified Google Ads call lead, L9;
+- S3 (an older granted) into T3 (a newer denied);
+- X1 (a newer denied) into X2 (an older granted), then X2 into X3.
+
+Read each logical customer from every member's id. Claim, record a new grant on T2, and claim again.
 
 Negative Test Design:
 - **The table door.** A session cannot INSERT a consent record with a forged actor or time (`42501`), cannot record `unspecified` (`23514`), and without CREATE_CUSTOMER is refused (`42501 permission denied: CREATE_CUSTOMER`).
@@ -265,12 +296,18 @@ Negative Test Design:
   - a hand-recorded `qualified_phone_call`.
 - **Replay.** A rewound mapper cursor re-maps nothing, and a second claim claims nothing.
 - **E.164.** `app.e164_phone` returns NULL for local, 00-prefixed, malformed, extended, too-short and too-long values, and NULL for NULL.
+- **Merge.** A merged identity's newer DENIED is not hidden by the survivor's older GRANTED, even at delivery (L9 is not claimed).
+- **Merged identity.** A merged identity refuses a new decision, naming its survivor.
+- **History.** Every record survives five merges unchanged.
+- **Tenant.** Another tenant's read of the same customer id is NULL.
+- **Order.** A later-`seq` DENIED with an earlier `created_at` governs.
+- **Foreign key.** Even the platform cannot record consent for a customer outside the record's tenant (`23503`).
 
-Non-Empty Population Obligation: Two tenants with active enterprise subscriptions. Tenant one has an owner, an `employee` handler and a user holding no role, one branch and department, eight customers with eight leads, and four consented or denied Google Ads clicks. Tenant two has an owner.
+Non-Empty Population Obligation: Two tenants with active enterprise subscriptions. Tenant one has an owner, an `employee` handler and a user holding no role, one branch and department, eight customers with eight leads, four consented or denied Google Ads clicks, and nine merge customers, one with a Google Ads call lead. Tenant two has an owner.
 
 Mutation Obligation: Out of file, record the md5 of a surface covering:
-- the five function definitions;
-- the consent table's triggers and ACL;
+- the six function definitions, the merge included;
+- the consent table's triggers, ACL and constraints;
 - the `offline_conversions` indexes.
 
 For each mutant: install it, prove the md5 differs, run Test 142 and require every planned assertion to run with no ERROR line, restore, and prove the md5 matches. A mutant whose installation is not proven is a harness error, never a killed mutant.
@@ -298,6 +335,11 @@ For each mutant: install it, prove the md5 differs, run Test 142 and require eve
 | M19 | the actor is not derived | 2 |
 | M20 | the append-only trigger is dropped | 8 |
 | M21 | the subscription gate is attached | 21 |
+| M22 | the reader ignores merged identities | 28 |
+| M23 | the reader orders by `created_at` | 37 |
+| M24 | the merge re-points consent | 26 |
+| M25 | a merged identity takes new decisions | 33 |
+| M26 | the customer foreign key is dropped | 38 |
 
 Post-Implementation Proof Obligation: All of the following, on the final bytes and through canonical `-Finish`:
 - the focused test, a clean reset, pgTAP Pass A, the declared HTTP suite, pgTAP Pass B and smoke;
@@ -308,16 +350,17 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Implementation Steps
 
-1. **Check** that `supabase/migrations/20260929160000_a_google_ads_call_qualifies_as_a_phone_call.sql` is absent. If absent, create it LF with SHA-256 `7a7e171544a92b34f148c96325bf4e2367fdcff09f090602f6f94fcf7c38a066`. It holds exactly the objects Business Reason names, with EXECUTE revoked from PUBLIC on every new function:
+1. **Check** that `supabase/migrations/20260929160000_a_google_ads_call_qualifies_as_a_phone_call.sql` is absent. If absent, create it LF with SHA-256 `4889af581f5759bbd7e9c3a075835942604a374b151624e2916d8132b90ec126`. It holds exactly the objects Business Reason names, with EXECUTE revoked from PUBLIC on every new function:
    - `app.e164_phone`;
    - `public.customer_consents`, with its index, RLS policy, grants and three triggers;
    - `app.record_customer_consent`, granted to `authenticated`;
    - `public.record_customer_consent`, granted to `authenticated`;
    - `app.customer_consent_status`;
+   - `app.merge_customer_identity`, identical to its live body except that its exclusion list also names `customer_consents`;
    - `app.map_outcomes_to_conversions` and `app.claim_conversion_deliveries`, each identical to its live body except for the changes Business Reason names.
 
    It changes no other function, grant, policy or table. If the target exists with different bytes, stop.
-2. **Check** that `supabase/tests/142_a_google_ads_call_qualifies_as_a_phone_call_test.sql` is absent. If absent, create it LF with SHA-256 `edf3fcdbaf3406c38e4b712dffacc328b1d818b7726f4c49d146d8db12931584`. It is one transaction-rolled-back pgTAP file with `select plan(25);`. Its `-- ATTACK-CLASSES:` line reads `BUSINESS REPLAY STATE INPUT PRIVILEGE TENANT DOOR OBSERVABILITY AUTH=N/A CONCURRENCY=N/A`, and its header states each `N/A` reason. It implements the Positive and Negative Test Design and the privilege shape of the new functions.
+2. **Check** that `supabase/tests/142_a_google_ads_call_qualifies_as_a_phone_call_test.sql` is absent. If absent, create it LF with SHA-256 `d858cf644d38945458673623c1af0752e3987ab1ae254ad6a5d37edf7453f2c2`. It is one transaction-rolled-back pgTAP file with `select plan(38);`. Its `-- ATTACK-CLASSES:` line reads `BUSINESS REPLAY STATE INPUT PRIVILEGE TENANT DOOR OBSERVABILITY AUTH=N/A CONCURRENCY=N/A`, and its header states each `N/A` reason. It implements the Positive and Negative Test Design and the privilege shape of the new functions.
 
    Then edit four existing tests and two verification scripts LF, each only as Risks states, with SHA-256 values:
    - `supabase/tests/35_subscription_write_gate_test.sql` `f45669b2c060a7b052801556741ecff623e7911ba0b7363efc6e0ffcbb978e4c`;
@@ -334,6 +377,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    - **PH8-3.** Insert a first bullet stating its engineering half is closed by `app.e164_phone`, that no country is stored, and that the owner decision is unchanged.
    - **AUDIT-4.** Insert a first bullet stating the first slice is delivered for `ad_user_data` only, with its shape, and that the owner decision on other purposes and the counsel question are unchanged.
    - **PH8-10.** Insert a block before PH8-5, with **Status:** OPEN (external prerequisite) and **Owner:** owner (Google Ads UI verification). Give the first-party evidence of Business Reason, what ORVION does meanwhile, and when it closes.
+   - **AUDIT-4's bullet** also states the merge semantics and that a merged identity takes no new decision. **PH8-10's evidence** uses Business Reason's A/B/C wording.
    - **CONV-9 and CONV-10.** Insert both rows after CONV-8, each Sev `Low`, Req/Opt `R`, Batch `8`, Mig `—`, Cert `📋`, Status `OPEN`, Owner Decision `—`, Source this contract, dates `09-29`. Give each its measurement or cause, latency and reopening trigger.
 
    In `reports/master/MASTER_SURFACE_DISPOSITION.md`:
@@ -349,7 +393,9 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    - qualify the re-verification paragraph's phone-only sentence with PH8-10;
    - extend §2b item 2 with a 2026-09-29 note that it is closed by SPEC-240 except PH8-10.
 
-   Applied to `6c48fbb`, these edits produce LF SHA-256 values: register `cb80ae2dbaef3ed7076c1da297ccb545b4ee80d52ac0a2c24f78edcd4c10e723`, disposition `e127a6a311ace9bbfc3cf70c1d57dd91f19e48ede29cda57d02dbe480b5f9356`, catalog `32a50529011fbe3939c48e0b40ee45f07bb2fc150ccdd4918e10cb01e7909ef6`. If a target already carries different content, stop.
+   In `reports/architecture-decision-records.md`, append to ADR-0019 one dated bullet recording `customer_consents` as its second documented exclusion and how the reader handles it. Change no other text.
+
+   Applied to `6c48fbb`, these edits produce LF SHA-256 values: register `71d9970c532c6bd846678ea2e3afffc6405735ac064c447a61e8d0530f97ce81`, disposition `e127a6a311ace9bbfc3cf70c1d57dd91f19e48ede29cda57d02dbe480b5f9356`, catalog `32a50529011fbe3939c48e0b40ee45f07bb2fc150ccdd4918e10cb01e7909ef6`, ADR `9999e48a137a050cdfc56e89456a19d594c83adc2c5bb239e19a3588fcbb19ae`. If a target already carries different content, stop.
 4. **Check** for a `Pre-deploy readiness gate` Execution Log entry. If absent, run and record, with actual counts, exits and exact SHA-256 hashes:
    - a clean local reset and the focused test;
    - pgTAP Pass A, all six HTTP suites, then pgTAP Pass B without reset;
@@ -362,7 +408,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    - the full ordered ledger and the absence of the target migration;
    - the function and structural surfaces;
    - the tenant, lead, customer, event and offline-conversion counts;
-   - the current definition md5 of the mapper and the claim;
+   - the current definition md5 of the mapper, the claim and the merge;
    - the absence of every new object.
 
    Record the predicted structural delta.
@@ -374,7 +420,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
    Approval of this contract does not authorize deployment.
 6. **Check** that Primary `vrvtsxexkiiiivlkdxzp` lacks `20260929160000_a_google_ads_call_qualifies_as_a_phone_call`. If it is absent and deployment is separately authorized:
-   - Immediately re-read HEAD, the hashes, the project URL, the full ordered ledger, target absence, the business counts and the two pre-repair md5 values.
+   - Immediately re-read HEAD, the hashes, the project URL, the full ordered ledger, target absence, the business counts and the three pre-repair md5 values.
    - On an exact match, apply only the authorized migration through the Primary connector.
    - If the connector assigns a temporary version, rename only that one newly inserted ledger row. The rename requires exactly one new row, its stored statement md5 equal to the file's, and no existing target version.
    - Read fresh: the ledger, the function surface and all ten structural surfaces, and the new functions' security modes, `search_path` and EXECUTE ACLs. Also read the table's RLS, policy, grants and triggers.
@@ -384,10 +430,10 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    - Update `reports/evidence/primary-ledger-evidence.json` from those readings only.
    - In `_ORVION_CANONICAL/manifest.md`:
      - set `Live state` from the same readings: the migration count and latest version, the ledger and surface hashes and counts, 78 tables, 80 client RPCs and 451 HTTP assertions;
-     - confirm that `supabase/tests` holds 142 files whose literal `plan(N)` values sum to 2557, then set the suite figure to `Suite **142 files / 2557 assertions**`; if either differs, stop;
+     - confirm that `supabase/tests` holds 142 files whose literal `plan(N)` values sum to 2570, then set the suite figure to `Suite **142 files / 2570 assertions**`; if either differs, stop;
      - set coverage to 31 of 78;
      - add PH8-10 to `Open owner decisions`;
-     - set `Last Completed` to SPEC-240 / PH8-4, keeping the manifest within 7000 characters (the prototype of this step measured 6955).
+     - set `Last Completed` to SPEC-240 / PH8-4, keeping the manifest within 7000 characters (the prototype of this step measured 6968).
    - Mark PH8-4 `DEPLOYED` in the register.
    - Regenerate `MASTER_API_CONTRACT.md` and `ai-map.json` (stored LF) with the canonical generators.
    - Set the Runtime Checkpoint to DONE, so that Step 8's `-Finish` runs in VERIFY mode.
@@ -409,20 +455,29 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 - [ ] Each qualification of an attributed or `google_ads_call` lead becomes exactly one conversion keyed to its own `lead_qualified`: `qualified_phone_call` for a first-touch `google_ads_call` lead with or without a click, and `qualified_lead` otherwise. A logged phone call does not change the type, the source cannot be rewritten, and a rewound mapper re-maps nothing.
 - [ ] `public.customer_consents` is written only through `app.record_customer_consent`. Each record carries the server's actor and time. It refuses `unspecified`, callers without CREATE_CUSTOMER and other tenants' customers, is invisible across tenants, is never rewritten, and is recordable while the tenant is billing-restricted.
-- [ ] `app.customer_consent_status` returns the latest record: denied-then-granted is `granted`, granted-then-denied is `denied`, and no record is NULL.
+- [ ] `app.customer_consent_status` returns the latest record by `seq` of the logical customer, the same from any member's id: denied-then-granted is `granted`, granted-then-denied is `denied`, and no record is NULL.
+- [ ] A customer merge neither erases nor hides a decision, and succeeds with consent records present:
+  - a source GRANTED into an unrecorded target is `granted`;
+  - a source's newer DENIED over a target's older GRANTED is `denied`, including at delivery;
+  - a source's older GRANTED under a target's newer DENIED is `denied`;
+  - after two sequential merges the newest decision governs;
+  - a new decision on the survivor governs, and a merged identity refuses one;
+  - every record is unchanged, and another tenant reads nothing.
+- [ ] The effective order is `seq`, never a timestamp. Two concurrent decisions for one customer are serialized by its row lock, and the later-serialized one governs. Measured with two live sessions and pinned by assertion 37.
 - [ ] The claim delivers a `qualified_phone_call` only when it came from a real event, its customer's current consent is `granted`, and it carries an E.164 phone, an email or a consented click id. It keeps a genuine consented click id, needs none, and withholds one whose own consent was denied. It never delivers a withdrawn, never-consented or hand-recorded one, or one with nothing to match on.
 - [ ] Every click-path conversion is claimed on its click's consent exactly as before. The customer's consent never admits one.
 - [ ] No phone leaves the claim unless `app.e164_phone` returns it. `app.e164_phone` never guesses a country, and a conversion that is not eligible stays recorded with its snapshot and no delivery.
 - [ ] `app.record_customer_consent` is SECURITY DEFINER with an empty `search_path`, executable by `authenticated` and through one HTTP endpoint for signed-in callers only. `app.customer_consent_status` and `app.e164_phone` are executable by `postgres` only.
-- [ ] Mutants M1 to M21 are each killed, with installation and restoration md5-proven and no aborted run. On the pre-repair mapper and claim, Test 142 fails assertions 11, 12, 15, 16 and 18.
+- [ ] Mutants M1 to M26 are each killed, with installation and restoration md5-proven and no aborted run. On the pre-repair mapper and claim, Test 142 fails assertions 11, 12, 15, 16, 18 and 35.
 - [ ] Register and records:
   - PH8-4 is registered fixed and deployed.
+  - ADR-0019 records `customer_consents` as its second documented exclusion.
   - PH8-3 and AUDIT-4 record their delivered halves and stay open on their owner decisions.
   - PH8-10, CONV-9 and CONV-10 are registered open, and PH8-10 is on the manifest's open-decision line.
   - `customer_consents` is `NOT-RECORDED`, `offline_conversions` stays `PARTIAL`, and §2b item 2 is closed except PH8-10.
   - The Google Ads registry row stays `NOT OPERATIONAL`.
   - Every other row and the recorded coverage are unchanged.
-- [ ] The migration, the five tests and the two scripts match their SHA-256 values. Primary, the recorded evidence, the manifest (239 migrations; 142 files / 2557 assertions; 78 tables), the API contract and `ai-map.json` agree.
+- [ ] The migration, the five tests and the two scripts match their SHA-256 values. Primary, the recorded evidence, the manifest (239 migrations; 142 files / 2570 assertions; 78 tables), the API contract and `ai-map.json` agree.
 - [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
 - [ ] No file outside Write Scope was created, modified or deleted.
 
@@ -461,22 +516,23 @@ None yet.
   - One qualification fact, one acquisition authority, one E.164 authority and one consent authority per path.
   - The delivery edge hashes and never decides.
   - A future lead writer, qualification door or consumer inherits every rule.
-  - Tests are behavioural and pinned by 21 mutants, not SQL text.
+  - Tests are behavioural and pinned by 26 mutants, not SQL text.
+  - The merge change is one name on ADR-0019's existing exclusion list, not a second identity system.
 - **Future change cost.**
   - A Google payload change touches only the workflow (§2a).
   - A default-country policy (PH8-3) changes one function body.
   - A new consent purpose adds one CHECK value and a reader call.
-- **Owner decisions requested at Gate 1**, each with the recommended answer:
-  1. **The consent writer's permission** is CREATE_CUSTOMER, held by every role that handles customers, rather than a new permission.
-  2. **Consent does not follow a customer merge** and fails closed. The alternative, a foreign key plus a merge that carries consent, changes `app.merge_customer_identity`.
-  3. **A phone conversion whose click consent is denied** is delivered on the customer's own grant with the click id withheld: each authority governs its own data. The alternative is to refuse the conversion whenever any attached click was denied.
-  4. **Consent is recordable while billing-restricted,** for grants as well as withdrawals, since one trigger cannot tell them apart.
-  5. **PH8-10 is accepted as the owner's Google Ads verification,** and the five-conversion certification waits on it for click-less calls.
+- **Owner Gate-1 decisions (2026-09-29), applied by this amendment of Draft `5caa678`:**
+  1. **APPROVED:** CREATE_CUSTOMER authorizes the writer. The writer independently verifies same-tenant ownership, neither actor nor time can be forged, and the table has no write door. Assertions 3, 5 and 6 pin the unauthorized and cross-tenant refusals.
+  2. **REJECTED and replaced:** consent now follows the logical customer through the merge record, as Business Reason states.
+  3. **APPROVED, with separate authorities.** The customer's grant authorizes the customer's first-party identity. A click whose own consent is denied is never sent as an identifier. Neither decision is read as the other. A row left with `userData` only remains subject to PH8-10.
+  4. **APPROVED:** consent decisions are compliance facts, recordable while subscription writes are restricted. The exemption covers consent recording only, never delivery, platform status or retry rules.
+  5. **APPROVED, wording tightened:** PH8-10 stays open until provider or account evidence shows a click-less phone event is attributed and credited.
 - **Deliberately not changed:**
   - PH8-2 and DELIV-1, the observability surface: not required here, and the ineligible rows stay recorded.
   - PH8-3's default-country policy: an owner decision.
   - AUDIT-4's other purposes: Phase 10.
   - CONV-9 and CONV-10: recorded.
-  - `app.record_offline_conversion` and `customers`: unchanged.
+  - `app.record_offline_conversion`, `customers` and every merge behaviour except the one exclusion: unchanged.
   - PH8-9 and the workflow: their own contracts, next.
   - The registered worktree `owt/p2` is untouched.
