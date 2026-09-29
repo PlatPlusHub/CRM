@@ -112,7 +112,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -347,6 +347,78 @@ Revalidation before approval:
 ### 2026-09-29 — Execution started
 
 The approved ten-path contract entered In Progress at `30814189208935ec37b8438b39d4f1082f431d83`. Resume Step 1. Primary stays read-only until Human Gate 2.
+
+### 2026-09-29 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration `20260929120000` was created LF, byte-identical to the approved prototype, SHA-256 `a24f93d31d625eeaced0947c97e7c1e7021911eea45286bd8b2553693ff4d917`.
+- **Step 2: Applied.** Test 141 was created LF, byte-identical to the approved prototype, SHA-256 `9ab9f11ed5885e4f3aef7e44cd42f169481af0c4a30f848c3528a2ea529b10f6`, `plan(27)`. No existing test changed.
+- **Step 3: Applied.** The BOOK-10 precondition text was present exactly once.
+  - The register gained a freshness entry. BOOK-10's Status opening was replaced and its Updated cell set to `09-29`; BOOK-11 and BOOK-12 were inserted after it; ENTRY-1 gained its dated note and Updated `09-29`.
+  - At the owner's Gate-1 direction, recorded above, PH8-9 gained one dated note, the reissue `transactionId` question for the delivery contract, and Updated `09-29`. The freshness entry names it. No other row changed.
+  - The disposition gained a freshness entry, and the `bookings` and `offline_conversions` rows' CR, findings and Next cells were updated.
+  - The catalog's Google Ads registry row and §2b item 1 were updated.
+  - The disposition and catalog are byte-identical to the reviewed prototype. The register differs from it only in the freshness entry and the PH8-9 row.
+  - LF SHA-256: register `c47396d0679f7ba357cf509d1a0230646adbc274cafc1f8fc82abde606eda1d2`, disposition `241976811e54307d111282be93432e1dceb90bd43ee601be753cda702262d309`, catalog `03de48280159cd2b6d3b3c0195982a3496128ec7e79f600273679189ad0fca29`.
+
+Per the DATABASE sequencing, these five paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-09-29 — Pre-deploy readiness gate
+
+Run on HEAD `a266a5be92bab9ef5f4fae43b1028d6de704641b`, with the migration and Test 141 at their approved hashes.
+
+- **Reset:** clean local reset to 238 migrations, latest `20260929120000`.
+- **Focused test:** Test 141 27/27.
+- **Out-of-file mutants:** base md5 of the two definitions and the trigger `27628da663ebacfbd5b29aea13bc5e6f`. Every installation was proven by a changed md5 and every restoration by the base md5.
+
+  | Mutant | Failing assertions |
+  | --- | --- |
+  | M-A (RPC keeps its emission) | 2, 17, 18, 21 |
+  | M-B (no override) | 7, 8, 9, 10, 20 |
+  | M-C (state, not edge) | 17, 18, 21 |
+  | M-D (no entry rule) | 15 |
+  | M-E (no archived rule) | 12, 13, 14, 21 |
+  | M-F (no risk flag) | 3, 5, 17, 18 |
+  | M-G (reason leaks) | 4, 5, 11, 20, 27 |
+  | M-H (override demanded without a session) | 19, 20, 21 |
+  | M-I (balance judged on NEW) | 9, 10, 20 |
+
+  No run aborted; each kill is an assertion.
+- **In-file mutation:** with the trigger dropped in a savepoint, the door issue is silent and the mapper adds 0. Restored, it is recorded (assertions 25-27, inside the suite).
+- **Unrepaired counterfactual:** the pre-repair objects were reinstated on the reset stack: the authority and trigger were dropped, and `app.advance_booking` was restored to its live pre-repair body, md5 `270170a9e13b1ff56b18eae592f206f8`, equal to Primary's. Test 141, without its in-file drop, fails assertions 4, 5, 8, 9, 10, 11, 13, 14, 15, 20 and 21, then aborts where the authority is absent. Restoration by re-applying the migration was md5-proven.
+- **pgTAP Pass A:** 141 files / 2532 assertions PASS.
+- **HTTP suites:** 33 + 40 + 74 + 122 + 120 + 60 = 449 passed, 0 failed. The declared `verify_lifecycle_branches.ps1` passed 122/122.
+- **pgTAP Pass B,** without reset: 141 / 2532 PASS.
+- **Smoke:** `ALL CHECKS PASSED`, exit 0.
+- **Plan sum:** 141 files, 2532 assertions.
+- **Local authority and trigger:**
+  - `app.enforce_booking_lifecycle()` is SECURITY INVOKER, `search_path=""`, ACL `{postgres=X/postgres}`.
+  - `bookings_enforce_lifecycle` is tgtype 21 (ROW, INSERT, UPDATE OF `booking_status_code`), AFTER, not a constraint trigger, and enabled.
+  - `bookings` carries 10 non-internal triggers.
+  - Definition md5: `app.advance_booking` `ec850eb7e8aa5c3233a59ef8697f2885`, `app.enforce_booking_lifecycle` `32153975bc13b0e392323ee4ad420273`.
+- **Generators:** `MASTER_API_CONTRACT.md` changes one line as the Draft states: `advance_booking` no longer lists ALLOW_ISSUE_WITH_NEGATIVE_BALANCE and counts 4 raises instead of 5. It keeps 79 RPC endpoints, 8 views and 73 tables, and was restored until Step 7. `ai-map.json` differed only in `generated_at` and was restored.
+- **Scope, diff check and consistency:**
+  - The five changed paths are all in Write Scope, and `git diff --check` exited 0.
+  - Repository consistency reports exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and the undeployed RECOVER-1 migration.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 237 migrations, fingerprint `79a420205c451967b72ee0ccae917e0b`, equal to the recorded evidence. Latest `20260928180000`; the target is absent by version and by name.
+- **Function surface:** `df53eb28ba5cbcffa45e1006d077ed61`/313.
+- **Structural surface:** `_combined` `b372e1280a502d2c707713aca76a718e`/3069. Functions `df53eb28…`/313, triggers `cb10085173eb5a13ceefa6e951bb8fac`/302 and constraints `41023bb50efc61b2e139530345ff5908`/513; the other seven surfaces equal local's.
+- **Pre-repair definition md5:** `app.advance_booking` `270170a9e13b1ff56b18eae592f206f8`.
+- **Absent:** `app.enforce_booking_lifecycle` and `bookings_enforce_lifecycle`. `bookings` carries 9 non-internal triggers, and there is no default function ACL for schema `app`.
+- **Business rows:** 0 tenants, bookings, per-user permission grants, invoices, events and offline conversions.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 238 migrations, latest `20260929120000`, fingerprint `8ac45c812287217f9c5ba25859e7348b`.
+- **Functions:** `675e77e6d6f562b004d9eac7ac15505d`/314.
+- **Triggers:** `6bdfd761a4c70e44ec3b74d58882a236`/303.
+- **The other eight surfaces:** unchanged, constraints included, because this trigger owns no `pg_constraint` row.
+- **Combined:** `ff2aeaf2e753134c44c3f721bfacdacf`/3071.
+- **`bookings` triggers:** 10.
+- **Definition md5:** `app.advance_booking` `ec850eb7e8aa5c3233a59ef8697f2885`, `app.enforce_booking_lifecycle` `32153975bc13b0e392323ee4ad420273`.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 
 ## Verification Notes
 
