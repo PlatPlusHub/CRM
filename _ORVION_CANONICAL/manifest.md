@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-09-29. **repository, local stack and Primar
 
 Batch 6 surface coverage: **31 of 78 surfaces have a recorded audit disposition**, all thirty-one at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary bookings, booking_items, passengers and booking_item_passengers tables had zero rows at SPEC-224 deployment precheck (2026-09-26).
 
-Active Change Request: changes/SPEC-241-the-open-decision-pin-counts-three.md
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**, **PH8-10**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration; PH8-10 awaits Google evidence that click-less phone conversions are credited. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **PH8-4 fixed: a first-touch Google Ads call is `qualified_phone_call`, not `qualified_lead`, click or none, sent only on recorded, merge-aware consent (AUDIT-4 slice 1) with an E.164 phone; PH8-10, CONV-9, CONV-10 recorded; SPEC-240 (2026-09-29).**
+Last Completed: **SPEC-241 corrected the cold-start open-decision self-test pin from 2 to 3; repository-only, no product or database change (2026-09-29).**
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
