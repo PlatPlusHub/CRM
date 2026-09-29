@@ -41,7 +41,7 @@ The manifest's next capability is the Phase-8 Activation Closure, and PAY-3's tr
 - **A payment recorded twice would be revenue uploaded twice.** Mitigated by three things:
   - Neither RPC emits these events any more, and the trigger is their only producer. A census of every function body found no other writer of either code, and `app.record_payment` and `app.record_supplier_payment` are the only functions that insert payments.
   - `source_event_seq` is unique on `offline_conversions`.
-  - Test 140 asserts one event per payment on every door, and mutants M-A and M-C, which restore each RPC's own emission, are killed.
+  - Test 140 asserts one event per in-scope customer or supplier payment on every door, and mutants M-A and M-C, which restore each RPC's own emission, are killed.
 - **Money paid out recorded as revenue.** Mitigated: the emitter maps direction to event explicitly, and the mapper sees only `payment_recorded`. Test 140 asserts that no supplier payment ever carries `payment_recorded`, and mutant M-D is killed.
 - **Revenue attributed to the wrong booking.** Mitigated: a payment split across invoices names none, and mutant M-E, which takes the first invoice instead, is killed. The invoice lookup is tenant-scoped.
 - **The event is recorded at commit, not at the INSERT.** Two consequences follow:
@@ -124,7 +124,7 @@ Applicability: APPLICABLE
 
 | Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
 | --- | --- | --- | --- |
-| `payment_recorded` is produced at commit by `payments_emit_recorded` on every door, and no longer by `app.record_payment` | `app.map_outcomes_to_conversions` (reads `payload.invoice_id`); `app.customer_timeline`; `events` readers | VERIFY | The prototype was applied as a real migration on a clean reset in a scratch worktree at `73e571c`: migration SHA-256 `b696f6aa8ea5619a1a75c456f3a790e785d4f6eacce801ca654f67aa71c2218d`, Test-140 SHA-256 `280f284137ad7c41dc4b8c095de6d8913e59eda313b57993503cc0936f79f75b`. The RPC path records exactly one event with the same actor, reason, new state, severity and four payload keys as before, including the invoice it paid. One value changes form: `amount` is the stored `payments.amount` (`5000.0000`), where the RPC wrote its argument (`5000`). The two are numerically equal, and no function reads the field; the mapper reads `payments.amount`. |
+| `payment_recorded` is produced at commit by `payments_emit_recorded` on every door, and no longer by `app.record_payment` | `app.map_outcomes_to_conversions` (reads `payload.invoice_id`); `app.customer_timeline`; `events` readers | VERIFY | The prototype was applied as a real migration on a clean reset in a scratch worktree at `73e571c`: migration SHA-256 `b696f6aa8ea5619a1a75c456f3a790e785d4f6eacce801ca654f67aa71c2218d`, Test-140 SHA-256 `b6c873085e0f49a6f98561f319a41912f5b827f7dd1c2b19bfd42f7ec99c7d89`. The RPC path records exactly one event with the same actor, reason, new state, severity and four payload keys as before, including the invoice it paid. One value changes form: `amount` is the stored `payments.amount` (`5000.0000`), where the RPC wrote its argument (`5000`). The two are numerically equal, and no function reads the field; the mapper reads `payments.amount`. |
 | `supplier_payment_recorded` is produced by the same trigger, and no longer by `app.record_supplier_payment` | `events` readers (no function reads it) | VERIFY | The RPC path records exactly one event with the same payload keys, read from the row. |
 | The event is recorded at commit rather than inside the RPC call | In-transaction readers of the event | WRITE | The only reader is the mapper, which runs in its own transaction. `137_...` fires the deferred event after `app.record_payment`, and its assertions are unchanged. |
 | The `payments` trigger inventory grows by one | `126_...` assertion 23 | WRITE | Moves from 9 to 10, and its description names the emitter. |
@@ -164,7 +164,7 @@ Existing Mechanism: SPEC-215's and SPEC-237's single-producer event trigger, SEC
 - **Keeping the RPC emission and skipping the trigger when an RPC runs:** two producers joined by a flag is the double-emission risk this shape removes.
 - **Closing the door:** PAY-1, PAY-2 and FIN-10 made it a governed, designed door; closing it would change authority, not observability.
 
-Added Property: Every payment inserted on any door records exactly one creation event of its own direction, naming the session's actor, at the commit that makes it visible. A customer payment with an attributable booking, through the one invoice it paid in its transaction or the booking it names, yields exactly one `payment_received`. A supplier payment yields none.
+Added Property: Every `customer_payment` and `supplier_payment` inserted on any door records exactly one creation event of its own direction, naming the session's actor, at the commit that makes it visible. Refund directions remain outside SPEC-238 and remain separately owned by PAY-4. A customer payment with an attributable booking, through the one invoice it paid in its transaction or the booking it names, yields exactly one `payment_received`. A supplier payment yields none.
 
 Causal Negative: On the local stack at `73e571c`, in a rolled-back transaction, with a consented Google Ads click on each lead, an owner holding RECORD_PAYMENT made two door customer payments and one door supplier payment. One was allocated to an issued invoice and one named its booking. None produced an event, and the mapper produced no `payment_received` for either customer payment, while `app.record_payment` produced both.
 
@@ -182,7 +182,7 @@ Negative Test Design:
 - A split payment names no invoice.
 - No supplier payment ever carries `payment_recorded`.
 - A further mapper run adds nothing.
-- Every payment carries exactly one creation event of its direction.
+- Every in-scope `customer_payment` and `supplier_payment` carries exactly one creation event of its own direction. Refund directions remain outside SPEC-238 and remain separately owned by PAY-4.
 
 Non-Empty Population Obligation: One tenant, one branch and department, an owner holding RECORD_PAYMENT and an `employee` without it, one customer, one supplier, and five leads, each carrying a consented first-touch Google Ads click. Each lead has a booking with an issued 5000 EGP invoice.
 
@@ -213,7 +213,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    - `app.record_payment` and `app.record_supplier_payment`, each byte-identical to its live body except that its `app.record_event` call for the payment's creation event is replaced by a PAY-3 comment. `app.record_payment`'s invoice-status event is kept.
 
    It changes no grant, policy, guard, invoice rule or other function. If the target exists with different bytes, stop.
-2. **Check** that `supabase/tests/140_payment_is_recorded_on_every_door_test.sql` is absent. If absent, create it LF with SHA-256 `280f284137ad7c41dc4b8c095de6d8913e59eda313b57993503cc0936f79f75b`. It is one transaction-rolled-back pgTAP file with `select plan(20);`. Its `-- ATTACK-CLASSES:` line reads `DOOR BUSINESS INPUT STATE OBSERVABILITY PRIVILEGE REPLAY TENANT=N/A AUTH=N/A CONCURRENCY=N/A`, and its header states each `N/A` reason and how it fires deferred events. It implements:
+2. **Check** that `supabase/tests/140_payment_is_recorded_on_every_door_test.sql` is absent. If absent, create it LF with SHA-256 `b6c873085e0f49a6f98561f319a41912f5b827f7dd1c2b19bfd42f7ec99c7d89`. It is one transaction-rolled-back pgTAP file with `select plan(20);`. Its `-- ATTACK-CLASSES:` line reads `DOOR BUSINESS INPUT STATE OBSERVABILITY PRIVILEGE REPLAY TENANT=N/A AUTH=N/A CONCURRENCY=N/A`, and its header states each `N/A` reason and how it fires deferred events. It implements:
    - the Positive and Negative Test Design;
    - the emitter's privilege and trigger shape;
    - the platform path;
@@ -227,7 +227,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
    If a target carries different content, stop.
 3. **Check** whether the PAY-3 row in `reports/master/MASTER_GAP_REGISTER.md` still reads `**OPEN — independently reproduced during Slice 20`. If it does, make four changes and nothing else:
    - Add a dated freshness entry and demote the previous one to `Previously:`.
-   - Keep every PAY-3 cell except Status. Prefix its Status with a bold statement that SPEC-238 (`20260928180000`) fixed it locally, pending Primary deployment, followed by the mechanism, the measurement, what `140_...` proves, and that the unchanged invoice status is PAY-5.
+   - Keep every PAY-3 cell except Status and Updated, and set Updated to `09-28`. Prefix its Status with a bold statement that SPEC-238 (`20260928180000`) fixed it locally, pending Primary deployment, followed by the mechanism, the measurement, what `140_...` proves, and that the unchanged invoice status is PAY-5.
    - Insert **PAY-5** after PAY-4: Category `financial state / two doors`, Sev `Low`, Req/Opt `R`, Batch `6`, Mig `—`, Cert `📋`, Status `OPEN`. It carries the measurement, the cause (the RPC derives the invoice status and nothing else does), the consequence, why it is not FIN-7, PAY-1 or PAY-3, its latency, and the reopening trigger FIN-7's scheduled package. Owner Decision `—`, Source this contract, dates `09-28`.
 
    In `reports/master/MASTER_SURFACE_DISPOSITION.md`, add a dated freshness entry and demote the previous one. Then:
@@ -297,7 +297,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - [ ] A door customer payment naming its booking records one `payment_recorded` with no invoice, and a split payment records one naming no invoice.
 - [ ] A supplier payment made through `app.record_supplier_payment` or at the door records exactly one `supplier_payment_recorded`, and never `payment_recorded`.
 - [ ] The RPC payment, the door payment through its invoice, the door payment through its booking and the platform payment each yield exactly one `payment_received`, keyed to its own event. The split payment and the supplier payments yield none, and a further mapper run adds nothing. The SPEC-233 invoice → booking → lead path still attributes the RPC payment.
-- [ ] A refused door payment leaves nothing to record, and a later edit or allocation records nothing more. Every payment carries exactly one creation event of its direction.
+- [ ] A refused door payment leaves nothing to record, and a later edit or allocation records nothing more. Every in-scope `customer_payment` and `supplier_payment` carries exactly one creation event of its own direction. Refund directions remain outside SPEC-238 and remain separately owned by PAY-4.
 - [ ] The emitter is SECURITY DEFINER with an empty `search_path`, executable by neither PUBLIC nor `authenticated`. Its trigger fires once, AFTER INSERT ROW, deferred to commit.
 - [ ] With the trigger dropped in a savepoint, the door payment is silent and produces no conversion, and the rolled-back state records it again. Mutants M-A to M-E are each killed, with their installation and restoration md5-proven. On the unrepaired stack, the decisive assertions of Test 140 fail.
 - [ ] PAY-3 is registered fixed and deployed, and PAY-5 is registered open with its trigger. The `payments` row stays `AUDITED-OPEN`, the `offline_conversions` row stays `PARTIAL`, and §2b item 1 records PAY-3 closed. Every other row and the Coverage totals are unchanged.
