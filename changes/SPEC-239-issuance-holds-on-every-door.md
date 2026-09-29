@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -322,7 +322,27 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-09-29 — Owner approval
+
+The owner approved the exact Draft SHA `7264c98009c6735529e2e19b4051063d66be2ddc` (CR SHA-256 `34c69218f6e19c62055f67b9de45af037baea46f9061f4a1dcb059547ca187e1`) and the frozen ten-path Write Scope. The approval covers Approve, In Progress, Steps 1-4 and full local proof only. Primary remains read-only and requires Human Gate 2.
+
+The approval is bound to two SHA-256 values:
+- migration `20260929120000`: `a24f93d31d625eeaced0947c97e7c1e7021911eea45286bd8b2553693ff4d917`;
+- Test 141: `9ab9f11ed5885e4f3aef7e44cd42f169481af0c4a30f848c3528a2ea529b10f6`.
+
+The owner decided the two Gate-1 questions:
+1. **The archived rule moves whole.** An archived booking may not perform any booking lifecycle status transition, on any legal door, exactly where `app.advance_booking` refuses it. This is intentional parity, not a row freeze: non-lifecycle metadata stays with its existing authorities, and archive and unarchive stay with the existing archive controls.
+2. **`reissue -> issued` stays a genuine issuance.** It records another `booking_issued` and yields another internal `ticket_issued` candidate, as the state machine does now. BOOK-10 owns truthful event parity, not Google Ads counting policy, and ORVION's history keeps every issuance.
+
+The owner also directed one record, to be registered and not solved here: a reissue of the same booking must not be assumed to be a second new Google Ads acquisition conversion. The delivery contract must decide the Google `transactionId` for `ticket_issued`, since Data Manager deduplicates and adjusts by `transactionId` within one conversion action. The current `transactionId` implementation, `bookings`, `app.advance_booking`, the lifecycle authority and the source event are not changed for it. Step 3 carries this out as one dated note on the PH8-9 register row, inside the frozen Write Scope. It is the only addition to Step 3's register changes.
+
+Revalidation before approval:
+- HEAD was the Draft, a direct child of the certified `2496591`, and the tree was clean.
+- `origin/main` was at `2496591`.
+- The Draft file hashes to the approved value.
+- A read-only evaluation of the committed Draft returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY, one permanent-control path in scope).
+- Two mutated copies returned FAIL (a gate at Step 4 inside the red window 1..7) and INDETERMINATE (the Mutation Obligation removed).
+- The prototype files in the scratch worktree hash to the two approved values.
 
 ## Verification Notes
 
