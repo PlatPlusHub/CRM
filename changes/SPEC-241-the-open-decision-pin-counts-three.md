@@ -86,7 +86,7 @@ Depends on: `changes/SPEC-240-a-google-ads-call-qualifies-as-a-phone-call.md` (C
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -211,6 +211,27 @@ Revalidation before approval:
 ### 2026-09-29 — Execution started
 
 The approved four-path contract entered In Progress at `5c1e55893357433713f840150e9578c7943e21fa`. Resume Step 1.
+
+### 2026-09-29 — Step 1: Applied
+
+Lines 103–104 of `scripts/test_cold_start_state_guard.ps1` carried the description `the open-decision set is the current ENUMERATION (2)` and the match `checked against 2 open id\(s\)`. Exactly those two sites changed from `2` to `3`, and nothing else. The file is LF with SHA-256 `14d3fcdc9019e6db3663316cef70764ac4614795bc64ef331f618e75b8bf8f9e`, equal to the frozen value. The count remains an explicit pin.
+
+### 2026-09-29 — Local certification
+
+Run on HEAD `bb0b1c9d5bcb9e0623eb506845b2636e7cc89557` with the Step-1 bytes, every command from the repository root:
+- **The four CI guard suites:**
+  - `pwsh -File scripts/test_future_date_guard.ps1` → exit 0, `FUTURE-DATE GUARD TEST: 18 passed, 0 failed`;
+  - `pwsh -File scripts/test_status_contradiction_guard.ps1` → exit 0, 33 passed / 0 failed;
+  - `pwsh -File scripts/test_primary_ledger_guard.ps1` → exit 0, 13 passed / 0 failed;
+  - `pwsh -File scripts/test_cold_start_state_guard.ps1` → exit 0, **34 passed / 0 failed**.
+- **Mutation Obligation:**
+  - Restoring `2` in both sites produced a file byte-identical to the `66bf1b2` baseline. The cold-start suite then exits 1, 33 passed / 1 failed, with `FAIL CONTROL: the open-decision set is the current ENUMERATION (2)`.
+  - Restoring the repaired bytes gives SHA-256 `14d3fcdc…` again, and exit 0 with 34 / 0.
+- `pwsh -NoProfile -File scripts/check_repository_consistency.ps1` → exit 0, `REPOSITORY CONSISTENCY: CLEAN`, "checked against 3 open id(s)".
+- `git diff --check` → exit 0.
+- **Manifest:** its enumeration is exactly `**MAIL-1**, **RET-1**, **PH8-10**`. The Approve commit changed only `Active Change Request`, at 6984 characters, with `ai-map.json` changing only `generated_at` and `live_state.active_change_request`.
+- **Paths:** the paths differing from `66bf1b2` are exactly the four in Write Scope. No `supabase/**` path and no SPEC-240 file changed, and no database was involved.
+- **Runtime Checkpoint:** set to DONE for `-Finish`.
 
 ## Verification Notes
 
