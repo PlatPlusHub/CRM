@@ -99,7 +99,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -343,6 +343,72 @@ Revalidation before approval:
 ### 2026-09-28 — Execution started
 
 The approved twelve-path contract entered In Progress at `564ef71e4178eddd5c1b5cfff126c7d870591156`. Resume Step 1. Primary stays read-only until Human Gate 2.
+
+### 2026-09-28 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration `20260928180000` was created LF, SHA-256 `b696f6aa8ea5619a1a75c456f3a790e785d4f6eacce801ca654f67aa71c2218d`.
+- **Step 2: Applied.**
+  - Test 140 was created LF, SHA-256 `b6c873085e0f49a6f98561f319a41912f5b827f7dd1c2b19bfd42f7ec99c7d89`, `plan(20)`.
+  - Test 137 was edited, SHA-256 `eceac068b979795ed953f428fbcda1eb360b2b690e55457e07850f20a0d7f3fc`, `plan(16)`.
+  - Test 126 was edited, SHA-256 `618d3eab8ae51f9204670c80db776a83a5c953e83baa7f8c007381b078964203`, `plan(33)`.
+- **Step 3: Applied.**
+  - The register gained a freshness entry. PAY-3's Status was prefixed and its Updated cell set to `09-28`, and PAY-5 was inserted after PAY-4.
+  - The disposition gained a freshness entry, and the `payments` and `offline_conversions` rows' CR and Next cells were updated.
+  - §2b item 1 was extended.
+  - No other row changed.
+  - These three files are byte-identical to the reviewed prototype, whose base files were unchanged since `73e571c`.
+
+Per the DATABASE sequencing, these seven paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-09-28 — Pre-deploy readiness gate
+
+Run on HEAD `4616893f9e16cf37ca71713d587abdfa8262a949`, with the four files at their approved hashes.
+
+- **Reset:** clean local reset to 237 migrations, latest `20260928180000`.
+- **Focused tests:** Test 140 20/20, Test 137 16/16, Test 126 33/33.
+- **Out-of-file mutants:** base md5 of the three definitions and the trigger `81759c034ae0df84c90d97780fd37e2c`. Every installation was proven by a changed md5 and every restoration by the base md5.
+  - M-A is killed at 2, 13 and 19.
+  - M-B at 2, 13 and 14.
+  - M-C at 3 and 19.
+  - M-D at 3, 8, 13, 19 and 20.
+  - M-E at 7 and 13.
+- **In-file mutation:** with the trigger dropped in a savepoint, the door payment is silent and the mapper adds 0. Restored, it is recorded and converted (assertions 16-17, inside the suite).
+- **Unrepaired counterfactual:** the pre-repair objects were reinstated on the reset stack (trigger and emitter dropped, both RPCs restored to their live pre-repair bodies). Test 140, with its `set constraints` lines stripped, fails assertions 2, 3, 5, 6, 7, 8, 11 and 13, then aborts where the emitter is absent. Restoration by re-applying the migration was md5-proven.
+- **pgTAP Pass A:** 140 files / 2505 assertions PASS.
+- **HTTP suites:** 33 + 40 + 74 + 122 + 120 + 60 = 449 passed, 0 failed. The declared `verify_lifecycle_branches.ps1` passed 122/122.
+- **pgTAP Pass B,** without reset: 140 / 2505 PASS.
+- **Smoke:** `ALL CHECKS PASSED`, exit 0.
+- **Plan sum:** 140 files, 2505 assertions.
+- **Harness defect in the first run:** the gate script's restore variable overwrote its repository-root variable (PowerShell names are case-insensitive), so the HTTP suites, smoke and later checks failed to start (exit 64, path not found). The fault was the harness, not the product: nothing was written to the repository or the database, and the one file write attempted outside the repository was refused. The tail was re-run in order after Pass A: the HTTP suites, then Pass B, smoke and the checks. The results above are that re-run's.
+- **Local emitter and trigger:**
+  - `app.emit_payment_recorded()` is SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres}`.
+  - `payments_emit_recorded` is tgtype 5 (ROW, INSERT), a constraint trigger, DEFERRABLE, INITIALLY DEFERRED and enabled.
+  - `payments` carries 10 non-internal triggers.
+  - Definition md5: `app.record_payment` `b51c763418c942bcbc4337c880ef7c61`, `app.record_supplier_payment` `6e6b868fbfa4a9c3d631d139281cb867`, `app.emit_payment_recorded` `75216b2918978f0df444f2821a4e267b`.
+- **Generators:** `MASTER_API_CONTRACT.md` is byte-identical (79 RPC endpoints, 8 views, 73 tables). `ai-map.json` differed only in `generated_at` and was restored.
+- **Scope, diff check and consistency:**
+  - The seven changed paths are all in Write Scope, and `git diff --check` exited 0.
+  - Repository consistency reports exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and the undeployed RECOVER-1 migration.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 236 migrations, fingerprint `c97a2a7ad959f19a710830583b36bd89`, equal to the recorded evidence. Latest `20260928160000`; target absent.
+- **Function surface:** `87c960b34aa9347eb4d4a235fef07639`/312. There are 301 non-internal triggers in `public`/`app`.
+- **Structural surface:** `_combined` `a2f5903d89922eb0442271c312c8c238`/3066. Functions `87c960b3…`/312, triggers `7cd58b04…`/301 and constraints `3b47f1d1…`/512; the other seven surfaces as recorded.
+- **Pre-repair definition md5:** `app.record_payment` `86f38be7a214e38ea0a1f97865c97c97`, `app.record_supplier_payment` `4ef3c67a20e340bc6f18cb9b79c1e1a4`.
+- **Absent:** `app.emit_payment_recorded` and `payments_emit_recorded`. `payments` carries 9 non-internal triggers, and there is no default function ACL for schema `app`.
+- **Business rows:** 0 tenants, payments, allocations, invoices, events and offline conversions.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 237 migrations, latest `20260928180000`, fingerprint `79a420205c451967b72ee0ccae917e0b`.
+- **Functions:** `df53eb28ba5cbcffa45e1006d077ed61`/313.
+- **Triggers:** `cb10085173eb5a13ceefa6e951bb8fac`/302.
+- **Constraints:** `41023bb50efc61b2e139530345ff5908`/513. The constraint trigger owns a `pg_constraint` row.
+- **The other seven surfaces:** unchanged.
+- **Combined:** `b372e1280a502d2c707713aca76a718e`/3069.
+- **`payments` triggers:** 10.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 
 ## Verification Notes
 
