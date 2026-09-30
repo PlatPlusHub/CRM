@@ -503,6 +503,7 @@ try{
     Put '.github/workflows/always.yml' "name: Always`non:`n  push:`n  pull_request:`n"
     Put '.github/workflows/docs.yml' "name: Docs`non:`n  push:`n    paths:`n      - `"**/*.md`"`n  pull_request:`n    paths:`n      - `"**/*.md`"`n"
     Put '.github/workflows/db.yml' "name: Db`non:`n  push:`n    paths:`n      - `"supabase/migrations/**`"`n      - `"supabase/config.toml`"`n"
+    Put '.github/workflows/context.yml' ('name: Context'+[char]10+'on:'+[char]10+'  push:'+[char]10+'    paths:'+[char]10+'      - "context.txt"'+[char]10)
     Put '.github/workflows/review-only.yml' "name: Review Only`non:`n  pull_request:`n    types: [opened]`n"
     # Branch-filtered triggers, in BOTH YAML styles. The flow style is load-bearing:
     # a `branches:` list written inline produces no `- item` lines at all, so a reader
@@ -2570,6 +2571,252 @@ exit 0
     MutationKillRangeAt 'ORIGINATION STATE MUTATION: the range endpoint is excluded' `
         {OsBuildLifecycle} 'MODE: VERIFY' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck -CheckOrigination}' 'ORIGIN'
 
+    # ---- SEGMENTED PUBLICATION: committed range, receipt, and tail ----
+    function Build-SegmentedFixture([string]$SecondScope='context.txt;_ORVION_CANONICAL/manifest.md',[string]$FirstExtra='',[switch]$StopAtApproved,[switch]$KeepFirstPointer){
+        $first='supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md'
+        Rebase (ContractText -Resume DONE -Scope $first -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1')
+        git -C $root push origin main --quiet
+        Put 'supabase/migrations/20260101_fixture.sql' 'select 2;'
+        if($FirstExtra){Put $FirstExtra 'first-segment unauthorized write'}
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $first -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Closeable)
+        if(-not $KeepFirstPointer){Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')}
+        Commit first-segment-complete
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $SecondScope -Evidence (EvidenceText))
+        Commit second-draft
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $SecondScope -Evidence (EvidenceText))
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md')
+        Commit second-approved
+        if(-not $StopAtApproved){
+            Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Resume DONE -Scope $SecondScope -Evidence (EvidenceText))
+            Commit second-inprogress
+        }
+    }
+    function Close-Second([string]$Scope='context.txt;_ORVION_CANONICAL/manifest.md'){
+        Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope $Scope -Evidence (EvidenceText) -Closeable)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')
+        Commit second-complete
+    }
+    Reset-Fixture;Build-SegmentedFixture
+    $f=Run Finish;$j=ReceiptJson
+    Assert 'SEG-1 clean multi-contract Finish freezes full promotion paths, including Db from the prior segment' ($f.Code-eq0-and(@($j.expected)-contains'Db')-and(@($j.expected)-contains'Docs')-and(@($j.expected)-contains'Always')-and(@($j.expected)-notcontains'Context')) "$($f.Text)"
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'context.txt' 'uncommitted trigger change'
+    $f=Run Finish
+    Assert 'SEG-2 dirty segmented Finish refuses a HEAD-only diff that omits a future pushed path' ($f.Code-ne0-and$f.Text-match'PUBLICATION_RANGE_UNCOMMITTED'-and$f.Text-notmatch'LOCAL_CERTIFY: READY') $f.Text
+    Reset-Fixture;Build-SegmentedFixture;Close-Second
+    $r=RunRange 'origin/main'
+    Assert 'SEG-3 two completed segments with separate governors pass the full range' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match'CR: SPEC-901') $r.Text
+    Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status Draft -Scope '_ORVION_CANONICAL/manifest.md')
+    Commit tail-draft
+    Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-tail.md')
+    Commit tail-approved
+    Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope '_ORVION_CANONICAL/manifest.md')
+    Commit tail-inprogress
+    $r=RunRange 'origin/main'
+    Assert 'SEG-4 a completed multi-segment range with unfinished tail is refused' ($r.Code-ne0-and$r.Text-match'SEGMENT_TRAILING_WORK') $r.Text
+
+    # The three concrete surfaces model SPEC-240 migration, SPEC-241 guard test,
+    # and SPEC-242 control code. Each contract is born only after its predecessor closes.
+    Reset-Fixture;Build-SegmentedFixture 'scripts/test_cold_start_state_guard.ps1;_ORVION_CANONICAL/manifest.md'
+    Put 'scripts/test_cold_start_state_guard.ps1' "exit 0`n# second segment";Commit second-guard-change
+    Close-Second 'scripts/test_cold_start_state_guard.ps1;_ORVION_CANONICAL/manifest.md'
+    $third='scripts/check_agent_continuity.ps1;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-902-control.md' (ContractText -Id SPEC-902 -Status Draft -Scope $third -Evidence (EvidenceText));Commit third-draft
+    Put 'changes/SPEC-902-control.md' (ContractText -Id SPEC-902 -Status Approved -Scope $third -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-control.md');Commit third-approved
+    Put 'changes/SPEC-902-control.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Resume DONE -Scope $third -Evidence (EvidenceText));Commit third-inprogress
+    Put 'scripts/check_agent_continuity.ps1' ((Get-Content -Raw -LiteralPath (Join-Path $root 'scripts/check_agent_continuity.ps1'))+"`n# third segment fixture`n")
+    Put 'changes/SPEC-902-control.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope $third -Evidence (EvidenceText) -Closeable)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit third-complete
+    $r=RunRange 'origin/main'
+    Assert 'SEG-9 migration, guard and control Complete segments pass as three independent governors' ($r.Code-eq0-and$r.Text-match'CR: SPEC-902'-and$r.Text-match'MODE: VERIFY') $r.Text
+
+    # Final-state-only pointer drift may be corrected by the final HEAD. Historical
+    # scope/status violations below cannot be repaired by a later commit.
+    Reset-Fixture;Build-SegmentedFixture -KeepFirstPointer;Close-Second
+    $r=RunRange 'origin/main'
+    Assert 'SEG-10 a later segment may repair an intermediate final-state pointer' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY') $r.Text
+
+    Reset-Fixture;Build-SegmentedFixture 'outside.txt;_ORVION_CANONICAL/manifest.md' 'outside.txt';Close-Second 'outside.txt;_ORVION_CANONICAL/manifest.md'
+    $r=RunRange 'origin/main'
+    Assert 'SEG-11 later scope cannot authorize an earlier outside write' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'outside.txt' 'second segment unauthorized';Close-Second
+    $r=RunRange 'origin/main'
+    Assert 'SEG-12 the later segment refuses its own outside write' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'outside.txt' 'transient second segment unauthorized';Commit second-transient-write
+    Remove-Item -LiteralPath (Join-Path $root 'outside.txt') -Force;Commit second-transient-restore
+    Close-Second;$r=RunRange 'origin/main'
+    Assert 'SEG-13 a later revert does not launder a committed outside write' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+
+    Reset-Fixture;Build-SegmentedFixture
+    $wide='context.txt;outside.txt;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Resume DONE -Scope $wide -Evidence (EvidenceText))
+    Put 'outside.txt' 'written under widened scope';Commit second-scope-widened
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Resume DONE -Scope 'context.txt;_ORVION_CANONICAL/manifest.md' -Evidence (EvidenceText))
+    Remove-Item -LiteralPath (Join-Path $root 'outside.txt') -Force;Commit second-scope-restored
+    Close-Second;$r=RunRange 'origin/main'
+    Assert 'SEG-14 a later segment cannot widen frozen scope then restore it' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED:Write Scope') $r.Text
+
+    $terminalScope='changes/SPEC-900-fixture.md;_ORVION_CANONICAL/manifest.md'
+    Reset-Fixture;Build-SegmentedFixture $terminalScope
+    Add-Content -LiteralPath (Join-Path $root 'changes/SPEC-900-fixture.md') -Value 'terminal tamper';Commit second-tampers-first
+    Close-Second $terminalScope;$r=RunRange 'origin/main'
+    Assert 'SEG-15 later authorized scope cannot mutate a terminal earlier CR' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION:changes/SPEC-900-fixture\.md') $r.Text
+
+    Reset-Fixture;Build-SegmentedFixture -StopAtApproved;Close-Second
+    $r=RunRange 'origin/main'
+    Assert 'SEG-16 each completed segment keeps the In Progress to Complete transition' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION|ILLEGAL_STATUS_TRANSITION:Approved->Complete') $r.Text
+
+    Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
+    Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='fixture';result='READY';target='main';expected=@('Always','Docs','Db')}
+    GhRuns @((Run1 'Always'),(Run1 'Docs')) $sha;$r=RunCertify
+    Assert 'SEG-5 absent prior-segment Db run fails certification' ($r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db') $r.Text
+    GhRuns @((Run1 'Always'),(Run1 'Docs'),(Run1 'Db' 'completed' 'failure')) $sha;$r=RunCertify
+    Assert 'SEG-6 failed prior-segment Db run fails certification' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED') $r.Text
+    GhRuns @((Run1 'Always'),(Run1 'Docs'),(Run1 'Db' 'in_progress' $null)) $sha;$r=RunCertify
+    Assert 'SEG-7 running prior-segment Db run is pending' ($r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: PENDING') $r.Text
+    GhRuns @((Run1 'Always'),(Run1 'Docs'),(Run1 'Db')) $sha;$r=RunCertify
+    Assert 'SEG-8 all successful expected runs are ready' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY') $r.Text
+
+    # Mutation scripts live outside the fixture repository. Each is executed
+    # against the SAME committed history as the pristine and restored evaluator,
+    # so no changed Git range can supply an incidental kill.
+    function SegRunEvaluator([string]$Evaluator,[string]$Mode='Gate'){
+        if($Mode-eq'Finish'){
+            $o=& pwsh -NoProfile -File $Evaluator -Finish -Root $root 2>&1
+        }else{
+            $cmd=". '$Evaluator' -Gate -Root '$root' -BaseRef 'origin/main' -HeadRef 'HEAD'; if ((Test-Path -LiteralPath variable:\LASTEXITCODE)) { exit `$LASTEXITCODE }"
+            $o=& pwsh -NoProfile -Command $cmd 2>&1
+        }
+        [pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}
+    }
+    function SegMutantFile([string]$Find,[string]$Replace){
+        $src=Get-Content -Raw -LiteralPath $control
+        $count=[regex]::Matches($src,[regex]::Escape($Find)).Count
+        $p=Join-Path $sandbox 'seg-mutant.ps1'
+        if($count-eq1){[IO.File]::WriteAllText($p,$src.Replace($Find,$Replace),[Text.UTF8Encoding]::new($false))}
+        [pscustomobject]@{Path=$p;Installed=($count-eq1-and(Test-Path $p)-and([IO.File]::ReadAllText($p)).Contains($Replace))}
+    }
+    function SegMutationRange([string]$Name,[scriptblock]$Build,[string]$Expected,[string]$Find,[string]$Replace){
+        Reset-Fixture;& $Build
+        $before=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+        $pristine=SegRunEvaluator $control
+        $m=SegMutantFile $Find $Replace
+        $mutated=if($m.Installed){SegRunEvaluator $m.Path}else{[pscustomobject]@{Text='mutant not installed';Code=1}}
+        Remove-Item -LiteralPath $m.Path -Force -ErrorAction SilentlyContinue
+        $restored=SegRunEvaluator $control
+        $after=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+        Assert $Name ($m.Installed-and$pristine.Code-ne0-and$pristine.Text-match$Expected-and$mutated.Code-eq0-and$mutated.Text-match'ORVION: READY'-and$restored.Code-ne0-and$restored.Text-match$Expected-and$before-eq$after) "installed=$($m.Installed) pristine=$($pristine.Text) mutant=$($mutated.Text) restored=$($restored.Text)"
+    }
+    function SegBuildEarlierOutside{
+        Build-SegmentedFixture 'outside.txt;_ORVION_CANONICAL/manifest.md' 'outside.txt'
+        Close-Second 'outside.txt;_ORVION_CANONICAL/manifest.md'
+    }
+    function SegBuildTail{
+        Build-SegmentedFixture;Close-Second
+        Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status Draft -Scope '_ORVION_CANONICAL/manifest.md');Commit mutation-tail-draft
+        Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-tail.md');Commit mutation-tail-approved
+        Put 'changes/SPEC-902-tail.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Scope '_ORVION_CANONICAL/manifest.md');Commit mutation-tail-inprogress
+    }
+    SegMutationRange 'SEG-M1 removing per-segment replay admits an earlier outside write' {SegBuildEarlierOutside} 'OUT_OF_SCOPE_WRITE:outside\.txt' `
+        'if($script:PublicationSegments.Count-gt1){Validate-PublicationSegments}else{Validate-CommittedRange $rel}' `
+        'if($script:PublicationSegments.Count-gt1){}else{Validate-CommittedRange $rel}'
+    SegMutationRange 'SEG-M2 letting final scope govern earlier segments admits the earlier write' {SegBuildEarlierOutside} 'OUT_OF_SCOPE_WRITE:outside\.txt' `
+        'Validate-CommittedRange $seg.Rel $terminal' 'Validate-CommittedRange $script:PublicationSegments[-1].Rel $terminal'
+    SegMutationRange 'SEG-M3 removing the unfinished-tail check admits unfinished work' {SegBuildTail} 'SEGMENT_TRAILING_WORK' `
+        'if($segments[-1].End-ne$headSha)' 'if($false)'
+
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'context.txt' 'dirty workflow-triggering bytes'
+    $before=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    $pristine=SegRunEvaluator $control Finish
+    $m=SegMutantFile 'if($dirty.Count)' 'if($false)'
+    $mutated=if($m.Installed){SegRunEvaluator $m.Path Finish}else{[pscustomobject]@{Text='mutant not installed';Code=1}}
+    $mutReceipt=ReceiptJson
+    Remove-Item -LiteralPath $m.Path -Force -ErrorAction SilentlyContinue
+    $restored=SegRunEvaluator $control Finish
+    $after=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    Assert 'SEG-M4 removing clean Finish mints a receipt missing the dirty trigger' ($m.Installed-and$pristine.Code-ne0-and$pristine.Text-match'PUBLICATION_RANGE_UNCOMMITTED'-and$mutated.Code-eq0-and$mutated.Text-match'LOCAL_CERTIFY: READY'-and(@($mutReceipt.expected)-notcontains'Context')-and$restored.Code-ne0-and$restored.Text-match'PUBLICATION_RANGE_UNCOMMITTED'-and$before-eq$after) "installed=$($m.Installed) pristine=$($pristine.Text) mutant=$($mutated.Text) restored=$($restored.Text)"
+
+    Reset-Fixture;Build-SegmentedFixture
+    $before=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    $pristine=SegRunEvaluator $control Finish;$priorReceipt=ReceiptJson
+    $m=SegMutantFile 'return @($changed)' 'return @($Contract.Scope)'
+    $mutated=if($m.Installed){SegRunEvaluator $m.Path Finish}else{[pscustomobject]@{Text='mutant not installed';Code=1}}
+    $mutReceipt=ReceiptJson
+    Remove-Item -LiteralPath $m.Path -Force -ErrorAction SilentlyContinue
+    $restored=SegRunEvaluator $control Finish;$restoredReceipt=ReceiptJson
+    $after=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    Assert 'SEG-M5 final-CR-only expectations lose earlier Migration CI' ($m.Installed-and$pristine.Code-eq0-and(@($priorReceipt.expected)-contains'Db')-and$mutated.Code-eq0-and(@($mutReceipt.expected)-notcontains'Db')-and$restored.Code-eq0-and(@($restoredReceipt.expected)-contains'Db')-and$before-eq$after) "installed=$($m.Installed) pristine=$($pristine.Text) mutant=$($mutated.Text) restored=$($restored.Text)"
+
+    # A simultaneous completion followed by a new active CR must not escape the
+    # old ambiguity resolver through its normal active-pointer fast path.
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Draft -Scope '_ORVION_CANONICAL/manifest.md');Commit ambiguity-with-tail-draft
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-simultaneous.md');Commit ambiguity-with-tail-approved
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md');Commit ambiguity-with-tail-inprogress
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope 'context.txt;_ORVION_CANONICAL/manifest.md' -Evidence (EvidenceText) -Closeable)
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit ambiguity-with-tail-dual-complete
+    $all='changes/SPEC-900-fixture.md;changes/SPEC-901-born.md;changes/SPEC-902-simultaneous.md;supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-903-tail.md' (ContractText -Id SPEC-903 -Status Draft -Scope $all -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Evidence (EvidenceText));Commit ambiguity-with-tail-new-draft
+    Put 'changes/SPEC-903-tail.md' (ContractText -Id SPEC-903 -Status Approved -Scope $all -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Evidence (EvidenceText))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-903-tail.md');Commit ambiguity-with-tail-new-approved
+    Put 'changes/SPEC-903-tail.md' (ContractText -Id SPEC-903 -Status 'In Progress' -Scope $all -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Evidence (EvidenceText));Commit ambiguity-with-tail-new-inprogress
+    $r=RunRange 'origin/main'
+    Assert 'SEG-20 a simultaneous completion cannot hide behind a later active governor' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+    $before=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    $m=SegMutantFile 'if($closed.Count-gt1){throw ''AMBIGUOUS_GOVERNING_CR''}' 'if($closed.Count-gt1){return @()}'
+    $mutated=if($m.Installed){SegRunEvaluator $m.Path}else{[pscustomobject]@{Text='mutant not installed';Code=1}}
+    Remove-Item -LiteralPath $m.Path -Force -ErrorAction SilentlyContinue
+    $restored=SegRunEvaluator $control
+    $after=(Get-FileHash -LiteralPath $control -Algorithm SHA256).Hash
+    Assert 'SEG-M6 simultaneous-completion refusal cannot be bypassed by an active tail' ($m.Installed-and$mutated.Code-eq0-and$mutated.Text-match'ORVION: READY'-and$restored.Code-ne0-and$restored.Text-match'AMBIGUOUS_GOVERNING_CR'-and$before-eq$after) "installed=$($m.Installed) mutant=$($mutated.Text) restored=$($restored.Text)"
+
+    Reset-Fixture;Build-SegmentedFixture
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Draft -Scope '_ORVION_CANONICAL/manifest.md');Commit simultaneous-draft
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Approved -Scope '_ORVION_CANONICAL/manifest.md')
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-902-simultaneous.md');Commit simultaneous-approved
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status 'In Progress' -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md');Commit simultaneous-inprogress
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Scope 'context.txt;_ORVION_CANONICAL/manifest.md' -Evidence (EvidenceText) -Closeable)
+    Put 'changes/SPEC-902-simultaneous.md' (ContractText -Id SPEC-902 -Status Complete -Resume DONE -Scope '_ORVION_CANONICAL/manifest.md' -Closeable)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit simultaneous-completion
+    $r=RunRange 'origin/main'
+    Assert 'SEG-19 two simultaneous Complete governors retain the ambiguity refusal' ($r.Code-ne0-and$r.Text-match'AMBIGUOUS_GOVERNING_CR') $r.Text
+
+    # A later governor exists as Draft at the range base, so including its path
+    # in the earlier scope does not create a spurious SPEC-ID reservation refusal.
+    Reset-Fixture
+    $firstOverlap='supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md;changes/SPEC-901-born.md'
+    $secondOverlap='context.txt;_ORVION_CANONICAL/manifest.md'
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $secondOverlap)
+    Rebase (ContractText -Resume DONE -Scope $firstOverlap -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1')
+    git -C $root push origin main --quiet
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $secondOverlap)
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'changes/SPEC-901-born.md');Commit overlapping-approval
+    Put 'supabase/migrations/20260101_fixture.sql' 'select 2;'
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $firstOverlap -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Closeable);Commit first-completes-after-second-approved
+    Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status 'In Progress' -Resume DONE -Scope $secondOverlap);Commit second-overlap-inprogress
+    Close-Second $secondOverlap;$r=RunRange 'origin/main'
+    Assert 'SEG-17 overlapping Approved governors are refused despite a clean final HEAD' ($r.Code-ne0-and$r.Text-match'OVERLAPPING_GOVERNORS') $r.Text
+
+    # A cancellation beside a Complete remains legal within the second segment.
+    Reset-Fixture
+    Put 'changes/SPEC-902-cancel.md' (ContractText -Id SPEC-902 -Status Draft -Scope 'context.txt')
+    Commit preexisting-cancellable-draft
+    $cancelScope='context.txt;changes/SPEC-902-cancel.md;_ORVION_CANONICAL/manifest.md'
+    Build-SegmentedFixture $cancelScope
+    Put 'changes/SPEC-902-cancel.md' (ContractText -Id SPEC-902 -Status Cancelled -Scope 'context.txt')
+    Close-Second $cancelScope;$r=RunRange 'origin/main'
+    Assert 'SEG-18 a Complete with a scoped Cancelled contract remains legal in the later segment' ($r.Code-eq0-and$r.Text-match'CR: SPEC-901') $r.Text
+
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
@@ -2587,7 +2834,5 @@ exit 0
 }
 Write-Host "AGENT CONTROL TESTS: $($script:pass) passed, $($script:fail) failed"
 if($script:fail){exit 1};exit 0
-
-
 
 

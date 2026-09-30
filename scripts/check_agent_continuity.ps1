@@ -812,7 +812,7 @@ function Validate-StatusPath([string[]]$Sequence){
 # ORVION history is linear (`main` carries non-fast-forward protection and the
 # acceptance model forbids merge-generated SHAs), so each commit is compared
 # against its first parent without special merge handling.
-function Validate-CommittedRange([string]$Rel){
+function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
     $commits=@(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")
     if(!$commits.Count){return}
     $governing=$Rel-replace'\\','/'
@@ -833,7 +833,11 @@ function Validate-CommittedRange([string]$Rel){
         if($baseStatus-and$baseStatus-ne'Draft'){$frozenBound=$true}
     }
 
-    $terminal=@{};$touched=@{}
+    # Segments share terminal history: closing A makes its contract immutable
+    # while every later governor is validated.
+    $terminal=$SharedTerminal
+    if($null-eq$terminal){$terminal=@{}}
+    $touched=@{}
     # A cross-identity rename of the GOVERNING contract leaves its former path in
     # the diff. Without this the contract's own earlier name reads as a foreign
     # file and the range is refused OUT_OF_SCOPE_WRITE - which is exactly how this
@@ -1129,6 +1133,25 @@ function Workflow-Expectations([string[]]$Paths,[string]$Branch){
     @($names|Sort-Object -Unique)
 }
 
+function Certification-Paths($Contract,[string]$Rel){
+    $upstream=(git -C $Root rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null)
+    if($LASTEXITCODE-ne0){throw 'GIT_UPSTREAM_MISSING'}
+    $upstream=("$upstream").Trim()
+    $changed=@(git -C $Root diff --name-only "$upstream..HEAD" --)
+    if($LASTEXITCODE-ne0){throw 'PUBLICATION_RANGE_DIFF_FAILED'}
+    $prior=@($changed|?{$_-match'^changes/SPEC-[0-9]+-.*\.md$'-and$_-ne$Rel}|?{
+        $atHead=Read-GitFile HEAD $_
+        if($null-eq$atHead){return $false}
+        try{(Status-FromText $atHead)-eq'Complete'}catch{$false}
+    })
+    # Single-contract Finish retains the established scope-based expectation.
+    # Multiple completed contracts are one push, judged by that push's paths.
+    if(!$prior.Count){return @($Contract.Scope|%{$_-replace'\\','/'})}
+    $dirty=@(git -C $Root status --porcelain)
+    if($LASTEXITCODE-ne0){throw 'PUBLICATION_RANGE_STATUS_FAILED'}
+    if($dirty.Count){throw 'PUBLICATION_RANGE_UNCOMMITTED'}
+    return @($changed)
+}
 function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
     $target=Target-Branch
     $receipt=[ordered]@{
@@ -1142,7 +1165,7 @@ function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
         target=$target
         # Derived ONCE, here, and read back by -Certify. Re-deriving it after the push
         # would make the completed task's own surface a second authority.
-        expected=@(Workflow-Expectations @($Contract.Scope|%{$_-replace'\\','/'}) $target)
+        expected=@(Workflow-Expectations @(Certification-Paths $Contract $Rel) $target)
         result='READY'
         at=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
@@ -1172,8 +1195,64 @@ function Validate-CompletionPrerequisites($Contract){
     if($Contract.VerificationNotes-notmatch'(?m)^Verdict:\s*Confirmed Complete\s*$'){throw 'COMPLETION_PREREQUISITE:no Confirmed Complete verdict'}
 }
 
+function Get-PublicationSegments {
+    $segments=@();$start=$BaseRef
+    foreach($commit in @(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")){
+        $closed=@()
+        foreach($r in @(Records-For $commit)){
+            $p=$r.Path
+            if($p-notmatch '^changes/SPEC-[0-9]+-.*\.md$'){continue}
+            $now=Read-GitFile $commit $p
+            $old=Read-GitFile "$commit^" $p
+            if($null-eq$now){continue}
+            $nowStatus=try{Status-FromText $now}catch{''}
+            $oldStatus=if($null-ne$old){try{Status-FromText $old}catch{''}}else{''}
+            if($nowStatus-eq'Complete'-and$oldStatus-ne'Complete'){$closed+=$p}
+        }
+        # A simultaneous completion has no unique governor. The ordinary
+        # resolver refuses it when no CR remains active, but an active tail
+        # would take its fast path and hide both completions. Refuse here.
+        if($closed.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
+        if($closed.Count-eq1){
+            $segments+=,[pscustomobject]@{Start=$start;End=$commit;Rel=$closed[0]}
+            $start=$commit
+        }
+    }
+    if($segments.Count-gt1){
+        $headSha=(git -C $Root rev-parse $HeadRef).Trim()
+        if($segments[-1].End-ne$headSha){throw 'SEGMENT_TRAILING_WORK'}
+    }
+    $segments
+}
+function Validate-PublicationSegments {
+    $saveBase=$BaseRef;$saveHead=$HeadRef
+    $terminal=@{}
+    try{
+        for($i=0;$i-lt$script:PublicationSegments.Count;$i++){
+            $seg=$script:PublicationSegments[$i]
+            $script:BaseRef=$seg.Start;$script:HeadRef=$seg.End
+            # A later CR may exist as Draft; it may not acquire active authority
+            # before the preceding governor completes.
+            foreach($later in @($script:PublicationSegments|Select-Object -Skip ($i+1))){
+                # Re-closing this same CR is judged by the shared terminal guard,
+                # which names the historical mutation rather than an overlap.
+                if($later.Rel-eq$seg.Rel){continue}
+                $seen=@(Status-Path $later.Rel $seg.Start $null)
+                if(@($seen|?{$_-ne'Draft'}).Count){throw "OVERLAPPING_GOVERNORS:$($later.Rel)"}
+            }
+            $seq=@(Status-Path $seg.Rel $seg.Start 'Complete')
+            if($seq.Count-lt2-or$seq[-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($seg.Rel)"}
+            # This one existing walk owns the per-commit scope, frozen authority,
+            # allocation, Approval replay and status checks. Shared terminal state
+            # carries immutability across segment boundaries.
+            Validate-CommittedRange $seg.Rel $terminal
+        }
+    }finally{$script:BaseRef=$saveBase;$script:HeadRef=$saveHead}
+}
+
 function Resolve-Contract($m,[object[]]$Records){
     if($m.Active){return $m.Active}
+    if($script:PublicationSegments.Count-gt1){return $script:PublicationSegments[-1].Rel}
     $changed=@($Records|?{$_.Path-match'^changes/SPEC-[0-9]+-.*\.md$'}|%{$_.Path}|select -Unique);$c=@();$finals=@{}
     foreach($p in $changed){
         # BOTH terminal statuses may govern the run that closes a contract (SPEC-170).
@@ -1703,6 +1782,8 @@ try{
     # per-commit walk can see the state a contract actually had when it appeared.
     if(-not $BaseRef){Validate-SpecAllocation $records $base -CheckOrigination}
     elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}
+    $script:PublicationSegments=@()
+    if($BaseRef){$script:PublicationSegments=@(Get-PublicationSegments)}
     $m=Manifest
     $rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
     if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
@@ -1762,7 +1843,7 @@ try{
     # PASSED THROUGH, which a net diff cannot see. It runs before the pointer
     # invariant because a forbidden committed state is the deeper defect, and the
     # pointer is a final-state property that would otherwise report the symptom.
-    if($BaseRef){Validate-CommittedRange $rel}
+    if($BaseRef){if($script:PublicationSegments.Count-gt1){Validate-PublicationSegments}else{Validate-CommittedRange $rel}}
 
     # Deliberately AFTER the contract's own legality. An agent that jumps a status
     # illegally usually also forgets to move the pointer, and the illegal
@@ -1804,9 +1885,11 @@ try{
     $declaredCapabilities=@();if(!$BaseRef){$declaredCapabilities=@(Test-Capabilities $c)}
 
     $scope=@($c.Scope|%{$_-replace'\\','/'})
-    foreach($r in $records){
-        foreach($p in @($r.Path,$r.Old)|?{$_}){
-            if($p-ne($rel-replace'\\','/')-and$scope-notcontains$p){throw "OUT_OF_SCOPE_WRITE:$p"}
+    if($script:PublicationSegments.Count-le1){
+        foreach($r in $records){
+            foreach($p in @($r.Path,$r.Old)|?{$_}){
+                if($p-ne($rel-replace'\\','/')-and$scope-notcontains$p){throw "OUT_OF_SCOPE_WRITE:$p"}
+            }
         }
     }
 

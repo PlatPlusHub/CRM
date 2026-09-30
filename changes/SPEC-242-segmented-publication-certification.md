@@ -55,7 +55,7 @@ Depends on `changes/SPEC-240-a-google-ads-call-qualifies-as-a-phone-call.md` and
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -137,7 +137,8 @@ Post-Implementation Proof Obligation: All existing Agent Control tests and new S
 
 ## Execution Log
 
-None.
+- 2026-09-30: Test-first run against the previous control returned 305 passes and 14 failures in the new segmented cases. Implemented ordered completion segments using the existing per-commit validator and one shared terminal-state table; each segment retains its own frozen Approved scope and Approval Evidence replay. An active successor exposed a real same-commit ambiguity escape, so the segment finder explicitly refuses it. No terminal CR or publication script changed.
+- 2026-09-30: The focused block passed 27/0, including six installed, killed and byte-restored mutants. The full Agent Control suite passed 331/0. Future-date, status-contradiction, recorded Primary-ledger and cold-start guard suites passed 18/0, 33/0, 13/0 and 34/0. Repository Consistency was CLEAN and `git diff --check` passed. A clean disposable clone carrying the actual SPEC-240 and SPEC-241 commits plus a synthetic SPEC-242 Complete transition returned `ORVION: READY` for the full base-to-HEAD Gate. The live In Progress range still refused its unfinished tail as `SEGMENT_TRAILING_WORK`.
 
 ## Verification Notes
 
