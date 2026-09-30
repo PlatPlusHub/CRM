@@ -25,7 +25,7 @@ Current state only. `Last Completed` names the single most recent capability —
 
 Current Phase: **Phase 8 (Offline Conversion) — IN PROGRESS**. Execution order 7→9→8→10 (`32`). Phases 2–7 + 9 COMPLETE. Supabase-native backend (ADR-0014); transport ADR-0023. **Phase 10 is NOT ready** — evidence in `32` under Phase 10; blocker is Phase 8's unbuilt n8n workflow, gated behind the Foundation Completion Programme.
 
-Current Module: Phase-8 offline-conversion / Foundation Completion Programme Batch 6. The Agent Control Plane is closed: the contract partition is mechanically enforced against the Git baseline, the manifest pointer and contract Status are one invariant checked both ways, engineering method lives in `ENGINEERING_METHOD.md` so routine execution no longer reads it, and the evidence chain is now as deterministic as the write-authority chain. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
+Current Module: Phase-8 offline-conversion / Foundation Completion Programme Batch 6. SPEC-242 completed the repository-only segmented-publication and full-range certification repair. The n8n workflow remains governed by `MASTER_INTEGRATION_CATALOG.md §2/§2a`; the real-GCLID test stays on hold until genuine ad-click traffic exists.
 
 Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` deploys to **Primary `vrvtsxexkiiiivlkdxzp` only**. Secondary `brplkqmbzffpxqgkkdzo` is the `Shehabhub/ORVION` environment and is never a CRM target; differences between the two are expected and valid. Detail: `MASTER_INTEGRATION_CATALOG.md §0/§4`.
 
@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-09-29. **repository, local stack and Primar
 
 Batch 6 surface coverage: **31 of 78 surfaces have a recorded audit disposition**, all thirty-one at `ADVERSARIAL` (`MASTER_SURFACE_DISPOSITION.md`, Checks 22 and 24). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key. Primary bookings, booking_items, passengers and booking_item_passengers tables had zero rows at SPEC-224 deployment precheck (2026-09-26).
 
-Active Change Request: changes/SPEC-242-segmented-publication-certification.md
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**, **PH8-10**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration; PH8-10 awaits Google evidence that click-less phone conversions are credited. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-241 corrected the cold-start open-decision self-test pin from 2 to 3; repository-only, no product or database change (2026-09-29).**
+Last Completed: **SPEC-242 completed the repository-only segmented-publication and full-range certification repair (2026-10-01).**
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 
