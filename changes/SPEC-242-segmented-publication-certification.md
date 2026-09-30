@@ -128,31 +128,34 @@ Post-Implementation Proof Obligation: All existing Agent Control tests and new S
 
 ## Acceptance Criteria
 
-- [ ] Every sequential Complete segment is range-validated under its own frozen Approved CR; the actual SPEC-240→241→242 range reaches `ORVION: READY`.
-- [ ] Historical allocation, per-commit scope/status, terminal immutability, Approval Evidence replay, valid Complete plus Cancelled and final-HEAD repair behavior remain covered by passing positive and negative cases.
-- [ ] An unfinished tail and ambiguous same-commit completions are refused; no later CR authorizes earlier work.
-- [ ] Multi-Complete `-Finish` refuses dirt and freezes expected names from actual upstream/main-to-HEAD paths through the existing matcher and receipt; single-contract semantics remain unchanged.
-- [ ] Missing or failed expected Migration CI cannot certify a main promotion; running is PENDING, all exact target-branch successes are READY, and wrong SHA/branch/moved target remain refused.
-- [ ] No terminal CR, publisher, workflow, Supabase file, Primary evidence, application file or unrelated report changes.
+- [x] Every sequential Complete segment is range-validated under its own frozen Approved CR; the actual SPEC-240→241→242 range reaches `ORVION: READY`.
+- [x] Historical allocation, per-commit scope/status, terminal immutability, Approval Evidence replay, valid Complete plus Cancelled and final-HEAD repair behavior remain covered by passing positive and negative cases.
+- [x] An unfinished tail and ambiguous same-commit completions are refused; no later CR authorizes earlier work.
+- [x] Multi-Complete `-Finish` refuses dirt and freezes expected names from actual upstream/main-to-HEAD paths through the existing matcher and receipt; single-contract semantics remain unchanged.
+- [x] Missing or failed expected Migration CI cannot certify a main promotion; running is PENDING, all exact target-branch successes are READY, and wrong SHA/branch/moved target remain refused.
+- [x] No terminal CR, publisher, workflow, Supabase file, Primary evidence, application file or unrelated report changes.
 
 ## Execution Log
 
 - 2026-09-30: Test-first run against the previous control returned 305 passes and 14 failures in the new segmented cases. Implemented ordered completion segments using the existing per-commit validator and one shared terminal-state table; each segment retains its own frozen Approved scope and Approval Evidence replay. An active successor exposed a real same-commit ambiguity escape, so the segment finder explicitly refuses it. No terminal CR or publication script changed.
 - 2026-09-30: The focused block passed 27/0, including six installed, killed and byte-restored mutants. The full Agent Control suite passed 331/0. Future-date, status-contradiction, recorded Primary-ledger and cold-start guard suites passed 18/0, 33/0, 13/0 and 34/0. Repository Consistency was CLEAN and `git diff --check` passed. A clean disposable clone carrying the actual SPEC-240 and SPEC-241 commits plus a synthetic SPEC-242 Complete transition returned `ORVION: READY` for the full base-to-HEAD Gate. The live In Progress range still refused its unfinished tail as `SEGMENT_TRAILING_WORK`.
+- 2026-09-30: With implementation committed at `fd638c5efc7998bfdc362c5495065170bff00898` and a clean tree, canonical `-Finish` passed Agent Control, all four control guard suites, Repository Consistency and `git diff --check`; it returned `LOCAL_CERTIFY: READY`. The existing receipt targets `main` and freezes exactly Agent Control, Migration CI and Repository Consistency, derived from the full upstream-to-HEAD changed paths.
 
 ## Verification Notes
 
-None.
+Independent Review, 2026-09-30: The committed SPEC-242 range changed exactly the five scoped paths, while implementation after In Progress changed only this CR and the two control scripts. SPEC-240 and SPEC-241 remain Complete and unmodified. The new segment walk reuses the existing frozen-authority and per-commit checks; its shared terminal state, overlap refusal and unfinished-tail refusal are exercised by positive, negative and mutation cases. The full real SPEC-240→SPEC-241→synthetic SPEC-242 Complete range was READY in a clean disposable clone; the exact production Complete SHA will be checked again immediately after its commit. The canonical clean-tree receipt is READY with the three expected main workflows. Every Acceptance Criterion and Review Gate item was checked against the committed implementation, test results, receipt and scope diff. No unresolved business, legal, database or architecture decision was introduced.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] The Depends On contracts remain Complete and immutable; no terminal Status is changed.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] The Depends On contracts remain Complete and immutable; no terminal Status is changed.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
