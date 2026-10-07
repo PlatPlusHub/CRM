@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -320,6 +320,13 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 None.
 
+### 2026-10-07 — Owner-delegated approval and execution start
+
+The owner's Slice-31 directive of 2026-10-07 directed this bounded Batch-6 slice to proceed through repository governance: reproduce, repair only evidence-backed defects, give the surface a truthful disposition, stop once at the exact Primary Gate-2 boundary if a migration is earned, then publish and synchronize. It does not authorize any Primary write; Gate 2 is required.
+
+- Draft `e047151`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY).
+- Approved at `4caccda`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
+- In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 ## Verification Notes
 
 None.
