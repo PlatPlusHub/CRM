@@ -105,7 +105,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -308,6 +308,70 @@ The owner's directive of 2026-10-07 authorized this bounded PH8-9 task to procee
 - Approved at `302f569`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 
+### 2026-10-07 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration was absent and was created LF and ASCII, byte-identical to the prototype: SHA-256 `4746ad7c439c56b551ce69596fb06f88c31f8fa2dcb29455bbafbb16d14d43a5`, md5 `6d63f73e7d03beadac97836ea02ef2d1`, 24382 bytes.
+- **Step 2: Applied.** Test 143 (`95a6d9c0…`, `plan(45)`), Test 09 (`f73c8fd6…`) and `scripts/verify_database.sql` (`33c0cfdb…`) match their frozen SHA-256 values. Both edited targets held their `67007fb` bytes first.
+- **Step 3: Applied.** The PH8-9 row did not lead with the FIXED line. Register `721368ee…`, catalog `7576ac29…`, plan `c9267ea5…`, canon 21 `b884d21e…`, 24 `3da8ca4c…`, 25 `3302740d…`, 26 `ca413df6…` and roadmap `b20f48ae…` match their frozen values; every target held its `67007fb` bytes first.
+
+Per the DATABASE sequencing, these twelve paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-10-07 — Pre-deploy readiness gate
+
+Run on HEAD `5de1915` with every Step 1-3 file at its frozen hash.
+
+- **Reset:** a clean local reset to 240 migrations, latest `20261007120000`.
+- **Focused:** Tests 143 and 09, 62/62 (45 + 17).
+- **pgTAP Pass A:** 143 files / 2615 assertions PASS.
+- **HTTP suites:** `verify_api_end_to_end` 35, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122 (the declared suite), `verify_role_journeys` 120, `verify_storage_end_to_end` 60: 451 passed, 0 failed, each exit 0.
+- **pgTAP Pass B,** without reset: 143 / 2615 PASS.
+- **Smoke:** `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`, exit 0. Plan sum: 143 files, 2615 assertions.
+- **Mutation:** base surface md5 `a6c85aab17521c8a7e89168132a3d352` (the four functions' definitions, the table's constraints and indexes). Each installation was proven by a changed md5 and each restoration by the base md5; the final md5 equals the base. All 17 were killed:
+
+  | Mutant | Failing assertions | Ran of 45 |
+  | --- | --- | --- |
+  | M1 ingestion writes `sent` | 8, 17, 19 | 19 |
+  | M2 `ingested` re-claimable | 16, 17 | 18 |
+  | M3 lease sweeps `ingested` | 17 | 18 |
+  | M4 `PROCESSING` is `sent` | 20, 21, 22 | 22 |
+  | M5 `PARTIAL_SUCCESS` is `sent` | 36 | 45 |
+  | M6 no provider deadline | 38 | 45 |
+  | M7 repeated `SUCCESS` re-emits | 29, 30, 31 | 45 |
+  | M8 stale request resolves newer | 24, 27, 35 | 45 |
+  | M9 `UNKNOWN` is `sent` | 23 | 25 |
+  | M10 `FAILED` after `sent` | 30, 31 | 45 |
+  | M11 reissue identity ignored | 6, 42 | 45 |
+  | M12 identity from `booking_id` | 6, 42 | 45 |
+  | M13 no 30-minute wait | 18 | 45 |
+  | M14 last check ignored | 21 | 45 |
+  | M15 `sent` CHECK dropped | 44 | 45 |
+  | M16 request-id uniqueness dropped | 11 | 45 |
+  | M17 request-id shape dropped | 12, 13 | 31 |
+
+  Six runs stop after their named assertion failed, because the mutated state makes a later unguarded call raise (M1-M4, M9, M17); the Mutation Obligation admits that and the kill is the named failure. The identical harness on the prototype gave identical results.
+- **Causal negative (pre-repair schema, `67007fb`, rolled back):** claimed 1; the boolean acknowledgement of an ingestion made the delivery `sent` with 1 sent event; the only delivery RPCs were `claim_conversion_deliveries` and `record_conversion_delivery_result`; a later FAILED was refused (`delivery … is sent — only pending deliveries can be resolved`); re-claimed after 48 hours: 0.
+- **Two-session proofs** (prototype schema, disposable committed state, reset afterwards):
+  - an ingestion committed by backend 409 was read by backend 416 as `ingested` with `REQ-LIVE-143`; its claim took 0; aged 31 minutes, it was due with its request id;
+  - two concurrent `SUCCESS` calls: B waited on `Lock/transactionid` from 17:36:21.40 until A committed at 17:36:24.005, then returned `sent`; 1 sent event; state `sent`/`SUCCESS`;
+  - two concurrent ingestions of one delivery: B waited on A's lock and was refused (`… is ingested -- only a pending delivery can record its ingestion`); the request is `REQ-LIVE-A` alone.
+- **Generators:** `MASTER_API_CONTRACT.md` regenerates byte-identical (80 RPC endpoints, 80 with HTTP evidence, 8 views, 74 tables). `ai-map.json` differs only in `generated_at` and was restored until Step 7.
+- **Scope, diff check and consistency:** the twelve changed paths are all in Write Scope; `git diff --check` exited 0. Repository consistency reports exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and RECOVER-1.
+- **Guard self-tests (prototype):** future-date 18/0 and status-contradiction 33/0; primary-ledger and cold-start fail only their clean-repository CONTROL cases (baseline 13/0 and 34/0). Re-run at Step 7.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 239 migrations, `66f7ce11526941ed7ab4e675b3fd4e28`, equal to the recorded evidence; latest `20260929160000`. The target is absent by version and by name.
+- **Function surface:** `78339ac07ebd500811850ad5bf04f302`/318.
+- **Structural surfaces:** functions `78339ac0…`/318, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `623c6b38…`/521, grants `ebdcfde6…`/195, columns `2d54cc2a…`/1129, views `10bb212a…`/16, indexes `cdaa3b83…`/298, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79, `_combined` `77bba1da1535be6fcfee07aff2ca118c`/3102 — equal to the recorded evidence.
+- **Pre-repair definition md5:** claim `55b47389de51be40a8cd2252126d3f69` (equal to SPEC-240's deployed value), boolean acknowledgement `5df2b44ce26f3eeb3c1c8adbaf7b8ff3`.
+- **Absent:** the `ingested` catalog value, the three new functions, the five columns, the four CHECKs and the index.
+- **Business rows:** 0 tenants, offline conversions, deliveries, events and attribution clicks; 621 catalog values.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 240 migrations, latest `20261007120000`, fingerprint `5907e3b5a170d153797aff8cb08ca20e`.
+- **Surfaces:** functions `e6bb8dd300da86442ff8bcd942912d94`/320 (+2: three added, one dropped, the claim re-created); triggers, policies, grants, views, status_transitions and rls_enabled unchanged; constraints `cea733efe840d1579bc55f541de54c2d`/525 (+4); columns `448db887b387a7b7974675beca4d502e`/1134 (+5); indexes `56872e87068cc220c988957980511eae`/299 (+1); `_combined` `f8062e9459f894e1f4e0a5b8ef0b0efc`/3114.
+- **Catalog:** 622 values. **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 ## Verification Notes
 
 None.
