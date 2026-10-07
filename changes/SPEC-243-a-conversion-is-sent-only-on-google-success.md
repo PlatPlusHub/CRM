@@ -105,7 +105,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -372,6 +372,37 @@ Run on HEAD `5de1915` with every Step 1-3 file at its frozen hash.
 - **Catalog:** 622 values. **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+### 2026-10-07 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of exactly `supabase/migrations/20261007120000_a_conversion_is_sent_only_on_google_success.sql`, SHA-256 `4746ad7c439c56b551ce69596fb06f88c31f8fa2dcb29455bbafbb16d14d43a5`, md5 `6d63f73e7d03beadac97836ea02ef2d1`, with the focused test `143_a_conversion_is_sent_only_on_google_success_test.sql` at SHA-256 `95a6d9c0b802b7d1b5a226f45fa31faa0ef6f4a4a17446f06f0dc0cc032e67e0`. Conditions, any mismatch voiding it: HEAD `c8d77a1` or the exact expected pre-deployment state; both hashes unchanged; Primary at 239 migrations with latest `20260929160000`; `20261007120000` absent; the PH8-9 objects absent; business counts compatible with the recorded evidence; Secondary never contacted. The authorization continues through deployment verification, Review, Complete, publication, exact-SHA candidate CI, promotion, `REMOTE_CERTIFY: READY` and synchronization, ending with the next capability set to Batch 6 Slice 31. It does not authorize n8n.
+### 2026-10-07 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:** HEAD `c8d77a17a529c22a0c23caae60b2bf920c6cd818`; migration SHA-256 `4746ad7c…`, md5 `6d63f73e…`, 24382 bytes, 0 CR, 0 non-ASCII; Test 143 `95a6d9c0…`; only the twelve in-scope Step 1-3 paths dirty; project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 239, `66f7ce11…`, latest `20260929160000`, target absent by version and name; claim `55b47389…` and boolean acknowledgement `5df2b44c…` unchanged; the catalog value, three functions, five columns, four CHECKs and index absent; 0 tenants, conversions, deliveries, events and clicks; 621 catalog values.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `6d63f73e7d03beadac97836ea02ef2d1` and 24382 bytes.
+- That text was applied through `apply_migration` as `a_conversion_is_sent_only_on_google_success`. The connector assigned the temporary version `20261007182839`; its single stored statement has md5 `6d63f73e…` and 24382 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261007120000`. The guard required 240 rows, the other 239 hashing to the baseline, the statement md5 to match, and no existing target. All four were true; 1 row renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 240, `5907e3b5a170d153797aff8cb08ca20e`, latest `20261007120000`, present once; the temporary version is gone.
+- **Surfaces:** functions `e6bb8dd3…`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `ebdcfde6…`/195, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79, `_combined` `f8062e9459f894e1f4e0a5b8ef0b0efc`/3114.
+- **Functions:** `app.record_conversion_delivery_result` is absent. The claim (`d72b27bb50c289b9170667db849dad67`), `app.record_conversion_ingestion` (`6a9b6929dd221ee13e49a8bc61b6a69c`), `app.conversion_status_checks_due` (`fe9d52eeef4c1e02aa91a278ca020457`) and `app.record_conversion_provider_status` (`401eeb377845eeae8149b11fbbecdf65`) are byte-identical to local, SECURITY DEFINER, owned by `postgres`, `search_path=""`, ACL `{postgres=X, orvion_integration=X}` only.
+- **Table:** the five columns in order after `created_at`; the four CHECKs validated; the partial unique index `offline_conversion_deliveries_provider_request_id_key`; 78 public tables.
+- **Catalog:** `ingested` (`Ingested`, sort 5, active); 622 values.
+- **Business rows:** 0 tenants, conversions, deliveries, events and clicks.
+
+No business-data write and no reproduction was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-07 — Step 7: evidence and measured state
+
+- `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 240 migrations, `5907e3b5…`, functions `e6bb8dd3…`/320, structural `f8062e94…`/3114, commit `c8d77a1`; its ledger equals the repository's migration files.
+- `supabase/tests` holds 143 files whose `plan(N)` values sum to 2615. The manifest's `Live state` now reads 240 migrations, latest `20261007120000`, the same hashes and counts, 78 tables, `71/622` catalog, 80 client RPCs, `Suite **143 files / 2615 assertions**` and 451 HTTP assertions last passed 2026-10-07. The manifest measures 6599 characters.
+- PH8-9 is marked DEPLOYED with Cert `✅`.
+- `MASTER_API_CONTRACT.md` regenerates byte-identical; `ai-map.json` was regenerated and stored LF.
+- The four guard self-tests pass: future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0.
+- `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency exit 0; `git diff --check` exit 0.
+- The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 ## Verification Notes
 
 None.

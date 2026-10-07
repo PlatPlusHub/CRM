@@ -111,11 +111,14 @@ Offline Conversion Engine is responsible for:
 Offline conversion delivery states:
 
 - pending
+- ingested
 - sent
 - failed
 - retried
 
 Every send attempt must be recorded.
+
+A platform that accepts a request has not yet processed it. Acceptance is `ingested`; a delivery is `sent` only when the platform reports terminal success for that request.
 
 ---
 

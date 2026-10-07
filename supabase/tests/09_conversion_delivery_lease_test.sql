@@ -145,10 +145,15 @@ select is(
 -- ------------------------- 11-12. a SENT delivery is never turned back into claimable work
 do $$
 begin
-    perform app.record_conversion_delivery_result(
+    -- PH8-9 (SPEC-243): sent means Google's terminal SUCCESS for the delivery's own request.
+    perform app.record_conversion_ingestion(
         (select id from public.offline_conversion_deliveries
           where offline_conversion_id = pg_temp.conv('b') and delivery_status_code = 'pending'),
-        true, '{"ok":true}'::jsonb, null);
+        'NOT-A-REAL-REQUEST-b');
+    perform app.record_conversion_provider_status(
+        (select id from public.offline_conversion_deliveries
+          where offline_conversion_id = pg_temp.conv('b') and delivery_status_code = 'ingested'),
+        'NOT-A-REAL-REQUEST-b', 'SUCCESS', '{"requestStatus":"SUCCESS"}'::jsonb);
     update public.offline_conversion_deliveries
        set created_at = now() - interval '24 hours'
      where offline_conversion_id = pg_temp.conv('b');

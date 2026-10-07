@@ -485,6 +485,7 @@ reference the original document. Nothing produces it today, and a credit note is
 ## States
 
 - pending
+- ingested
 - sent
 - failed
 - retried
@@ -493,7 +494,9 @@ reference the original document. Nothing produces it today, and a credit note is
 
 | From | To | Rule |
 | --- | --- | --- |
-| pending | sent | External platform accepts conversion |
+| pending | ingested | External platform accepts the request and returns its request identity |
+| ingested | sent | External platform reports terminal success for that request |
+| ingested | failed | External platform reports failure or partial success, or no terminal status arrives by the deadline |
 | pending | failed | Send attempt fails |
 | failed | retried | Retry scheduled or attempted |
 | retried | sent | Retry succeeds |

@@ -1559,6 +1559,7 @@ Ownership: System Catalog
 Values:
 
 - pending
+- ingested
 - sent
 - failed
 - retried

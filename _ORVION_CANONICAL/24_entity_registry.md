@@ -844,7 +844,7 @@ Represents sending conversion data to an external platform.
 
 Responsibilities:
 
-- Tracks pending, sent, failed, and retried states.
+- Tracks pending, ingested, sent, failed, and retried states.
 - Records send attempts.
 
 ---
