@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -299,6 +299,14 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ## Execution Log
 
 None.
+
+### 2026-10-07 — Owner-delegated approval and execution start
+
+The owner's directive of 2026-10-07 authorized this bounded PH8-9 task to proceed through Draft, Pre-Approval Evidence, Approved, In Progress, implementation, local verification and Review without pausing for routine acknowledgements, on condition that the objective stays PH8-9 plus its direct planning consumers, no unrelated architecture is added, the Write Scope stays justified and no new material owner decision appears. It does not authorize any Primary write; Gate 2 is required.
+
+- Draft `d970dd6`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY). Two mutated copies were refused: a gate moved to Step 4 inside the red window 2..7 (`FAIL`), and a removed Mutation Obligation (`INDETERMINATE`).
+- Approved at `302f569`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
+- In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 
 ## Verification Notes
 
