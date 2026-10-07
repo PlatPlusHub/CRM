@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -281,20 +281,20 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] Ingestion records Google's request id and leaves the delivery `ingested`; ingestion, `PROCESSING`, `REQUEST_STATUS_UNKNOWN`, `PARTIAL_SUCCESS` and `FAILED` never make it `sent`, and no sent event is recorded for them.
-- [ ] Only `SUCCESS` for the delivery's own request makes it `sent`, with exactly one `offline_conversion_sent` from `ingested`; a repeated `SUCCESS` returns `sent` and records nothing; `FAILED` after `sent` is refused.
-- [ ] An `ingested` delivery is never re-claimed and never lease-swept; it is due for a status check 30 minutes after ingestion and then at most hourly; 26 hours after ingestion the claim fails it with `PROVIDER_DEADLINE` and re-claims the conversion.
-- [ ] `FAILED`, `PARTIAL_SUCCESS`, a material `fieldWarnings` entry, a `validateOnly` run and an ingestion error each become `failed` and re-claimable under the retry ceiling of 5, and every retry carries the same `transaction_id`.
-- [ ] A request id is required, well-formed and unique across deliveries and tenants; a delivery takes at most one; a status for another request or for an obsolete attempt is refused.
-- [ ] `transaction_id` is the conversion's id, except that a mapped `ticket_issued` carries its source event's booking, so an issue and a reissue of one booking share it; it is never read from `offline_conversions.booking_id`.
-- [ ] No door, the platform included, can write `sent` without a recorded `SUCCESS` or `ingested` without a request id.
-- [ ] The four delivery RPCs are SECURITY DEFINER with an empty `search_path` and executable by `orvion_integration` only; `app.record_conversion_delivery_result` no longer exists; a phone conversion without consent is still not claimed.
-- [ ] Mutants M1 to M17 are each killed, with installation and restoration md5-proven. The pre-repair causal negative and the three two-session proofs are recorded.
-- [ ] Register and records: PH8-9 is fixed and deployed; PH8-5 records `transaction_id`; catalog §2/§2a describe the new contract, §2b item 3 is closed, item 6 exists and its order points to roadmap 32; roadmap 32 records the owner's 2026-10-07 sequence; EC-1 names its surface set; canon 21, 24, 25 and 26 list `ingested`. CONV-9, CONV-10, BOOK-11, BOOK-12 and PAY-5 are unchanged; the Google Ads registry row stays `NOT OPERATIONAL`; no new planning document exists.
-- [ ] The migration, the two tests, the smoke script and the eight Step-3 documents matched their frozen SHA-256 values when applied. Primary, the recorded evidence, the manifest (240 migrations; 143 files / 2615 assertions; 71/622 catalog), the API contract and `ai-map.json` agree.
-- [ ] The manifest names Foundation Completion Programme Batch 6 Slice 31 as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] Ingestion records Google's request id and leaves the delivery `ingested`; ingestion, `PROCESSING`, `REQUEST_STATUS_UNKNOWN`, `PARTIAL_SUCCESS` and `FAILED` never make it `sent`, and no sent event is recorded for them.
+- [x] Only `SUCCESS` for the delivery's own request makes it `sent`, with exactly one `offline_conversion_sent` from `ingested`; a repeated `SUCCESS` returns `sent` and records nothing; `FAILED` after `sent` is refused.
+- [x] An `ingested` delivery is never re-claimed and never lease-swept; it is due for a status check 30 minutes after ingestion and then at most hourly; 26 hours after ingestion the claim fails it with `PROVIDER_DEADLINE` and re-claims the conversion.
+- [x] `FAILED`, `PARTIAL_SUCCESS`, a material `fieldWarnings` entry, a `validateOnly` run and an ingestion error each become `failed` and re-claimable under the retry ceiling of 5, and every retry carries the same `transaction_id`.
+- [x] A request id is required, well-formed and unique across deliveries and tenants; a delivery takes at most one; a status for another request or for an obsolete attempt is refused.
+- [x] `transaction_id` is the conversion's id, except that a mapped `ticket_issued` carries its source event's booking, so an issue and a reissue of one booking share it; it is never read from `offline_conversions.booking_id`.
+- [x] No door, the platform included, can write `sent` without a recorded `SUCCESS` or `ingested` without a request id.
+- [x] The four delivery RPCs are SECURITY DEFINER with an empty `search_path` and executable by `orvion_integration` only; `app.record_conversion_delivery_result` no longer exists; a phone conversion without consent is still not claimed.
+- [x] Mutants M1 to M17 are each killed, with installation and restoration md5-proven. The pre-repair causal negative and the three two-session proofs are recorded.
+- [x] Register and records: PH8-9 is fixed and deployed; PH8-5 records `transaction_id`; catalog §2/§2a describe the new contract, §2b item 3 is closed, item 6 exists and its order points to roadmap 32; roadmap 32 records the owner's 2026-10-07 sequence; EC-1 names its surface set; canon 21, 24, 25 and 26 list `ingested`. CONV-9, CONV-10, BOOK-11, BOOK-12 and PAY-5 are unchanged; the Google Ads registry row stays `NOT OPERATIONAL`; no new planning document exists.
+- [x] The migration, the two tests, the smoke script and the eight Step-3 documents matched their frozen SHA-256 values when applied. Primary, the recorded evidence, the manifest (240 migrations; 143 files / 2615 assertions; 71/622 catalog), the API contract and `ai-map.json` agree.
+- [x] The manifest names Foundation Completion Programme Batch 6 Slice 31 as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -403,19 +403,51 @@ No business-data write and no reproduction was made on Primary. Secondary `brplk
 - The four guard self-tests pass: future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0.
 - `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency exit 0; `git diff --check` exit 0.
 - The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+### 2026-10-07 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` on the clean committed execution HEAD `17b5623` in VERIFY mode, profiles DATABASE and REPOSITORY. The first run stopped at its first command: `npx supabase db reset` exited 1 with `error running container: exit 1` during "Initialising schema", while the database container itself came back healthy. Recovery attempt 1: the same reset run alone with `--debug` exited 0 at 240 migrations, so the failure was a transient helper-container exit, not a migration defect. The second `-Finish` passed every mandatory verification and returned `LOCAL_CERTIFY: READY`:
+- reset; pgTAP Pass A; the declared `verify_lifecycle_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
 ## Verification Notes
 
 None.
 
+### 2026-10-07 — Independent Review of execution commit `17b5623`
+
+Reviewed the committed tree against the approved Draft `d970dd6`, the owner's Gate-2 authorization and the frozen seventeen-path Write Scope, not against the Execution Log.
+- **Scope.** `67007fb..17b5623` changes sixteen paths, all in Write Scope; `MASTER_API_CONTRACT.md` regenerates byte-identical and is unchanged; `MASTER_SURFACE_DISPOSITION.md` and every Out-of-Scope file are untouched.
+- **Frozen bytes.** The committed migration (`4746ad7c…`), Test 143 (`95a6d9c0…`), Test 09 (`f73c8fd6…`), the smoke script (`33c0cfdb…`), catalog (`7576ac29…`), plan (`c9267ea5…`), canon 21, 24, 25, 26 and roadmap 32 hash to their frozen values. The register differs from its Step-3 value by exactly one line, the PH8-9 row's Step-7 `DEPLOYED` status and Cert `✅`.
+
+Acceptance, re-checked against the committed bytes, the certified run and the Primary readback:
+1. **Ingestion is not delivery.** Assertions 7–9, 20, 23, 32, 36 and 39–40: ingestion records the request and leaves `ingested`; `PROCESSING`, `REQUEST_STATUS_UNKNOWN`, `PARTIAL_SUCCESS`, `FAILED`, a material `fieldWarnings` entry and a `validateOnly` run never make `sent` or a sent event. Mutants M1, M4, M5 and M9 are killed.
+2. **SUCCESS, once.** Assertions 26–30: only `SUCCESS` for the delivery's own request makes `sent`, with one event from `ingested`; a repeat returns `sent` and records nothing; `FAILED` after `sent` is refused (M7, M10). The two-session proof gave one event for two concurrent `SUCCESS` calls.
+3. **Pending lifecycle.** Assertions 16–22 and 37–38: never re-claimed, never lease-swept, due 30 minutes after ingestion and then at most hourly, failed by the 26-hour deadline and re-claimed (M2, M3, M6, M13, M14). The committed ingestion survived a new connection in the live proof.
+4. **Retry.** Assertions 32–33, 36, 38–43: every failure path re-enters the existing retry path under the ceiling of 5 with the same `transaction_id`.
+5. **Request identity.** Assertions 10–15, 24, 34–35: required, well-formed, unique across deliveries and tenants, one per delivery; another request's or an obsolete attempt's status is refused (M8, M16, M17). Two concurrent ingestions attached one request.
+6. **Reissue.** Assertions 6 and 42: an issue and a reissue of one booking share the booking from the source event; `booking_id` is never read (M11, M12).
+7. **Doors.** Assertions 44–45: the platform cannot write `sent` without `SUCCESS` or `ingested` without a request (M15).
+8. **Authority shape.** Assertions 1–3 and the Primary readback: four SECURITY DEFINER RPCs with an empty `search_path`, ACL `{postgres, orvion_integration}`; the boolean is absent on Primary and locally; assertion 5 keeps the unconsented phone call unclaimed.
+9. **Mutation.** M1–M17 killed with md5-proven install and restore, identical on the prototype and the main checkout; the causal negative and three two-session proofs are recorded.
+10. **Records.** PH8-9 fixed and deployed; PH8-5 records `transaction_id`; catalog §2/§2a, §2b item 3, item 6 and its order paragraph; roadmap 32's 2026-10-07 sequence; EC-1's surface-set criterion; `ingested` in canon 21, 24, 25 and 26. CONV-9, CONV-10, BOOK-11, BOOK-12 and PAY-5 rows are byte-identical to `67007fb`; the Google Ads registry row stays `NOT OPERATIONAL`; no new planning document exists.
+11. **Agreement.** Primary, the evidence and the manifest agree: 240 migrations, `5907e3b5…`, functions `e6bb8dd3…`/320, structural `f8062e94…`/3114, 143 files / 2615 assertions, `71/622`; RECOVER-1 and parity evidence CLEAN; the four guard self-tests pass.
+12. **Handoff.** The Complete commit sets the next capability to Batch 6 Slice 31 with no Active Change Request.
+13. **Primary.** Only the authorized bytes (statement md5 `6d63f73e…`) and the one guarded rename; 0 business rows before and after; Secondary was never contacted.
+14. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+Not built, as directed: the n8n workflow, the Direct Call Quality Feedback Loop, PH8-10, and Slice 31.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
