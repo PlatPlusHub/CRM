@@ -121,7 +121,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -327,6 +327,65 @@ The owner's Slice-31 directive of 2026-10-07 directed this bounded Batch-6 slice
 - Draft `e047151`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY).
 - Approved at `4caccda`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-07 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration was absent. It was created LF and ASCII, byte-identical to the prototype: SHA-256 `8286493bc96dd795baea727252acc8a4fcf1e3efa77bea0ffcd1ce6100329c85`, md5 `705b8d7f40c633142f63bc98124a3355`, 8030 bytes.
+- **Step 2: Applied.** Test 144 (`72bce040…`, `plan(23)`), Test 87 (`0671672e…`) and `scripts/verify_role_journeys.ps1` (`a69f8438…`) match their frozen SHA-256 values. Both edited targets held their committed bytes first.
+- **Step 3: Applied.** The register held no MRG-1 row. Register `ec10970d…` and disposition `dc2569fc…` match their frozen values; both held their committed bytes first.
+
+Per the DATABASE sequencing, these six paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-10-07 — Pre-deploy readiness gate
+
+Run on HEAD `674236a` with every Step 1-3 file at its frozen hash.
+
+- **Reset:** a clean local reset to 241 migrations, latest `20261007190000`.
+- **Focused:** Tests 144 and 87, 52/52 (23 + 29).
+- **pgTAP Pass A:** 144 files / 2638 assertions PASS.
+- **HTTP suites:** `verify_api_end_to_end` 35, `verify_care_journeys` 40, `verify_journey_branches` 74, `verify_lifecycle_branches` 122, `verify_role_journeys` 122 (the declared suite, including the two MRG-1 checks), `verify_storage_end_to_end` 60: 453 passed, 0 failed.
+- **pgTAP Pass B,** without reset: 144 / 2638 PASS.
+- **Smoke:** `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`. Plan sum: 144 files, 2638 assertions.
+- **Mutation:** base surface md5 `eb747464e820ccc17f02e4dabc2d734d` (the merge's definition and the table's ACL). Every installation was proven by a changed md5 and every restoration by the base md5; the final md5 equals the base, and Test 144 passed afterwards. All four were killed, with results identical to the prototype:
+
+  | Mutant | Failing assertions | Ran of 23 |
+  | --- | --- | --- |
+  | M1 INSERT restored | 1, 3, 4, 5, 6 | 6 |
+  | M2 UPDATE restored | 1, 10, 11, 19, 20, 21, 23 | 23 |
+  | M3 source record check removed | 19, 20, 21 | 23 |
+  | M4 target record check removed | 20, 21, 22 | 23 |
+
+  M1's run stops after its named failures, as the Mutation Obligation admits.
+- **HTTP discrimination (prototype):** with INSERT and UPDATE re-granted, `verify_role_journeys.ps1` failed exactly its two MRG-1 checks (POST 201; PATCH 204, record rewritten to `rewritten`/2001) and passed the other 120.
+- **Causal negative:** the measurements in Business Reason, taken at `368a881` before the repair.
+- **Two-session proofs on the final schema,** each with an observed `pg_blocking_pids` edge:
+  - A→B against A→C, and A→B against B→A: one merge, an active survivor, and the loser refused for its own lifecycle reason;
+  - a merge against a consent decision on the source, both orders: either the decision is refused toward the survivor, or it lands first and governs both;
+  - a merge against a decision on the target, both orders: serialized, and the target's denial governs both.
+
+  `scripts/verify_customer_concurrency.py` passes its three cases.
+- **Generators:** `MASTER_API_CONTRACT.md` regenerates with exactly two lines moved: the table's `SIU-` → `S---` and the merge's refusal count 7 → 9 (SHA-256 `d8ef4dc6ae433fe7748d823af057f4e4ce7d64f4ecea12af86a6559829943ef8`). Totals are 80 RPC endpoints (80 with HTTP evidence), 8 views and 74 tables. `ai-map.json` differs only in `generated_at`. Both were restored until Step 7.
+- **Scope and diff check:** the six changed paths are all in Write Scope; `git diff --check` exited 0.
+- **Repository consistency:** exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and RECOVER-1.
+- **Guard self-tests (prototype):** future-date 18/0 and status-contradiction 33/0. Primary-ledger and cold-start fail only their clean-repository CONTROL cases. Re-run at Step 7.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 240 migrations, `5907e3b5a170d153797aff8cb08ca20e`, equal to the recorded evidence; latest `20261007120000`. The target is absent by version and by name.
+- **Structural surfaces:** functions `e6bb8dd3…`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `ebdcfde6…`/195, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79. `_combined` is `f8062e9459f894e1f4e0a5b8ef0b0efc`/3114, equal to the recorded evidence.
+- **The surface:** table ACL `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=arw/postgres}`; merge definition md5 `375a663c0b700498b78c029c5ce07e15`.
+- **Business rows:** 0 tenants, customers, merge records, consents and events.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 241 migrations, latest `20261007190000`, fingerprint `a7f02a08140c6ef7e0ed7a68f52aeeb5`.
+- **Functions:** `8eb85701fe0935b6ca60349a6c34ba71`/320 (the merge body replaced).
+- **Grants:** `134cce397b6d69b35f1745ea014168e3`/193 (−2: `authenticated` INSERT and UPDATE).
+- **Unchanged:** triggers, policies, constraints, columns, views, indexes, status_transitions and rls_enabled.
+- **`_combined`:** `235c36872752c174d3fde2ff3a042be2`/3112.
+- **Table ACL:** `authenticated=r`. Merge definition md5 `a1534c3eb8af1587f4dc83c7325b1361` locally.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
+
 ## Verification Notes
 
 None.
