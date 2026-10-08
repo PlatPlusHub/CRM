@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -208,7 +208,10 @@ Every file is written LF. Each SHA-256 below is the prototype's at `523888d` wit
 
 ## Execution Log
 
-None.
+### 2026-10-08 — Owner approval and execution started
+
+- **Approval** is delegated by the owner's directive of 2026-10-08, GitHub issue 3, which orders this integration through the canonical CR lifecycle. `APPROVAL_EVIDENCE: PASS` was reported at Approve `912a043`, with profiles CONTROL and REPOSITORY.
+- `origin/main` and `origin/orvion-preflight` were at `523888d`; the Draft is `28a8ff1`.
 
 ## Verification Notes
 
