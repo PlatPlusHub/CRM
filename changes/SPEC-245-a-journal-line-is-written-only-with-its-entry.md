@@ -141,7 +141,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -362,6 +362,81 @@ The owner's Slice-32 directive of 2026-10-08 directed this bounded Batch-6 slice
 - Draft `297e57f`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY).
 - Approved at `8c330f5`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-08 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1: Applied.** The migration was absent and was created LF and ASCII, byte-identical to the prototype: SHA-256 `74e957d1d1ce2372e1873c2e0413fbe0670161f7d958d76ff263b49f2aa502b0`, md5 `9d047676b3fd927a7a26926b1d6a073c`, 4911 bytes.
+- **Step 2: Applied.** These match their frozen SHA-256 values:
+  - Test 145 (`acf4a049…`, `plan(19)`);
+  - Test 70 (`d2416a28…`) and Test 89 (`982b0ee6…`);
+  - `scripts/verify_journey_branches.ps1` (`c2c23340…`).
+
+  Each edited target held its `3c34870` bytes first.
+- **Step 3: Applied.** The register held no JE-3 row. Register `fd07e810…` and disposition `b00dce7b…` match their frozen values, and both held their `3c34870` bytes first.
+
+Per the DATABASE sequencing, these seven paths stay uncommitted until Primary is deployed and the manifest remeasured.
+
+### 2026-10-08 — Pre-deploy readiness gate
+
+Run on HEAD `677aa5a` with every Step 1-3 file at its frozen hash.
+
+- **Reset:** a clean local reset to 242 migrations, latest `20261008120000`.
+- **Focused:** Tests 145, 70 and 89, 59/59 (19 + 19 + 21).
+- **pgTAP Pass A:** 145 files / 2657 assertions PASS.
+- **HTTP suites:** 458 passed, 0 failed:
+  - `verify_api_end_to_end` 35, `verify_care_journeys` 40;
+  - `verify_journey_branches` 79 (the declared suite, including the five JE-3 checks);
+  - `verify_lifecycle_branches` 122, `verify_role_journeys` 122, `verify_storage_end_to_end` 60.
+- **pgTAP Pass B,** without reset: 145 / 2657 PASS.
+- **Smoke:** `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`. Plan sum: 145 files, 2657 assertions.
+- **Mutation:** base surface md5 `a0700d7bd49edb3775297e8b2db0caef` (the RPC's definition, the balance check's definition and the table's ACL). Every installation was proven by a changed md5 and every restoration by the base md5; the final md5 equals the base, and Test 145 passed afterwards. All five were killed, with results identical to the prototype:
+
+  | Mutant | Failing assertions | Ran of 19 |
+  | --- | --- | --- |
+  | M1 line UPDATE restored | 1, 5, 7, 8, 10, 12 | 15 |
+  | M2 line INSERT restored | 1, 9, 10 | 19 |
+  | M3 RPC back to invoker | 2, 3, 5, 7, 8, 10, 12, 15, 16, 17 | 17 |
+  | M4 old parent not judged | 16, 18 | 19 |
+  | M5 parent lock removed | both sessions committed, entry emptied | two-session |
+
+- **Two-session proof on the final schema:** two platform sessions each moved half of one entry's four lines elsewhere. The second blocked on the first (`pg_blocking_pids` edge observed), then was refused (`… has 0 line(s) …`), and the entry kept its two lines.
+- **HTTP discrimination (prototype):** with INSERT and UPDATE re-granted on the lines, `verify_journey_branches.ps1` failed exactly its five JE-3 checks and passed the other 74:
+  - the bulk POST returned 201, the upsert 200, and the PATCH 204 at both aal2 and aal1;
+  - the posted 2500/2500 entry ended 14000/14000 across four EGP and USD lines, with its one event still saying 2500.
+- **Causal negative:** the measurements in Business Reason, taken at `3c34870` before the repair.
+- **Generators:**
+  - `MASTER_API_CONTRACT.md` regenerates with exactly one line moved, `journal_entry_lines` `SIU-` → `S---` (SHA-256 `482548e32c7328b1bd435a03efcc850176671a607a1650c8358016c2226c54ee`). It still reports 80 RPC endpoints (80 with HTTP evidence), 8 views and 74 tables.
+  - `ai-map.json` differs only in `generated_at`.
+  - Both were restored until Step 7.
+- **Scope and diff check:** the seven changed paths are all in Write Scope; `git diff --check` exited 0.
+- **Repository consistency:** exactly the six expected pre-deploy issues: three migration-state drifts, two suite-figure drifts and RECOVER-1.
+- **Guard self-tests (prototype):** future-date 18/0 and status-contradiction 33/0. Primary-ledger and cold-start fail only their clean-repository CONTROL cases. Re-run at Step 7.
+
+**Fresh Primary baseline,** read-only from `https://vrvtsxexkiiiivlkdxzp.supabase.co`:
+- **Ledger:** 241 migrations, `a7f02a08140c6ef7e0ed7a68f52aeeb5`, equal to the recorded evidence; latest `20261007190000`. The target is absent by version and by name.
+- **Structural surfaces:**
+  - functions `8eb85701…`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `134cce39…`/193;
+  - columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79;
+  - `_combined` `235c36872752c174d3fde2ff3a042be2`/3112, equal to the recorded evidence.
+- **The surface:**
+  - `journal_entry_lines` ACL `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=arw}`;
+  - `app.create_journal_entry` md5 `3992fa98695290c7596ce55088f02727`, SECURITY INVOKER;
+  - `app.enforce_journal_entry_balanced` md5 `fce34afe06ebb7d8c40d128144f64367`.
+- **Business rows:** 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Predicted delta,** equal to the local post-migration surface:
+- **Ledger:** 242 migrations, latest `20261008120000`, fingerprint `5f8565a14fcf6ef6cc7bca0218a4bcd9`.
+- **Functions:** `f704b7836a75f3f623a4112a28e5a779`/320 (the balance check replaced; the RPC's security mode changed).
+- **Grants:** `b6791b01807286f0d66baa3239b5869a`/191 (−2: `authenticated` INSERT and UPDATE on the lines).
+- **Unchanged:** triggers, policies, constraints, columns, views, indexes, status_transitions and rls_enabled.
+- **`_combined`:** `f18fcf70d3293eb80c4ec0536e1cced1`/3110.
+- **The surface:**
+  - lines ACL `authenticated=r`;
+  - `app.create_journal_entry` SECURITY DEFINER, md5 `13689c0479f7a76d7de053c39d9d618a` locally, ACL `{postgres=X, authenticated=X}`;
+  - `app.enforce_journal_entry_balanced` md5 `0d8ed6e22333a30412e0a63e4db6e3eb` locally.
+- **Business rows:** none written.
+
+Stopped at Step 5: Human Gate 2.
 
 ## Verification Notes
 
