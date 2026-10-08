@@ -169,7 +169,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -392,6 +392,48 @@ The owner approved Gate 1 for the exact Draft `c22d7821eb2b72648c5c2ed0d4d06a228
 - Pre-flight before Approve: HEAD `c22d782`, clean tree; `origin/main` and `origin/orvion-preflight` still `7e6f51e`; every Step 1–3 target unchanged since `7e6f51e` and both new files absent; a read-only evaluation returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY) with its three negative controls failing as designed.
 - Approved at `f2b1ef2`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-08 — Steps 1–3 applied; Step 4 pre-deploy readiness gate; stop at Gate 2
+
+**Steps 1–3**, applied in the working tree and left uncommitted until after the Primary deployment, as a DATABASE contract's must be. Every target was unchanged since `7e6f51e` before it was written, and each file hashes to its frozen value:
+- migration `4b8a88cd41c9d9355bdf7dd3f1fa89e31f91bdff2a9da52ecedb48982f73fcbc` (md5 `fbd6f81ad12d64bf8d4af2d3fa3b650a`, 2177 bytes, LF, ASCII, one statement);
+- Test 146 `f2074d7443596f8404d3de85018671d22f9763c7a52dca03e68bd1f8c332cfab`;
+- Test 83 `868ecc18194cd7e7e12add2f60eb336cee342a2b411ddc08e789892ce568bc62` (CRLF working tree, as before);
+- Test 89 `c4e12233fe4344033e604013a4da3ce59a5aaf07d384e367901b05ffbaa65cf4`;
+- `verify_journey_branches.ps1` `b459a7ce0b6fc8def2928fba6019fcddd3533a1e8ee872d13a31b1dbfa36714c`;
+- register `39ef1b8ad98b39f9dbd33becf92a48879ab10b0a402672dd476e038d846fd0cf` and disposition `8df653fc121933c34eb3d80296337872ab4ccda547edc707702913ce71bcabd3` (both LF).
+
+The register changes the freshness entry, JE-5 (FIXED locally, Cert `🛡`), a new JE-6 row and one STEPUP-1 sentence; the JE-2, DC-11 and FIN-9 rows are byte-identical to `7e6f51e`. The disposition changes the freshness entry, coverage 34 of 78 (18 `AUDITED-OPEN`, 44 `NOT-RECORDED`), "All 34" and the `journal_entries` row only.
+
+**Measured correction within Step 3.** The first JE-6 owner field read `engineering + owner: …`, which Check 25 reads as a registered owner decision absent from the manifest's open-decision line (`UNSURFACED DECISION: register entry 'JE-6'`). JE-6 is record-only and nothing reads the column, so it is not a decision anyone must make now; surfacing it would also change the three-id open-decision set the cold-start guard pins. The field now reads `engineering: decide the source-type-to-entity mapping and manual-entry semantics when the first reader of source_entity_id is built, escalating to the owner only if canon cannot answer them`, which is a scheduling position, as JE-2's and FIN-9's are. Check 25 then passed (`all 2 register entr(ies) awaiting a decider are named … of 322 findings`).
+
+**Step 4**, on the governed checkout at `311ece5` plus the Step 1–3 working tree:
+- **Reset** from the main checkout: exit 0; storage 68 migrations with `bucketid_objname`; ledger 243, latest `20261008150000`, fingerprint `201d938a80ae5fe6d32fb8ef6f3a7619`; `journal_entries` ACL `{postgres=arwdDxtm/postgres,service_role=Dxtm/postgres,authenticated=r/postgres}`, 0 column ACLs.
+- **Unchanged bytes:** `app.create_journal_entry` `13689c0479f7a76d7de053c39d9d618a`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X, authenticated=X}` (the value SPEC-245 deployed); `app.enforce_journal_entry_balanced` `0d8ed6e22333a30412e0a63e4db6e3eb`; the `public` wrapper `14725a2f84c3299bc341328a263fe967`. JE-6's input handling is therefore unchanged.
+- **Focused:** Test 146 17/17; Test 83 23/23; Test 89 21/21; Tests 145 19/19, 70 19/19 and 29 15/15 unchanged.
+- **Causal negative:** with INSERT and UPDATE restored, Test 146 fails 1, 4–9, 11–13, 15 and 16, each for its intended reason; restoration proven.
+- **pgTAP Pass A:** 146 files / 2674 assertions, PASS.
+- **HTTP:** 35 + 40 + 83 + 122 + 122 + 60 = **462 passed, 0 failed**.
+- **pgTAP Pass B,** without reset: 146 / 2674, PASS.
+- **Smoke:** `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`. Plan sum 146 files / 2674 assertions.
+- **Mutation** (base surface `{…,authenticated=r/postgres} cols=0`; every installation proven by a changed surface and every restoration by the base): M1 1, 4, 5, 6, 7, 8, 11, 13, 15, 16; M2 1, 9, 12; M3 1, 4, 16; M4 1, 7, 16; M5 1, 8, 16; M6 1, 5, 13, 15, 16; M7 1, 6, 16; M8 1, 9, 12. All eight killed; Test 146 17/17 afterwards. **H1**, on a fresh reset: `verify_journey_branches.ps1` failed exactly the pinned POST check (400 from the deferred check), the three JE-5 PATCH checks (204) and the header NON-MUTATION check, and passed the other 78; restoration proven, then a final reset.
+- **Generators:** the API contract regenerates to `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`, the prototype value; exactly one line moves, `journal_entries` `SIU-` → `S---`.
+- **Structural surface on the repaired stack:** grants `6727f6d89168b7aec4c06f131bef75bc`/189 and combined `f50dea30bd2a7c4cf4c22ddd9e191622`/3108; functions `f704b783…`/320 and the other eight surfaces unchanged — the frozen prediction.
+- **Scope:** ten paths changed since `7e6f51e`, all in Write Scope. `git diff --check` clean.
+- **Guard self-tests:** future-date 18/0 and status-contradiction 33/0 pass. Primary-ledger 11 passed, 2 failed, and cold-start 25 passed, 9 failed — every failure a CONTROL case requiring an untouched copy of the repository to be CLEAN; every mutation case passes.
+- **Repository consistency:** exactly the six expected pre-deploy issues — three migration-state drifts (242 vs 243, latest, ledger fingerprint), two suite-figure drifts (145 vs 146 files, 2657 vs 2674 assertions) and RECOVER-1. These are not waived; Step 7 makes them true and Step 8 requires them green.
+
+**Fresh Primary baseline,** read-only:
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 242, `5f8565a14fcf6ef6cc7bca0218a4bcd9`, latest `20261008120000`; the target absent by version and name;
+- functions `f704b7836a75f3f623a4112a28e5a779`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `b6791b01807286f0d66baa3239b5869a`/191, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79, combined `f18fcf70d3293eb80c4ec0536e1cced1`/3110 — equal to the recorded evidence;
+- `journal_entries` ACL `{postgres=arwdDxtm/postgres,service_role=arwdDxtm/postgres,authenticated=arw/postgres}`, 0 column ACLs; client grants `authenticated` INSERT, SELECT, UPDATE; `anon` none;
+- `app.create_journal_entry`, the balance check and the wrapper byte-identical to local;
+- 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Predicted delta:** ledger 243, `201d938a80ae5fe6d32fb8ef6f3a7619`, latest `20261008150000`; grants `6727f6d8…`/189; combined `f50dea30…`/3108; every other surface unchanged; `journal_entries` ACL `authenticated=r`; `service_role`'s privileges are Primary's platform default ACL (PAR-5) and do not change.
+
+Stopped after Step 4 for Gate 2. No Primary write was made. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
 
 ## Verification Notes
 
