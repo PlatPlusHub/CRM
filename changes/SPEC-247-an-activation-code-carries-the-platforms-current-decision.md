@@ -153,7 +153,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -385,6 +385,54 @@ Run on HEAD `7026c7a` with Steps 1–3 in the working tree, every reset from the
 
 Stopping at Gate 2 (Step 5): no owner authorization for the migration is recorded.
 
+
+### 2026-10-08 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of only `supabase/migrations/20261008170000_an_activation_code_carries_the_platforms_current_decision.sql`, SHA-256 `42fbb882ea584917c2740369a55c565a62a3e9d1b5f74d972f3797b05b532668`, md5 `b1ac5e31a7627221b3bde8bd8ac4ed26`, exclusively those bytes and the approved scope, with the guarded rename of a temporary connector version only if required.
+
+**Stop conditions before writing,** any material difference voiding it: pre-deploy HEAD other than `08a0a3d`; the migration's hashes; Test 147 or the HTTP suite differing from their tested bytes; Primary not at 243 migrations with latest `20261008150000`; the target version present; schema or function definitions differing from the approved baseline; business data changed; the new index already present.
+
+**Required behaviour:** suspension and cancellation revoke outstanding codes through the existing, audited revocation; a code issued afterwards still reactivates; one unconsumed, unrevoked code per tenant; authentication, MFA, tenant isolation, hashing, expiry, replay protection (LIC-2) and transition authority intact; a losing concurrent issuance leaves no unaudited or usable second code. No new role, table, trigger, policy or RPC. **SUB-4 stays OPEN** and is not implemented here; SPEC-247 is not evidence that concurrent subscription transitions are serialized. A newly reproducible LIC-4 bypass after deployment means stop, not complete. Secondary `brplkqmbzffpxqgkkdzo` stays out of bounds.
+
+### 2026-10-08 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- refs: HEAD `08a0a3db0a644dfee7461c76e80c4e225fe7c159`; `origin/main` and `origin/orvion-preflight` `bdf6f1b`;
+- the file: SHA-256 `42fbb882…`, md5 `b1ac5e31…`, 4393 bytes, 88 LF, 0 CR, 0 non-ASCII; Test 147 `2d244589…` and `verify_journey_branches.ps1` `4d321256…` unchanged;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 243, `201d938a80ae5fe6d32fb8ef6f3a7619`, latest `20261008150000`; the target absent by version and name; `tenant_license_activations_one_live_per_tenant` absent;
+- functions `f704b7836a75f3f623a4112a28e5a779`/320 and indexes `56872e87068cc220c988957980511eae`/299, equal to the recorded evidence; `app.platform_transition_subscription` SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X, service_role=X}`, raw text md5 `5ed79ca4…` as read before Step 4;
+- 0 tenants, subscriptions, activation codes, security events and events.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `b1ac5e31a7627221b3bde8bd8ac4ed26`, 4393 bytes, 88 LF, no CR.
+- That text was applied through `apply_migration` as `an_activation_code_carries_the_platforms_current_decision`. The connector assigned the temporary version `20261008173434`; its single stored statement has md5 `b1ac5e31…` and 4393 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261008170000`. The guard required 244 rows, the other 243 hashing to the baseline, the statement md5 to match and no existing target. All four held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 244, `9e846936c3b320e03eaf125844f46223`, latest `20261008170000`; exactly one row for the migration, under the target version; the temporary version is gone.
+- **Surfaces:** functions `127430f783d23b2b89e474636be684c9`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58cef10893d1279b6ddd9ff38f0`/300, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79; `_combined` `bb42b1b7a8ee985d892ccaf4426ce4ce`/3109.
+- **The index:** `CREATE UNIQUE INDEX tenant_license_activations_one_live_per_tenant ON public.tenant_license_activations USING btree (tenant_id) WHERE ((consumed_at IS NULL) AND (revoked_at IS NULL))`; the table now carries 4 indexes and its ACL is unchanged.
+- **The function:** `app.platform_transition_subscription` text md5 `5de22847f871687907f159f6656a727c`, byte-equal to the locally proven text; SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X, service_role=X}`, comment kept. `app.platform_issue_license_token`, `app.platform_revoke_license_tokens` and `app.redeem_license_token` read the same md5 as before the write.
+- **Business rows:** 0 tenants, subscriptions, activation codes, security events and events.
+
+**Behaviour on the deployed bytes,** proven locally on the byte-identical function and index, because no business data or fixture is written on Primary:
+- Test 147 15/15 and `verify_journey_branches.ps1` 85/0 at Step 4; the causal negative, M1–M5 and H1 killed on these bytes.
+- **Concurrent issuance:** two sessions; the first returned its plaintext, the second raised 23505 on `tenant_license_activations_one_live_per_tenant` and returned none. Afterwards 1 live code, exactly 1 added `license_token_issued` event and exactly 1 row for the winner's hash, and that code redeemed. The loser's transaction rolled back whole, so it left neither a usable code nor an audit row.
+- **LIC-4:** after suspension the old code was refused with the generic message and the tenant stayed suspended; an aal1 owner (`multi-factor authentication required for this role`), an employee (`permission denied: MANAGE_TENANT_SETTINGS`) and a rival tenant's owner (generic) were refused; a fresh code restored the tenant. No bypass was found.
+- **LIC-2:** replaying a consumed code is refused with the generic message.
+- LIC-1 unchanged; SUB-4 OPEN and unrepaired.
+
+No business-data write and no fixture was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-08 — Step 7: evidence and measured state
+
+- **Evidence:** `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 244 migrations, `9e846936…`, functions `127430f7…`/320, structural `bb42b1b7…`/3109, head `08a0a3d`. Its ledger is the Primary ledger read with its own `read_query`; it equals the recorded 243 entries plus the new one, and the repository's 244 migration files.
+- **Manifest:** `supabase/tests` holds 147 files whose `plan(N)` values sum to 2689. `Live state` reads 244 migrations, latest `20261008170000`, the same hashes and counts; 78 tables, `71/622` catalog, 80 client RPCs; `Suite **147 files / 2689 assertions**` and 464 HTTP assertions last passed 2026-10-08. Batch 6 coverage reads 35 of 78, all thirty-five at `ADVERSARIAL`. The manifest measures 6888 characters.
+- **Register:** LIC-4 and LIC-5 are marked DEPLOYED with Cert `✅`. SUB-4 stays OPEN; LIC-1, LIC-2 and LIC-3 are unchanged.
+- **Generators:** `MASTER_API_CONTRACT.md` regenerates unchanged (SHA-256 `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`), and `ai-map.json` was regenerated and stored LF.
+- **Checks:** the four CI-only guard self-tests pass (cold-start 34/0, future-date 18/0, primary-ledger 13/0, status-contradiction 33/0); `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency `CLEAN`; `git diff --check` clean.
+- **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
 ## Verification Notes
 

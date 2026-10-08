@@ -500,6 +500,16 @@ Check "LIC-2 over HTTP: the SAME code is refused the second time -- single-use, 
 $r = Rpc $emp 'redeem_license_token' @{ p_token = 'ffffffffffffffffffffffffffffffff' }
 Check "...and an employee without MANAGE_TENANT_SETTINGS cannot redeem at all" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
+# LIC-4 over the door. Only the Platform Owner restores a cancelled tenant (canon 26), so cancelling
+# revokes the code the Platform Owner issued before it; the tenant cannot redeem its way back.
+$tok = (Psql "select app.platform_issue_license_token('$T','enterprise','annual',false,7,'http lic-4');").Trim()
+Psql "select app.platform_transition_subscription('$T','cancelled','http lic-4');" | Out-Null
+$r = Rpc $owner 'redeem_license_token' @{ p_token = $tok }
+Check "LIC-4 over HTTP: a code issued before the Platform Owner cancelled the tenant is refused, with the same generic message" `
+    ((-not (Ok $r)) -and ((Err $r) -match 'activation code is not valid')) "$($r.StatusCode) $(Err $r)"
+$st = (Psql "select subscription_status_code from public.subscriptions where tenant_id = '$T';").Trim()
+Check "...and the tenant stays cancelled: it did not restore itself" ($st -eq 'cancelled') "status=$st"
+Psql "select app.platform_transition_subscription('$T','active','http lic-4 restore');" | Out-Null
 # =============================================================================================
 # API-3 FINAL THREE OVER HTTP -- assign_task, link_internal_supplier, financial_documents.
 # These are the last three endpoints without HTTP execution evidence; after this run the generated
