@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -330,19 +330,19 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] Suspending or cancelling a tenant through `app.platform_transition_subscription` revokes its outstanding code, audited as one `license_token_revoked` event naming the transition; a code issued before either decision is refused with the generic 42501 message, in pgTAP and over HTTP, and the tenant stays suspended or cancelled.
-- [ ] `grace_period` and `read_only` keep the outstanding code; a code issued after a suspension still restores the tenant; another tenant's code is untouched.
-- [ ] A tenant cannot hold two live codes: a second live row is refused 23505 at the statement, the second of two concurrent issuances is refused, and sequential rotation and issuance after a consumed code are unchanged.
-- [ ] `app.platform_transition_subscription` differs from `bdf6f1b` only by the revocation block, with signature, owner, security mode, `search_path`, ACL and comment unchanged; `app.redeem_license_token`, `app.platform_issue_license_token`, `app.platform_revoke_license_tokens` and `app.platform_activate_subscription` are byte-identical.
-- [ ] The held controls stay held: no signed-in privilege on the table; aal1, employee and rival-tenant redemption refused; revoked, expired, replayed and unknown codes refused with the one generic message; a failed activation consumes nothing.
-- [ ] Mutants M1–M5 are each killed against Test 147, and H1 against `verify_journey_branches.ps1`'s two LIC-4 checks, with installation and restoration proven. The causal negative is recorded.
-- [ ] LIC-4 and LIC-5 are fixed and deployed in the register. SUB-4 is recorded OPEN, Low, and unrepaired. LIC-1, LIC-2 and LIC-3 are unchanged.
-- [ ] `tenant_license_activations` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 35 of 78. No other surface's row changed.
-- [ ] The migration, Test 147 and the HTTP script matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (244 migrations; 147 files / 2689 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 35 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] Suspending or cancelling a tenant through `app.platform_transition_subscription` revokes its outstanding code, audited as one `license_token_revoked` event naming the transition; a code issued before either decision is refused with the generic 42501 message, in pgTAP and over HTTP, and the tenant stays suspended or cancelled.
+- [x] `grace_period` and `read_only` keep the outstanding code; a code issued after a suspension still restores the tenant; another tenant's code is untouched.
+- [x] A tenant cannot hold two live codes: a second live row is refused 23505 at the statement, the second of two concurrent issuances is refused, and sequential rotation and issuance after a consumed code are unchanged.
+- [x] `app.platform_transition_subscription` differs from `bdf6f1b` only by the revocation block, with signature, owner, security mode, `search_path`, ACL and comment unchanged; `app.redeem_license_token`, `app.platform_issue_license_token`, `app.platform_revoke_license_tokens` and `app.platform_activate_subscription` are byte-identical.
+- [x] The held controls stay held: no signed-in privilege on the table; aal1, employee and rival-tenant redemption refused; revoked, expired, replayed and unknown codes refused with the one generic message; a failed activation consumes nothing.
+- [x] Mutants M1–M5 are each killed against Test 147, and H1 against `verify_journey_branches.ps1`'s two LIC-4 checks, with installation and restoration proven. The causal negative is recorded.
+- [x] LIC-4 and LIC-5 are fixed and deployed in the register. SUB-4 is recorded OPEN, Low, and unrepaired. LIC-1, LIC-2 and LIC-3 are unchanged.
+- [x] `tenant_license_activations` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 35 of 78. No other surface's row changed.
+- [x] The migration, Test 147 and the HTTP script matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (244 migrations; 147 files / 2689 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 35 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -434,19 +434,70 @@ No business-data write and no fixture was made on Primary. Secondary `brplkqmbzf
 - **Checks:** the four CI-only guard self-tests pass (cold-start 34/0, future-date 18/0, primary-ledger 13/0, status-contradiction 33/0); `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency `CLEAN`; `git diff --check` clean.
 - **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
+### 2026-10-08 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `9ab2fbc` in VERIFY mode, with profiles DATABASE and REPOSITORY. It passed every mandatory verification on its own run and reported `LOCAL_CERTIFY: READY`:
+- reset; pgTAP Pass A; the declared `verify_journey_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+
+The mutation evidence (the causal negative, M1–M5 and H1) was recorded at Step 4 on these exact migration and test bytes, which the committed tree carries unchanged (`42fbb882…`, `2d244589…`, `4d321256…`), so it was not repeated.
+
+**Selector after Slice 34** (`scripts/batch6_select_target.ps1`, 43 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `service_requests` 8/34
+2. `quotation_items` 8/36
+3. `totp_enrollments` 8/38
+4. `subscription_payment_proofs` 8/48
+5. `complaints` 8/48
+6. `payment_allocations` 8/60
+7. `receipts` 7/20
+8. `chart_of_accounts` 7/38
+9. `notification_deliveries` 7/42
+10. `approval_requests` 7/52
+11. `user_branch_assignments` 7/554
+12. `user_role_assignments` 7/612
+
+Slice 35's measured target is `service_requests`.
+
 ## Verification Notes
 
-None.
+### 2026-10-08 — Independent Review of execution commit `9ab2fbc`
+
+Reviewed the committed tree against the approved Draft `400f9e9`, the owner's Slice-34 directive and Gate-2 authorization, and the frozen ten-path Write Scope, not against the Execution Log.
+- **Scope.** `bdf6f1b..9ab2fbc` changes nine paths, all in Write Scope; the tenth, `MASTER_API_CONTRACT.md`, regenerates unchanged. Every Out-of-Scope file is untouched, among them the licensing and subscription migrations, Tests 35, 42, 43, 53, 80, 83, 131 and 133, canon 09, 26 and 28, the execution plan, `verify_database.sql` and the five other HTTP suites.
+- **Frozen bytes.** The committed migration (`42fbb882…`, md5 `b1ac5e31…`), Test 147 (`2d244589…`) and `verify_journey_branches.ps1` (`4d321256…`) hash to their frozen values.
+
+Acceptance, re-checked against the committed bytes, the certified run and the Primary readback:
+1. **Suspension and cancellation.** `app.platform_transition_subscription` revokes the outstanding code through `app.platform_revoke_license_tokens`, audited once with its reason and count; the old code is refused with the generic 42501 message and the tenant stays suspended or cancelled (Test 147 assertions 5–8 and 12–13; the two LIC-4 HTTP checks; M2, M3, H1).
+2. **What still renews.** `grace_period` and `read_only` keep the code, a code issued after the suspension restores the tenant, and another tenant's code is untouched (assertions 4, 9–11; M5).
+3. **One live code.** A second live row is refused 23505 (assertion 14; M1); a losing concurrent issuance returned no plaintext and left no row and no audit event (Step 6); rotation and issuance after a consumed code are unchanged (assertions 3 and 15; M4).
+4. **The function.** On Primary its text md5 is `5de22847…`, byte-equal to the local text, and differs from `bdf6f1b`'s only by the revocation block; SECURITY DEFINER, owner `postgres`, empty `search_path`, ACL `{postgres=X, service_role=X}` and its comment are unchanged. The issue, revoke, redeem and activate functions are byte-identical.
+5. **Held controls.** No signed-in privilege on the table; aal1, employee and rival-tenant redemption refused; revoked, expired, replayed and unknown codes refused generically; a failed activation consumes nothing (Business Reason, re-proven at Step 6).
+6. **Mutation.** The causal negative, M1–M5 and H1 were killed with proven install and restore, on the prototype and at Step 4 on the committed bytes.
+7. **Findings.** LIC-4 and LIC-5 are fixed and deployed. SUB-4 is OPEN, Low and unrepaired, its owner field an engineering scheduling position for the `subscriptions` slice; SPEC-247 is not evidence that concurrent subscription transitions are serialized. LIC-1, LIC-2 and LIC-3 are byte-identical to `bdf6f1b`.
+8. **Disposition.** `tenant_license_activations` is `AUDITED` / `ADVERSARIAL`, coverage 35 of 78; no other surface's row changed.
+9. **Frozen values** matched when applied (Steps 1–3 log, re-verified after the stash and again before Gate 2).
+10. **Agreement.** Primary, the evidence and the manifest agree: 244 migrations, `9e846936…`, functions `127430f7…`/320, structural `bb42b1b7…`/3109, 147 files / 2689 assertions, 464 HTTP assertions. The API contract matches its generator (`d28fb567…`), `ai-map.json` is regenerated, the four guard self-tests pass and repository consistency is CLEAN.
+11. **Handoff.** The Complete commit sets the next capability to Batch 6 Slice 35 on `service_requests`, with no Active Change Request.
+12. **Primary.** It received only the authorized bytes (statement md5 `b1ac5e31…`) and the one guarded rename. It holds 0 business rows before and after, no fixture was written there, and Secondary was never contacted.
+13. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+Review Gate: the steps were applied exactly; no unresolved step was guessed; this contract supersedes and depends on nothing; the repository is clean and releasable (`-Finish` READY on a clean tree).
+
+Not built, as directed: Slice 35, SUB-4's repair, any change to LIC-1, plans, billing or payment proofs, the n8n workflow and any Phase-8 work.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
