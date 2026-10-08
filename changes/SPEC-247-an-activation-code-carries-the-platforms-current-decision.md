@@ -153,7 +153,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -353,6 +353,38 @@ The owner's Slice-34 directive of 2026-10-08 directed this bounded Batch-6 slice
 - Draft `400f9e9`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY).
 - Approved at `be70746`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-08 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1:** the migration was absent and was created byte-identical to the prototype: SHA-256 `42fbb882ea584917c2740369a55c565a62a3e9d1b5f74d972f3797b05b532668`, md5 `b1ac5e31a7627221b3bde8bd8ac4ed26`, 4393 bytes, 88 LF lines, ASCII.
+- **Step 2:** Test 147 was absent and was created byte-identical (SHA-256 `2d244589d7fdf2a5393131c872628004c404094439646b01617c8cc86de8d65a`, `plan(15)`). `scripts/verify_journey_branches.ps1` carried its `bdf6f1b` bytes and now hashes to the frozen `4d321256f8508fa9435031c73a4c05821150dcfbf537dffe008a47db9bc94a2d`.
+- **Step 3:** the register had no `LIC-4` row and both reports carried their `bdf6f1b` bytes. The register gained the Slice-34 freshness entry (the Slice-33 one demoted), the rows LIC-4 and LIC-5 (FIXED locally, Primary pending, Cert `🛡`) and SUB-4 (Low, OPEN, owner field `engineering: …`). The disposition record gained its freshness entry, coverage 35 of 78 (14 `AUDITED`, 18 `AUDITED-OPEN`, 3 `PARTIAL`, 43 `NOT-RECORDED`), the "All 35" line and the `tenant_license_activations` row `AUDITED` / `ADVERSARIAL` / SPEC-247 / LIC-4, LIC-5.
+
+### 2026-10-08 — Pre-deploy readiness gate
+
+Run on HEAD `7026c7a` with Steps 1–3 in the working tree, every reset from the main checkout:
+- **Reset:** exit 0; storage 68 migrations; ledger 244, latest `20261008170000`.
+- **Focused:** Test 147 15/15; Test 42 28/28; Test 43 19/19; Test 80 19/19.
+- **pgTAP Pass A:** 147 files / 2689 assertions, PASS.
+- **HTTP:** `verify_api_end_to_end` 35/0, `verify_care_journeys` 40/0, `verify_journey_branches` 85/0, `verify_lifecycle_branches` 122/0, `verify_role_journeys` 122/0, `verify_storage_end_to_end` 60/0: 464 passed, 0 failed.
+- **pgTAP Pass B** (no reset): 147 / 2689, PASS. **Smoke:** `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`. **Plan sum:** 147 files, 2689.
+- **Local surfaces:** functions `127430f783d23b2b89e474636be684c9`/320; indexes `22a4d58cef10893d1279b6ddd9ff38f0`/300; every other surface equal to Primary's; combined `bb42b1b7a8ee985d892ccaf4426ce4ce`/3109; ledger fingerprint 244/`9e846936c3b320e03eaf125844f46223`. `app.platform_transition_subscription` text md5 `5de22847…`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X, service_role=X}`; the other four licensing functions unchanged.
+- **Mutation** on these bytes, base surface `5de22847… 365e782a…`, every installation and restoration proven: causal negative (index dropped and no revocation) [5, 6, 7, 8, 12, 13, 14]; M1 [14]; M2 [5, 6, 7, 8, 12, 13]; M3 [12, 13]; M4 [3, 4, 6], then 23505 at the next issuance; M5 [4, 6]. All killed, as frozen. H1 on a fresh reset: `verify_journey_branches.ps1` 83 passed and failed exactly the two LIC-4 checks (the old code redeemed with 204; the tenant `active`); restoration proven, then a final reset to the repository state.
+- **Generators:** the API contract regenerates byte-identical (`d28fb567…`); `ai-map.json` changed only its timestamp and was left at its committed bytes for Step 7.
+- **Guards:** future-date 18/0 and status-contradiction 33/0 pass; cold-start 25/9 and primary-ledger 11/2 fail only their CONTROL cases, as predicted.
+- **Repository consistency:** exactly the predicted pre-deploy drift (243 vs 244 migrations; latest; fingerprint `201d938a…` vs `9e846936…`; 146 vs 147 files; 2674 vs 2689 assertions; RECOVER-1).
+- **Scope:** the working tree changes only Write Scope paths; `git diff --check` clean.
+
+**Fresh Primary baseline, read-only** (`https://vrvtsxexkiiiivlkdxzp.supabase.co`):
+- **Ledger:** 243, fingerprint `201d938a80ae5fe6d32fb8ef6f3a7619`, latest `20261008150000`; the target absent by version and name.
+- **Surfaces:** functions `f704b7836a75f3f623a4112a28e5a779`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87068cc220c988957980511eae`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79; combined `f50dea30bd2a7c4cf4c22ddd9e191622`/3108, equal to the recorded evidence.
+- **The surface:** `tenant_license_activations` ACL `{postgres=arwdDxtm, service_role=arwdDxtm}`, indexes `pkey`, `tenant_idx`, `token_hash_key`; `app.platform_transition_subscription` ACL `{postgres=X, service_role=X}`.
+- **Business rows:** 0 tenants, subscriptions, activation codes and security events.
+
+**Predicted delta on Primary:** 244 migrations, fingerprint `9e846936c3b320e03eaf125844f46223`; functions `127430f783d23b2b89e474636be684c9`/320; indexes `22a4d58cef10893d1279b6ddd9ff38f0`/300; combined `bb42b1b7a8ee985d892ccaf4426ce4ce`/3109; every other surface unchanged; business counts unchanged.
+
+Stopping at Gate 2 (Step 5): no owner authorization for the migration is recorded.
+
 
 ## Verification Notes
 
