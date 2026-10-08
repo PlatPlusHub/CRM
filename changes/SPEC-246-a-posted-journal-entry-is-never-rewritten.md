@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -384,6 +384,14 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ## Execution Log
 
 None.
+
+### 2026-10-08 — Owner Gate 1 and execution start
+
+The owner approved Gate 1 for the exact Draft `c22d7821eb2b72648c5c2ed0d4d06a2280c2cb7e`, contract SHA-256 `feb123a929b041e4f5271301b0ab55c506c8d85d96ba984f5fd4d00f14f10d23`, and authorized Draft → Approved → In Progress and execution of the frozen plan within Write Scope. It authorizes no Primary write or migration deployment; Gate 2 is required. JE-5 is closed by the UPDATE revoke; INSERT is removed only as the approved least-privilege / STEPUP-1 closure; JE-6 stays OPEN and record-only.
+
+- Pre-flight before Approve: HEAD `c22d782`, clean tree; `origin/main` and `origin/orvion-preflight` still `7e6f51e`; every Step 1–3 target unchanged since `7e6f51e` and both new files absent; a read-only evaluation returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY) with its three negative controls failing as designed.
+- Approved at `f2b1ef2`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
+- In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 
 ## Verification Notes
 
