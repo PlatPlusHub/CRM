@@ -287,6 +287,15 @@ Check "the source is archived, not deleted" ($arch -eq 't' -or $arch -eq 'true')
 $r = Rpc $owner 'merge_customer_identity' @{ p_source_customer_id = $mDup; p_target_customer_id = $mReal; p_reason = 'again' }
 Check "IDEMPOTENCY BOUNDARY: re-merging an already-archived source is refused rather than repeated" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
+# MRG-1 (slice 31): the merge record decides which identities share one consent, and the owner who
+# may merge could also write and rewrite it at the table without merging anything.
+$r = Invoke-Post $owner 'customer_identity_merges' @{ tenant_id = $T; source_customer_id = $mReal; target_customer_id = $mDup; reason = 'forged' }
+Check "MRG-1: the owner cannot POST a merge record that no merge produced" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-Patch $owner "customer_identity_merges?source_customer_id=eq.$mDup" @{ reason = 'rewritten'; created_at = '2001-01-01T00:00:00Z' }
+$kept = (Psql "select reason || '/' || (created_at > now() - interval '1 day')::text from public.customer_identity_merges where source_customer_id='$mDup';").Trim()
+Check "MRG-1: ...nor PATCH the record of the merge it made" ((-not (Ok $r)) -and $kept -eq 'duplicate record/true') "$($r.StatusCode) $(Err $r) kept=$kept"
+
 
 # =================================================================================================
 # IDENT-1 -- the canon-34 Human Identity family over the wire.

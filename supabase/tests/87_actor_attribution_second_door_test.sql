@@ -209,7 +209,9 @@ select is(
   'ATTR-2/D2: filling a NULL registrar afterwards derives the caller too -- the freeze permitted this because its predicate is `old is not null`');
 
 -- ================================================================================================
--- customer_identity_merges.merged_by -- the audit log of a destructive operation.
+-- customer_identity_merges.merged_by -- the audit log of a destructive operation. Since slice 31
+-- (MRG-1) the table has no signed-in door and the merge is its one writer, so the attribution is
+-- proved on the merge.
 -- ================================================================================================
 reset role;
 select set_config('request.jwt.claims','{"sub":"87000000-0000-0000-0000-0000000000a2"}',true);
@@ -220,23 +222,20 @@ select throws_ok(
     values ('87000000-0000-0000-0000-000000000001','87000000-0000-0000-0000-0000000000d2',
             '87000000-0000-0000-0000-0000000000d1','87000000-0000-0000-0000-000000000021')$$,
   '42501', null,
-  'NEGATIVE CONTROL: the employee lacks MERGE_CUSTOMER_IDENTITY -- `app.guard_write_capability` still refuses, so this fix changed no authorization');
+  'NEGATIVE CONTROL: no signed-in user writes a merge record naming its merger -- the table has no door');
 
 reset role;
 select set_config('request.jwt.claims','{"sub":"87000000-0000-0000-0000-0000000000a1","aal":"aal2"}',true);
 set local role authenticated;
 
 select lives_ok(
-  $$insert into public.customer_identity_merges (id,tenant_id,source_customer_id,target_customer_id,merged_by)
-    values ('87000000-0000-0000-0000-00000000008e','87000000-0000-0000-0000-000000000001',
-            '87000000-0000-0000-0000-0000000000d2','87000000-0000-0000-0000-0000000000d1',
-            '87000000-0000-0000-0000-000000000021')$$,
-  'POSITIVE CONTROL: the owner holds MERGE_CUSTOMER_IDENTITY and the write proceeds');
+  $$select app.merge_customer_identity('87000000-0000-0000-0000-0000000000d2','87000000-0000-0000-0000-0000000000d1','duplicate')$$,
+  'POSITIVE CONTROL: the owner holds MERGE_CUSTOMER_IDENTITY and merges');
 
 select is(
-  (select merged_by from public.customer_identity_merges where id='87000000-0000-0000-0000-00000000008e'),
+  (select merged_by from public.customer_identity_merges where source_customer_id='87000000-0000-0000-0000-0000000000d2'),
   '87000000-0000-0000-0000-000000000011'::uuid,
-  'ATTR-2/E: the merge is attributed to the owner who performed it, not the employee named in the statement');
+  'ATTR-2/E: the merge is attributed to the owner who performed it');
 
 -- ================================================================================================
 -- booking_items.cancelled_by / no_show_recorded_by -- ACTION attributions, so the fix ties the

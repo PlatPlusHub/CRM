@@ -121,7 +121,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -385,6 +385,67 @@ Run on HEAD `674236a` with every Step 1-3 file at its frozen hash.
 - **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+### 2026-10-08 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of exactly `supabase/migrations/20261007190000_the_merge_record_is_written_only_by_the_merge.sql`, SHA-256 `8286493bc96dd795baea727252acc8a4fcf1e3efa77bea0ffcd1ce6100329c85`, md5 `705b8d7f40c633142f63bc98124a3355`, with the focused test `144_the_merge_record_is_written_only_by_the_merge_test.sql` at SHA-256 `72bce0402e0f11d3296b53da04d3b4afee8fa2bb84aab867bb172565632d1d06`.
+
+Conditions, any mismatch voiding it:
+- HEAD `6dce92d6a4c075fa5db2d057f03da252bc552d69` or the exact canonical equivalent;
+- the hashes unchanged;
+- Primary at 240 migrations with latest `20261007120000` and `20261007190000` absent;
+- no business rows that invalidate the proof;
+- `authenticated` still holding the INSERT and UPDATE being removed;
+- Secondary never contacted.
+
+The authorization continues through post-deploy verification, Review, Complete, publication, exact-SHA candidate CI, promotion, `REMOTE_CERTIFY: READY` and synchronization. It ends with the next capability set to the measured Batch 6 Slice 32 target. It does not authorize Slice 32, n8n or any Phase-8 workflow work.
+
+### 2026-10-08 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- HEAD `6dce92d6a4c075fa5db2d057f03da252bc552d69`, with only the six in-scope Step 1-3 paths dirty;
+- migration SHA-256 `8286493b…`, md5 `705b8d7f…`, 8030 bytes, 0 CR, 0 non-ASCII; Test 144 `72bce040…`;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 240, `5907e3b5…`, latest `20261007120000`, with the target absent by version and name;
+- table ACL `authenticated=arw`, INSERT and UPDATE true;
+- merge md5 `375a663c…`;
+- 0 tenants, customers, merge records, consents and events.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `705b8d7f40c633142f63bc98124a3355` and 8030 bytes.
+- That text was applied through `apply_migration` as `the_merge_record_is_written_only_by_the_merge`. The connector assigned the temporary version `20261008051505`; its single stored statement has md5 `705b8d7f…` and 8030 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261007190000`. The guard required 241 rows, the other 240 hashing to the baseline, the statement md5 to match and no existing target. All four held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 241, `a7f02a08140c6ef7e0ed7a68f52aeeb5`, latest `20261007190000`, present once; the temporary version is gone.
+- **Surfaces:** functions `8eb85701…`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `134cce39…`/193, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79. `_combined` is `235c36872752c174d3fde2ff3a042be2`/3112.
+- **Table:** ACL `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=r}`. `authenticated` holds SELECT and has no INSERT, UPDATE or DELETE. `service_role`'s privileges come from Primary's platform default ACL (PAR-5) and are unchanged. Its three triggers are present.
+- **Merge:** `app.merge_customer_identity` md5 `a1534c3eb8af1587f4dc83c7325b1361`, byte-identical to local; SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X, authenticated=X}` as before and as local. The `public` HTTP wrapper is unchanged.
+- **Business rows:** 0 tenants, customers, merge records, consents and events.
+
+**Behaviour on the deployed bytes,** proven locally on the byte-identical function and grant, because no business data is written on Primary:
+- The complete ADR-0019 merge: Test 144 assertion 9; Test 111.
+- A merged source un-archived and merged again is refused: Test 144 assertion 19.
+- A reverse merge into a merged source is refused: Test 144 assertion 20.
+- A legitimate survivor chain still merges. Test 142's merge section (assertions 26–37) merges X1 into X2 and then the survivor X2 into X3, and consent follows the chain. Both pass unchanged in Pass A and Pass B.
+- `app.customer_consent_status` follows only real lineage: Test 144 assertions 4, 11 and 21–23; Test 142.
+- Table DML cannot manufacture lineage, in pgTAP (Test 144 assertions 1, 3 and 10) and over HTTP (`verify_role_journeys.ps1`).
+- Test 87 proves the merge's attribution through the merge itself: assertions 19–20.
+
+No business-data write and no reproduction was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-08 — Step 7: evidence and measured state
+
+- `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 241 migrations, `a7f02a08…`, functions `8eb85701…`/320, structural `235c3687…`/3112, head `6dce92d`. Its ledger equals Primary's full ordered list and the repository's migration files.
+- `supabase/tests` holds 144 files whose `plan(N)` values sum to 2638. The manifest's `Live state` now reads:
+  - 241 migrations, latest `20261007190000`, with the same hashes and counts;
+  - 78 tables, `71/622` catalog, 80 client RPCs;
+  - `Suite **144 files / 2638 assertions**`, and 453 HTTP assertions last passed 2026-10-07.
+
+  Batch 6 coverage reads 32 of 78, all thirty-two at `ADVERSARIAL`. The manifest measures 6736 characters.
+- MRG-1 and MRG-2 are marked DEPLOYED with Cert `✅`.
+- `MASTER_API_CONTRACT.md` was regenerated (SHA-256 `d8ef4dc6…`, the two predicted lines); `ai-map.json` was regenerated and stored LF.
+- The four guard self-tests pass: future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0. The first cold-start run failed 9 CONTROL cases on one repository-consistency issue: the two register rows' DEPLOYED text carried 2026-10-08 beneath the register's 2026-10-07 freshness line (Check 21, STALE-1). The date was removed from that phrase, as the ASGN rows word it. `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency exit 0; `git diff --check` exit 0.
+- The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
 ## Verification Notes
 
