@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -366,20 +366,20 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] `authenticated` holds SELECT and no table or column INSERT, UPDATE or DELETE on `journal_entries`. Its direct UPDATE and direct INSERT are refused with 42501 at the statement, in pgTAP and over HTTP.
-- [ ] SELECT remains available within tenant scope: the finance manager reads its own entry, and a rival tenant's finance manager reads none.
-- [ ] A posted header cannot be backdated, post-dated, re-described, re-sourced or re-timed, and its void columns cannot be written, by a CREATE_JOURNAL_ENTRY holder at aal2 or aal1, through the table door.
-- [ ] `app.create_journal_entry` still posts for an authorized aal2 caller, and still refuses an employee (permission), an aal1 caller (step-up) and an unbalanced entry. Its bytes are unchanged.
-- [ ] Every posted header and its lines are what the RPC wrote, and its one `journal_entry_created` event still agrees with it; no signed-in table write can make them diverge.
-- [ ] No refusal is supplied by an unrelated deferred check: Test 146 asserts each at the statement, and the INSERT refusal is 42501, not 23514.
-- [ ] Mutants M1–M8 are each killed against Test 146, and H1 against `verify_journey_branches.ps1`'s five named checks, with installation and restoration proven. The causal negative is recorded.
-- [ ] JE-5 is fixed and deployed in the register. JE-6 is recorded OPEN, Low, and unrepaired: `app.create_journal_entry` and its `source_entity_id` handling are unchanged. STEPUP-1 carries its dated sentence. JE-2, DC-11 and FIN-9 are unchanged.
-- [ ] `journal_entries` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 34 of 78. No other surface's row changed.
-- [ ] The migration, Test 146 and the edits to Tests 83 and 89 and the HTTP script matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (243 migrations; 146 files / 2674 assertions; 462 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 34 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `authenticated` holds SELECT and no table or column INSERT, UPDATE or DELETE on `journal_entries`. Its direct UPDATE and direct INSERT are refused with 42501 at the statement, in pgTAP and over HTTP.
+- [x] SELECT remains available within tenant scope: the finance manager reads its own entry, and a rival tenant's finance manager reads none.
+- [x] A posted header cannot be backdated, post-dated, re-described, re-sourced or re-timed, and its void columns cannot be written, by a CREATE_JOURNAL_ENTRY holder at aal2 or aal1, through the table door.
+- [x] `app.create_journal_entry` still posts for an authorized aal2 caller, and still refuses an employee (permission), an aal1 caller (step-up) and an unbalanced entry. Its bytes are unchanged.
+- [x] Every posted header and its lines are what the RPC wrote, and its one `journal_entry_created` event still agrees with it; no signed-in table write can make them diverge.
+- [x] No refusal is supplied by an unrelated deferred check: Test 146 asserts each at the statement, and the INSERT refusal is 42501, not 23514.
+- [x] Mutants M1–M8 are each killed against Test 146, and H1 against `verify_journey_branches.ps1`'s five named checks, with installation and restoration proven. The causal negative is recorded.
+- [x] JE-5 is fixed and deployed in the register. JE-6 is recorded OPEN, Low, and unrepaired: `app.create_journal_entry` and its `source_entity_id` handling are unchanged. STEPUP-1 carries its dated sentence. JE-2, DC-11 and FIN-9 are unchanged.
+- [x] `journal_entries` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 34 of 78. No other surface's row changed.
+- [x] The migration, Test 146 and the edits to Tests 83 and 89 and the HTTP script matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (243 migrations; 146 files / 2674 assertions; 462 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 34 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -485,17 +485,73 @@ No business-data write and no fixture was made on Primary. Secondary `brplkqmbzf
 - **Checks:** the four `scripts/test_*_guard.ps1` pass (future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0); `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency `REPOSITORY CONSISTENCY: CLEAN` (the six pre-deploy issues cleared); `git diff --check` clean.
 - **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
+### 2026-10-08 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `3a78c1b` in VERIFY mode, with profiles DATABASE and REPOSITORY. It passed every mandatory verification on its own run and reported `LOCAL_CERTIFY: READY`:
+- reset; pgTAP Pass A; the declared `verify_journey_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+
+**Mutants on the committed bytes,** re-run after `-Finish` as Gate 2 required (Test 146 `f2074d74…`, 17/17 before and after). Every installation was proven by a changed surface and every restoration by the base `{…,authenticated=r/postgres} cols=0`. Results are identical to Step 4: causal negative [1, 4–9, 11–13, 15, 16]; M1 [1, 4, 5, 6, 7, 8, 11, 13, 15, 16]; M2 [1, 9, 12]; M3 [1, 4, 16]; M4 [1, 7, 16]; M5 [1, 8, 16]; M6 [1, 5, 13, 15, 16]; M7 [1, 6, 16]; M8 [1, 9, 12]. H1, on a fresh reset, failed exactly the pinned POST check and the four JE-5 header checks and passed the other 78; restoration proven, then a final reset to the repository state.
+
+**Own-tenant read on the deployed bytes,** rolled back: the finance manager reads its posted entry at aal2 and at aal1, a same-tenant employee reads it (tenant-wide read scope), and the rival tenant's finance manager reads 0; 0 residue after rollback.
+
+**Selector after Slice 33** (`scripts/batch6_select_target.ps1`, 44 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `tenant_license_activations` 8/30
+2. `service_requests` 8/34
+3. `quotation_items` 8/36
+4. `totp_enrollments` 8/38
+5. `subscription_payment_proofs` 8/48
+6. `complaints` 8/48
+7. `payment_allocations` 8/60
+8. `receipts` 7/20
+9. `chart_of_accounts` 7/38
+10. `notification_deliveries` 7/42
+11. `approval_requests` 7/52
+12. `user_branch_assignments` 7/554
+
+Slice 34's measured target is `tenant_license_activations`.
+
 ## Verification Notes
 
 None.
 
+### 2026-10-08 — Independent Review of execution commit `3a78c1b`
+
+Reviewed the committed tree against the approved Draft `c22d782`, the owner's Gate-1 and Gate-2 authorizations and the frozen twelve-path Write Scope, not against the Execution Log.
+- **Scope.** `7e6f51e..3a78c1b` changes twelve paths, all in Write Scope. Every Out-of-Scope file is untouched, among them Tests 10, 29, 53, 70, 72, 73, 102, 106 and 145, canon 07, 30 and 31, the execution plan, the decision records, `verify_database.sql` and the five other HTTP suites.
+- **Frozen bytes.** The committed migration (`4b8a88cd…`), Test 146 (`f2074d74…`), Test 83 (`868ecc18…`, CRLF working tree), Test 89 (`c4e12233…`) and `verify_journey_branches.ps1` (`b459a7ce…`) hash to their frozen values.
+
+Acceptance, re-checked against the committed bytes, the certified run, the post-certification mutants and the Primary readback:
+1. **Door.** On Primary, `authenticated` holds `r` on `journal_entries`, with no table or column INSERT, UPDATE or DELETE. Test 146 assertions 1, 4–9 and 11–12 refuse both at the statement with 42501, and so do the HTTP checks, the table POST pinned to 403/42501 (M1, M2, M8, H1).
+2. **Read.** SELECT stands within tenant scope: the finance manager reads its own entry at aal2 and aal1, and the rival tenant reads nothing (assertion 14 and the rolled-back read probe).
+3. **Header.** No posted header can be backdated, post-dated, re-described, re-sourced or re-timed, or have its void columns written, at aal2 or aal1 (assertions 4–8 and 11; M3–M7).
+4. **The RPC.** `app.create_journal_entry` is byte-identical on Primary and local (`13689c04…`): it still posts at aal2 (assertion 2), refuses aal1 for want of step-up (Test 145 assertion 11), and refuses an employee and an unbalanced entry (the ledger block over HTTP).
+5. **Records.** Every posted header and its lines are what the RPC wrote, and its one event still agrees with it (assertions 16–17).
+6. **No unrelated refusal.** Test 146 asserts every refusal at the statement and runs no `set constraints … immediate`; the INSERT refusal is 42501, not 23514, and M2/M8 prove it is the grant that refuses.
+7. **Mutation.** M1–M8 and H1 were killed with proven install and restore, on the prototype, at Step 4 and again on the committed bytes. The causal negative is recorded.
+8. **Findings.** JE-5 is fixed and deployed. JE-6 is OPEN, Low and unrepaired, its owner field an engineering scheduling position (see the Steps 1–3 log). STEPUP-1 carries its dated sentence. JE-2, DC-11 and FIN-9 are byte-identical to `7e6f51e`.
+9. **Disposition.** `journal_entries` is `AUDITED-OPEN` / `ADVERSARIAL`, coverage 34 of 78; no other surface's row changed.
+10. **Frozen values** matched when applied (Steps 1–3 log, re-verified after the stash).
+11. **Agreement.** Primary, the evidence and the manifest agree: 243 migrations, `201d938a…`, functions `f704b783…`/320, structural `f50dea30…`/3108, 146 files / 2674 assertions, 462 HTTP assertions. The API contract matches its generator (`d28fb567…`), `ai-map.json` is regenerated, the four guard self-tests pass and repository consistency is CLEAN.
+12. **Handoff.** The Complete commit sets the next capability to Batch 6 Slice 34 on `tenant_license_activations`, with no Active Change Request.
+13. **Primary.** It received only the authorized bytes (statement md5 `fbd6f81a…`) and the one guarded rename. It holds 0 business rows before and after, no fixture was written there, and Secondary was never contacted.
+14. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+The Review Gate as approved carries five items. The template's two others hold and are stated here rather than added to a frozen section: this contract supersedes and depends on nothing, and the repository is clean and releasable (`-Finish` READY on a clean tree).
+
+Not built, as directed: Slice 34, JE-6's repair, a void or reversal workflow, any change to FIN-9 or the platform paths, the n8n workflow and any Phase-8 work.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
 
 ## Notes
 
