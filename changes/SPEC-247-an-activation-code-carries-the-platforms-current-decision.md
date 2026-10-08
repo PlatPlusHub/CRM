@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -346,7 +346,13 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-10-08 — Owner-delegated approval and execution start
+
+The owner's Slice-34 directive of 2026-10-08 directed this bounded Batch-6 slice to proceed through repository governance. It covers reproducing the findings, repairing only evidence-backed defects with the smallest correction, giving the surface a truthful disposition, stopping once at the exact Primary Gate-2 boundary if a migration is earned, then publishing and synchronizing. It does not authorize any Primary write; Gate 2 is required.
+
+- Draft `400f9e9`; a read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS` (profiles DATABASE and REPOSITORY).
+- Approved at `be70746`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
+- In Progress from this commit. Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 
 ## Verification Notes
 
