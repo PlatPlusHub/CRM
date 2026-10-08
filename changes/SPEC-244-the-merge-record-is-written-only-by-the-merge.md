@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -303,18 +303,18 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] `authenticated` holds SELECT and neither INSERT, UPDATE nor DELETE on `customer_identity_merges`. A MERGE_CUSTOMER_IDENTITY holder at aal2 can neither create nor rewrite a merge record at the table, in pgTAP or over HTTP.
-- [ ] A customer that was never merged answers only to its own consent decisions. Its call is not claimed on another customer's consent, and it can always record a withdrawal.
-- [ ] The merge is unchanged for a valid pair. It archives the source, re-points its history, writes one record attributed to the caller at the server's time and emits one critical event.
-- [ ] The merge refuses a source or a target that the record names as merged away, whatever its archive flag. Its archive, self-merge, privilege, step-up and tenant refusals keep their messages.
-- [ ] Test 87 proves ATTR-2's merge attribution through the merge.
-- [ ] Mutants M1 to M4 are each killed, with installation and restoration md5-proven. The causal negative and the six two-session proofs are recorded.
-- [ ] MRG-1 and MRG-2 are fixed and deployed in the register. `customer_identity_merges` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 32 of 78. No other surface's row changed; BOOK-11, BOOK-12, PAY-5, CONV-9 and CONV-10 are unchanged.
-- [ ] The migration, the two tests, the HTTP script and the two Step-3 documents matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (241 migrations; 144 files / 2638 assertions; 453 HTTP assertions), the API contract and `ai-map.json` agree.
-- [ ] The manifest names Batch 6 Slice 32 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `authenticated` holds SELECT and neither INSERT, UPDATE nor DELETE on `customer_identity_merges`. A MERGE_CUSTOMER_IDENTITY holder at aal2 can neither create nor rewrite a merge record at the table, in pgTAP or over HTTP.
+- [x] A customer that was never merged answers only to its own consent decisions. Its call is not claimed on another customer's consent, and it can always record a withdrawal.
+- [x] The merge is unchanged for a valid pair. It archives the source, re-points its history, writes one record attributed to the caller at the server's time and emits one critical event.
+- [x] The merge refuses a source or a target that the record names as merged away, whatever its archive flag. Its archive, self-merge, privilege, step-up and tenant refusals keep their messages.
+- [x] Test 87 proves ATTR-2's merge attribution through the merge.
+- [x] Mutants M1 to M4 are each killed, with installation and restoration md5-proven. The causal negative and the six two-session proofs are recorded.
+- [x] MRG-1 and MRG-2 are fixed and deployed in the register. `customer_identity_merges` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 32 of 78. No other surface's row changed; BOOK-11, BOOK-12, PAY-5, CONV-9 and CONV-10 are unchanged.
+- [x] The migration, the two tests, the HTTP script and the two Step-3 documents matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (241 migrations; 144 files / 2638 assertions; 453 HTTP assertions), the API contract and `ai-map.json` agree.
+- [x] The manifest names Batch 6 Slice 32 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -446,20 +446,67 @@ No business-data write and no reproduction was made on Primary. Secondary `brplk
 - `MASTER_API_CONTRACT.md` was regenerated (SHA-256 `d8ef4dc6…`, the two predicted lines); `ai-map.json` was regenerated and stored LF.
 - The four guard self-tests pass: future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0. The first cold-start run failed 9 CONTROL cases on one repository-consistency issue: the two register rows' DEPLOYED text carried 2026-10-08 beneath the register's 2026-10-07 freshness line (Check 21, STALE-1). The date was removed from that phrase, as the ASGN rows word it. `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency exit 0; `git diff --check` exit 0.
 - The Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+### 2026-10-08 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed execution HEAD `300f120` in VERIFY mode, with profiles DATABASE and REPOSITORY. It passed every mandatory verification on its first run and returned `LOCAL_CERTIFY: READY`:
+- reset; pgTAP Pass A; the declared `verify_role_journeys.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+
+**Selector after Slice 31** (`scripts/batch6_select_target.ps1`, 46 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `journal_entry_lines` 8/26
+2. `tenant_license_activations` 8/30
+3. `service_requests` 8/34
+4. `quotation_items` 8/36
+5. `totp_enrollments` 8/38
+6. `subscription_payment_proofs` 8/48
+7. `complaints` 8/48
+8. `payment_allocations` 8/60
+9. `receipts` 7/20
+10. `chart_of_accounts` 7/32
+11. `notification_deliveries` 7/42
+12. `journal_entries` 7/46
+
+Slice 32's measured target is `journal_entry_lines`.
 
 ## Verification Notes
 
 None.
 
+### 2026-10-08 — Independent Review of execution commit `300f120`
+
+Reviewed the committed tree against the approved Draft `e047151`, the owner's Gate-2 authorization and the frozen eleven-path Write Scope, not against the Execution Log.
+- **Scope.** `368a881..300f120` changes eleven paths, all in Write Scope. Every Out-of-Scope file is untouched, among them Tests 10, 53, 57, 58, 71, 111 and 142, ADR-0019, `verify_database.sql` and `verify_customer_concurrency.py`.
+- **Frozen bytes.** The committed migration (`8286493b…`), Test 144 (`72bce040…`), Test 87 (`0671672e…`), `verify_role_journeys.ps1` (`a69f8438…`) and the disposition (`dc2569fc…`) hash to their frozen values. The register differs from its Step-3 value only in the two MRG rows' Step-7 `DEPLOYED` status and Cert `✅`.
+
+Acceptance, re-checked against the committed bytes, the certified run and the Primary readback:
+1. **No table door.** Test 144 assertions 1, 3 and 10 and the Primary readback (`authenticated=r`; no INSERT, UPDATE or DELETE); `verify_role_journeys.ps1`'s two MRG-1 checks over HTTP. Mutants M1 and M2 are killed.
+2. **Own consent only.** Assertions 4–7: A's DENIED governs A, A's call is not claimed on B's consent, A can withdraw, and the call is claimed once A itself grants.
+3. **The merge is unchanged for a valid pair.** Assertions 8–9 and Tests 71, 111 and 142, unchanged; the survivor chain of Test 142 still merges.
+4. **The record decides.** Assertions 18–23: an un-archived source is not merged again, and a merge back into it is refused. Every other refusal keeps its message (assertions 12–17). Mutants M3 and M4 are killed.
+5. **Test 87** proves ATTR-2's attribution through the merge (assertions 19–20).
+6. **Mutation and concurrency.** M1–M4 killed with md5-proven install and restore, identical on the prototype and the main checkout. The causal negative and the six two-session proofs are recorded, and `verify_customer_concurrency.py` passes.
+7. **Records.** MRG-1 and MRG-2 are fixed and deployed. `customer_identity_merges` is `AUDITED` / `ADVERSARIAL` with coverage 32 of 78. No other surface row changed. BOOK-11, BOOK-12, PAY-5, CONV-9 and CONV-10 are byte-identical to `368a881`.
+8. **Frozen values** matched when applied (Steps 1–3 log).
+9. **Agreement.** Primary, the evidence and the manifest agree: 241 migrations, `a7f02a08…`, functions `8eb85701…`/320, structural `235c3687…`/3112, 144 files / 2638 assertions, 453 HTTP assertions. The API contract matches its generator, and `ai-map.json` is regenerated. RECOVER-1 and parity evidence are CLEAN, and the four guard self-tests pass.
+10. **Handoff.** The Complete commit sets the next capability to Batch 6 Slice 32 at the selector's measured target, with no Active Change Request.
+11. **Primary.** Only the authorized bytes (statement md5 `705b8d7f…`) and the one guarded rename; 0 business rows before and after. Secondary was never contacted.
+12. **Scope.** No file outside Write Scope was created, modified or deleted.
+
+Not built, as directed: Slice 32, the n8n workflow and any Phase-8 work.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
