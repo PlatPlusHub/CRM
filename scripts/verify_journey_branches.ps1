@@ -287,6 +287,37 @@ Check "FIN-8 CLOSED: a bare journal_entries row via PATCH/POST on the TABLE endp
 $orphans = (Psql "select count(*) from public.journal_entries je where je.tenant_id='$T' and (select count(*) from public.journal_entry_lines l where l.journal_entry_id=je.id) < 2;").Trim()
 Check "NON-MUTATION: no entry in this tenant has fewer than two lines" ($orphans -eq '0') "bad_entries=$orphans"
 
+# JE-3 (slice 32): a POSTED entry is corrected by a reversal, never by mutation (canon 07), and the
+# finance manager who may post could rewrite one at the line table -- in one PostgREST request each.
+$finAal1 = New-UserJwt $AU_FIN $false
+$lineRows = (Psql "select id || '|' || chart_account_id || '|' || debit_amount::text || '|' || credit_amount::text from public.journal_entry_lines where journal_entry_id='$jeId' order by debit_amount desc;") -split "`n" | Where-Object { $_ }
+$dr = $lineRows[0].Split('|'); $cr = $lineRows[1].Split('|')
+$other = (Psql "select id from public.chart_of_accounts where tenant_id='$T' and code='5000';").Trim()
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entry_lines" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $fin" } -ContentType 'application/json' `
+        -Body (ConvertTo-Json -Compress @(@{tenant_id=$T;journal_entry_id=$jeId;chart_account_id=$dr[1];debit_amount=5000;credit_amount=0;currency_code='EGP'},
+                                          @{tenant_id=$T;journal_entry_id=$jeId;chart_account_id=$cr[1];debit_amount=0;credit_amount=5000;currency_code='EGP'}))
+Check "JE-3: finance cannot append a balanced pair of lines to the posted entry" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entry_lines?on_conflict=id" -Method Post -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $fin"; Prefer = 'resolution=merge-duplicates' } -ContentType 'application/json' `
+        -Body (ConvertTo-Json -Compress @(@{id=$dr[0];tenant_id=$T;journal_entry_id=$jeId;chart_account_id=$dr[1];debit_amount=9000;credit_amount=0;currency_code='USD'},
+                                          @{id=$cr[0];tenant_id=$T;journal_entry_id=$jeId;chart_account_id=$cr[1];debit_amount=0;credit_amount=9000;currency_code='USD'}))
+Check "JE-3: ...nor rewrite both of its lines in one upsert, still balanced" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entry_lines?id=eq.$($dr[0])" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $fin" } -ContentType 'application/json' -Body "{`"chart_account_id`":`"$other`"}"
+Check "JE-3: ...nor move its debit line onto another account" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entry_lines?id=eq.$($dr[0])" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $finAal1" } -ContentType 'application/json' -Body "{`"chart_account_id`":`"$other`"}"
+Check "JE-3: ...nor do it at aal1, where create_journal_entry refuses for want of step-up" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$after = (Psql "select coalesce(sum(debit_amount),0)::text || '/' || coalesce(sum(credit_amount),0)::text || '/' || count(*)::text || '/' || string_agg(distinct currency_code, ',') || '/' || bool_and(chart_account_id in ('$($dr[1])','$($cr[1])'))::text from public.journal_entry_lines where journal_entry_id='$jeId';").Trim()
+$evt = (Psql "select count(*) from public.events where entity_id='$jeId';").Trim()
+Check "NON-MUTATION: the posted entry is still 2500/2500 on two EGP lines on its own accounts, with its one event" ($after -eq '2500.0000/2500.0000/2/EGP/true' -and $evt -eq '1') "lines=$after events=$evt"
+
 
 # =================================================================================================
 # BOOK-1 -- a closed booking cannot earn new revenue, proven over the wire.

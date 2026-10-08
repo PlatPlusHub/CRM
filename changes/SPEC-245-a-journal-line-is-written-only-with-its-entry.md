@@ -141,7 +141,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -437,6 +437,83 @@ Run on HEAD `677aa5a` with every Step 1-3 file at its frozen hash.
 - **Business rows:** none written.
 
 Stopped at Step 5: Human Gate 2.
+### 2026-10-08 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of only `supabase/migrations/20261008120000_a_journal_line_is_written_only_with_its_entry.sql`, SHA-256 `74e957d1d1ce2372e1873c2e0413fbe0670161f7d958d76ff263b49f2aa502b0`, md5 `9d047676b3fd927a7a26926b1d6a073c`. It authorizes no other migration, DDL, data write, repair, cleanup or scope expansion.
+
+**Stop conditions before writing,** any mismatch voiding it:
+- the hashes or the project ref differ;
+- Primary is not at 241 migrations with latest `20261007190000` and the target absent;
+- the recorded pre-deploy structural evidence differs;
+- there are unexpected business rows;
+- the repository or Write-Scope state differs from SPEC-245's.
+
+**Required after the write:**
+- the frozen predictions;
+- `app.create_journal_entry`'s postconditions: SECURITY DEFINER, owner `postgres`, `search_path ''`, no PUBLIC or `anon` execution, only the intended `authenticated` RPC path, and `app.authorize('CREATE_JOURNAL_ENTRY')` still governing it;
+- permission, MFA and tenant discrimination;
+- `authenticated` with read only on the lines;
+- the balance check judging both parents;
+- the two-session proof refused;
+- focused, Pass A/B, HTTP and smoke green;
+- all five mutants killed;
+- business counts unchanged.
+
+Secondary `brplkqmbzffpxqgkkdzo` stays out of bounds. Slice 33 does not begin until SPEC-245 is Complete, published, remotely certified and synchronized.
+
+### 2026-10-08 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- HEAD `a6d1afde16f9ec88a7b92286421ba3a0a1b4faf1`, with only the seven in-scope Step 1-3 paths dirty;
+- migration SHA-256 `74e957d1…`, md5 `9d047676…`, 4911 bytes, 0 CR, 0 non-ASCII; Test 145 `acf4a049…`;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 241, `a7f02a08…`, latest `20261007190000`, with the target absent by version and name;
+- functions `8eb85701…`/320 and grants `134cce39…`/193, equal to the recorded evidence;
+- lines ACL `authenticated=arw`; RPC `3992fa98…` invoker; balance check `fce34afe…`;
+- 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `9d047676b3fd927a7a26926b1d6a073c` and 4911 bytes.
+- That text was applied through `apply_migration` as `a_journal_line_is_written_only_with_its_entry`. The connector assigned the temporary version `20261008065950`; its single stored statement has md5 `9d047676…` and 4911 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261008120000`. The guard required 242 rows, the other 241 hashing to the baseline, the statement md5 to match and no existing target. All four held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 242, `5f8565a14fcf6ef6cc7bca0218a4bcd9`, latest `20261008120000`, present once; the temporary version is gone.
+- **Surfaces:**
+  - functions `f704b783…`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `b6791b01…`/191;
+  - columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79;
+  - `_combined` `f18fcf70d3293eb80c4ec0536e1cced1`/3110.
+- **Lines:** ACL `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=r}`. `authenticated` has SELECT true and INSERT, UPDATE and DELETE false; no column ACLs; `anon` holds nothing. `service_role`'s privileges come from Primary's platform default ACL (PAR-5) and are unchanged.
+- **`app.create_journal_entry`:**
+  - md5 `13689c0479f7a76d7de053c39d9d618a`, byte-identical to local;
+  - SECURITY DEFINER true, owner `postgres`, `search_path=""`;
+  - ACL `{postgres=X, authenticated=X}`: EXECUTE false for PUBLIC and `anon`, true for `authenticated`;
+  - its body still calls `app.authorize('CREATE_JOURNAL_ENTRY')`.
+- **The `public` wrapper:** `create_journal_entry` is unchanged and still invoker, md5 `14725a2f84c3299bc341328a263fe967`, equal to local. Its extra `service_role` execute is the same platform default ACL and predates this migration.
+- **`app.enforce_journal_entry_balanced`:** md5 `0d8ed6e22333a30412e0a63e4db6e3eb`, byte-identical to local; SECURITY DEFINER, owner `postgres`, `search_path=""`.
+- **Business rows:** 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Behaviour on the deployed bytes,** proven locally on byte-identical functions and grants, because no business data is written on Primary:
+- **Permission, MFA and tenant on the RPC path:** Test 145 assertions 2–4, 11 (aal1 refused), 13 (employee refused), 14 (other tenant reads nothing) and 15; Test 70 assertions 7–9; `verify_journey_branches.ps1`'s ledger block.
+- **The table door closed at aal2 and aal1:** Test 145 assertions 1, 5, 7–9 and 12; the five HTTP checks.
+- **Both parents judged:** Test 145 assertions 16–18; the two-session proof refused.
+- The Step-4 gate (Pass A/B 145/2657, HTTP 458/0, smoke) and the five mutants ran on these exact bytes.
+
+No business-data write and no reproduction was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-08 — Step 7: evidence and measured state
+
+- **Evidence:** `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 242 migrations, `5f8565a1…`, functions `f704b783…`/320, structural `f18fcf70…`/3110, head `a6d1afd`. Its ledger equals the repository's migration files.
+- **Manifest:** `supabase/tests` holds 145 files whose `plan(N)` values sum to 2657. The manifest's `Live state` now reads:
+  - 242 migrations, latest `20261008120000`, the same hashes and counts;
+  - 78 tables, `71/622` catalog, 80 client RPCs;
+  - `Suite **145 files / 2657 assertions**` and 458 HTTP assertions last passed 2026-10-08.
+
+  Batch 6 coverage reads 33 of 78, all thirty-three at `ADVERSARIAL`. The manifest measures 6875 characters.
+- **Register:** JE-3 and JE-4 are marked DEPLOYED with Cert `✅`, worded without a date.
+- **Generators:** `MASTER_API_CONTRACT.md` was regenerated (SHA-256 `482548e3…`, the one predicted line), and `ai-map.json` was regenerated and stored LF.
+- **Checks:** the four guard self-tests pass: future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0. `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency CLEAN; `git diff --check` exit 0.
+- **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
 ## Verification Notes
 

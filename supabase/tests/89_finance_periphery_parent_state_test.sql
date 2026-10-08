@@ -122,13 +122,16 @@ select is(
   true,
   'POSITIVE CONTROL: chart account 1000 exists and is ACTIVE before anything is asserted about it');
 
--- 11
+-- 11 -- Since SPEC-245 (JE-3) a signed-in user holds no write on journal lines, so the table door is
+-- the platform's alone; JE-1's guard is asked there (11 and 14), with no session exemption.
+reset role;
 select lives_ok(
   $$insert into public.journal_entry_lines (tenant_id, journal_entry_id, chart_account_id, debit_amount, credit_amount, currency_code)
     select '89000000-0000-0000-0000-000000000001','89000000-0000-0000-0000-0000000000e1', ca.id, 100, 0,'EGP'
     from public.chart_of_accounts ca
     where ca.tenant_id = '89000000-0000-0000-0000-000000000001' and ca.code = '1000'$$,
   'NEGATIVE CONTROL: a direct line against an ACTIVE account posts normally');
+set local role authenticated;
 
 -- 12
 select lives_ok(
@@ -146,6 +149,7 @@ select throws_ok(
   'POSITIVE CONTROL: the RPC refuses a line on a RETIRED account');
 
 -- 14 -- SAME STATE.
+reset role;
 select throws_ok(
   $$insert into public.journal_entry_lines (tenant_id, journal_entry_id, chart_account_id, debit_amount, credit_amount, currency_code)
     select '89000000-0000-0000-0000-000000000001','89000000-0000-0000-0000-0000000000e1', ca.id, 0, 100,'EGP'
@@ -153,6 +157,7 @@ select throws_ok(
     where ca.tenant_id = '89000000-0000-0000-0000-000000000001' and ca.code = '1000'$$,
   '23514', 'unknown or inactive chart account code: 1000',
   'JE-1: and so does the TABLE. The RPC''s other two line rules were ALREADY here and are not re-added: the debit-xor-credit CHECK and the deferred balance trigger. Only the active-account rule was missing');
+set local role authenticated;
 
 -- ================================================================================================
 -- DEV-1 -- two rows for one device, and revoking one left the other trusted.
@@ -212,11 +217,10 @@ select throws_ok(
   '...and once the mutation is rolled back the guard is BACK: the identical allocation against the identical draft invoice is refused again');
 
 -- ================================================================================================
--- THE CLASS, re-derived from the catalog on every run. Ten pairs remain and each is CLASSIFIED,
+-- THE CLASS, re-derived from the catalog on every run. Nine pairs remain and each is CLASSIFIED,
 -- which is what makes this an inventory rather than an exemption list:
---   SAME-TRANSACTION CREATION (7) -- the function creates the parent in the same transaction, so
+--   SAME-TRANSACTION CREATION (6) -- the function creates the parent in the same transaction, so
 --     there is no prior state to refuse on: create_customer -> customer_identity_signals,
---     create_journal_entry -> journal_entry_lines (the ENTRY; the ACCOUNT rule is JE-1 above),
 --     record_payment -> payment_allocations (the PAYMENT; the INVOICE rule is PAY-1 above),
 --     upload_document -> documents, and upload_subscription_payment_proof's three, which build
 --     document + version + proof + link in one transaction.
@@ -224,6 +228,8 @@ select throws_ok(
 --     the assigned -> contacted transition; record_refund refuses on tenancy alone;
 --     map_outcomes_to_conversions reads the first-touch `lead_source_code` only to CLASSIFY a
 --     qualification as qualified_phone_call or qualified_lead (PH8-4), and is session-less.
+--   create_journal_entry -> journal_entry_lines left the inventory with SPEC-245: a signed-in user
+--     no longer writes journal lines, so the pair has no table door to guard.
 -- Counterexample-tested BOTH ways before being trusted: dropping this migration's two triggers takes
 -- the count 9 -> 10 and the reappearing pair is `record_payment -> payment_allocations (invoices)`,
 -- PAY-1 itself; rolling the drop back returns it to 9.
@@ -271,8 +277,8 @@ select is(
                      order by pr.proname || ' -> ' || pr.child || ' (' || pr.parent || ')'), '')
    from pairs pr left join guarded g on g.child = pr.child and g.parent = pr.parent
    where g.child is null)::text,
-  'create_customer -> customer_identity_signals (customers), create_journal_entry -> journal_entry_lines (journal_entries), map_outcomes_to_conversions -> offline_conversions (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payment_allocations (payments), record_refund -> refunds (payments), upload_document -> documents (document_versions), upload_subscription_payment_proof -> document_links (subscription_payment_proofs), upload_subscription_payment_proof -> documents (document_versions), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
-  'CLASS GUARD (PAY-1): every app function that reads a CATALOG-CODED parent state and INSERTs into a table `authenticated` can write, where the parent is a real FK parent, either has a table-door guard or is one of these ten classified non-defects. Scope stated honestly: boolean-flag state is NOT covered -- JE-1 is that residual and was found by reading, not by this.');
+  'create_customer -> customer_identity_signals (customers), map_outcomes_to_conversions -> offline_conversions (leads), record_lead_interaction -> lead_interactions (leads), record_payment -> payment_allocations (payments), record_refund -> refunds (payments), upload_document -> documents (document_versions), upload_subscription_payment_proof -> document_links (subscription_payment_proofs), upload_subscription_payment_proof -> documents (document_versions), upload_subscription_payment_proof -> subscription_payment_proofs (documents)',
+  'CLASS GUARD (PAY-1): every app function that reads a CATALOG-CODED parent state and INSERTs into a table `authenticated` can write, where the parent is a real FK parent, either has a table-door guard or is one of these nine classified non-defects. Scope stated honestly: boolean-flag state is NOT covered -- JE-1 is that residual and was found by reading, not by this.');
 
 select * from finish();
 rollback;

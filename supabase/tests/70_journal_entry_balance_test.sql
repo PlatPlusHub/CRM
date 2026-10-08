@@ -114,7 +114,13 @@ select throws_ok(
 
 -- =============================================================================================
 -- 10-13. THE REPRODUCTION, on the direct path, in all four shapes it can take.
+--
+-- Since SPEC-245 (JE-3) a signed-in user holds no write on journal lines -- a posted line is
+-- corrected by reversal, never by mutation, and `145_...` proves that door closed. The direct path
+-- is now the platform's alone, and FIN-8 deliberately does not exempt it, so 10-14 ask it there.
 -- =============================================================================================
+reset role;
+
 select throws_ok(
   $q$do $x$
      begin
@@ -180,7 +186,9 @@ select lives_ok(
        update public.journal_entry_lines set credit_amount = 700 where journal_entry_id = v_e and credit_amount > 0;
        execute 'set constraints all immediate';
      end $x$$q$,
-  'NOT A VACUOUS HARNESS: a BALANCED correction (1000/1000 -> 700/700) passes the same forced check -- so the refusals above are the constraint, not the mechanism');
+  'NOT A VACUOUS HARNESS: a BALANCED change by the platform (1000/1000 -> 700/700) passes the same forced check -- so the refusals above are the constraint, not the mechanism');
+
+set local role authenticated;
 
 -- =============================================================================================
 -- 15-16. SIDE EFFECTS and TENANT ISOLATION.
