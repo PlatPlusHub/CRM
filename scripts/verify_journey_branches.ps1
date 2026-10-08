@@ -278,11 +278,13 @@ $r = Rpc $fin 'create_journal_entry' @{ p_source_type_code = 'manual_entry'; p_e
 Check "an UNBALANCED entry is refused over HTTP" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
 
 # FIN-8's real attack shape: the TABLE endpoint, not the RPC. One request = one transaction, so the
-# entry row commits alone with zero lines and the deferred constraint fires.
+# entry row would commit alone with zero lines and the deferred constraint fires. Since JE-5 (slice
+# 33) authority refuses it first: `authenticated` holds no INSERT on the header, so the request is a
+# 403, and a 400 from the balance check would mean the grant had come back.
 $r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entries" -Method Post -SkipHttpErrorCheck `
         -Headers @{ apikey = $ANON; Authorization = "Bearer $fin" } -ContentType 'application/json' `
         -Body "{""tenant_id"":""$T"",""source_type_code"":""manual_entry"",""entry_date"":""2026-08-29"",""description"":""forged""}"
-Check "FIN-8 CLOSED: a bare journal_entries row via PATCH/POST on the TABLE endpoint is refused -- an entry with no lines is not an entry" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+Check "FIN-8 / JE-5: a bare journal_entries row on the TABLE endpoint is refused by authority (42501) before the balance check is reached" ($r.StatusCode -eq 403 -and $r.Content -match '42501') "$($r.StatusCode) $(Err $r)"
 
 $orphans = (Psql "select count(*) from public.journal_entries je where je.tenant_id='$T' and (select count(*) from public.journal_entry_lines l where l.journal_entry_id=je.id) < 2;").Trim()
 Check "NON-MUTATION: no entry in this tenant has fewer than two lines" ($orphans -eq '0') "bad_entries=$orphans"
@@ -317,6 +319,28 @@ Check "JE-3: ...nor do it at aal1, where create_journal_entry refuses for want o
 $after = (Psql "select coalesce(sum(debit_amount),0)::text || '/' || coalesce(sum(credit_amount),0)::text || '/' || count(*)::text || '/' || string_agg(distinct currency_code, ',') || '/' || bool_and(chart_account_id in ('$($dr[1])','$($cr[1])'))::text from public.journal_entry_lines where journal_entry_id='$jeId';").Trim()
 $evt = (Psql "select count(*) from public.events where entity_id='$jeId';").Trim()
 Check "NON-MUTATION: the posted entry is still 2500/2500 on two EGP lines on its own accounts, with its one event" ($after -eq '2500.0000/2500.0000/2/EGP/true' -and $evt -eq '1') "lines=$after events=$evt"
+
+# JE-5 (slice 33): the header is the posting too -- its date is the period it is booked in, its source
+# and narrative are what its event recorded, and its void columns are closed by design (VOID-1). An
+# RLS-filtered PATCH answers 2xx with no rows, so only a refusal counts here.
+$hdrBefore = (Psql "select entry_date||'|'||description||'|'||source_type_code||'|'||coalesce(source_entity_id::text,'-')||'|'||created_at||'|'||is_voided||'|'||coalesce(voided_by::text,'-') from public.journal_entries where id='$jeId';").Trim()
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entries?id=eq.$jeId" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $fin" } -ContentType 'application/json' -Body '{"entry_date":"2001-01-01","description":"rewritten"}'
+Check "JE-5: finance cannot backdate or re-describe the posted entry's header" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entries?id=eq.$jeId" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $finAal1" } -ContentType 'application/json' `
+        -Body '{"is_voided":true,"voided_at":"2026-08-30T00:00:00Z","void_reason":"by hand","voided_by":"0b110000-0000-0000-0000-00000000aa04"}'
+Check "JE-5: ...nor void it at aal1 through the closed void columns, naming the employee as voider" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$r = Invoke-WebRequest -Uri "$API/rest/v1/journal_entries?id=eq.$jeId" -Method Patch -SkipHttpErrorCheck `
+        -Headers @{ apikey = $ANON; Authorization = "Bearer $finAal1" } -ContentType 'application/json' `
+        -Body '{"created_at":"2001-01-01T00:00:00Z","source_type_code":"refund","source_entity_id":"0b110000-0000-0000-0000-00000000dead"}'
+Check "JE-5: ...nor rewrite its creation time and source at aal1" (-not (Ok $r)) "$($r.StatusCode) $(Err $r)"
+
+$hdrAfter = (Psql "select entry_date||'|'||description||'|'||source_type_code||'|'||coalesce(source_entity_id::text,'-')||'|'||created_at||'|'||is_voided||'|'||coalesce(voided_by::text,'-') from public.journal_entries where id='$jeId';").Trim()
+$evt = (Psql "select count(*) from public.events where entity_id='$jeId';").Trim()
+Check "NON-MUTATION: the posted header is unchanged and still agrees with its one event" ($hdrAfter -eq $hdrBefore -and $hdrAfter -like '2026-08-29|http balanced|manual_entry|-|*|false|-' -and $evt -eq '1') "before=$hdrBefore after=$hdrAfter events=$evt"
 
 
 # =================================================================================================

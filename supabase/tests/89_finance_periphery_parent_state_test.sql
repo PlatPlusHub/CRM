@@ -112,8 +112,6 @@ select throws_ok(
 -- JE-1 -- a journal line posted to a RETIRED chart account.
 -- ================================================================================================
 select app.seed_default_chart_of_accounts();
-insert into public.journal_entries (id, tenant_id, source_type_code, entry_date, description)
-values ('89000000-0000-0000-0000-0000000000e1','89000000-0000-0000-0000-000000000001','manual_entry', current_date,'F89 entry');
 
 -- 10
 select is(
@@ -123,8 +121,11 @@ select is(
   'POSITIVE CONTROL: chart account 1000 exists and is ACTIVE before anything is asserted about it');
 
 -- 11 -- Since SPEC-245 (JE-3) a signed-in user holds no write on journal lines, so the table door is
--- the platform's alone; JE-1's guard is asked there (11 and 14), with no session exemption.
+-- the platform's alone; JE-1's guard is asked there (11 and 14), with no session exemption. Since
+-- SPEC-246 (JE-5) the same is true of the header, so the platform writes it here too.
 reset role;
+insert into public.journal_entries (id, tenant_id, source_type_code, entry_date, description)
+values ('89000000-0000-0000-0000-0000000000e1','89000000-0000-0000-0000-000000000001','manual_entry', current_date,'F89 entry');
 select lives_ok(
   $$insert into public.journal_entry_lines (tenant_id, journal_entry_id, chart_account_id, debit_amount, credit_amount, currency_code)
     select '89000000-0000-0000-0000-000000000001','89000000-0000-0000-0000-0000000000e1', ca.id, 100, 0,'EGP'

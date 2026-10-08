@@ -196,7 +196,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `holidays` | `SIU-` | yes | conditional | tenant_isolation |
 | `internal_supplier_links` | `SIU-` | yes | conditional | tenant_isolation |
 | `invoices` | `SIU-` | yes | conditional | scope_isolation |
-| `journal_entries` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `journal_entries` | `S---` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `journal_entry_lines` | `S---` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `languages` | `S---` | no | no | read_all_authenticated |
 | `lead_assignments` | `SIU-` | yes | conditional | scope_isolation |

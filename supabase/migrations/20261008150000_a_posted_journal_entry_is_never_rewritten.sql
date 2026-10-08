@@ -1,0 +1,29 @@
+-- Batch 6 slice 33 -- `journal_entries`: a posted journal entry is never rewritten.
+--
+-- ================================================================================================
+-- WHY
+--
+-- Canon 07 and canon 30: a correction after approval goes through a new event, adjustment, reversal
+-- or new journal entry, and approved financial actions are not overwritten silently. The register's
+-- `journal_entries` closure (VOID-1) applies it to the ledger: a POSTED double-entry record is
+-- corrected by a compensating reversal, never by mutation, and its void columns must never be given
+-- a writer. A journal entry has no draft state; `app.create_journal_entry` writes the header and all
+-- its lines in one call and records `journal_entry_created`. No function updates a header.
+--
+-- JE-5. `authenticated` held INSERT and UPDATE on the header, guarded only by RLS charging
+--   CREATE_JOURNAL_ENTRY through `app.has_permission`, so a finance manager -- at aal1 as well, where
+--   the RPC refuses for want of step-up -- PATCHed a posted entry in one PostgREST request each:
+--   `entry_date` backdated to 2001, the description rewritten, `source_type_code` and
+--   `source_entity_id` re-pointed at a refund that does not exist, `created_at` backdated, and the
+--   closed void columns set with another user named as `voided_by`. The lines and the one
+--   `journal_entry_created` event kept the original truth; no event recorded the change.
+--   The INSERT door could never commit (FIN-8: a header without two balanced lines is refused at
+--   COMMIT, and since SPEC-245 no signed-in user writes a line), so it carried no reproduced harm --
+--   but it is the last write door that keeps this table in STEPUP-1's criterion, and its refusal
+--   rested on an integrity check rather than on authority.
+--
+-- The RPC has run SECURITY DEFINER since SPEC-245 and needs neither grant, so both are revoked and
+-- the RPC becomes the one writer of an entry, as it already is of its lines. SELECT stays.
+-- ================================================================================================
+
+revoke insert, update on public.journal_entries from authenticated;

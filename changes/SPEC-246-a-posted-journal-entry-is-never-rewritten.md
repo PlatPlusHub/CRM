@@ -169,7 +169,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -434,6 +434,56 @@ The register changes the freshness entry, JE-5 (FIXED locally, Cert `🛡`), a n
 **Predicted delta:** ledger 243, `201d938a80ae5fe6d32fb8ef6f3a7619`, latest `20261008150000`; grants `6727f6d8…`/189; combined `f50dea30…`/3108; every other surface unchanged; `journal_entries` ACL `authenticated=r`; `service_role`'s privileges are Primary's platform default ACL (PAR-5) and do not change.
 
 Stopped after Step 4 for Gate 2. No Primary write was made. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-08 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of only `supabase/migrations/20261008150000_a_posted_journal_entry_is_never_rewritten.sql`, SHA-256 `4b8a88cd41c9d9355bdf7dd3f1fa89e31f91bdff2a9da52ecedb48982f73fcbc`, md5 `fbd6f81ad12d64bf8d4af2d3fa3b650a`, 2177 bytes, 29 LF lines, plain ASCII, whose only effective statement is `revoke insert, update on public.journal_entries from authenticated;`. It authorizes no other DDL, data write, repair or cleanup, and permits only the established guarded rename of a temporary connector version.
+
+**Stop conditions before writing,** any mismatch voiding it: the hashes, size, line count or effective SQL differ; Primary is not at 242 migrations with latest `20261008120000` and the target absent; `authenticated` does not hold INSERT, SELECT and UPDATE on `public.journal_entries`; the recorded structural baseline differs; business-row counts changed; remote `main` moved.
+
+**Required after the write:** 243 migrations, latest `20261008150000`, exactly one row for the migration; `authenticated` SELECT only, no INSERT or UPDATE, nothing widened for `anon`, platform access unchanged; ledger `201d938a…`, grants `6727f6d8…`/189, combined `f50dea30…`/3108, functions `f704b783…`/320; the behavioural invariants; business counts unchanged; verification fixtures local only. Secondary `brplkqmbzffpxqgkkdzo` stays out of bounds.
+
+### 2026-10-08 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- the file: SHA-256 `4b8a88cd…`, md5 `fbd6f81a…`, 2177 bytes, 29 LF, 0 CR, 0 non-ASCII; effective SQL unchanged;
+- refs: HEAD `90a5129`; `origin/main` and `origin/orvion-preflight` `7e6f51e`;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 242, `5f8565a14fcf6ef6cc7bca0218a4bcd9`, latest `20261008120000`; the target absent by version and name;
+- `journal_entries` ACL `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=arw}`, 0 column ACLs; client grants `authenticated` INSERT, SELECT, UPDATE; `app.create_journal_entry` `13689c04…`;
+- all ten structural surfaces and the combined `f18fcf70d3293eb80c4ec0536e1cced1`/3110 equal to the recorded evidence; grants `b6791b01…`/191;
+- 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `fbd6f81ad12d64bf8d4af2d3fa3b650a`, 2177 bytes, 29 LF, no CR.
+- That text was applied through `apply_migration` as `a_posted_journal_entry_is_never_rewritten`. The connector assigned the temporary version `20261008122125`; its single stored statement has md5 `fbd6f81a…` and 2177 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261008150000`. The guard required 243 rows, the other 242 hashing to the baseline, the statement md5 to match and no existing target. All four held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 243, `201d938a80ae5fe6d32fb8ef6f3a7619`, latest `20261008150000`; exactly one row for the migration, under the target version, stored md5 `fbd6f81a…`; the temporary version is gone.
+- **Surfaces:** functions `f704b7836a75f3f623a4112a28e5a779`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d89168b7aec4c06f131bef75bc`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `56872e87…`/299, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79; `_combined` `f50dea30bd2a7c4cf4c22ddd9e191622`/3108.
+- **`journal_entries`:** ACL `{postgres=arwdDxtm, service_role=arwdDxtm, authenticated=r}`. `authenticated` has SELECT and, at table and column level, no INSERT, UPDATE or DELETE; no column ACLs; `anon` holds nothing. `service_role`'s privileges are Primary's platform default ACL (PAR-5) and are unchanged.
+- **Functions:** `app.create_journal_entry` `13689c0479f7a76d7de053c39d9d618a`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X, authenticated=X}` — unchanged, so JE-6's input handling is unchanged; `app.enforce_journal_entry_balanced` `0d8ed6e2…` and the `public` wrapper `14725a2f…` unchanged.
+- **Business rows:** 0 tenants, journal entries, journal lines, chart accounts and events.
+
+**Behaviour on the deployed bytes,** proven locally on byte-identical grants and functions, because no business data or fixture is written on Primary:
+- direct UPDATE and INSERT refused 42501 at the statement, at aal2 and aal1, column-aware: Test 146 assertions 1, 4–9, 11–12; the four JE-5 HTTP checks and the POST pinned to 42501;
+- SELECT within tenant scope; the rival tenant reads nothing and has no door: assertions 14–15;
+- the RPC still posts at aal2 (Test 146 assertion 2; the ledger block's positive control over HTTP), refuses aal1 for want of step-up (Test 145 assertion 11), and refuses an employee and an unbalanced entry over HTTP (`verify_journey_branches.ps1`'s ledger block); the employee is refused at the door too (Test 146 assertion 13);
+- no header or void mutation through the signed-in door, and the event still agrees with the header: assertions 4–8, 16–17;
+- the Step-4 gate (Pass A/B 146/2674, HTTP 462/0, smoke) and M1–M8 and H1 ran on these exact bytes;
+- JE-2, DC-11 and FIN-9 rows unchanged; JE-6 OPEN and unrepaired.
+
+No business-data write and no fixture was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-08 — Step 7: evidence and measured state
+
+- **Evidence:** `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 243 migrations, `201d938a…`, functions `f704b783…`/320, structural `f50dea30…`/3108, head `90a5129`. Its ledger is the Primary ledger read with its own `read_query`; Primary's fingerprint equals the recorded 242 entries plus the new one, and equals the repository's 243 migration files.
+- **Manifest:** `supabase/tests` holds 146 files whose `plan(N)` values sum to 2674. The manifest's `Live state` now reads 243 migrations, latest `20261008150000`, the same hashes and counts; 78 tables, `71/622` catalog, 80 client RPCs; `Suite **146 files / 2674 assertions**` and 462 HTTP assertions last passed 2026-10-08. Batch 6 coverage reads 34 of 78, all thirty-four at `ADVERSARIAL`. The manifest measures 6869 characters.
+- **Register:** JE-5 is marked DEPLOYED with Cert `✅`, worded without a further date.
+- **Generators:** `MASTER_API_CONTRACT.md` was regenerated (SHA-256 `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`, the one predicted line), and `ai-map.json` was regenerated and stored LF.
+- **Checks:** the four `scripts/test_*_guard.ps1` pass (future-date 18/0, status-contradiction 33/0, primary-ledger 13/0, cold-start 34/0); `check_primary_ledger.ps1` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency `REPOSITORY CONSISTENCY: CLEAN` (the six pre-deploy issues cleared); `git diff --check` clean.
+- **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
 ## Verification Notes
 
