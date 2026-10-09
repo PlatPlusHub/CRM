@@ -92,7 +92,7 @@ None. SPEC-248 is Complete and is not modified. The gate section it added to `MA
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
