@@ -75,7 +75,7 @@ Supersedes SPEC-252 (`changes/SPEC-252-recorded-contract-text-is-compared-by-cod
 
 ## Runtime Checkpoint
 
-Resume Step: 4
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
