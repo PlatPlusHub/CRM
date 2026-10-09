@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -361,20 +361,20 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
 
 ## Acceptance Criteria
 
-- [ ] `app.platform_activate_subscription` and `app.platform_transition_subscription` lock the subscription they judge (`for no key update`), and the transition revokes codes before that lock. A transition canon 26 forbids against the committed state is refused, and a refused transition revokes nothing.
-- [ ] `app.process_subscription_lifecycle` re-reads each iterated row under `for no key update`, inside its per-row exception block, and judges only that row. A renewal committed while it waited is left `active` with one true event.
-- [ ] Every recorded subscription event names the state actually replaced, in Cases A, C, D and F.
-- [ ] Legal transitions, LIC-2, LIC-4 and LIC-5 are preserved: Case B holds, Tests 42, 66, 131 and 147 pass unchanged, and the redemption, issuance, revocation and transition-rule functions are byte-identical.
-- [ ] A payment proof's foreign-key check is not made to wait by the job (Case G), no overlap creates a job finding, and Case E proves the lock order without a deadlock.
-- [ ] The three functions keep their signatures, owner, `SECURITY DEFINER`, empty `search_path`, ACLs and comments.
-- [ ] `scripts/verify_subscription_concurrency.py` runs all seven cases plus fault isolation, each independently, and is named in Additional Verification. Test 148 runs in every CI database job.
-- [ ] Mutants M1–M8 are each killed, with installation and restoration proven, and the causal negative is recorded.
-- [ ] SUB-4 (Low) and SUB-5 (Medium) are FIXED and DEPLOYED in the register. Case B's message stays the non-finding SPEC-247 recorded, and no other row changed.
-- [ ] The migration, Test 148 and the proof matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (245 migrations; 148 files / 2697 assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests pass.
-- [ ] The manifest names Batch 6 Slice 35 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration, plus at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `app.platform_activate_subscription` and `app.platform_transition_subscription` lock the subscription they judge (`for no key update`), and the transition revokes codes before that lock. A transition canon 26 forbids against the committed state is refused, and a refused transition revokes nothing.
+- [x] `app.process_subscription_lifecycle` re-reads each iterated row under `for no key update`, inside its per-row exception block, and judges only that row. A renewal committed while it waited is left `active` with one true event.
+- [x] Every recorded subscription event names the state actually replaced, in Cases A, C, D and F.
+- [x] Legal transitions, LIC-2, LIC-4 and LIC-5 are preserved: Case B holds, Tests 42, 66, 131 and 147 pass unchanged, and the redemption, issuance, revocation and transition-rule functions are byte-identical.
+- [x] A payment proof's foreign-key check is not made to wait by the job (Case G), no overlap creates a job finding, and Case E proves the lock order without a deadlock.
+- [x] The three functions keep their signatures, owner, `SECURITY DEFINER`, empty `search_path`, ACLs and comments.
+- [x] `scripts/verify_subscription_concurrency.py` runs all seven cases plus fault isolation, each independently, and is named in Additional Verification. Test 148 runs in every CI database job.
+- [x] Mutants M1–M8 are each killed, with installation and restoration proven, and the causal negative is recorded.
+- [x] SUB-4 (Low) and SUB-5 (Medium) are FIXED and DEPLOYED in the register. Case B's message stays the non-finding SPEC-247 recorded, and no other row changed.
+- [x] The migration, Test 148 and the proof matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (245 migrations; 148 files / 2697 assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests pass.
+- [x] The manifest names Batch 6 Slice 35 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration, plus at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -496,17 +496,66 @@ The owner approved Option B as a one-time recovery of the unpublished local SPEC
 **Earlier entries are kept as they were written.** Their SHA references (`d8b213b`, `a64d8c7`), the Correction entry and the Step 7 byte offsets describe the original commits, which this table maps. They are not claims about the reconstructed commits. The original chain is preserved locally for verification as `refs/orvion-recovery/spec250-original-chain` and as a git bundle outside the repository (SHA-256 `85765761e389e3567411e69e3d01fc24727b5c113f2667b6fa8bbdc3f6fa6c21`).
 
 **Deployment evidence.** `check_primary_ledger.ps1` refuses evidence bound to a commit outside HEAD's history, so `reports/evidence/primary-ledger-evidence.json` names the reconstruction `9a3c785` of the pre-deploy commit `a64d8c7` the deployment ran from. Its `read_via` states the mapping and the fresh re-read. Every Primary reading in it is byte-identical. No certification is inherited from the original chain: Step 8 runs in full on the reconstructed chain.
+
+### 2026-10-09 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed, reconstructed HEAD `6fdd47a` in VERIFY mode, with profiles DATABASE and REPOSITORY and nothing else running. It reported `LOCAL_CERTIFY: READY` in 5.0 minutes, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; the declared `verify_api_end_to_end.ps1`, `verify_journey_branches.ps1`, `verify_role_journeys.ps1` and `verify_subscription_concurrency.py`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+Before it, on the same reconstructed state:
+- the four CI-only guard self-tests passed (cold-start 34/0, status-contradiction 33/0, primary-ledger 13/0, future-date 18/0);
+- `-Gate -BaseRef origin/main` reported `ORVION: READY` over the whole range.
+
+Nothing was inherited from the original chain. The mutation evidence (the causal negative and M1–M8) was recorded before Approval on the same migration and test bytes, which are unchanged, so it was not repeated.
+
+**Selector after SPEC-250** (`scripts/batch6_select_target.ps1`, 43 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `service_requests` 8/34
+2. `quotation_items` 8/36
+3. `totp_enrollments` 8/38
+4. `subscription_payment_proofs` 8/48
+5. `complaints` 8/48
+6. `payment_allocations` 8/60
+7. `receipts` 7/20
+8. `chart_of_accounts` 7/38
+9. `notification_deliveries` 7/42
+10. `approval_requests` 7/52
+11. `user_branch_assignments` 7/554
+12. `user_role_assignments` 7/612
+
+Slice 35's measured target is `service_requests`.
 ## Verification Notes
+
+### 2026-10-09 — Independent Review of the reconstructed execution commit `59070c8` and its record `6fdd47a`
+
+Reviewed the committed tree against the approved Draft `0828e1b`, the owner's 2026-10-09 decision, the Gate-2 authorization, the owner's one-time reconstruction authorization and the frozen nine-path Write Scope. The review read the implementation, not the Execution Log.
+
+1. **The two Platform Owner writers.** In the committed migration, `app.platform_activate_subscription` and `app.platform_transition_subscription` select the tenant's latest subscription `for no key update` before `app.subscription_transition_allowed` judges it. The transition's LIC-4 revocation precedes that select, and a refused transition raises after it, so the revocation rolls back.
+2. **The lifecycle job.** `app.process_subscription_lifecycle` re-reads each iterated row by id `for no key update` as the first statement inside its per-row `begin … exception when others` block. Every judgement and the renewal arithmetic read `v_cur`; no `r.` state column remains (Test 148 [5]).
+3. **Truthful events.** Each `app.record_event` call passes the locked from-state, `v_sub.subscription_status_code` or `v_from`. Cases A, C, D and F of the two-session proof assert the recorded from-state.
+4. **Preserved surfaces.** Redeem, issue, revoke and `subscription_transition_allowed` read the same md5 on Primary before and after the write. Tests 42, 66, 131 and 147 are unchanged in the tree, and Pass A and Pass B ran them in `-Finish`.
+5. **Case G, fault isolation and lock order.** These are proven by `scripts/verify_subscription_concurrency.py` (8/0 on these bytes), which `-Finish` ran as a declared verification.
+6. **Function metadata.** On Primary, all three are SECURITY DEFINER with owner `postgres`, `search_path=""`, ACLs as before and comments unchanged.
+7. **Permanent controls.** The proof is named in Additional Verification. Test 148 is in `supabase/tests`, which every CI database job runs.
+8. **Mutation evidence.** M1–M8 and the causal negative were recorded on these migration and test bytes before Approval, and the bytes are unchanged (`5d6ecc1f…`, `ec160be8…`).
+9. **Register.** SUB-4 (Low) and SUB-5 (Medium) read FIXED and DEPLOYED with Cert ✅. The diff against `f70e1b3` touches only the freshness entry and those two rows.
+10. **Frozen values.** The migration, Test 148 and the proof equal their frozen SHA-256 values in the committed tree.
+11. **Agreement.** Primary, the evidence and the manifest agree: 245 migrations, `43bf5bef…`, functions `258738c5…`/320, structural `90231190…`/3109, 148 files / 2697 assertions. The API contract matches its generator. The four guard self-tests pass on the reconstructed state (34/0, 33/0, 13/0, 18/0).
+12. **Primary and Secondary.** Primary received only the authorized bytes (statement md5 `f9a4a15f…`) and the one guarded rename. It holds 0 business rows before and after. The reconstruction wrote nothing to Primary, and Secondary was never contacted.
+13. **Scope.** `f70e1b3..HEAD` changes only Write Scope paths, and `MASTER_API_CONTRACT.md` regenerates unchanged.
+14. **The reconstruction.** Each reconstructed commit differs from its original only in this contract, plus, for the implementation commit, the evidence's `repository_head` and one disclosing `read_via` sentence. The mapping is recorded and the original chain preserved. This file carries no control or invisible character, recursive search finds it, and the parser reads every section. `-Finish` certified the reconstructed chain itself; nothing is inherited.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
