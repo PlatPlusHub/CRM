@@ -76,7 +76,7 @@ None. SPEC-239 and SPEC-250 are Complete and are not modified.
 
 ## Runtime Checkpoint
 
-Resume Step: 4
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
