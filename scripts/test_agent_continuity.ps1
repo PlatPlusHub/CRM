@@ -649,10 +649,10 @@ try{
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Review 'A weaker gate item.');$r=Run Gate
     Assert '60 a Review Gate item cannot be reworded' ($r.Code-ne0-and$r.Text-match'REVIEW_GATE_TEXT_MUTATED') $r.Text
 
-    # ---- CTRL-4 (SPEC-251): frozen and prior text is compared by code point ----
+    # ---- CTRL-4 (SPEC-252): frozen and prior text is compared by code point ----
     # Each ordinal case uses an edit the character rule below cannot see (a combining accent, a
     # case change, a deletion), so a refusal here is credited to the ordinal comparison alone.
-    # Every case was first run against the pre-SPEC-251 evaluator, which ACCEPTED each refusal below.
+    # Every case was first run against the pre-repair evaluator (ae1d130), which ACCEPTED each refusal below.
     $nul=[string][char]0;$bs=[string][char]8;$bel=[string][char]7;$zw=[string][char]0x200B;$shy=[string][char]0xAD
     $nfc="caf$([char]0xE9)";$nfd="cafe$([char]0x301)"
     $fx='changes/SPEC-900-fixture.md'
@@ -726,6 +726,52 @@ try{
     Pop 'CTRL4' 'reject';Assert 'CTRL4-22 a character added after the declared boundary is refused' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
     Reset-Fixture;$r=RunRange (Ctrl4Boundary 'unknown')
     Pop 'CTRL4' 'reject';Assert 'CTRL4-23 a boundary this repository does not contain protects' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    # ---- SPEC-252: the boundary cannot be moved ----
+    # Both bypasses reproduced on SPEC-251's evaluator, judged the way CI judges a range. The
+    # sandbox carries no pre-commit hook, so every commit below is made with the hook skipped and
+    # the range Gate alone must refuse. The contract owns CR_LIFECYCLE.md, so OUT_OF_SCOPE_WRITE
+    # cannot supply the refusal.
+    function Ctrl4Moved([string]$How){
+        $sc='allowed.txt;CR_LIFECYCLE.md'
+        Put $fx (ContractText -Scope $sc -Log 'ENTRY ONE');Commit ctrl4-moved-base
+        $b=(git -C $root rev-parse HEAD).Trim()
+        if($How-ne'unrelatedfirst'){Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n`nEvidence Character Enforcement: $b`n";Commit ctrl4-declare-real}
+        $base=(git -C $root rev-parse HEAD).Trim()
+        if($How-eq'forward'){
+            Put $fx (ContractText -Scope $sc -Log "ENTRY ONE`n`nENTRY TWO ${bel}dvance");Commit ctrl4-bel-first
+            Put 'allowed.txt' 'ctrl4-later';Commit ctrl4-later;$to=(git -C $root rev-parse HEAD).Trim()
+        }else{
+            git -C $root branch -D ctrl4-side --quiet 2>$null
+            git -C $root checkout --quiet --orphan ctrl4-side;git -C $root rm -rfq . 2>$null
+            Put 'side.txt' 'side';git -C $root add side.txt;git -C $root commit -qm ctrl4-side
+            $to=(git -C $root rev-parse HEAD).Trim();git -C $root checkout --quiet -f main;git -C $root clean -fdq
+        }
+        Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n`nEvidence Character Enforcement: $to`n";Commit ctrl4-move-marker
+        if($How-ne'forward'){Put $fx (ContractText -Scope $sc -Log "ENTRY ONE`n`nENTRY TWO ${bel}dvance");Commit ctrl4-bel-after}
+        $base
+    }
+    Reset-Fixture;$r=RunRange (Ctrl4Moved 'forward')
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-24 moving the marker forward past the offending content does not exempt it (hook skipped)' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    Reset-Fixture;$r=RunRange (Ctrl4Moved 'unrelated')
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-25 re-pointing the marker at an unrelated branch exempts nothing (hook skipped)' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    Reset-Fixture;$r=RunRange (Ctrl4Moved 'unrelatedfirst')
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-27 a first declaration outside the declaring commit''s history exempts nothing (hook skipped)' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    # The repository pin, the way 119i pins CTRL-1: in THIS repository the declared value is the one
+    # first committed, it lies in HEAD's history, the evaluator at it carried no character rule, and
+    # the evaluator that first declared it did. A contract that moves or re-points the marker turns
+    # this red in ORVION Acceptance even if the evaluator were weakened alongside it.
+    $markerRx='(?m)^Evidence Character Enforcement:\s*(?<v>[0-9a-f]{40})\s*$'
+    $declaredC4=[regex]::Match([IO.File]::ReadAllText((Join-Path $sourceRoot 'CR_LIFECYCLE.md')),$markerRx).Groups['v'].Value
+    $firstC4=@(& git -C $sourceRoot log --reverse --format=%H -G '^Evidence Character Enforcement:' HEAD -- CR_LIFECYCLE.md 2>$null)|Select-Object -First 1
+    $firstValC4=if($firstC4){[regex]::Match(((& git -C $sourceRoot show "${firstC4}:CR_LIFECYCLE.md" 2>$null)-join"`n"),$markerRx).Groups['v'].Value}else{''}
+    & git -C $sourceRoot merge-base --is-ancestor $declaredC4 HEAD 2>$null|Out-Null;$ancC4=$LASTEXITCODE
+    $atBoundaryC4=(& git -C $sourceRoot show "${declaredC4}:scripts/check_agent_continuity.ps1" 2>$null|Out-String)
+    $atFirstC4=if($firstC4){(& git -C $sourceRoot show "${firstC4}:scripts/check_agent_continuity.ps1" 2>$null|Out-String)}else{''}
+    $global:LASTEXITCODE=0
+    Pop 'CTRL4' 'accept'
+    Assert 'CTRL4-26 the declared character boundary is its first declaration, in HEAD''s history, and protection began right after it' `
+        ($declaredC4-match'^[0-9a-f]{40}$'-and[string]::Equals($firstValC4,$declaredC4,[StringComparison]::Ordinal)-and$ancC4-eq0-and-not$atBoundaryC4.Contains('Validate-NoNewProhibitedCharacter')-and$atFirstC4.Contains('Validate-NoNewProhibitedCharacter')) `
+        "declared=$declaredC4 first=$firstC4 firstValue=$firstValC4 ancestor=$ancC4"
     # ---- CTRL-4 MUTATION POPULATION: each predicate is killed by the one case no other rule rescues ----
     function Ctrl4Setup([string]$Text,[string]$Base=''){Reset-Fixture;if($Base){Put $fx $Base;Commit ctrl4-mutation-base};Put $fx $Text}
     $ctrl4Mutants=@(
@@ -757,10 +803,15 @@ try{
         {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive "$commit^"){' 'if($true){' 'CTRL4'
     MutationKillRangeAt 'CTRL-4 MUTATION: the endpoint rule honours the declared boundary' `
         {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive $base){' 'if($true){' 'CTRL4'
-    MutationKillRangeAt 'CTRL-4 MUTATION: an unknown boundary protects' `
-        {Ctrl4Boundary 'unknown'} 'PROHIBITED_CHARACTER:U\+0007' '$ancestorCode-ne1' '$ancestorCode-eq0' 'CTRL4'
-    MutationKillRangeAt 'CTRL-4 MUTATION: a missing marker protects' `
-        {Ctrl4AddRemove} 'PROHIBITED_CHARACTER:U\+0000' 'if(-not $m.Success){return $true}' 'if(-not $m.Success){return $false}' 'CTRL4'
+    # SPEC-252. SPEC-251's `$ancestorCode-ne1` mutant is now EQUIVALENT: an unknown or unrelated
+    # boundary is refused by the ancestry precondition before that line runs. It is replaced by the
+    # precondition itself and by the first-declaration pin, each killed by the bypass it closes.
+    MutationKillRangeAt 'CTRL-4 MUTATION: a marker outside the declaring history protects' `
+        {Ctrl4Moved 'unrelatedfirst'} 'PROHIBITED_CHARACTER:U\+0007' "if(`$inHistory-ne0){return ''}" '' 'CTRL4'
+    MutationKillRangeAt 'CTRL-4 MUTATION: the first committed declaration is the boundary' `
+        {Ctrl4Moved 'forward'} 'PROHIBITED_CHARACTER:U\+0007' "if(-not(Same-Text `$was `$declared)){return ''}" '' 'CTRL4'
+    MutationKillRangeAt 'CTRL-4 MUTATION: an unproven boundary protects' `
+        {Ctrl4AddRemove} 'PROHIBITED_CHARACTER:U\+0000' 'if(!$boundary){return $true}' 'if(!$boundary){return $false}' 'CTRL4'
 
     # ---- The full CR_LIFECYCLE.md §4 transition matrix ----
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Commit draft-base;Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress');$r=Run Gate

@@ -1781,7 +1781,7 @@ Twenty-one surfaces are `AUDITED-OPEN` (18) or `PARTIAL` (3). The manifest's ope
   - **USR-4**, **ORIG-1**, **PLACE-2**, **CAP-1** — each latent or unproven, with its trigger.
   - **DC-15** — `service_role` is never a client credential, and integrations use `orvion_integration`.
   - **DEAD-3**, **DEAD-4**.
-- **Control plane and governance**, none a Day-1 business function — GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27; and CTRL-5, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4, recorded on 2026-10-09 by SPEC-251 from the engineering review. The control-plane chapter is closed, and each reopens only on its own trigger.
+- **Control plane and governance**, none a Day-1 business function — GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27; and CTRL-5, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4, recorded on 2026-10-09 from the engineering review, and CTRL-6 (SPEC-252). The control-plane chapter is closed, and each reopens only on its own trigger.
 
 **Terminal in substance — not genuinely open, so no release class; register hygiene only:**
 - **OPS-2**, **RLS-1**, **API-2**, **TAX-1** and **FIN-DOC-1** each carry a terminal verdict outside the guard's settled vocabulary: implemented, merged, delivered, retracted, and closed respectively.

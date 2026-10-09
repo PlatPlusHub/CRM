@@ -706,7 +706,7 @@ function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
     'PASS'
 }
 
-# CTRL-4 (SPEC-251). Every immutability comparison below is ORDINAL. PowerShell's `-ne`
+# CTRL-4 (SPEC-252). Every immutability comparison below is ORDINAL. PowerShell's `-ne`
 # and .NET's default `StartsWith` compare by CULTURE: `-ne` ignores case, and both treat NUL,
 # backspace, zero-width space and soft hyphen as zero-weight and composed and decomposed
 # letters as equal. Measured: each of those edits to frozen or prior text passed these checks
@@ -746,7 +746,7 @@ function Validate-EvidenceAppendOnly([string]$BaselineText,$Current){
     }
 }
 
-# CTRL-4 (SPEC-251). A governed contract gains no character a reader cannot see: C0 controls
+# CTRL-4 (SPEC-252). A governed contract gains no character a reader cannot see: C0 controls
 # other than TAB, LF and a CRLF's CR; DEL and C1; and the invisible format characters (soft
 # hyphen, zero-width and joiner characters, bidirectional controls, word joiner, BOM). One NUL
 # made SPEC-250 invisible to every recursive search; a BEL from the same PowerShell escape sits
@@ -764,13 +764,38 @@ function Validate-NoNewProhibitedCharacter([string]$BaselineText,[string]$Curren
 # CTRL-1's boundary. A transition whose before-state descends from the declared commit is judged;
 # one that predates it keeps the verdict it was published under (SPEC-239's range added its BEL
 # legally). Unprovable means protect: a missing marker or an unknown boundary reads as active.
-function Character-Guard-IsActive([string]$Ref){
-    if(!$BaseRef){return $true}
+# The boundary cannot be MOVED (SPEC-252). Reproduced on SPEC-251's evaluator: a range whose
+# contract owned this authority pointed the marker at an unrelated branch, or forward past its own
+# BEL, and CI read READY. The declared value is a boundary only if it lies in the history of the
+# commit that declares it, and only if it is the value FIRST committed there; anything else is
+# unprovable and protects. Computed once per run.
+$script:CharacterBoundary=$null
+function Get-CharacterBoundary{
+    if($null-ne$script:CharacterBoundary){return $script:CharacterBoundary}
+    $script:CharacterBoundary=''
+    $markerRx='(?m)^Evidence Character Enforcement:\s*(?<v>[0-9a-f]{40})\s*$'
     $local=Join-Path $Root $script:HistoricalAuthority
     $text=if(Test-Path -LiteralPath $local){[IO.File]::ReadAllText($local)}else{''}
-    $m=[regex]::Match($text,'(?m)^Evidence Character Enforcement:\s*(?<v>[0-9a-f]{40})\s*$')
-    if(-not $m.Success){return $true}
-    git -C $Root merge-base --is-ancestor $m.Groups['v'].Value $Ref 2>$null|Out-Null
+    $m=[regex]::Match($text,$markerRx)
+    if(-not $m.Success){return ''}
+    $declared=$m.Groups['v'].Value
+    git -C $Root merge-base --is-ancestor $declared HEAD 2>$null|Out-Null
+    $inHistory=$LASTEXITCODE;$global:LASTEXITCODE=0
+    if($inHistory-ne0){return ''}
+    $first=@(git -C $Root log --reverse --format=%H -G '^Evidence Character Enforcement:' HEAD -- $script:HistoricalAuthority 2>$null)|Select-Object -First 1
+    $global:LASTEXITCODE=0
+    if(!$first){return ''}
+    $was=[regex]::Match(((git -C $Root show "${first}:$($script:HistoricalAuthority)" 2>$null)-join"`n"),$markerRx).Groups['v'].Value
+    $global:LASTEXITCODE=0
+    if(-not(Same-Text $was $declared)){return ''}
+    $script:CharacterBoundary=$declared
+    $declared
+}
+function Character-Guard-IsActive([string]$Ref){
+    if(!$BaseRef){return $true}
+    $boundary=Get-CharacterBoundary
+    if(!$boundary){return $true}
+    git -C $Root merge-base --is-ancestor $boundary $Ref 2>$null|Out-Null
     # Captured into a distinct local, reset only through $global: (the CTRL-1 shadow trap above).
     $ancestorCode=$LASTEXITCODE;$global:LASTEXITCODE=0
     # 0 descends, 1 predates; anything else (a boundary this clone lacks) protects.
