@@ -472,6 +472,30 @@ No business-data write and no fixture was made on Primary. Secondary `brplkqmbzf
 - **A separate latent defect, not repaired here:** `Validate-EvidenceAppendOnly` compares with culture-sensitive `String.StartsWith`, under which NUL and backspace are ignorable. Measured in this shell (en-US, ICU): deleting or inserting either character in prior evidence passes the prefix test, while replacing the NUL with `0` is refused. The append-only rule is therefore blind to control-character edits. That loophole was not used.
 
 Execution stops before Step 8. Completion makes this file immutable and publication puts it on `origin/main`, so the corruption becomes permanent at either step. The owner's narrowly governed decision on the correction is required first.
+
+### 2026-10-09 — Owner-authorized reconstruction of the unpublished chain
+
+The owner approved Option B as a one-time recovery of the unpublished local SPEC-250 chain. It is not authority to rewrite published or terminal history, to force-push, or to write to Primary. The original Human Gate 2 approved the migration bytes, which are unchanged.
+
+**Feasibility, every condition met before any commit was altered:**
+- After a fresh fetch, the five SPEC-250 commits were reachable only from local `main`; `origin/main` and `origin/orvion-preflight` were at `f70e1b3`.
+- There was no stash, the working tree was clean, and no other ref contained the chain.
+- The migration blob is `0c98c8da`, SHA-256 `5d6ecc1f46b7ead278fb1557f39e1192a5dcca0259a3c41d56fc56a2088f8b06`.
+- A fresh read-only read of Primary matched the evidence: ledger 245 / `43bf5bef…`, functions `258738c5…`/320, combined `90231190…`/3109, the three function text md5s, and 0 tenants, subscriptions, activation codes, payment proofs, events and job findings.
+
+**The intended Begin entry** was recovered verbatim from the command that wrote it. Applying PowerShell's own case-sensitive escape rules to that text reproduces the committed corrupted entry exactly, once in each of the three original versions of this file. Restoring it removes the NUL and the backspace and returns the 10 dropped backticks. Draft `0828e1b` and Approve `32c9fbd` were not touched.
+
+**Mapping.** Each new commit was made with `git commit`, so the pre-commit Gate judged it (`ORVION: READY` each time). Each keeps its original author date and subject and names its original in a `Reconstructed-From:` trailer.
+
+| Original (unpublished, retired) | Reconstruction | Difference |
+|---|---|---|
+| Begin `d8b213bcf00bb1898f11fadcd0db62d583f9457f` | `5eda4ea7498a6e6a7eabc3e8cb349272f96277be` | this contract only (blob `2939190e` → `2f5a8157`) |
+| pre-deploy `a64d8c72338f7b5732a981f584d7c9a185988ac6` | `9a3c785bea8b6cd3a201805dace4106bd0be413b` | this contract only (blob `48275c85` → `afeed611`) |
+| Implement `38691f8b070d0b764013e9a74a788aff22c8f58b` | `59070c892ee8bb6b14884c12000ab2573060350e` | this contract (blob `1b833b40` → `f566e56c`), and the Primary evidence's `repository_head` rebound |
+
+**Earlier entries are kept as they were written.** Their SHA references (`d8b213b`, `a64d8c7`), the Correction entry and the Step 7 byte offsets describe the original commits, which this table maps. They are not claims about the reconstructed commits. The original chain is preserved locally for verification as `refs/orvion-recovery/spec250-original-chain` and as a git bundle outside the repository (SHA-256 `85765761e389e3567411e69e3d01fc24727b5c113f2667b6fa8bbdc3f6fa6c21`).
+
+**Deployment evidence.** `check_primary_ledger.ps1` refuses evidence bound to a commit outside HEAD's history, so `reports/evidence/primary-ledger-evidence.json` names the reconstruction `9a3c785` of the pre-deploy commit `a64d8c7` the deployment ran from. Its `read_via` states the mapping and the fresh re-read. Every Primary reading in it is byte-identical. No certification is inherited from the original chain: Step 8 runs in full on the reconstructed chain.
 ## Verification Notes
 
 ## Review Gate
