@@ -143,7 +143,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 5
 Blocker: None
 Recovery Attempt: 0
 
@@ -384,6 +384,41 @@ The owner's 2026-10-09 decision approved including the scheduled subscription li
 - Draft `0828e1b`. A read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS`, with 9 Write Scope paths and profiles DATABASE and REPOSITORY.
 - Approved at `32c9fbd`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
 - In Progress from this commit, at Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-09 — Correction to the entry above
+
+The entry above was written through a PowerShell expanding string, which consumed its backticks. As committed at `d8b213b`, it carries two control characters: a NUL where `Draft 0828e1b` reads, and a backspace where `brplkqmbzffpxqgkkdzo` reads. The other inline code marks were dropped. The Execution Log is append-only, so the entry stays as committed, and these are the intended values: Draft `0828e1b`; `APPROVAL_EVIDENCE: PASS`; Approved at `32c9fbd`; Secondary `brplkqmbzffpxqgkkdzo`. Every later entry is written from a non-expanding string.
+
+### 2026-10-09 — Steps 1-3 applied (uncommitted until after deployment)
+
+- **Step 1:** the migration was absent and was created byte-identical to the prototype: SHA-256 `5d6ecc1f46b7ead278fb1557f39e1192a5dcca0259a3c41d56fc56a2088f8b06`, md5 `f9a4a15f8d3263b852ae88c867431d3e`, 13678 bytes, 274 LF, 0 CR.
+- **Step 2:** Test 148 (`ec160be88c2e4dd40f51b202b2de04f97859e34db0a0b696d4c92f42c3cda080`) and `scripts/verify_subscription_concurrency.py` (`acb2b3dfb15e7cc7eb418f4be5a609244953b3f885eb8974906c3593d4969d45`) were absent and were created byte-identical.
+- **Step 3:** the register had no `SUB-5` row and carried its `f70e1b3` bytes. It gained the 2026-10-09 SPEC-250 freshness entry (the SPEC-248 one demoted to `Previously:`), the SUB-4 row rewritten FIXED locally (Low, re-measured, `Mig` `M`, Cert `🛡`, Owner Decision `—`, Updated `10-09`) and the new SUB-5 row (Medium, FIXED locally, Cert `🛡`). Its working copy hashes to `f84de8f90ad4bd82d9e368f2c7f23bfc361f131915b78fa57e8135b276f9475f`, equal to the value measured in the Pre-Approval worktree.
+
+### 2026-10-09 — Pre-deploy readiness gate
+
+Run on HEAD `d8b213b` with Steps 1–3 in the working tree. No command that `-Finish` runs was run here.
+- **Byte identity:** the three new files equal their frozen SHA-256 values above, so the Pre-Approval evidence is evidence about exactly these bytes. That evidence covers the clean main-checkout reset, pgTAP A/B (147 / 2689 plus Test 148 8/8), the six HTTP suites (464/0), the two-session proof (8/0), smoke, the causal negative and M1–M8.
+- **Narrow check:** `npx supabase test db supabase/tests/148_a_subscription_transition_is_judged_on_the_row_it_replaces_test.sql` gave `Files=1, Tests=8 … Result: PASS` against the local stack. That stack is at ledger 245, latest `20261009120000`, with text md5 `ae7c5de5…` (activate), `546f01ef…` (transition) and `31d6258e…` (lifecycle).
+- **Scope:** `git status` shows only this file, the register (modified) and the three new files, all in Write Scope.
+
+**Fresh Primary baseline, read-only** (`https://vrvtsxexkiiiivlkdxzp.supabase.co`):
+- **Ledger:** 244, fingerprint `9e846936c3b320e03eaf125844f46223`, latest `20261008170000`. The target is absent by version and by name.
+- **Surfaces:** functions `127430f783d23b2b89e474636be684c9`/320, triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status_transitions `db2165c7…`/115, rls_enabled `c117cbf7…`/79. Combined `bb42b1b7a8ee985d892ccaf4426ce4ce`/3109, equal to the recorded evidence.
+- **The three functions:**
+  - Text md5: activate `ffe43969f83656bb7722eb2fedc10a92`, transition `5de22847f871687907f159f6656a727c`, lifecycle `0865bbcec607604d043bf1d1b9e38b59`.
+  - All three: SECURITY DEFINER, owner `postgres`, `search_path=""`. ACLs `{postgres=X, service_role=X}`, and `{postgres=X}` for the lifecycle job. Comment md5: none, `a48027f8…` and `c5011031…`, equal to the local values.
+  - Primary's activate text lacks one two-line comment the repository's `202607054000` carries, a difference since its 2026-08-27 deployment. The parity surface strips comments, so the function surfaces agree.
+- **Unchanged neighbours:** redeem `f2fdf35d…`, issue `eb8b52a3…`, revoke `1cff7f0a…`, `subscription_transition_allowed` `36371cfb…`.
+- **Business rows:** 0 tenants, subscriptions, activation codes, payment proofs, events and job findings. `cron.job` `subscription-lifecycle` is present.
+
+**Predicted delta on Primary:**
+- **Ledger:** 245 migrations, fingerprint `43bf5befaf466ec422d8eaaf5261d250`, latest `20261009120000`.
+- **Surfaces:** functions `258738c5fea4dd5ff1040cf65997390b`/320 and combined `902311907ba7e192b285bd43e091ff8d`/3109; the other nine surfaces unchanged.
+- **The three functions:** text md5 `ae7c5de5b7ae7de1b8f14fa3d669aa97` (activate), `546f01ef341e7b9c80738c4221fcf1b6` (transition) and `31d6258e77608a45e486142208ad2136` (lifecycle), with metadata and comments unchanged.
+- **Everything else:** the four neighbours and the business counts unchanged.
+
+Stopping at Gate 2 (Step 5): no owner authorization for the migration is recorded.
 ## Verification Notes
 
 ## Review Gate
