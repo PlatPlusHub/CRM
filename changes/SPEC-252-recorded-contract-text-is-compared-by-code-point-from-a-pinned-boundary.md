@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -225,7 +225,11 @@ Every file is written LF. The "from" hashes are SPEC-251's committed bytes at `7
 
 ## Execution Log
 
-None.
+### 2026-10-09 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-252 Gate 1 approval of 2026-10-09, conditional on the exact frozen Draft. Verified before acting: the Draft commit is `a1da561dfb664f1bd2fe28a61dc7dd8637db6120`, and the contract's SHA-256 is `9611f95f0e85abf9ac7a8f6d326c5272f690d658cd0037f20ebe8d02d2b065da`, equal to the committed blob. Approval was committed at `847db81`, where the Gate printed `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** each of the six files in this checkout equals its "from" hash, and each prototype file on the local scratch branch (`090fa44`, never pushed) equals its "to" hash.
+- **No Primary write is authorized or expected.** Secondary is never contacted.
 
 ## Verification Notes
 
