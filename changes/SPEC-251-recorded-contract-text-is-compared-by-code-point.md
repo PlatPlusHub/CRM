@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -217,7 +217,10 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `a
 
 ## Execution Log
 
-None.
+### 2026-10-09 — Owner approval and execution started
+
+- **Authority:** the owner's SPEC-251 scope decision of 2026-10-09, approved in principle, with the instruction to proceed through the canonical lifecycle. Approval was committed at `15c305e` after the Gate printed `APPROVAL_EVIDENCE: PASS` on the Draft-to-Approved transition.
+- **No Primary write is authorized or expected.** Secondary is never contacted.
 
 ## Verification Notes
 
