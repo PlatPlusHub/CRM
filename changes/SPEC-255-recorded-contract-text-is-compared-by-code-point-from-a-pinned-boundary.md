@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -220,8 +220,12 @@ Every file is written LF. The "from" hashes are SPEC-254's committed bytes at `3
 
 ## Execution Log
 
-None.
+### 2026-10-09 — Gate 1 approval and execution started
 
+- **Authority:** the owner's SPEC-255 Gate 1 approval of 2026-10-09, conditional on the exact committed Draft. Verified before acting: the Draft commit is `c0a0e9a238d87c339c1cb9f095a397bb6add25af`, and the contract's SHA-256 is `760b03864c53a43cebb65703c28910a89a4da69a0a0d3afd45057a2ec47c88b6`, equal to the committed blob. A read-only probe of the evaluator derived profiles `CONTROL,REPOSITORY` and returned `APPROVAL_EVIDENCE: PASS`. Approval was committed at `0b5e6e0`, where the Gate printed `APPROVAL_EVIDENCE: PASS`.
+- **Publication range:** `origin/main..HEAD` holds 21 commits and no merges, and is 0 behind. Every path it touches is in this Write Scope. It includes SPEC-251's, SPEC-252's and SPEC-254's commits and cancellations, none rewritten.
+- **Preconditions:** each of the six files in this checkout equals its "from" hash. Each prototype file in the scratch worktree equals its "to" hash, and the prototype patch's SHA-256 is `d6acf25f…`.
+- **No Primary write is authorized or expected.** Secondary is never contacted.
 ## Verification Notes
 
 None.
