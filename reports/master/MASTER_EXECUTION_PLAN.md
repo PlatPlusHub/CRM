@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-10-08 (**The Pre-Production Readiness Closure gate is added below Batch 6's exit criteria, by the owner's 2026-10-08 directive (SPEC-248).** It derives its population from the register's own settled vocabulary, the surface dispositions and the manifest's open-decision line, rather than from a chosen list. Its first derivation gives 439 distinct finding ids, of which 119 are not settled, and classifies each once into five release classes. It orders a closure queue with SUB-4 first, ahead of Batch 6 Slice 35, as the one recorded exception to the selector's ranking. EC-1…EC-11 are unchanged. Every dated entry below is unchanged.)
+Last updated: 2026-10-09 (**The readiness gate's population is now derived by `scripts/readiness_population.ps1` (SPEC-249).** Its replay of the first derivation at `523888d` reads every id of a shared register row, as the register's own resolver does, and finds 446 ids with 124 not settled. BF-7, which the first reading left unplaced, is placed with CDD-5/BF-6. No class, order or criterion changed.)
+
+Previously: 2026-10-08 (**The Pre-Production Readiness Closure gate is added below Batch 6's exit criteria, by the owner's 2026-10-08 directive (SPEC-248).** It derives its population from the register's own settled vocabulary, the surface dispositions and the manifest's open-decision line, rather than from a chosen list. Its first derivation gives 439 distinct finding ids, of which 119 are not settled, and classifies each once into five release classes. It orders a closure queue with SUB-4 first, ahead of Batch 6 Slice 35, as the one recorded exception to the selector's ranking. EC-1…EC-11 are unchanged. Every dated entry below is unchanged.)
 
 Previously: 2026-10-07 (**EC-1 now names its surface set instead of a table count.** It read "All **77** tables" while the set it measures — derived from `supabase/migrations/**` and owned by `MASTER_SURFACE_DISPOSITION.md` — had grown to 78 with SPEC-240's `customer_consents`. The criterion means what it meant, and adding a table no longer makes its wording false. Batch 6 resumes at Slice 31 after PH8-9 (SPEC-243), by the owner's 2026-10-07 order recorded in `_ORVION_CANONICAL/32_execution_roadmap.md`; the order inside the batch is still `scripts/batch6_select_target.ps1`'s. Every dated entry below is unchanged.)
 
@@ -1711,7 +1713,7 @@ A verdict is never carried forward. Each evaluation re-derives its population fr
 - every surface `MASTER_SURFACE_DISPOSITION.md` records as `AUDITED-OPEN` or `PARTIAL`;
 - every id on the manifest's open-decision line.
 
-A hand-picked or remembered list is not an evaluation.
+A hand-picked or remembered list is not an evaluation. `scripts/readiness_population.ps1` executes this rule. It reads the finding pattern, both vocabularies and the register resolver from `scripts/check_repository_consistency.ps1` itself, and names every derived id this section does not classify; `scripts/readiness_selftest.ps1` proves it.
 
 **Each member receives exactly one class.** Each nonterminal member also names an owner, an exact trigger or dependency, and either a bounded fix unit or a fail-closed release condition. An UNPROVEN candidate is held with the class its scheduled proof would confirm, and it blocks READY in its scope until that proof confirms or dismisses it.
 
@@ -1738,6 +1740,8 @@ The register holds **439 distinct finding ids**. **320** open with the settled v
 - 10 exist only as `###` blocks.
 
 Twenty-one surfaces are `AUDITED-OPEN` (18) or `PARTIAL` (3). The manifest's open-decision line names MAIL-1, RET-1 and PH8-10. Every one of the 119 is placed below exactly once, and RET-1 joins from the manifest line. The classes are a dated reading of the register, never a second status: where this section and the register differ, the register wins and this reading is stale.
+
+**Corrected 2026-10-09 (`SPEC-249`).** `scripts/readiness_population.ps1` replayed this derivation at `523888d`. It reads a shared row such as `CDD-5/BF-6/BF-7` as one finding per id, as the register's resolver does, and finds **446** ids: **322** settled and **124** not (106 open vocabulary, 8 other, 10 block only). The surfaces and the decision line are unchanged. Of the five additional members, B3, BF-3, CDD-4 and BF-6 were already placed below beside their row siblings. **BF-7** had been left unplaced and is now placed with CDD-5/BF-6.
 
 **Closure queue — verified defects inside a Day-1 boundary, in order:**
 
@@ -1784,7 +1788,7 @@ Twenty-one surfaces are `AUDITED-OPEN` (18) or `PARTIAL` (3). The manifest's ope
 - **N1**, **DC-5**, **RC-4**, **R8/B3** and **RC-1** still read `DESIGN-READY` although shipped migrations implement them, in whole or in part: `202607049100` (event registry), `202607054600` (document storage), `202607048900` (reporting read model), `202607048800` (business keys), and the subscription lifecycle behind `app.process_subscription_lifecycle` and `app.plan_allows`. They are re-verified and settled at the first evaluation, and are not release work.
 
 **Future-only — none is a Day-1 function, and nothing exists to enable:**
-- **Design-accepted builds with their batch:** R1, R2, R4 (with DC-7), R6, INV-1, N5, CDD-1/BF-3, CDD-2, CDD-3, CDD-5/BF-6, CDD-6, CDD-7, CDD-9, CDD-10, CDD-11, BF-1, BF-2, BF-5, BF-8, BF-9, BF-10, BF-11, BF-12, RC-2, FOE-4, FOE-5, FOE-6, FOE-8, DEAD-2, AUDIT-5, CONV-3.
+- **Design-accepted builds with their batch:** R1, R2, R4 (with DC-7), R6, INV-1, N5, CDD-1/BF-3, CDD-2, CDD-3, CDD-5/BF-6/BF-7, CDD-6, CDD-7, CDD-9, CDD-10, CDD-11, BF-1, BF-2, BF-5, BF-8, BF-9, BF-10, BF-11, BF-12, RC-2, FOE-4, FOE-5, FOE-6, FOE-8, DEAD-2, AUDIT-5, CONV-3.
 - **Hardening, optional or evidence-gated:** DC-6, DC-8, DC-9 (the SLA is elapsed-time and reads no business hours today), DC-13, DC-14, DC-17, DC-18, DC-19, DC-20, DC-21, DC-23, DC-24, DC-25, DC-26, DC-29, B1, B2, B6, B7, B8.
 - **Enablement-gated:**
   - **DC-2** must exist before the first client application writes.

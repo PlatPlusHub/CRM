@@ -192,6 +192,8 @@ Post-Implementation Proof Obligation: [what the certified suite must prove befor
 [Number each step. Each step must be deterministic. Each step must identify exactly what to change,
 exactly where to change it, and exactly what must remain untouched. No step may require inference,
 judgment, or improvisation. If a step cannot be written deterministically, stop and escalate.
+A step never runs a command `-Finish` already runs (a derived profile command or an Additional
+Verification command), and `Resume Step: DONE` is committed before `-Finish` (`CR_LIFECYCLE.md §9`).
 
 Every step must begin with a verification check: the exact string or heading to search for that
 proves the step has already been applied. If the check matches, the step is skipped and recorded

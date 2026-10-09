@@ -52,3 +52,16 @@ Review every change for correctness, clarity, maintainability, security, and con
 All implementation must remain consistent with the canonical architecture.
 
 Never bypass or contradict canonical design decisions without explicit approval.
+
+## 12. PowerShell traps
+
+Repository scripts run under PowerShell 7. Each trap below has already cost this repository a wrong result or a damaged working tree, and each rule names that evidence.
+
+- **Variable names are case-insensitive.** `$r` and `$R` are one variable: in `SPEC-238`'s readiness script `$r` overwrote the repository root `$R`, every later path resolved under `C:\scripts\`, and the suites after it failed with exit 64. A loop's `$l` later emptied a line array named `$L`. Give every variable a distinct descriptive name, and never a one-letter one beside another.
+- **An alias wins over a function of the same name.** A helper named `Rd` ran the built-in `rd` alias, which deletes files, and removed `AGENTS.md` from the working tree; Git restored it (2026-10-08). Name helpers `Verb-Noun`, and check that `Get-Alias <name>` finds nothing before defining a short one.
+- **Comparisons are case-insensitive by default.** `-match 'FAIL\b'` matches the prose "fail-closed", and a watcher reported prose as a failure until it used `-cmatch`. Use `-cmatch`, `-cnotmatch` and `-ceq` wherever case carries meaning, as Check 22 does.
+- **`-match` rebinds `$Matches`.** A second `-match` inside a block that still reads `$Matches` returns the second pattern's groups. Use `[regex]::Match` for any value that must survive (`Get-RegisterFindingState`).
+- **Assigning `$LASTEXITCODE` inside a function creates a local shadow**, and every later read in that function returns the stale value instead of the native command's code. That made the historical-immutability guard read ACTIVE for every ref (`SPEC-212`). Capture each exit code into a distinct local immediately.
+- **`Start-Process -ArgumentList` does not keep a path containing a space together.** This checkout's own path (`Platinum Plus`) split into two arguments. Pass one argument string with each path in double quotes (`scripts/watch_selftest.ps1`).
+- **.NET file APIs ignore `Set-Location`.** `[IO.File]` and `[IO.Directory]` resolve a relative path against the process directory, so a script working in a scratch worktree wrote into the main checkout. Give .NET absolute paths built from the root.
+- **Write repository text with LF.** A CRLF `ai-map.json` fails `git diff --check`, and a migration written with CRLF carries the CR bytes into the function text it defines. Write with `[IO.File]::WriteAllText` after replacing CRLF, as the generators do.

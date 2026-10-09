@@ -210,6 +210,19 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `6
 
 - **Approval** is delegated by the owner's instruction of 2026-10-09: correct the defects found in prototyping, then, once the prototype is stable and the acceptance criteria pass, freeze the minimal Write Scope and proceed through the governed lifecycle. `APPROVAL_EVIDENCE: PASS` was reported at Approve `bca3310`, with profiles CONTROL, REPOSITORY and WORKSTATION. The same verdict was refused (`FAIL`) when a mandatory gate was injected inside a red window, so the PASS is a real evaluation.
 - `origin/main` and `origin/orvion-preflight` were at `697b050`; the Draft is `4cff68c`.
+### 2026-10-09 — Steps 1-4 executed
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied — the six on-demand scripts, each matching its frozen SHA-256.
+- Step 2: Applied — `AGENTS.md`, `CR_LIFECYCLE.md`, `changes/TEMPLATE.md`, `CODING_STANDARDS.md` and `ENGINEERING_METHOD.md`, each matching its frozen SHA-256.
+- Step 3: Applied — `.workstation/manifest.md` and `.workstation/prepare.ps1`, each matching its frozen SHA-256.
+- Step 4: Applied — `reports/master/MASTER_EXECUTION_PLAN.md`, matching its frozen SHA-256.
+
+All 14 resulting hashes were compared with the frozen values: 14 matched and none differed. `git diff --check` is clean. No step ran a command that `-Finish` runs.
+
+Engineering Observation: the first application stopped at step 2's `CR_LIFECYCLE.md` anchor, as the step requires when content is not as expected. The cause was measured, not guessed. This checkout held CRLF working copies (`git ls-files --eol`: `i/lf w/crlf`) of `CR_LIFECYCLE.md` and `changes/TEMPLATE.md`, while their committed blobs are LF; the prototype worktree had fresh LF copies. The content was otherwise identical. The scratch apply script now normalizes line endings on read, and it writes LF, the committed form. The rerun produced the frozen bytes exactly. This is the LF trap `CODING_STANDARDS.md §12` now records.
 ## Verification Notes
 
 ## Review Gate

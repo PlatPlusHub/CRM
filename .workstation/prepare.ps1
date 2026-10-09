@@ -126,6 +126,18 @@ Ensure-CodexMcp "github" "https://api.githubcopilot.com/mcp/" $null "GITHUB_PAT_
 Write-Host "[NOTE] Remote MCP OAuth and GITHUB_PAT_TOKEN remain external to git."
 
 Write-Host ""
+Write-Host "== MCP startup timeout =="
+# A cold `npx -y` start of the stdio servers measured 51.6 s against Claude Code's 30 s default
+# (.workstation/manifest.md section 3). The value is in milliseconds and is read when a client starts.
+$mcpTimeout = [Environment]::GetEnvironmentVariable("MCP_TIMEOUT", "User")
+if (-not $mcpTimeout) {
+    Write-Host "[CONFIG] MCP_TIMEOUT=90000 for this user; restart VS Code and the CLI to apply it"
+    [Environment]::SetEnvironmentVariable("MCP_TIMEOUT", "90000", "User")
+    Note "MCP startup timeout" "configured"
+} elseif ($mcpTimeout -eq "90000") { Write-Host "[ OK ] MCP_TIMEOUT=90000"; Note "MCP startup timeout" "present" }
+else { Write-Host "[NOTE] MCP_TIMEOUT=$mcpTimeout was set by the user and is kept (repository value 90000)"; Note "MCP startup timeout" "user value kept" }
+
+Write-Host ""
 Write-Host "== Claude engineering-awareness wiring =="
 & (Join-Path $PSScriptRoot "claude-awareness.ps1") -Apply
 if ($LASTEXITCODE -eq 0) { Note "Claude awareness wiring" "ok" } else { Note "Claude awareness wiring" "FAILED" }
