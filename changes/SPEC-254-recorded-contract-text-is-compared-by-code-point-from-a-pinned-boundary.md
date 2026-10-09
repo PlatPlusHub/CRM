@@ -232,9 +232,40 @@ Every file is written LF. The "from" hashes are SPEC-252's committed bytes at `6
 - **Applied exactly as prototyped.** All six full SHA-256s equal the frozen "to" values: `d5f1e1d3…` (evaluator), `6c03f931…` (suite), `1256fb64…` (`CR_LIFECYCLE.md`), `5344a44e…` (`CODING_STANDARDS.md`), `979ae384…` (register), `29842fe7…` (execution plan).
 - **The diff against `095187b` is byte-identical to the prototype's increment over SPEC-252 (`090fa44..578f3fb`):** six files, 12 insertions, 12 deletions. Every file is LF, and `git diff --check` is clean.
 
+### 2026-10-09 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree at `1149a2d`, through `scripts/run_timed.ps1` with `concurrent=0` from start to end, watched by `scripts/watch_run.ps1`.
+- Every step printed `PASS`:
+
+  | Step | Time |
+  | --- | --- |
+  | `test_agent_continuity.ps1` | 28.2 min |
+  | cold-start guard | 4.5 min |
+  | status-contradiction guard | 3.4 min |
+  | Primary-ledger guard | 0.3 min |
+  | future-date guard | 3.0 min |
+  | repository consistency, `git diff --check` and `scripts/readiness_population.ps1` | 0.3 min together |
+
+  The result was `LOCAL_CERTIFY: READY` in 40.1 min, `exit=0`.
+- This result is recorded as evidence. It does not authorize Complete.
+
 ## Verification Notes
 
-None.
+### 2026-10-09 — Review: Acceptance Criterion 9 is false as written
+
+Verdict: Needs Corrective Change Request
+
+Findings, checked against the live repository at `1149a2d`, not against the Execution Log:
+
+- **Criteria 1 to 8 and 10 are true.** The six files equal their frozen "to" hashes. `-Finish` passed the suite, including CTRL4-1 to CTRL4-27, the fifteen mutants and CTRL4-26 on real history. Both existing marker lines are byte-unchanged. `CODING_STANDARDS.md` gains one line and loses none. The register and plan read as Criterion 6 states, and `scripts/readiness_population.ps1` exits 0. SPEC-251 and SPEC-252 are unchanged since `78853c7` and `619376a`, no other contract changed, and SPEC-239 still holds one BEL. No path under `supabase/` changed. Every path changed in `origin/main..HEAD` is in Write Scope. Criterion 8 is a Step 5 state that is reachable within the manifest budget.
+- **Criterion 9 is false.** It requires that "no SPEC identity after this one is named in any changed file". Changed files name later identities: `CR_LIFECYCLE.md` and the evaluator name three real historical contracts with four-digit identities, the register names an example identity, and the suite names its fixture identities. All of them were already present on `origin/main`, and this range adds only one line naming an already-used fixture identity. The criterion can never be true for these files, whatever this contract does.
+- **The criterion is also redundant.** SPEC identity is decided mechanically by `Validate-SpecAllocation` and the allocator (`CR_LIFECYCLE.md` §4; `SPEC-163`, `SPEC-196`). `changes/TEMPLATE.md` already states that SPEC identity is not recorded in a contract, because the allocator is its sole authority (`SPEC-210`). The criterion restated machine truth, and restated it wrongly.
+- **No lawful completion path exists.** Acceptance Criteria wording is frozen after Approval (`CR_LIFECYCLE.md` §8). Complete requires every item to be ticked, and no waiver mechanism exists. Ticking Criterion 9 would record a falsehood. This is the SPEC-200 precedent: the engineering is green and the frozen contract text is defective.
+- **Review Gate.** Every step matches the Implementation Steps, no file outside Write Scope changed, no section was restructured, and nothing was guessed. The item "Every Acceptance Criteria item is confirmed true" fails on Criterion 9.
+
+Nothing here weakens the repair. The implementation, its tests and this contract's `LOCAL_CERTIFY: READY` are preserved in history.
+
+Recommendation to human: Set Status to Cancelled. A minimal successor keeps this implementation's behaviour, deletes Criterion 9 without replacement, and changes only the attribution text that names this contract.
 
 ## Review Gate
 
