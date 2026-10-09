@@ -706,15 +706,22 @@ function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
     'PASS'
 }
 
+# CTRL-4 (SPEC-251). Every immutability comparison below is ORDINAL. PowerShell's `-ne`
+# and .NET's default `StartsWith` compare by CULTURE: `-ne` ignores case, and both treat NUL,
+# backspace, zero-width space and soft hyphen as zero-weight and composed and decomposed
+# letters as equal. Measured: each of those edits to frozen or prior text passed these checks
+# while a visible edit was refused. Frozen means the same code points.
+function Same-Text([string]$A,[string]$B){[string]::Equals($A,$B,[StringComparison]::Ordinal)}
+
 function Validate-FrozenAuthority([string]$BaselineText,[string]$CurrentText){
     foreach($name in $script:FrozenSections){
         $was=Normalize (Section $BaselineText $name -Optional)
         $now=Normalize (Section $CurrentText $name -Optional)
-        if($was-ne$now){throw "FROZEN_AUTHORITY_MUTATED:$name"}
+        if(-not(Same-Text $was $now)){throw "FROZEN_AUTHORITY_MUTATED:$name"}
     }
     $wasScope=Normalize (Section-OutOfScope $BaselineText)
     $nowScope=Normalize (Section-OutOfScope $CurrentText)
-    if($wasScope-ne$nowScope){throw 'FROZEN_AUTHORITY_MUTATED:Out of Scope'}
+    if(-not(Same-Text $wasScope $nowScope)){throw 'FROZEN_AUTHORITY_MUTATED:Out of Scope'}
 }
 
 # `None.`, an empty body, or a bracketed template instruction block all mean
@@ -735,8 +742,39 @@ function Validate-EvidenceAppendOnly([string]$BaselineText,$Current){
         @{Name='Execution Log';Was=(EvidenceBody (Section $BaselineText 'Execution Log' -Optional));Now=(EvidenceBody $Current.ExecutionLog)},
         @{Name='Verification Notes';Was=(EvidenceBody (Section $BaselineText 'Verification Notes' -Optional));Now=(EvidenceBody $Current.VerificationNotes)}
     )){
-        if($pair.Was-and-not$pair.Now.StartsWith($pair.Was)){throw "EVIDENCE_NOT_APPEND_ONLY:$($pair.Name)"}
+        if($pair.Was-and-not$pair.Now.StartsWith($pair.Was,[StringComparison]::Ordinal)){throw "EVIDENCE_NOT_APPEND_ONLY:$($pair.Name)"}
     }
+}
+
+# CTRL-4 (SPEC-251). A governed contract gains no character a reader cannot see: C0 controls
+# other than TAB, LF and a CRLF's CR; DEL and C1; and the invisible format characters (soft
+# hyphen, zero-width and joiner characters, bidirectional controls, word joiner, BOM). One NUL
+# made SPEC-250 invisible to every recursive search; a BEL from the same PowerShell escape sits
+# in SPEC-239. A variation selector stays legal after a symbol, where it selects emoji
+# presentation. COUNTED against the baseline, so text already in history is preserved and only
+# an addition is refused; rewriting prior text is already refused by the ordinal checks above.
+$script:ProhibitedCharacter='[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F\u00AD\u034F\u061C\u115F\u1160\u17B4\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u206F\u3164\uFEFF\uFFA0\uFFF9-\uFFFB]|\r(?!\n)|(?<![\u2000-\u2BFF\uDC00-\uDFFF])[\uFE00-\uFE0F]'
+function Validate-NoNewProhibitedCharacter([string]$BaselineText,[string]$CurrentText){
+    $now=[regex]::Matches("$CurrentText",$script:ProhibitedCharacter)
+    if($now.Count-gt([regex]::Matches("$BaselineText",$script:ProhibitedCharacter)).Count){
+        throw ('PROHIBITED_CHARACTER:U+{0:X4}' -f [int][char]$now[$now.Count-1].Value[0])
+    }
+}
+# The character rule is FORWARD-ONLY, declared in the same authority and read the same way as
+# CTRL-1's boundary. A transition whose before-state descends from the declared commit is judged;
+# one that predates it keeps the verdict it was published under (SPEC-239's range added its BEL
+# legally). Unprovable means protect: a missing marker or an unknown boundary reads as active.
+function Character-Guard-IsActive([string]$Ref){
+    if(!$BaseRef){return $true}
+    $local=Join-Path $Root $script:HistoricalAuthority
+    $text=if(Test-Path -LiteralPath $local){[IO.File]::ReadAllText($local)}else{''}
+    $m=[regex]::Match($text,'(?m)^Evidence Character Enforcement:\s*(?<v>[0-9a-f]{40})\s*$')
+    if(-not $m.Success){return $true}
+    git -C $Root merge-base --is-ancestor $m.Groups['v'].Value $Ref 2>$null|Out-Null
+    # Captured into a distinct local, reset only through $global: (the CTRL-1 shadow trap above).
+    $ancestorCode=$LASTEXITCODE;$global:LASTEXITCODE=0
+    # 0 descends, 1 predates; anything else (a boundary this clone lacks) protects.
+    $ancestorCode-ne1
 }
 
 # Wording and item count are frozen; only an unchecked box may become checked.
@@ -744,7 +782,7 @@ function Validate-EvidenceAppendOnly([string]$BaselineText,$Current){
 function Validate-Checklist([object[]]$Was,[object[]]$Now,[string]$Code){
     if($Was.Count-ne$Now.Count){throw "${Code}:count $($Was.Count)->$($Now.Count)"}
     for($i=0;$i-lt$Was.Count;$i++){
-        if($Was[$i].Text-ne$Now[$i].Text){throw "${Code}:item $($i+1) reworded"}
+        if(-not(Same-Text $Was[$i].Text $Now[$i].Text)){throw "${Code}:item $($i+1) reworded"}
         if($Was[$i].Checked-and-not$Now[$i].Checked){throw "${Code}:item $($i+1) uncheckedaftercheck"}
     }
 }
@@ -894,6 +932,8 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
                 # contract's own Write Scope. A later commit therefore cannot launder an
                 # invalid Approval. The evaluator itself is reused unchanged.
                 $parentText=Read-GitFile "$commit^" $governing
+                # CTRL-4: judged per commit, so a character added and later removed inside one range is still refused.
+                if(Character-Guard-IsActive "$commit^"){try{Validate-NoNewProhibitedCharacter $parentText $text}catch{throw "$($_.Exception.Message)@$short"}}
                 $parentStatus=if($null-ne$parentText){try{Status-FromText $parentText}catch{$null}}else{$null}
                 if($parentStatus-eq'Draft'-and$statusAt-eq'Approved'){
                     try{
@@ -1812,6 +1852,8 @@ try{
     # approved. A Change Request absent from the baseline is newly created and
     # has no approved version to contradict.
     $baselineText=Read-GitFile $base ($rel-replace'\\','/')
+    # CTRL-4: in every status, including a newly created contract, whose baseline is empty; forward-only in a range.
+    if(Character-Guard-IsActive $base){Validate-NoNewProhibitedCharacter $baselineText $c.Text}
     if($null-ne$baselineText){
         $baselineStatus=Status-FromText $baselineText
         # Authority freezes at APPROVAL (CR_LIFECYCLE.md 8), so a baseline that is still a

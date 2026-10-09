@@ -649,6 +649,119 @@ try{
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Review 'A weaker gate item.');$r=Run Gate
     Assert '60 a Review Gate item cannot be reworded' ($r.Code-ne0-and$r.Text-match'REVIEW_GATE_TEXT_MUTATED') $r.Text
 
+    # ---- CTRL-4 (SPEC-251): frozen and prior text is compared by code point ----
+    # Each ordinal case uses an edit the character rule below cannot see (a combining accent, a
+    # case change, a deletion), so a refusal here is credited to the ordinal comparison alone.
+    # Every case was first run against the pre-SPEC-251 evaluator, which ACCEPTED each refusal below.
+    $nul=[string][char]0;$bs=[string][char]8;$bel=[string][char]7;$zw=[string][char]0x200B;$shy=[string][char]0xAD
+    $nfc="caf$([char]0xE9)";$nfd="cafe$([char]0x301)"
+    $fx='changes/SPEC-900-fixture.md'
+    Reset-Fixture;Put $fx (ContractText -Log "ENTRY ONE $nfc");Commit nfc-base;Put $fx (ContractText -Log "ENTRY ONE $nfd`n`nENTRY TWO");$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-1 prior Execution Log evidence cannot be re-encoded (composed to decomposed letter)' ($r.Code-ne0-and$r.Text-match'EVIDENCE_NOT_APPEND_ONLY:Execution Log') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Notes "NOTE ONE $nfc");Commit nfc-notes;Put $fx (ContractText -Notes "NOTE ONE $nfd`n`nNOTE TWO");$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-2 prior Verification Notes evidence cannot be re-encoded' ($r.Code-ne0-and$r.Text-match'EVIDENCE_NOT_APPEND_ONLY:Verification Notes') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Log "ENTRY ONE 0828${nul}e1b");Commit nul-base;Put $fx (ContractText -Log "ENTRY ONE 0828e1b`n`nENTRY TWO");$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-3 a character already in prior evidence cannot be silently deleted' ($r.Code-ne0-and$r.Text-match'EVIDENCE_NOT_APPEND_ONLY:Execution Log') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Acceptance 'FIXTURE.');$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-4 an Acceptance Criterion cannot be reworded by case alone' ($r.Code-ne0-and$r.Text-match'ACCEPTANCE_TEXT_MUTATED') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Review 'FIXTURE.');$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-5 a Review Gate item cannot be reworded by case alone' ($r.Code-ne0-and$r.Text-match'REVIEW_GATE_TEXT_MUTATED') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Objective 'FIXTURE.');$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-6 a frozen section cannot change by case alone' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED:Objective') $r.Text
+    Reset-Fixture;Put $fx (ContractText -OutOfScope 'SECRET.TXT');$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-7 Out of Scope cannot change by case alone' ($r.Code-ne0-and$r.Text-match'FROZEN_AUTHORITY_MUTATED:Out of Scope') $r.Text
+    # ---- CTRL-4: a contract gains no character a reader cannot see ----
+    foreach($k in @(@('8','a NUL',$nul,'0000'),@('9','a backspace',$bs,'0008'),@('10','a BEL',$bel,'0007'),@('11','a zero-width space',$zw,'200B'),@('12','a soft hyphen',$shy,'00AD'))){
+        Reset-Fixture;Put $fx (ContractText -Log "ENTRY ONE Draft 0828$($k[2])e1b");$r=Run Gate
+        Pop 'CTRL4' 'reject';Assert "CTRL4-$($k[0]) $($k[1]) cannot enter a contract" ($r.Code-ne0-and$r.Text-match"PROHIBITED_CHARACTER:U\+$($k[3])") $r.Text
+    }
+    Reset-Fixture;Put $fx (ContractText -Objective "Fix${zw}ture.");$r=Run Gate
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-13 an invisible character cannot enter a frozen section' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+200B') $r.Text
+    function Ctrl4AddRemove{
+        Put $fx (ContractText -Log "ENTRY ONE 0828${nul}e1b");Commit nul-added
+        Put $fx (ContractText -Log 'ENTRY ONE 0828e1b');Commit nul-removed
+        (git -C $root rev-parse 'HEAD~2').Trim()
+    }
+    Reset-Fixture;$r=RunRange (Ctrl4AddRemove)
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-14 a character added and removed inside one range is still refused' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0000') $r.Text
+    # ---- CTRL-4 MUST-ACCEPT: legitimate text, appends and checkbox moves are unchanged ----
+    $rich="ENTRY ONE`ttabbed ✅ ⚠$([char]0xFE0F) $nfc → done"
+    Reset-Fixture;Put $fx (ContractText -Log $rich);$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-15 MUST-ACCEPT: an entry with TAB, symbols, an emoji selector and accents passes' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    $multi=(@('### 2026-10-09 10:00 — first entry','- a bullet','  an indented continuation','','```text','a | b','```','')-join"`n")+'Done.'
+    Reset-Fixture;Put $fx (ContractText -Log $multi);Commit multi-base;Put $fx (ContractText -Log "$multi`n`n### 2026-10-09 11:00 — second entry`n`tline one`n`tline two");$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-16 MUST-ACCEPT: a multiline entry appends after multiline prior evidence' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Log $rich -Notes "NOTE ONE $nfc —");Commit rich-base;Put $fx (ContractText -Log "$rich`n`nENTRY TWO" -Notes "NOTE ONE $nfc —`n`nNOTE TWO");$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-17 MUST-ACCEPT: unchanged non-ASCII prior evidence reads back identically and appends' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    function Ctrl4Crlf{Reset-Fixture;Put $fx (ContractText -Log 'ENTRY ONE');Commit crlf-base;Put $fx ((ContractText -Log "ENTRY ONE`n`nENTRY TWO")-replace"`r?`n","`r`n")}
+    Ctrl4Crlf;$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-18 MUST-ACCEPT: a CRLF working copy of an LF contract appends (normalization preserved)' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Reset-Fixture;Put $fx (ContractText -Acceptance "Caf$([char]0xE9) → ✅ verified." -Review "Caf$([char]0xE9) → reviewed.");Commit box-base
+    Put $fx (ContractText -Acceptance "Caf$([char]0xE9) → ✅ verified." -Review "Caf$([char]0xE9) → reviewed." -Closeable);$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-19 MUST-ACCEPT: checking non-ASCII criteria with unchanged wording passes' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    # Published history, as SPEC-239's BEL is: pushed to the sandbox remote, then restored the way case 38's setup restores it.
+    Reset-Fixture;$fxOriginal=(git -C $root rev-parse origin/main).Trim()
+    Rebase (ContractText -Log "ENTRY ONE ${bel}dvance_booking");git -C $root push origin main --quiet
+    Put $fx (ContractText -Log "ENTRY ONE ${bel}dvance_booking`n`nENTRY TWO");$r=Run Gate
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-20 MUST-ACCEPT: a character already in published history is preserved and clean evidence still appends' ($r.Code-eq0-and$r.Text-match'MODE: EXECUTE') $r.Text
+    Reset-Fixture;git -C $root checkout $fxOriginal -- $fx;Commit restore-ctrl4;git -C $root push origin main --quiet
+    # ---- CTRL-4 activation: the character rule is forward-only from a declared boundary ----
+    # Built the way CTRL-1's resolvable boundary is: the lifecycle authority sits in the governing
+    # Write Scope, so OUT_OF_SCOPE_WRITE can never supply the refusal. The range base predates the
+    # boundary, so only the per-commit walk can see a character added after it.
+    function Ctrl4Boundary([string]$Added){
+        $sc='allowed.txt;CR_LIFECYCLE.md'
+        Put $fx (ContractText -Scope $sc -Log 'ENTRY ONE');Commit ctrl4-boundary-base
+        $b=(git -C $root rev-parse HEAD).Trim()
+        if($Added-eq'before'){Put $fx (ContractText -Scope $sc -Log "ENTRY ONE`n`nENTRY TWO ${bel}dvance");Commit ctrl4-before}
+        Put 'allowed.txt' 'ctrl4-boundary';Commit ctrl4-boundary
+        $marker=if($Added-eq'unknown'){'f'*40}else{(git -C $root rev-parse HEAD).Trim()}
+        Put 'CR_LIFECYCLE.md' "# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n`nEvidence Character Enforcement: $marker`n";Commit ctrl4-declare
+        if($Added-ne'before'){Put $fx (ContractText -Scope $sc -Log "ENTRY ONE`n`nENTRY TWO ${bel}dvance");Commit ctrl4-after}
+        $b
+    }
+    Reset-Fixture;$r=RunRange (Ctrl4Boundary 'before')
+    Pop 'CTRL4' 'accept';Assert 'CTRL4-21 MUST-ACCEPT: a character added before the declared boundary keeps its published verdict' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Reset-Fixture;$r=RunRange (Ctrl4Boundary 'after')
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-22 a character added after the declared boundary is refused' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    Reset-Fixture;$r=RunRange (Ctrl4Boundary 'unknown')
+    Pop 'CTRL4' 'reject';Assert 'CTRL4-23 a boundary this repository does not contain protects' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
+    # ---- CTRL-4 MUTATION POPULATION: each predicate is killed by the one case no other rule rescues ----
+    function Ctrl4Setup([string]$Text,[string]$Base=''){Reset-Fixture;if($Base){Put $fx $Base;Commit ctrl4-mutation-base};Put $fx $Text}
+    $ctrl4Mutants=@(
+        @{N='frozen sections compare ordinally';S={Ctrl4Setup (ContractText -Objective 'FIXTURE.')};E='FROZEN_AUTHORITY_MUTATED:Objective'
+          F="if(-not(Same-Text `$was `$now)){";R="if(`$was-ne`$now){"},
+        @{N='Out of Scope compares ordinally';S={Ctrl4Setup (ContractText -OutOfScope 'SECRET.TXT')};E='FROZEN_AUTHORITY_MUTATED:Out of Scope'
+          F="if(-not(Same-Text `$wasScope `$nowScope)){";R="if(`$wasScope-ne`$nowScope){"},
+        @{N='prior evidence is an ordinal prefix';S={Ctrl4Setup (ContractText -Log "ENTRY ONE $nfd`n`nENTRY TWO") (ContractText -Log "ENTRY ONE $nfc")};E='EVIDENCE_NOT_APPEND_ONLY:Execution Log'
+          F="StartsWith(`$pair.Was,[StringComparison]::Ordinal)";R="StartsWith(`$pair.Was)"},
+        @{N='checklist wording compares ordinally';S={Ctrl4Setup (ContractText -Acceptance 'FIXTURE.')};E='ACCEPTANCE_TEXT_MUTATED'
+          F="if(-not(Same-Text `$Was[`$i].Text `$Now[`$i].Text)){";R="if(`$Was[`$i].Text-ne`$Now[`$i].Text){"},
+        @{N='the endpoint judges added characters';S={Ctrl4Setup (ContractText -Log "ENTRY ONE 0828${nul}e1b")};E='PROHIBITED_CHARACTER:U\+0000'
+          F="{Validate-NoNewProhibitedCharacter `$baselineText `$c.Text}";R='{}'},
+        @{N='the format-character class names the zero-width space';S={Ctrl4Setup (ContractText -Log "ENTRY ONE 0828${zw}e1b")};E='PROHIBITED_CHARACTER:U\+200B'
+          F='\u200B-\u200F';R='\u200C-\u200F'},
+        @{N='history is counted, not refused outright';S={Ctrl4Setup (ContractText -Log "ENTRY ONE ${bel}dvance_booking`n`nENTRY TWO") (ContractText -Log "ENTRY ONE ${bel}dvance_booking")};E='MODE: EXECUTE'
+          F="if(`$now.Count-gt([regex]::Matches(""`$BaselineText"",`$script:ProhibitedCharacter)).Count){";R="if(`$now.Count-gt0){"},
+        @{N='a CRLF line ending is not a lone CR';S={Ctrl4Crlf};E='MODE: EXECUTE'
+          F='|\r(?!\n)|';R='|\r|'},
+        @{N='a variation selector after a symbol stays legal';S={Ctrl4Setup (ContractText -Log $rich)};E='MODE: EXECUTE'
+          F='|(?<![\u2000-\u2BFF\uDC00-\uDFFF])[\uFE00-\uFE0F]';R='|[\uFE00-\uFE0F]'}
+    )
+    foreach($m in $ctrl4Mutants){MutationKill "CTRL-4 MUTATION: $($m.N)" $m.S $m.E $m.F $m.R 'CTRL4'}
+    # The per-commit call, killed through the range: the endpoint of an add-then-remove range is clean.
+    MutationKillRangeAt 'CTRL-4 MUTATION: every committed state is judged, not only the endpoint' `
+        {Ctrl4AddRemove} 'PROHIBITED_CHARACTER:U\+0000' 'try{Validate-NoNewProhibitedCharacter $parentText $text}catch{throw "$($_.Exception.Message)@$short"}' '$null' 'CTRL4'
+    # Activation, killed through the boundary range in both directions.
+    MutationKillRangeAt 'CTRL-4 MUTATION: the per-commit rule honours the declared boundary' `
+        {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive "$commit^"){' 'if($true){' 'CTRL4'
+    MutationKillRangeAt 'CTRL-4 MUTATION: the endpoint rule honours the declared boundary' `
+        {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive $base){' 'if($true){' 'CTRL4'
+    MutationKillRangeAt 'CTRL-4 MUTATION: an unknown boundary protects' `
+        {Ctrl4Boundary 'unknown'} 'PROHIBITED_CHARACTER:U\+0007' '$ancestorCode-ne1' '$ancestorCode-eq0' 'CTRL4'
+    MutationKillRangeAt 'CTRL-4 MUTATION: a missing marker protects' `
+        {Ctrl4AddRemove} 'PROHIBITED_CHARACTER:U\+0000' 'if(-not $m.Success){return $true}' 'if(-not $m.Success){return $false}' 'CTRL4'
+
     # ---- The full CR_LIFECYCLE.md §4 transition matrix ----
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Commit draft-base;Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress');$r=Run Gate
     Assert '61 Draft to In Progress is rejected' ($r.Code-ne0-and$r.Text-match'ILLEGAL_STATUS_TRANSITION:Draft->In Progress') $r.Text
@@ -2820,7 +2933,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

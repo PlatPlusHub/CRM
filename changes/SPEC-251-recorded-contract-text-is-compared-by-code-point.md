@@ -76,7 +76,7 @@ None. SPEC-239 and SPEC-250 are Complete and are not modified.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 4
 Blocker: None
 Recovery Attempt: 0
 
@@ -221,6 +221,13 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `a
 
 - **Authority:** the owner's SPEC-251 scope decision of 2026-10-09, approved in principle, with the instruction to proceed through the canonical lifecycle. Approval was committed at `15c305e` after the Gate printed `APPROVAL_EVIDENCE: PASS` on the Draft-to-Approved transition.
 - **No Primary write is authorized or expected.** Secondary is never contacted.
+
+### 2026-10-09 — Steps 1-3 executed
+
+- **Checks:** `function Character-Guard-IsActive`, `Evidence Character Enforcement:` and `| CTRL-4 |` were each absent, so every step applied.
+- **Applied exactly as prototyped.** All six SHA-256s equal the frozen values: `21fa36ab…` (evaluator), `7abb8a46…` (suite), `3ba1d297…` (`CR_LIFECYCLE.md`), `066e36bf…` (`CODING_STANDARDS.md`), `f0c0e5e3…` (register), `736cf8c6…` (execution plan).
+- **The diff against `be987a5` is byte-identical to the prototype's diff against `ae1d130`:** six files, 173 insertions, 6 deletions. Every file is LF, and `git diff --check` is clean.
+- **Recorded, not a deviation:** before the copy, this checkout's working copies of the two scripts did not hash to their `ae1d130` blobs, while `git status` was clean; this is the known CRLF working-copy condition. After the copy both read `i/lf w/lf`.
 
 ## Verification Notes
 
