@@ -143,7 +143,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -419,6 +419,59 @@ Run on HEAD `d8b213b` with Steps 1–3 in the working tree. No command that `-Fi
 - **Everything else:** the four neighbours and the business counts unchanged.
 
 Stopping at Gate 2 (Step 5): no owner authorization for the migration is recorded.
+
+### 2026-10-09 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of only `supabase/migrations/20261009120000_a_subscription_transition_is_judged_on_the_row_it_replaces.sql`, SHA-256 `5d6ecc1f46b7ead278fb1557f39e1192a5dcca0259a3c41d56fc56a2088f8b06`, MD5 `f9a4a15f8d3263b852ae88c867431d3e`. The authorization covers exactly the three approved function replacements and the necessary guarded migration-version reconciliation. No other Primary change is authorized.
+
+**Stop conditions,** any mismatch voiding it, with no improvised additional migration: a frozen-file hash, the repository precondition (pre-deploy HEAD `a64d8c7`), the Primary ledger fingerprint, a function-body hash or a structural baseline differing from the Gate-2 package.
+
+**Required behaviour:** the demonstrated lock order (activation codes, then the subscription), the `for no key update` semantics, truthful transition events and scheduled-job fault isolation are preserved. After deployment, every predicted function, ledger and structural fingerprint and the unchanged business-row counts are verified independently. The corrupted control characters in the Begin entry stay transparently documented; their effect on consistency, parsing, certification and later agent interpretation is checked before certification, not assumed harmless. Then SPEC-250 completes through the canonical lifecycle and is published, certified with `REMOTE_CERTIFY: READY` and synchronized (identical refs, clean tree, zero unpublished governed commits), and Batch 6 Slice 35 (`service_requests`) resumes. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-09 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- refs: HEAD `a64d8c72338f7b5732a981f584d7c9a185988ac6`; `origin/main` `f70e1b3`;
+- the files: migration SHA-256 `5d6ecc1f…`, md5 `f9a4a15f…`, 13678 bytes, 274 LF, 0 CR; Test 148 `ec160be8…`, the proof `acb2b3df…` and the register `f84de8f9…` unchanged; `git status` only Write Scope paths;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 244, `9e846936c3b320e03eaf125844f46223`, latest `20261008170000`; the target absent by version and name;
+- all ten surfaces and combined `bb42b1b7a8ee985d892ccaf4426ce4ce`/3109, equal to the Gate-2 package;
+- text md5 activate `ffe43969…`, transition `5de22847…`, lifecycle `0865bbce…`, and redeem, issue, revoke and `subscription_transition_allowed` as recorded, each with the recorded security mode, owner, `search_path` and ACL;
+- 0 tenants, subscriptions, activation codes, payment proofs, events and job findings; `cron.job` `subscription-lifecycle` present.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `f9a4a15f8d3263b852ae88c867431d3e`, 13678 bytes, 274 LF, 0 CR.
+- That text was applied through `apply_migration` as `a_subscription_transition_is_judged_on_the_row_it_replaces`. The connector assigned the temporary version `20261009120409`; its single stored statement has md5 `f9a4a15f…` and 13678 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261009120000`. The guard required 245 rows, the other 244 hashing to the baseline `9e846936…`, the statement md5 to match and no existing target. All four held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 245, `43bf5befaf466ec422d8eaaf5261d250`, latest `20261009120000`; exactly one row for the migration, under the target version; the temporary version is gone.
+- **Surfaces:** functions `258738c5fea4dd5ff1040cf65997390b`/320; triggers `d07aa82d…`/306, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status_transitions `db2165c7…`/115 and rls_enabled `c117cbf7…`/79 unchanged; `_combined` `902311907ba7e192b285bd43e091ff8d`/3109.
+- **The three functions:** text md5 `ae7c5de5b7ae7de1b8f14fa3d669aa97` (activate), `546f01ef341e7b9c80738c4221fcf1b6` (transition) and `31d6258e77608a45e486142208ad2136` (lifecycle), byte-equal to the locally proven texts. Each is SECURITY DEFINER, owner `postgres`, `search_path=""`, with ACLs `{postgres=X, service_role=X}` and `{postgres=X}` for the job, and comments none, `a48027f8…` and `c5011031…`, all as before.
+- **Neighbours:** redeem `f2fdf35d…`, issue `eb8b52a3…`, revoke `1cff7f0a…` and `subscription_transition_allowed` `36371cfb…` read the same md5 as before the write.
+- **Business rows:** 0 tenants, subscriptions, activation codes, payment proofs, events and job findings; `cron.job` `subscription-lifecycle` present.
+
+**Behaviour on the deployed bytes** is proven locally on the byte-identical functions, because no business data or fixture is written on Primary: the two-session proof 8/0 (cases A–G and lifecycle fault isolation), Test 148 8/8, the six HTTP suites 464/0, the causal negative and M1–M8, all recorded on these bytes.
+
+No business-data write and no fixture was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-09 — Step 7: evidence and measured state
+
+- **Evidence:** `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 245 migrations, `43bf5bef…`, functions `258738c5…`/320, structural `90231190…`/3109, head `a64d8c7`. Its ledger is the Primary ledger read with its own `read_query`; it hashes to `43bf5befaf466ec422d8eaaf5261d250` and equals the repository's 245 migration files. The file is stored LF.
+- **Manifest:** `supabase/tests` holds 148 files whose `plan(N)` values sum to 2697. `Live state` reads 245 migrations, latest `20261009120000`, the same hashes and counts, last verified and re-read from Primary 2026-10-09; `Suite **148 files / 2697 assertions**`; and 464 HTTP assertions, last passed 2026-10-09 in the Pre-Approval protocol run. Tables (78), catalog (71/622) and client RPCs (80) do not move. The manifest measures 6964 characters.
+- **Register:** SUB-4 and SUB-5 are marked DEPLOYED with Cert `✅`, worded without a date. No other row changed.
+- **Generators:** `MASTER_API_CONTRACT.md` regenerates unchanged (SHA-256 `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`). `ai-map.json` was regenerated and stored LF; only its timestamp changed.
+- **Checks:** the four CI-only guard self-tests pass: cold-start 34/0, future-date 18/0, primary-ledger 13/0 and status-contradiction 33/0.
+- **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
+
+**The Begin entry's control characters, checked as the Gate-2 authorization requires.** This file carries a NUL at byte 35526 and a backspace at byte 35836, both in the committed Begin entry, and no other control character besides LF.
+- **Parsing:** the control plane's `Contract` parser reads every section of this file correctly: the Id, Status, Resume Step, 9 Write Scope paths, 4 capabilities, 4 Additional Verification commands, 8 steps, 14 Acceptance Criteria, 7 Review Gate items and the whole Execution Log, including every entry after the NUL. Profiles derive as DATABASE and REPOSITORY.
+- **Git:** git treats the file as text. Its NUL lies beyond the 8000 bytes git inspects: `git show --numstat` counts lines for `d8b213b` and `a64d8c7`, and `git grep` finds entries after the NUL in the work tree and at HEAD.
+- **Consistency:** `check_repository_consistency.ps1` reports `REPOSITORY CONSISTENCY: CLEAN` and `RECOVER-1 LEDGER EVIDENCE: CLEAN`, and `git diff --check` is clean.
+- **Agent interpretation: compromised.** A recursive ripgrep search, which is how an agent's repository search and the editor's search work, skips this file entirely. Over `changes/`, `^## Objective` matches 233 contracts and not this one, although its Objective precedes the NUL, and `Correction to the entry above` matches nothing. A search that names this file explicitly still reads all of it.
+- **A separate latent defect, not repaired here:** `Validate-EvidenceAppendOnly` compares with culture-sensitive `String.StartsWith`, under which NUL and backspace are ignorable. Measured in this shell (en-US, ICU): deleting or inserting either character in prior evidence passes the prefix test, while replacing the NUL with `0` is refused. The append-only rule is therefore blind to control-character edits. That loophole was not used.
+
+Execution stops before Step 8. Completion makes this file immutable and publication puts it on `origin/main`, so the corruption becomes permanent at either step. The owner's narrowly governed decision on the correction is required first.
 ## Verification Notes
 
 ## Review Gate
