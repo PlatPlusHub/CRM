@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -206,6 +206,10 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `6
 
 ## Execution Log
 
+### 2026-10-09 — Owner approval and execution started
+
+- **Approval** is delegated by the owner's instruction of 2026-10-09: correct the defects found in prototyping, then, once the prototype is stable and the acceptance criteria pass, freeze the minimal Write Scope and proceed through the governed lifecycle. `APPROVAL_EVIDENCE: PASS` was reported at Approve `bca3310`, with profiles CONTROL, REPOSITORY and WORKSTATION. The same verdict was refused (`FAIL`) when a mandatory gate was injected inside a red window, so the PASS is a real evaluation.
+- `origin/main` and `origin/orvion-preflight` were at `697b050`; the Draft is `4cff68c`.
 ## Verification Notes
 
 ## Review Gate
