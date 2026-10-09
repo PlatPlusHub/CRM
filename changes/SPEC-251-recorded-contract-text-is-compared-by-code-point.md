@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -228,6 +228,28 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `a
 - **Applied exactly as prototyped.** All six SHA-256s equal the frozen values: `21fa36ab…` (evaluator), `7abb8a46…` (suite), `3ba1d297…` (`CR_LIFECYCLE.md`), `066e36bf…` (`CODING_STANDARDS.md`), `f0c0e5e3…` (register), `736cf8c6…` (execution plan).
 - **The diff against `be987a5` is byte-identical to the prototype's diff against `ae1d130`:** six files, 173 insertions, 6 deletions. Every file is LF, and `git diff --check` is clean.
 - **Recorded, not a deviation:** before the copy, this checkout's working copies of the two scripts did not hash to their `ae1d130` blobs, while `git status` was clean; this is the known CRLF working-copy condition. After the copy both read `i/lf w/lf`.
+
+### 2026-10-09 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree at `48cdcdd`, through `scripts/run_timed.ps1`, starting with `concurrent=0`. Read-only investigations ran beside it.
+- Every step printed `PASS`: `test_agent_continuity.ps1` (30.2 min), the four guard self-tests, repository consistency, `git diff --check` and `scripts/readiness_population.ps1`. The result was `LOCAL_CERTIFY: READY` in 44.8 min.
+- This result is recorded as historical evidence only. It does not authorize Complete (owner, 2026-10-09).
+
+### 2026-10-09 — Cancelled by human command before publication
+
+- **The owner's decision of 2026-10-09:** Option B. Do not Complete or publish this contract, because its activation marker can be moved. Cancel it through the canonical lifecycle and replace it with a bounded successor.
+- **The defect, measured on this contract's frozen evaluator (`21fa36ab…`).** A contract whose approved Write Scope names `CR_LIFECYCLE.md` can disable the character rule in CI's range mode:
+  - by pointing `Evidence Character Enforcement` at a commit on an unrelated branch, then adding a BEL;
+  - by moving the marker forward past its own BEL.
+
+  Both ranges read `ORVION: READY`. An ordinary contract is refused `OUT_OF_SCOPE_WRITE:CR_LIFECYCLE.md`, and a removed, malformed or unknown marker protects. The local pre-commit Gate ignores the marker and refused the BEL. CTRL-1's marker is pinned by case 119i of `scripts/test_agent_continuity.ps1`; this one had no pin.
+- **The replay discrepancy is explained, not merely matched.** The local replay refused SPEC-247's and SPEC-250's real publication ranges with `INVALID_COMPLETION_TRANSITION`, under both the old and the new evaluator. CI had run exactly those ranges (Agent Control runs 37938708656 and 37937171291 for `f70e1b3..ae1d130`, and 37823190958 and 37821249473 for `bdf6f1b..523888d`, full SHAs, `-Gate -BaseRef -HeadRef`) and printed `ORVION: READY`. The cause:
+  - inside the Gate, `git show <40-character sha>:changes/SPEC-250-….md` failed with `fatal: failed to stat …: Filename too long` (exit 128);
+  - Git for Windows checks a `rev:path` argument as a possible file, and the replay's working directory was about 165 characters deep;
+  - `Read-GitFile` returned null for every commit, so the status path collapsed to `[Complete]`.
+
+  From a clone at a short path, the same evaluator and arguments return `ORVION: READY` for both ranges, as CI did. Release certification runs on Linux and is unaffected. In this checkout the worst case is 192 of 259 characters. The behaviour is recorded separately and is not repaired here.
+- **Preserved:** every commit of this contract (`b865c3f`, `15c305e`, `be987a5`, `8e9cbe5`, `48cdcdd`) and all of its evidence. Nothing is rewritten. Its implementation and tests are carried forward into the successor, which adds only the boundary hardening, its tests and the records that describe them.
 
 ## Verification Notes
 
