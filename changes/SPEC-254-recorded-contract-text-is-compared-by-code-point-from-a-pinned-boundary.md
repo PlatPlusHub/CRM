@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -248,6 +248,12 @@ Every file is written LF. The "from" hashes are SPEC-252's committed bytes at `6
 
   The result was `LOCAL_CERTIFY: READY` in 40.1 min, `exit=0`.
 - This result is recorded as evidence. It does not authorize Complete.
+
+### 2026-10-09 — Cancelled by human command before Complete
+
+- **The owner's decision of 2026-10-09:** proceed with the bounded corrective plan. Record the Review as `Needs Corrective Change Request`, grounded in the verified Criterion 9 discrepancy, and cancel this contract through the canonical lifecycle. Do not mark Criterion 9 satisfied or introduce a waiver. SPEC-200 is the applicable precedent.
+- **The defect.** Criterion 9 is false as written, and it duplicates the SPEC identity rules that `Validate-SpecAllocation` already enforces. The Review entry in Verification Notes gives the evidence.
+- **Preserved:** every commit of this contract (`0bebc76`, `2ef307f`, `095187b`, `a6c1759`, `1149a2d`, `abd5649`), its evidence and its local certification. Nothing is rewritten. The implementation is carried forward to the successor unchanged in behaviour.
 
 ## Verification Notes
 
