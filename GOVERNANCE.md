@@ -4,9 +4,10 @@ Status: **Authoritative governance operating system for the knowledge/decision/r
 
 **Precedence & scope boundary (no overlap):** `AGENTS.md` is authoritative for **execution conduct** (how work is done, when to continue/stop, standing authorities). This document is authoritative for **knowledge governance** (where information lives and how decisions/documents flow). Where the two touch, AGENTS.md governs conduct and GOVERNANCE.md governs knowledge placement. Neither restates the other. `CR_LIFECYCLE.md` remains authoritative for the Change Request state machine.
 
-Version 1.16 · 2026-09-11 · Governs every future human, Claude, Codex, and AI/MCP session.
+Version 1.17 · 2026-10-08 · Governs every future human, Claude, Codex, and AI/MCP session.
 
 **Governance changelog** (governance governs itself — §15):
+- v1.17 (2026-10-08) — owner directive (GitHub issue 3), integrated by SPEC-248. The §2 execution-plan row now names the **Pre-Production Readiness Closure gate** it owns: the rule that derives the gate's population from the register, the surface dispositions and the manifest's open-decision line; the five release classes; and the closure queue's order. The launch-readiness verdict stays with `MASTER_CERTIFICATION_STATUS.md`, and every finding's status stays with the register, so nothing is reassigned and no second inventory exists. The four decision rules are conduct and method, so they live in `AGENTS.md §2` and `ENGINEERING_METHOD.md §2`, not here. PATCH: clarifies an existing row; no SSOT reassignment.
 - v1.16 (2026-09-11) — owner-authorized deterministic Agent Control Plane: unrestricted repository
   reading, CR-scoped writes, compact Boot routing, semantic Runtime Checkpoints, derived verification,
   bounded recovery, and durable-report-by-need replace chat/session-memory workflow. Existing SSOTs
@@ -85,7 +86,7 @@ Read top-down to answer "what am I allowed to do?"; read a specific layer to ans
 | External citations | `reports/evidence/INDUSTRY_REFERENCES.md` | every evidence-based finding cites a ref-id |
 | Risk | `reports/master/MASTER_RISK_REGISTER.md` | references finding IDs |
 | Certification state | `reports/master/MASTER_CERTIFICATION_STATUS.md` | — |
-| Execution batches/sequencing | `reports/master/MASTER_EXECUTION_PLAN.md` | references register IDs + roadmap phases |
+| Execution batches/sequencing, and the **Pre-Production Readiness Closure gate**: its derivation rule, release classes and closure-queue order (owner directive 2026-10-08) | `reports/master/MASTER_EXECUTION_PLAN.md` | references register IDs + roadmap phases; `MASTER_CERTIFICATION_STATUS.md` keeps the launch-readiness verdict and points to the gate; the register keeps every finding's status |
 | Finding dependencies | `reports/master/MASTER_DEPENDENCY_GRAPH.md` | — |
 | Design completion scores | `reports/master/MASTER_COVERAGE_SCORE.md` | references register IDs |
 | Domain blueprint (catalog/ER/flow) | `reports/master/MASTER_{DOMAIN_CATALOG,ENTITY_RELATIONSHIP_MAP,DATA_FLOW}.md` | reference canon + physical-design |

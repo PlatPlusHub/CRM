@@ -26,6 +26,7 @@ Never invent policy, expose/request secrets, force-push, use `--no-verify`, rewr
 
 - **One Authority:** one fact has one owning location; other files point to it. See `GOVERNANCE.md §2`.
 - **Earn-It:** every process, file, abstraction, tool, and permanent rule must measurably increase confidence; prefer the simpler equivalent.
+- **Four decision rules (owner-ratified 2026-10-08):** LEARN BEFORE GUESSING → EARN IT → WORTH IT → SIMPLIFY IT WITHOUT WEAKENING, applied to small decisions as well as significant ones, with depth scaled to risk and freshness. Definitions: `ENGINEERING_METHOD.md §2`.
 - **Test Before Trust / No Guessing:** a claim is PROVEN only by an observed relevant check. Otherwise mark UNPROVEN, FAILED, or BLOCKED. Guard success proves only that guard's declared evidence class.
 - **Anti-entropy:** leave touched surfaces simpler, synchronized, deterministic, and harder to misuse; never turn this into unrelated cleanup.
 - **Implementation autonomy:** choose the strongest practical reversible option already implied by Canon, ADRs, implementation, tests, Git, and current official evidence.
@@ -68,7 +69,7 @@ Only a successful Finish permits Review/Complete, and that is now enforced rathe
 
 ### Decision and architecture discipline
 
-Owned by `ENGINEERING_METHOD.md §2 "Decision and architecture discipline"`: Earn-It, Fundamental Domain Structure, the Routine / Significant / Owner-Decision tiers, independent evaluation of every proposal, and the eight workflow stages.
+Owned by `ENGINEERING_METHOD.md §2 "Decision and architecture discipline"`: the four decision rules, Earn-It, Fundamental Domain Structure, the Routine / Significant / Owner-Decision tiers, independent evaluation of every proposal, and the eight workflow stages.
 
 Read it when classifying a capability or making an architectural or owner-facing decision. Routine execution inside an approved contract does not need it. Nothing was weakened in the move — Check 27 of `scripts/check_repository_consistency.ps1` fails if any of those rules stops existing there.
 
