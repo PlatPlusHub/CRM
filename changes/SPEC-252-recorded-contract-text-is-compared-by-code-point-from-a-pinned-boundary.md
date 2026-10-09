@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -236,6 +236,29 @@ Every file is written LF. The "from" hashes are SPEC-251's committed bytes at `7
 - **Checks:** `function Get-CharacterBoundary`, `The boundary cannot be moved` and `| CTRL-6 |` were each absent, so every step applied.
 - **Applied exactly as prototyped.** All six SHA-256s equal the frozen "to" values: `744bd409…` (evaluator), `5ab32fd1…` (suite), `cb85884c…` (`CR_LIFECYCLE.md`), `25e47693…` (`CODING_STANDARDS.md`), `23cabd7c…` (register), `3c82fde4…` (execution plan).
 - **The diff against `94a7ad6` is byte-identical to the prototype's increment over SPEC-251 (`78853c7..090fa44`):** six files, 95 insertions, 18 deletions. Every file is LF, and `git diff --check` is clean.
+
+### 2026-10-09 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree at `d9a5d75`, through `scripts/run_timed.ps1` with `concurrent=0` from start to end, watched by `scripts/watch_run.ps1`.
+- Every step printed `PASS`:
+
+  | Step | Time |
+  | --- | --- |
+  | `test_agent_continuity.ps1` | 29.0 min |
+  | cold-start guard | 4.4 min |
+  | status-contradiction guard | 3.0 min |
+  | Primary-ledger guard | 0.3 min |
+  | future-date guard | 2.8 min |
+  | repository consistency, `git diff --check` and `scripts/readiness_population.ps1` | 0.3 min together |
+
+  The result was `LOCAL_CERTIFY: READY` in 40.4 min.
+- This result is recorded as historical evidence. It does not authorize Complete.
+
+### 2026-10-09 — Cancelled by human command before Complete
+
+- **The owner's decision of 2026-10-09:** Option B. The implementation is technically sound, but Acceptance Criterion 9 is demonstrably false, and an owner-approved deviation must not be represented as a satisfied criterion. Cancel this contract through the canonical lifecycle and replace it with a minimal successor that corrects only the acceptance-contract defect and the lifecycle references that depend on it.
+- **The defect.** Criterion 9 requires that no SPEC identity after this one is named in any changed file. This contract's own Notes name a later identity: the allocator probe that was refused before this contract was drafted. Under `CR_LIFECYCLE.md`'s collision rule (`SPEC-163`), that mention reserves that identity, and the review at Complete found the criterion false.
+- **Preserved:** every commit of this contract (`a1da561`, `847db81`, `94a7ad6`, `fb192e0`, `d9a5d75`), its evidence and its local certification. Nothing is rewritten. The implementation is carried forward to the successor unchanged in behaviour.
 
 ## Verification Notes
 
