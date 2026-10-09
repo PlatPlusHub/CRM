@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -193,16 +193,16 @@ Every file is written LF. Each SHA-256 below was measured on the prototype at `6
 
 ## Acceptance Criteria
 
-- [ ] The six on-demand scripts exist with the step-1 SHA-256s (`run_timed` `31be2563…`, `watch_run` `84050ab2…`, `watch_ci` `049c45cb…`, `watch_selftest` `136a758f…`, `readiness_population` `6392f0c4…`, `readiness_selftest` `62f27dcd…`), and no profile, hook or workflow invokes them.
-- [ ] `AGENTS.md §7` bounds the watchers as on-demand reporting adapters that never retry, rerun, dismiss, classify or approve; SHA-256 `2d558ed3…`.
-- [ ] `CR_LIFECYCLE.md §9` and `changes/TEMPLATE.md` state that `Resume Step: DONE` is committed before `-Finish` and that no step runs what `-Finish` runs; SHA-256 `36eace8b…` and `f1f71e29…`.
-- [ ] `CODING_STANDARDS.md §12` lists the eight PowerShell traps with their evidence; SHA-256 `5b335192…`.
-- [ ] `ENGINEERING_METHOD.md §3` carries the four bullets, and every assertion-45 and Check 27 anchor survives; SHA-256 `4e3527b0…`.
-- [ ] `.workstation/manifest.md` records the measured startup timeout, and `prepare.ps1` sets `MCP_TIMEOUT=90000` only when it is absent; SHA-256 `01d95a37…` and `0c5ae9e7…`.
-- [ ] `MASTER_EXECUTION_PLAN.md` names the derivation script, records the corrected first derivation (446 / 322 / 124) and places BF-7; no class, order, criterion or EC changed; SHA-256 `27ceff43…`.
-- [ ] At Complete, the manifest's `Last Completed` names this contract, its `Next capability` still begins with the SUB-4 correction, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
-- [ ] No migration, database test or Primary object changed, and no SPEC identity after this one is named in any changed file.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] The six on-demand scripts exist with the step-1 SHA-256s (`run_timed` `31be2563…`, `watch_run` `84050ab2…`, `watch_ci` `049c45cb…`, `watch_selftest` `136a758f…`, `readiness_population` `6392f0c4…`, `readiness_selftest` `62f27dcd…`), and no profile, hook or workflow invokes them.
+- [x] `AGENTS.md §7` bounds the watchers as on-demand reporting adapters that never retry, rerun, dismiss, classify or approve; SHA-256 `2d558ed3…`.
+- [x] `CR_LIFECYCLE.md §9` and `changes/TEMPLATE.md` state that `Resume Step: DONE` is committed before `-Finish` and that no step runs what `-Finish` runs; SHA-256 `36eace8b…` and `f1f71e29…`.
+- [x] `CODING_STANDARDS.md §12` lists the eight PowerShell traps with their evidence; SHA-256 `5b335192…`.
+- [x] `ENGINEERING_METHOD.md §3` carries the four bullets, and every assertion-45 and Check 27 anchor survives; SHA-256 `4e3527b0…`.
+- [x] `.workstation/manifest.md` records the measured startup timeout, and `prepare.ps1` sets `MCP_TIMEOUT=90000` only when it is absent; SHA-256 `01d95a37…` and `0c5ae9e7…`.
+- [x] `MASTER_EXECUTION_PLAN.md` names the derivation script, records the corrected first derivation (446 / 322 / 124) and places BF-7; no class, order, criterion or EC changed; SHA-256 `27ceff43…`.
+- [x] At Complete, the manifest's `Last Completed` names this contract, its `Next capability` still begins with the SUB-4 correction, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
+- [x] No migration, database test or Primary object changed, and no SPEC identity after this one is named in any changed file.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -223,19 +223,47 @@ Step results:
 All 14 resulting hashes were compared with the frozen values: 14 matched and none differed. `git diff --check` is clean. No step ran a command that `-Finish` runs.
 
 Engineering Observation: the first application stopped at step 2's `CR_LIFECYCLE.md` anchor, as the step requires when content is not as expected. The cause was measured, not guessed. This checkout held CRLF working copies (`git ls-files --eol`: `i/lf w/crlf`) of `CR_LIFECYCLE.md` and `changes/TEMPLATE.md`, while their committed blobs are LF; the prototype worktree had fresh LF copies. The content was otherwise identical. The scratch apply script now normalizes line endings on read, and it writes LF, the committed form. The rerun produced the frozen bytes exactly. This is the LF trap `CODING_STANDARDS.md §12` now records.
+### 2026-10-09 — Local certification
+
+`pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree `2aa850a`, in VERIFY mode, with profiles CONTROL, REPOSITORY and WORKSTATION. It ran through `scripts/run_timed.ps1` and was followed by `scripts/watch_run.ps1`. Every command passed in its single run:
+
+- `test_agent_continuity.ps1`, at 24.1 min;
+- `test_cold_start_state_guard.ps1` (+4.5), `test_status_contradiction_guard.ps1` (+3.2), `test_primary_ledger_guard.ps1` (+0.2) and `test_future_date_guard.ps1` (+2.8);
+- `check_repository_consistency.ps1` and `git diff --check`;
+- `.workstation/doctor.ps1` and `scripts/verify_workstation_idempotence.ps1`;
+- `watch_selftest.ps1` (+5.5), `readiness_selftest.ps1` and `readiness_population.ps1`.
+
+It reported `LOCAL_CERTIFY: READY` after **41.9 minutes**, with `concurrent=0` at both start and end. This is the first labelled clean `-Finish` timing (host `DESKTOP-0U3LC2V`, pwsh 7.6.6, 8 CPUs). The previous SPEC-248 figure, 50.3 minutes, was contaminated and is not a comparison.
 ## Verification Notes
 
+### 2026-10-09 — Independent Review of the execution commits `b102694` and `2aa850a`
+
+Reviewed the committed tree against the approved Draft `4cff68c` and the frozen Write Scope, not against the Execution Log.
+
+- **Scope.** `697b050..2aa850a` changes exactly the 17 Write-Scope paths. No Out-of-Scope file changed; SPEC-248's contract, both authorities and `supabase/` are untouched.
+- **Frozen bytes.** All 14 files hash to their frozen SHA-256 values, and the committed tree equals the working tree.
+- **Non-authority.** No workflow, hook, profile or guard invokes any of the six new scripts (`git grep` over `.github`, `.githooks`, `.claude/hooks`, both authorities and `scripts/test_*.ps1`).
+- **Acceptance.**
+  - The readiness population re-derives at 446 / 322 / 124 with every id classified.
+  - The watcher and readiness self-tests passed inside `-Finish`.
+  - The manifest keeps the SUB-4 correction first in `Next capability` and the open-decision line MAIL-1, RET-1, PH8-10.
+  - No SPEC identity after this one is named, and no migration or test changed.
+- **Engineering Observation (watcher, not repaired here).** The Monitor that hosted `watch_run.ps1` for this `-Finish` was started by the session harness at 12:18:06, 17 minutes after the run began. The process's creation time proves this. The watcher then behaved as specified: it replayed the backlog and gave its first heartbeat after 5 quiet minutes. A second watcher attached to the same live log gave heartbeats every minute and named each stage. The real gap is that a watcher states the run's start but not its own attach time, so a late attach looks like silence. A one-line fix ("attached at HH:mm:ss, N min after start") is recorded for a later contract, if the SUB-4 success measures earn it. This contract's bytes are frozen.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
