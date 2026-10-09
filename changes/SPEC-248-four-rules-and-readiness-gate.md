@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -195,16 +195,16 @@ Every file is written LF. Each SHA-256 below is the prototype's at `523888d` wit
 
 ## Acceptance Criteria
 
-- [ ] `AGENTS.md` §2 carries the four-rules anchor routed to `ENGINEERING_METHOD.md §2`, and §3 routes to them; SHA-256 `e6f68e30…`.
-- [ ] `ENGINEERING_METHOD.md` §2 defines LEARN BEFORE GUESSING, EARN IT, WORTH IT and SIMPLIFY IT WITHOUT WEAKENING; stage 2 applies Learn-Before-Designing to small decisions; every Check 27 and assertion-44 anchor survives; SHA-256 `a2b478ca…`.
-- [ ] `GOVERNANCE.md` reads Version 1.17 · 2026-10-08, with its changelog line and the §2 row; SHA-256 `306ee2c2…`.
-- [ ] `MASTER_EXECUTION_PLAN.md` carries the gate: the derivation rule, five classes, five READY criteria, the first derivation (439 / 320 / 119) placing each of the 119 exactly once, the closure queue with SUB-4 first, and the owner's order; EC-1…EC-11 are unchanged; SHA-256 `3c863b14…`.
-- [ ] `MASTER_CERTIFICATION_STATUS.md`'s launch-readiness row stays 🟡 CONDITIONAL and points to the gate, with a 2026-10-08 history entry; SHA-256 `b40545c3…`.
-- [ ] Canon 32 step (B) records the SUB-4 exception and the gate's evaluation points; SHA-256 `c708743d…`.
-- [ ] The register's SUB-4 row is scheduled, its lead still `OPEN` and its Owner field still decider-free; no other row changed; SHA-256 `43e7c9cc…`.
-- [ ] At Complete, the manifest's SHA-256 is `55bafc4b…`; its open-decision line is MAIL-1, RET-1 and PH8-10; and `ai-map.json` is regenerated LF.
-- [ ] No migration, test or Primary object changed, and no SPEC identity after this one is named in any changed file.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `AGENTS.md` §2 carries the four-rules anchor routed to `ENGINEERING_METHOD.md §2`, and §3 routes to them; SHA-256 `e6f68e30…`.
+- [x] `ENGINEERING_METHOD.md` §2 defines LEARN BEFORE GUESSING, EARN IT, WORTH IT and SIMPLIFY IT WITHOUT WEAKENING; stage 2 applies Learn-Before-Designing to small decisions; every Check 27 and assertion-44 anchor survives; SHA-256 `a2b478ca…`.
+- [x] `GOVERNANCE.md` reads Version 1.17 · 2026-10-08, with its changelog line and the §2 row; SHA-256 `306ee2c2…`.
+- [x] `MASTER_EXECUTION_PLAN.md` carries the gate: the derivation rule, five classes, five READY criteria, the first derivation (439 / 320 / 119) placing each of the 119 exactly once, the closure queue with SUB-4 first, and the owner's order; EC-1…EC-11 are unchanged; SHA-256 `3c863b14…`.
+- [x] `MASTER_CERTIFICATION_STATUS.md`'s launch-readiness row stays 🟡 CONDITIONAL and points to the gate, with a 2026-10-08 history entry; SHA-256 `b40545c3…`.
+- [x] Canon 32 step (B) records the SUB-4 exception and the gate's evaluation points; SHA-256 `c708743d…`.
+- [x] The register's SUB-4 row is scheduled, its lead still `OPEN` and its Owner field still decider-free; no other row changed; SHA-256 `43e7c9cc…`.
+- [x] At Complete, the manifest's SHA-256 is `55bafc4b…`; its open-decision line is MAIL-1, RET-1 and PH8-10; and `ai-map.json` is regenerated LF.
+- [x] No migration, test or Primary object changed, and no SPEC identity after this one is named in any changed file.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -227,19 +227,63 @@ Every file is written LF. Each SHA-256 below is the prototype's at `523888d` wit
   - `git diff --check` exit 0.
 - **Derivation re-run** against the edited register: 439 ids, 320 settled and 119 not, unchanged by this contract's own register edits. Every one of the 119 appears in the gate section. The section has no `Status` column and no row led by a finding id, and no later SPEC identity is named.
 
+### 2026-10-09 — Local certification
+
+`pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed tree `ab1e3a3` in VERIFY mode, with profiles CONTROL and REPOSITORY. In its own run it passed:
+- `test_agent_continuity.ps1`, `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1`;
+- `check_repository_consistency.ps1` and `git diff --check`.
+
+It reported `LOCAL_CERTIFY: READY` after 50.3 minutes, a duration measured while other scratch work ran on the same machine, so it is not a clean timing baseline. An earlier `-Finish` at `f873050` refused in 0.4 minutes with `FINISH_NOT_READY:EXECUTE`, because the Runtime Checkpoint still read Step 5. Setting it to `DONE` (`ab1e3a3`) put `-Finish` in VERIFY mode.
+
 ## Verification Notes
 
-None.
+### 2026-10-09 — Independent Review of the execution commits `f873050` and `ab1e3a3`
+
+Reviewed the committed tree against the approved Draft `28a8ff1`, the owner's directive (GitHub issue 3) and the frozen ten-path Write Scope, not against the Execution Log.
+- **Scope.** `523888d..ab1e3a3` changes exactly the ten Write-Scope paths. Every Out-of-Scope file is untouched: SPEC-247's contract, its migration, the surface disposition, the integration catalog, the API contract, the Primary evidence, the backlog, canon 01 and 26, `CR_LIFECYCLE.md`, `PROJECT_CONTEXT.md`, `README.md`, and the four named scripts.
+- **Frozen bytes.** All eight non-generated files hash to their frozen SHA-256 values (`e6f68e30…`, `a2b478ca…`, `306ee2c2…`, `3c863b14…`, `b40545c3…`, `c708743d…`, `43e7c9cc…`, and the manifest's `55bafc4b…` with the pointer `None.`).
+
+Acceptance, re-checked against the committed bytes:
+1. **AGENTS.md.** The four-rules bullet follows Earn-It in §2 and routes to `ENGINEERING_METHOD.md §2`, and §3's routing names the rules. Against `523888d`, the file differs by exactly those two edits.
+2. **ENGINEERING_METHOD.md.** §2 defines the four rules. Stage 2 extends Learn-Before-Designing to small decisions as one procedure. The header no longer claims nothing is new. The assertion-44 anchors pass: the control suite reported 331/0.
+3. **GOVERNANCE.md.** It reads Version 1.17 · 2026-10-08, with its changelog line and the §2 row; no SSOT is reassigned.
+4. **The plan's gate:**
+   - the derivation rule, five classes and five READY criteria;
+   - the first derivation (439 / 320 / 119), with every one of the 119 present, as the placement script confirmed against the edited register;
+   - the closure queue with SUB-4 first, and the owner's order.
+
+   EC-1…EC-11 are byte-unchanged.
+5. **Certification status.** The launch-readiness row stays 🟡 CONDITIONAL and points to the gate, and the history gains a 2026-10-08 entry.
+6. **Canon 32 (B)** records the SUB-4 exception and the gate's evaluation points.
+7. **Register.** SUB-4's lead stays `OPEN`; its Owner field reads `engineering: …` with no decider. The open-decision line stays MAIL-1, RET-1 and PH8-10. No other row changed.
+8. **Manifest.** At Complete it hashes to `55bafc4b…`, within 7000 characters and every line within 1200. `ai-map.json` is regenerated LF.
+9. **No database or Primary change.** No migration, test or Primary object changed; Primary was not contacted, and Secondary never. No SPEC identity after this one appears in any changed file.
+10. **Scope.** No file outside Write Scope was created, modified or deleted. The incident on 2026-10-08 is recorded because it touched a governed file. A scratch prototyping script, whose helper named `Rd` was shadowed by PowerShell's built-in `rd` alias for file deletion, deleted `AGENTS.md` from the main checkout. The file was restored from `523888d` before this contract's Draft existed, byte-identical to its committed blob, and no other file was affected.
+
+Review Gate:
+- The steps were applied exactly, and no unresolved step was guessed.
+- This contract supersedes and depends on nothing.
+- The repository is clean and releasable: `-Finish` READY on a clean tree.
+
+Not built, as directed:
+- the SUB-4 repair, any Batch 6 slice, any guard, and any register status change other than SUB-4's schedule;
+- the n8n workflow and any Phase-8 work.
+
+GitHub issue 3 is closed only after remote certification, and only once every applicable requirement is verified.
+
+Verdict: Confirmed Complete
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
