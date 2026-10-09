@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -208,15 +208,15 @@ Every file is written LF. The "from" hashes are SPEC-254's committed bytes at `3
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_agent_continuity.ps1` (`e40be2e7…`) compares frozen sections, Out of Scope, evidence prefixes and checklist wording ordinally, refuses a new prohibited character at the endpoint and per commit, and yields a boundary only when the declared value is an ancestor of the evaluated HEAD and equals the value first committed in `CR_LIFECYCLE.md`; otherwise the rule applies everywhere.
-- [ ] `scripts/test_agent_continuity.ps1` (`c2ce82d8…`) carries CTRL4-1 to CTRL4-27, fifteen CTRL-4 mutants and the `CTRL4` population family, and passes in `-Finish`, including CTRL4-26 on this repository's history.
-- [ ] CTRL4-24, CTRL4-25 and CTRL4-27 refuse both reproduced bypasses and the isolated first-declaration case, in CI's range shape with no pre-commit hook.
-- [ ] `CR_LIFECYCLE.md` (`6b70b792…`) declares `Evidence Character Enforcement: ae1d130d82a1173099d858e667aab8dc88650d84`, states that the boundary cannot be moved, and both existing marker lines are byte-unchanged.
-- [ ] `CODING_STANDARDS.md` (`847bc709…`) carries one added rule on exact comparison and deliberate text construction.
-- [ ] The register (`d50b6002…`) records CTRL-4 fixed by this contract and CTRL-5, CTRL-6, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4 open, each with owner and trigger; the execution plan (`39845778…`) names them without restating any status; `scripts/readiness_population.ps1` exits 0.
-- [ ] SPEC-251, SPEC-252 and SPEC-254 stay Cancelled and are not modified by this contract, which modifies no other historical contract; SPEC-239's BEL is preserved.
-- [ ] At Complete, the manifest names this contract, its `Next capability` is still Batch 6 Slice 35, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `scripts/check_agent_continuity.ps1` (`e40be2e7…`) compares frozen sections, Out of Scope, evidence prefixes and checklist wording ordinally, refuses a new prohibited character at the endpoint and per commit, and yields a boundary only when the declared value is an ancestor of the evaluated HEAD and equals the value first committed in `CR_LIFECYCLE.md`; otherwise the rule applies everywhere.
+- [x] `scripts/test_agent_continuity.ps1` (`c2ce82d8…`) carries CTRL4-1 to CTRL4-27, fifteen CTRL-4 mutants and the `CTRL4` population family, and passes in `-Finish`, including CTRL4-26 on this repository's history.
+- [x] CTRL4-24, CTRL4-25 and CTRL4-27 refuse both reproduced bypasses and the isolated first-declaration case, in CI's range shape with no pre-commit hook.
+- [x] `CR_LIFECYCLE.md` (`6b70b792…`) declares `Evidence Character Enforcement: ae1d130d82a1173099d858e667aab8dc88650d84`, states that the boundary cannot be moved, and both existing marker lines are byte-unchanged.
+- [x] `CODING_STANDARDS.md` (`847bc709…`) carries one added rule on exact comparison and deliberate text construction.
+- [x] The register (`d50b6002…`) records CTRL-4 fixed by this contract and CTRL-5, CTRL-6, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4 open, each with owner and trigger; the execution plan (`39845778…`) names them without restating any status; `scripts/readiness_population.ps1` exits 0.
+- [x] SPEC-251, SPEC-252 and SPEC-254 stay Cancelled and are not modified by this contract, which modifies no other historical contract; SPEC-239's BEL is preserved.
+- [x] At Complete, the manifest names this contract, its `Next capability` is still Batch 6 Slice 35, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -233,21 +233,71 @@ Every file is written LF. The "from" hashes are SPEC-254's committed bytes at `3
 - **Applied exactly as prototyped.** All six full SHA-256s equal the frozen "to" values: `e40be2e7…` (evaluator), `c2ce82d8…` (suite), `6b70b792…` (`CR_LIFECYCLE.md`), `847bc709…` (`CODING_STANDARDS.md`), `d50b6002…` (register), `39845778…` (execution plan).
 - **The working-tree diff against `aa5bf3b` is byte-identical to the prototype patch (`d6acf25f…`):** six files, 12 insertions, 12 deletions. Every file is LF, and `git diff --check` is clean.
 
+### 2026-10-10 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree at `18366ae`, through `scripts/run_timed.ps1` with `concurrent=0` from start to end, watched by `scripts/watch_run.ps1 -QuietMinutes 10`. No other verification job ran beside it.
+- Every step printed `PASS`:
+
+  | Step | Time |
+  | --- | --- |
+  | `test_agent_continuity.ps1` | 26.7 min |
+  | cold-start guard | 3.9 min |
+  | status-contradiction guard | 3.0 min |
+  | Primary-ledger guard | 0.3 min |
+  | future-date guard | 2.5 min |
+  | repository consistency, `git diff --check` and `scripts/readiness_population.ps1` | 0.3 min together |
+
+  The result was `LOCAL_CERTIFY: READY` in 37.0 min, `exit=0`. This is this contract's own certification. SPEC-254's and SPEC-252's results remain historical evidence only.
+
+### 2026-10-10 — Step 5 executed
+
+- The manifest's `Last Completed` names this contract, and its Active pointer is `None.`. `Current Module`, `Next capability` (Batch 6 Slice 35) and the open-decision line (MAIL-1, RET-1, PH8-10) are byte-unchanged. The manifest is 6845 characters, with a longest line of 1151.
+- `ai-map.json` was regenerated with `scripts/generate-ai-map.ps1` and converted to LF.
+
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review
+
+Checked against the committed tree at `18366ae` and the Step 5 working state, not against the Execution Log:
+
+1. **Evaluator.** Its blob equals `e40be2e7…`.
+   - Checklist wording uses `Same-Text`, and the evidence prefix uses `StartsWith(…,[StringComparison]::Ordinal)`.
+   - `Validate-NoNewProhibitedCharacter` is called at the endpoint and per commit.
+   - `Get-CharacterBoundary` returns a boundary only after `merge-base --is-ancestor $declared HEAD` succeeds and the value equals the oldest `log -G` declaration in HEAD's history. Otherwise `Character-Guard-IsActive` reads active.
+2. **Suite.** Its blob equals `c2ce82d8…`.
+   - It carries CTRL4-1 to CTRL4-27: CTRL4-8 to CTRL4-12 are generated in a loop, and the rest are literal.
+   - It carries fifteen `CTRL-4 MUTATION` kills in family `CTRL4`, nine through `MutationKill` and six through `MutationKillRangeAt`, and the `NON-EMPTY POPULATION` loop.
+   - It passed inside this contract's `-Finish`, which ran CTRL4-26 against this repository's history.
+3. **CI range shape.** CTRL4-24, CTRL4-25 and CTRL4-27 assert through `RunRange`, the dot-sourced `-Gate -BaseRef` form CI uses, in a sandbox with no hook.
+4. **`CR_LIFECYCLE.md`.** Its blob equals `6b70b792…`. It declares `Evidence Character Enforcement: ae1d130d82a1173099d858e667aab8dc88650d84` and states that the boundary cannot be moved. The `SPEC Allocation Enforcement` and `Historical CR Immutability Enforcement` lines equal `origin/main`'s.
+5. **`CODING_STANDARDS.md`.** Its blob equals `847bc709…`, and it is one line added and none removed against `origin/main`.
+6. **Register and plan.**
+   - The register's blob equals `d50b6002…`. CTRL-4 reads `FIXED 2026-10-09 (SPEC-255)`. CTRL-5, CTRL-6, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4 read OPEN, and each carries an owner and a trigger.
+   - The plan's blob equals `39845778…`. Its line names the ids with no status word.
+   - `scripts/readiness_population.ps1` passed in `-Finish`.
+7. **Cancelled contracts.** SPEC-251, SPEC-252 and SPEC-254 read Cancelled and are unchanged since `78853c7`, `619376a` and `33e4db6`. This contract's commits change only its own file under `changes/`. SPEC-239 holds one BEL.
+8. **Manifest at Complete.** It is as Step 5 records, within 7000 characters and 1200 per line, and `ai-map.json` holds no CR.
+9. **Write Scope.** `origin/main..HEAD` touches 12 paths, all in Write Scope, and none under `supabase/`. No Primary or Secondary access occurred.
+
+Review Gate:
+- Steps 1 to 5 match the Implementation Steps byte for byte.
+- No section was restructured.
+- Nothing was guessed.
+- The superseded SPEC-254 is Cancelled.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
