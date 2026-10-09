@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -378,6 +378,12 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
 
 ## Execution Log
 
+### 2026-10-09 — Owner-authorized approval and execution start
+
+The owner's 2026-10-09 decision approved including the scheduled subscription lifecycle job (Case C) in this bounded SUB-4 correction. It authorized Draft → Approval → In Progress → Implementation → Local Verification → Review under the canonical lifecycle and the frozen Write Scope, with a full database verification. It stops at Human Gate 2 before any Primary write and does not authorize deployment.
+- Draft `0828e1b`. A read-only evaluation of it returned `APPROVAL_EVIDENCE: PASS`, with 9 Write Scope paths and profiles DATABASE and REPOSITORY.
+- Approved at `32c9fbd`; its pre-commit Gate reported `APPROVAL_EVIDENCE: PASS`.
+- In Progress from this commit, at Resume Step 1. Primary stays read-only until Gate 2; Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 ## Verification Notes
 
 ## Review Gate
