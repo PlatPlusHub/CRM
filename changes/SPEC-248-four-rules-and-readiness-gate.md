@@ -100,7 +100,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 5
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
