@@ -706,7 +706,7 @@ function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
     'PASS'
 }
 
-# CTRL-4 (SPEC-254). Every immutability comparison below is ORDINAL. PowerShell's `-ne`
+# CTRL-4 (SPEC-255). Every immutability comparison below is ORDINAL. PowerShell's `-ne`
 # and .NET's default `StartsWith` compare by CULTURE: `-ne` ignores case, and both treat NUL,
 # backspace, zero-width space and soft hyphen as zero-weight and composed and decomposed
 # letters as equal. Measured: each of those edits to frozen or prior text passed these checks
@@ -746,7 +746,7 @@ function Validate-EvidenceAppendOnly([string]$BaselineText,$Current){
     }
 }
 
-# CTRL-4 (SPEC-254). A governed contract gains no character a reader cannot see: C0 controls
+# CTRL-4 (SPEC-255). A governed contract gains no character a reader cannot see: C0 controls
 # other than TAB, LF and a CRLF's CR; DEL and C1; and the invisible format characters (soft
 # hyphen, zero-width and joiner characters, bidirectional controls, word joiner, BOM). One NUL
 # made SPEC-250 invisible to every recursive search; a BEL from the same PowerShell escape sits
@@ -764,7 +764,7 @@ function Validate-NoNewProhibitedCharacter([string]$BaselineText,[string]$Curren
 # CTRL-1's boundary. A transition whose before-state descends from the declared commit is judged;
 # one that predates it keeps the verdict it was published under (SPEC-239's range added its BEL
 # legally). Unprovable means protect: a missing marker or an unknown boundary reads as active.
-# The boundary cannot be MOVED (SPEC-254). Reproduced on SPEC-251's evaluator: a range whose
+# The boundary cannot be MOVED (SPEC-255). Reproduced on SPEC-251's evaluator: a range whose
 # contract owned this authority pointed the marker at an unrelated branch, or forward past its own
 # BEL, and CI read READY. The declared value is a boundary only if it lies in the history of the
 # commit that declares it, and only if it is the value FIRST committed there; anything else is

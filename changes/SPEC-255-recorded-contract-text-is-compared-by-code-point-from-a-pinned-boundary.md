@@ -226,6 +226,13 @@ Every file is written LF. The "from" hashes are SPEC-254's committed bytes at `3
 - **Publication range:** `origin/main..HEAD` holds 21 commits and no merges, and is 0 behind. Every path it touches is in this Write Scope. It includes SPEC-251's, SPEC-252's and SPEC-254's commits and cancellations, none rewritten.
 - **Preconditions:** each of the six files in this checkout equals its "from" hash. Each prototype file in the scratch worktree equals its "to" hash, and the prototype patch's SHA-256 is `d6acf25f…`.
 - **No Primary write is authorized or expected.** Secondary is never contacted.
+
+### 2026-10-09 — Steps 1-3 executed
+
+- **Checks:** `# CTRL-4 (SPEC-255).`, ``The boundary cannot be moved (`SPEC-255`)`` and `FIXED 2026-10-09 (SPEC-255)` were each absent, so every step applied.
+- **Applied exactly as prototyped.** All six full SHA-256s equal the frozen "to" values: `e40be2e7…` (evaluator), `c2ce82d8…` (suite), `6b70b792…` (`CR_LIFECYCLE.md`), `847bc709…` (`CODING_STANDARDS.md`), `d50b6002…` (register), `39845778…` (execution plan).
+- **The working-tree diff against `aa5bf3b` is byte-identical to the prototype patch (`d6acf25f…`):** six files, 12 insertions, 12 deletions. Every file is LF, and `git diff --check` is clean.
+
 ## Verification Notes
 
 None.
