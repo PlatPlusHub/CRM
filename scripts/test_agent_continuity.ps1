@@ -649,7 +649,7 @@ try{
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Review 'A weaker gate item.');$r=Run Gate
     Assert '60 a Review Gate item cannot be reworded' ($r.Code-ne0-and$r.Text-match'REVIEW_GATE_TEXT_MUTATED') $r.Text
 
-    # ---- CTRL-4 (SPEC-252): frozen and prior text is compared by code point ----
+    # ---- CTRL-4 (SPEC-254): frozen and prior text is compared by code point ----
     # Each ordinal case uses an edit the character rule below cannot see (a combining accent, a
     # case change, a deletion), so a refusal here is credited to the ordinal comparison alone.
     # Every case was first run against the pre-repair evaluator (ae1d130), which ACCEPTED each refusal below.
@@ -726,7 +726,7 @@ try{
     Pop 'CTRL4' 'reject';Assert 'CTRL4-22 a character added after the declared boundary is refused' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
     Reset-Fixture;$r=RunRange (Ctrl4Boundary 'unknown')
     Pop 'CTRL4' 'reject';Assert 'CTRL4-23 a boundary this repository does not contain protects' ($r.Code-ne0-and$r.Text-match'PROHIBITED_CHARACTER:U\+0007') $r.Text
-    # ---- SPEC-252: the boundary cannot be moved ----
+    # ---- SPEC-254: the boundary cannot be moved ----
     # Both bypasses reproduced on SPEC-251's evaluator, judged the way CI judges a range. The
     # sandbox carries no pre-commit hook, so every commit below is made with the hook skipped and
     # the range Gate alone must refuse. The contract owns CR_LIFECYCLE.md, so OUT_OF_SCOPE_WRITE
@@ -803,7 +803,7 @@ try{
         {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive "$commit^"){' 'if($true){' 'CTRL4'
     MutationKillRangeAt 'CTRL-4 MUTATION: the endpoint rule honours the declared boundary' `
         {Ctrl4Boundary 'before'} 'ORVION: READY' 'if(Character-Guard-IsActive $base){' 'if($true){' 'CTRL4'
-    # SPEC-252. SPEC-251's `$ancestorCode-ne1` mutant is now EQUIVALENT: an unknown or unrelated
+    # SPEC-254. SPEC-251's `$ancestorCode-ne1` mutant is now EQUIVALENT: an unknown or unrelated
     # boundary is refused by the ancestry precondition before that line runs. It is replaced by the
     # precondition itself and by the first-declaration pin, each killed by the bypass it closes.
     MutationKillRangeAt 'CTRL-4 MUTATION: a marker outside the declaring history protects' `

@@ -75,7 +75,7 @@ Supersedes SPEC-252 (`changes/SPEC-252-recorded-contract-text-is-compared-by-cod
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 4
 Blocker: None
 Recovery Attempt: 0
 
@@ -225,6 +225,12 @@ Every file is written LF. The "from" hashes are SPEC-252's committed bytes at `6
 - **Authority:** the owner's SPEC-254 Gate 1 approval of 2026-10-09, conditional on the exact frozen Draft. Verified before acting: the Draft commit is `0bebc76e9eb6b82b5e43c72993ef1dead640f85a`, and the contract's SHA-256 is `fa1513a7599ca595620aece8ea691810cfc748da72797aa4cc75903a3be7f256`, equal to the committed blob. A read-only probe of the evaluator derived profiles `CONTROL,REPOSITORY` and returned `APPROVAL_EVIDENCE: PASS`; Approval was committed at `2ef307f`, where the Gate printed `APPROVAL_EVIDENCE: PASS`.
 - **Preconditions:** each of the six files in this checkout equals its "from" hash, and each prototype file on the local scratch branch (`578f3fb`, never pushed) equals its "to" hash.
 - **No Primary write is authorized or expected.** Secondary is never contacted.
+
+### 2026-10-09 — Steps 1-3 executed
+
+- **Checks:** `# CTRL-4 (SPEC-254).`, ``The boundary cannot be moved (`SPEC-254`)`` and `FIXED 2026-10-09 (SPEC-254)` were each absent, so every step applied.
+- **Applied exactly as prototyped.** All six full SHA-256s equal the frozen "to" values: `d5f1e1d3…` (evaluator), `6c03f931…` (suite), `1256fb64…` (`CR_LIFECYCLE.md`), `5344a44e…` (`CODING_STANDARDS.md`), `979ae384…` (register), `29842fe7…` (execution plan).
+- **The diff against `095187b` is byte-identical to the prototype's increment over SPEC-252 (`090fa44..578f3fb`):** six files, 12 insertions, 12 deletions. Every file is LF, and `git diff --check` is clean.
 
 ## Verification Notes
 
