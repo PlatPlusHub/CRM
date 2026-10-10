@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -357,6 +357,32 @@ Post-Implementation Proof Obligation: All of the following exit 0 on the final b
 ## Execution Log
 
 None yet.
+
+### 2026-10-10 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-259 Gate 1 approval of 2026-10-10 for Draft `09be09534c3ba28dc912055ab54d3decff39332f`, contract SHA-256 `d70a5045eed1fdaf33903692bb54c2965938df0d3ad4ac89c7655e16a18a4d30` and test 151 SHA-256 `84e9ca2399ecabfb3f782892cfb00a5b2821b438e59aa8c5d15b9da2b8834e73`. It covers the record-only contract, the 16-assertion test, the `AUDITED-OPEN` disposition, and the declared documentation and generated-artifact synchronization. Verified before acting: HEAD was that commit, the tree was clean, the contract file hashed to that value, and the frozen test file in the scratch worktree and the scratchpad hashed to the test value. Approval was committed at `0d39e06`; the pre-commit Gate exited 0, and the pre-approval evaluator, re-run read-only, returned `PASS` on profiles `DATABASE, REPOSITORY`.
+- **Preconditions:** test 151 is absent, and the `totp_enrollments` row reads `NOT-RECORDED`. The register, disposition record, API contract, migrations and Primary evidence file are unchanged since `d1165fb`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits, with 0 merges and 0 behind.
+- **What the tripwire detects, stated exactly (owner's review).** Assertion 12 reads the catalog. It names:
+  - every function in `app` or `public` whose `prosrc` contains `totp_enrollments`;
+  - every view in `pg_views` whose definition does;
+  - every policy on another table whose USING or WITH CHECK does;
+  - every non-internal trigger on the table.
+
+  It does not see:
+  - application, Edge Function or n8n code that reads the table through the API. Today `supabase/functions` contains no `totp` reference.
+  - a function in another schema. Today the 483 function definitions in `supabase/migrations` are all in `app` or `public`.
+  - a SQL-standard `BEGIN ATOMIC` body. PROVEN, rolled back on the local stack: such a function stores an empty `prosrc` (`prosqlbody` holds the body), so the scan misses it. No migration uses the form today.
+  - a materialized view, or SQL that assembles the name at run time.
+
+  The Objective's "any function, view, policy or trigger" is read with that boundary. The approved text is not changed. The disposition row states the boundary.
+- **AUTH-1 stays binding (owner's review).** This test detects the first database reader, and it replaces no part of AUTH-1. The retirement is still owed before the first client-facing authentication build, or before any code first references either table, whichever comes first. The Draft already says so in Business Reason, Risks and Step 2.
+- **The four Supabase Auth concerns stay UNPROVEN.** These are the per-factor failure limit, the used-code record, first-factor enrollment at `aal1`, and `aal2` outliving an unenroll. They are outside this contract and are not ORVION findings. The execution plan has no client-facing-login gate of its own, so AUTH-1, whose trigger is that build, is the existing readiness authority. The disposition row, which cites AUTH-1, points to Business Reason, so they surface at that trigger. The register is out of this Write Scope, so no backlog entry is added or duplicated.
+- **Worktrees.** Read-only inventory, nothing modified:
+  - `wt251` (`578f3fb`) and `owt/p2` (`7fe62ed`) are clean.
+  - `wt255` (`33e4db6`) shows 6 porcelain entries and `C:\w234` (`6c48fbb`) shows 15. Both stay untouched.
+  - `wt259` holds only this contract's prototype bytes. Its results are prototype evidence, never certification, and it is removed at the end.
+- **No Primary or Secondary write** is authorized or required. Secondary is never contacted.
 
 ## Verification Notes
 
