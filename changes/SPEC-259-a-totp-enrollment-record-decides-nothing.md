@@ -384,6 +384,20 @@ None yet.
   - `wt259` holds only this contract's prototype bytes. Its results are prototype evidence, never certification, and it is removed at the end.
 - **No Primary or Secondary write** is authorized or required. Secondary is never contacted.
 
+### 2026-10-10 — Steps 1-4 applied
+
+- **Step 1.** Test 151 was absent, and was written from the frozen bytes: SHA-256 `84e9ca2399ecabfb3f782892cfb00a5b2821b438e59aa8c5d15b9da2b8834e73`, `plan(16)`.
+- **Step 2.** The `totp_enrollments` row was `NOT-RECORDED` and now reads `AUDITED-OPEN` / `ADVERSARIAL` / this contract / `IDENT-3, OTP-2, AUTH-1`. Coverage reads `38 of 78 recorded · 16 AUDITED · 19 AUDITED-OPEN · 3 PARTIAL · 0 EXEMPT · 40 NOT-RECORDED`, and the Slice 37 freshness entry is added. The Next cell also states:
+  - the tripwire's exact detection boundary, as recorded above;
+  - that the test replaces none of AUTH-1's retirement;
+  - where the four UNPROVEN Supabase Auth concerns are recorded.
+
+  No other row changed.
+- **Step 3.** The manifest coverage line now reads `38 of 78` and `thirty-eight`.
+- **Step 4.** The tree holds 151 test files whose `plan(N)` values sum to 2794, and the manifest suite figure now reads `151 files / 2794 assertions`.
+  - `ai-map.json` was regenerated and stored LF.
+  - `generate-api-contract.ps1` reproduced `MASTER_API_CONTRACT.md` byte-identical (80 RPC endpoints, 8 reporting views, 74 tables), so it is unchanged.
+- **Checks.** `git diff --check` exit 0. `check_repository_consistency.ps1`: `REPOSITORY CONSISTENCY: CLEAN`.
 ## Verification Notes
 
 None.
