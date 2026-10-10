@@ -149,7 +149,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -445,6 +445,55 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   Triggers, policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. No business row is written.
 - **Material finding outside this contract (Begin entry, observation 2):** the two-session race on `app.platform_review_payment_proof` stays reproduced and unrepaired. It is routed to a separate corrective contract after this one.
 - **Stop at Gate 2.** No exact-byte owner authorization for the migration is recorded. Step 5 stops here. Secondary was not contacted.
+### 2026-10-10 — Human Gate 2: owner authorization
+
+- **Authority:** the owner's SPEC-260 Gate 2 authorization of 2026-10-10. It covers exactly the migration `supabase/migrations/20261010160000_a_payment_proof_is_born_pending_and_unreviewed.sql`, SHA-256 `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012`, MD5 `f417ebb93516cb2c82f2b8e34da654cc`, 3208 bytes, 54 lines, ASCII, LF-only, to Primary `vrvtsxexkiiiivlkdxzp` only, by the approved procedure. Nothing else on Primary, and nothing on Secondary `brplkqmbzffpxqgkkdzo`.
+- **Not authorized:** the correction of the platform-review race (Begin entry, observation 2), or any other Primary change. The owner classes that race as a proven, independent correctness and financial-entitlement finding, to be assessed by priority after this contract is certified and before ordinary Batch 6 selection resumes.
+
+### 2026-10-10 — Step 6: Primary deployment
+
+- **Local recheck, immediately before the write:**
+  - HEAD `616507b9a9167e5b8f4702c9e6eedcd8f15df58e` on the chain `b9542b9 → c61e208 → 4faaf29 → 616507b`, 0 behind `origin/main` `e26733a`;
+  - Draft `b9542b9`'s contract hashes to `70f5ae61…`, and since then this contract changed only its status lines and its Execution Log;
+  - the migration hashes to its frozen identity (3208 bytes, 54 LF, 0 CR, ASCII), and test 152 to `8bed225b…`; the register (`b5bbeb2b…`) and disposition record (`5201e336…`) hash as Step 3 left them;
+  - the working tree touches only Write Scope paths, and the stash is empty.
+- **Primary recheck, read-only:**
+  - URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+  - ledger 247 `f2fd129466f76536d53779a131cda874`, latest `20261010140000`, the target absent by version and name, no row after it;
+  - all ten structural surfaces equal the recorded evidence: functions `b526e294…`/323, combined `2e608d8e…`/3115;
+  - the function: prosrc `037078ce190d9980d8429f74ec63545c`, definition `745eb8c2792ac249688c3f224afac186`, SECURITY INVOKER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`;
+  - the table: three enabled triggers (`derive_reviewer`, `derive_uploader`, `enforce_catalog_codes`), RLS on, grants unchanged from the Step-4 read;
+  - 0 tenants, subscriptions and payment proofs.
+- **Server-side proof:** the transmitted text hashed on Primary to MD5 `f417ebb93516cb2c82f2b8e34da654cc`, 3208 bytes, 54 LF, 0 CR.
+- **Apply:** that same text, through the Primary connector's `apply_migration`, returned success. A fresh read showed one new row, temporary version `20261010204356`, with one stored statement, MD5 `f417ebb9…`, 3208 bytes, and 248 rows in all.
+- **Reconciliation:** one guarded UPDATE renamed only that row to `20261010160000`. Every guard held, and it renamed 1 row:
+  - 248 rows;
+  - exactly one row after `20261010140000`;
+  - the other 247 hashing to `f2fd1294…`;
+  - the statement MD5 equal to the file's;
+  - no existing target.
+- **Fresh post-write reads (`2026-10-10T20:44:17Z`):**
+  - ledger 248 `207f3fad1a5d2a5b7d640f598c2050e9`, latest `20261010160000`, exactly one row for the migration, the temporary version gone;
+  - functions `b3d4fc61413a43ef1ea60bc27a323b6e`/323, the other nine surfaces unchanged, combined `c93fb668bb243fa19274bed2605889ab`/3115, each equal to the prediction;
+  - the function: prosrc `b3cda129c52b83db7739125b93c3e112` and definition `257a9fa2c086318865ae9f7a12f0ab9a`, each equal to local; SECURITY INVOKER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`;
+  - the same three enabled triggers, RLS on, unchanged grants;
+  - 0 tenants, subscriptions and payment proofs. No business-data write.
+- **Secondary** `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-10 — Step 7: evidence and measured state
+
+- **The evidence file, `reports/evidence/primary-ledger-evidence.json`,** was written from the fresh post-write readings only:
+  - `read_at` `2026-10-10T20:44:17Z`;
+  - `repository_head` `616507b9…`;
+  - 248 migrations, `207f3fad…`;
+  - functions `b3d4fc61…`/323, structural `c93fb668…`/3115;
+  - the ledger list appends `20261010160000_a_payment_proof_is_born_pending_and_unreviewed`. It equals the repository's 248 migration files, and its fingerprint recomputes to `207f3fad…`.
+- **Manifest:** `Live state` reads 248 migrations, the new ledger, function and structural hashes, and `Suite **152 files / 2810 assertions**`, with 464 HTTP assertions last passed 2026-10-10. Coverage reads 39 of 78, all thirty-nine at `ADVERSARIAL`. `supabase/tests` holds 152 files whose literal `plan(N)` values sum to 2810.
+- **Register:** SPP-5 reads `DEPLOYED to Primary under separate exact-byte owner authorization`, with Cert `✅`.
+- **Generated artifacts:** `MASTER_API_CONTRACT.md` regenerates unchanged (`d28fb567…`; 80 RPC endpoints, 8 views, 74 tables). `ai-map.json` is regenerated and stored LF; only `generated_at` changed.
+- **Runtime Checkpoint** is `DONE`.
+- **Checks:** `check_primary_ledger.ps1`: RECOVER-1 `CLEAN`; `check_database_parity_evidence.ps1`: `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency: `CLEAN`; `git diff --check`: exit 0.
+- **CI-only guard self-tests, on this deployed state:** `test_future_date_guard` 18/0, `test_status_contradiction_guard` 33/0, `test_primary_ledger_guard` 13/0 and `test_cold_start_state_guard` 34/0, each exit 0 (3.3, 3.0, 0.3 and 4.7 min). The CONTROL and restore cases that the pre-deploy drift failed at Step 4 now pass.
 
 ## Verification Notes
 
