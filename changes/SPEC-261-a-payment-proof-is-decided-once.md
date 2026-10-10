@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -378,7 +378,24 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
 
 ## Execution Log
 
-None.
+### 2026-10-11 — Gate 1 approval and execution started
+
+- **Authority:** the owner's one-time SPEC-261 completion authorization (2026-10-11). It approves Gate 1 for Draft `4d60253f06c63292ef62ddb31a9a73a6aa201517`, contract SHA-256 `4e798bb9a1f782b799bb63a3ad53b75dd178d9c809264c21531b830ae2d0895a`, migration `20261010210000`, SHA-256 `fa652cddd384989256ddbdef593486b51a7bb23739ae1639c5ab83a342a9ca1c`, MD5 `2539aa91d9bff705475fb465eaad33c4`, 4714 bytes, LF. The correction is limited to locking the proof row with `for no key update` before its status is judged. Verified before acting:
+  - HEAD was the Draft commit, 1 ahead of and 0 behind `origin/main` `39ab45a`, and the working tree was clean;
+  - the contract file and its committed blob both hash to the approved value;
+  - the frozen prototype files in the scratch worktree `wt261` hash to their Step 1–3 values: migration `fa652cdd…` (MD5 `2539aa91…`, 4714 bytes), test 153 `679b869d…`, the proof `3c13a698…`, test 152 `ab72f990…`, register `4794c750…`, disposition record `b355ab2b…`;
+  - Write Scope is the eleven paths above.
+
+  Approval was committed at `e2dd2b3`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 153 are absent. The proof script, test 152, the register, the disposition record, the API contract and the Primary evidence file are unchanged since `39ab45a`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
+- **Worktrees.** A read-only inventory; nothing was modified.
+  - `wt251` is clean at `578f3fb`, and `owt/p2` is clean at `7fe62ed`.
+  - `wt255` at `33e4db6` has 6 entries, and `C:\w234` at `6c48fbb` has 15.
+  - `wt260` (4 entries, `e26733a`) and `wt261` (6 entries, `39ab45a`) hold only SPEC-260's and this contract's prototype bytes.
+
+  All stay untouched.
+- **Gate 2 stands before Step 6.** The same authorization grants an advance, one-time, exact-byte Gate 2 for this migration to Primary `vrvtsxexkiiiivlkdxzp` only. It takes effect only after Step 4's readiness requirements pass, and it is recorded at Step 5 only if they do. Secondary is never contacted.
 
 ## Verification Notes
 
