@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -343,18 +343,18 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A proof inserted with a status other than `pending`, or with a review time, is refused 23514 with the guard's message, signed in and session-less; the RPC's upload and a direct `pending` proof are accepted.
-- [ ] A proof has no reviewer at birth, through either door, and none after the platform's approval; a stated reviewer is discarded.
-- [ ] The held controls stay held: the owner's UPDATE approving its own proof changes nothing; a proof under another tenant is refused by RLS; the platform review approves and reactivates the subscription.
-- [ ] `app.derive_proof_reviewer` keeps its trigger, SECURITY INVOKER, owner `postgres`, `search_path=""` and ACL `{postgres=X/postgres}`; `app.upload_subscription_payment_proof` and `app.platform_review_payment_proof` are unchanged.
-- [ ] Mutants M1–M4 are each killed against test 152, with installation and restoration proven. The causal negative is recorded.
-- [ ] SPP-5 is fixed and deployed in the register, and FX-4's and SPP-3's statements are corrected.
-- [ ] `subscription_payment_proofs` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 39 of 78. No other surface's row changed.
-- [ ] The migration and test 152 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (248 migrations; 152 files / 2810 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 39 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A proof inserted with a status other than `pending`, or with a review time, is refused 23514 with the guard's message, signed in and session-less; the RPC's upload and a direct `pending` proof are accepted.
+- [x] A proof has no reviewer at birth, through either door, and none after the platform's approval; a stated reviewer is discarded.
+- [x] The held controls stay held: the owner's UPDATE approving its own proof changes nothing; a proof under another tenant is refused by RLS; the platform review approves and reactivates the subscription.
+- [x] `app.derive_proof_reviewer` keeps its trigger, SECURITY INVOKER, owner `postgres`, `search_path=""` and ACL `{postgres=X/postgres}`; `app.upload_subscription_payment_proof` and `app.platform_review_payment_proof` are unchanged.
+- [x] Mutants M1–M4 are each killed against test 152, with installation and restoration proven. The causal negative is recorded.
+- [x] SPP-5 is fixed and deployed in the register, and FX-4's and SPP-3's statements are corrected.
+- [x] `subscription_payment_proofs` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 39 of 78. No other surface's row changed.
+- [x] The migration and test 152 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (248 migrations; 152 files / 2810 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 39 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -494,20 +494,69 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - **Runtime Checkpoint** is `DONE`.
 - **Checks:** `check_primary_ledger.ps1`: RECOVER-1 `CLEAN`; `check_database_parity_evidence.ps1`: `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`; repository consistency: `CLEAN`; `git diff --check`: exit 0.
 - **CI-only guard self-tests, on this deployed state:** `test_future_date_guard` 18/0, `test_status_contradiction_guard` 33/0, `test_primary_ledger_guard` 13/0 and `test_cold_start_state_guard` 34/0, each exit 0 (3.3, 3.0, 0.3 and 4.7 min). The CONTROL and restore cases that the pre-deploy drift failed at Step 4 now pass.
+### 2026-10-10 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `643870e` in VERIFY mode (`STATUS: In Progress`, `STEP: DONE`), with profiles DATABASE and REPOSITORY plus the declared `verify_journey_branches.ps1`, and nothing else running. It reported `LOCAL_CERTIFY: READY` in 5.7 min, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; `verify_journey_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+Before it, on the same committed state, the four CI-only guard self-tests passed (Step 7). The mutation evidence (M1–M4 and the causal negative), observation 1's rolled-back service-role measurement, the two-session race reproduction and the six HTTP suites (464/0) were recorded at Steps 1–4 on the same migration and test bytes, which are unchanged, so they were not repeated.
+
+**Selector after SPEC-260** (`scripts/batch6_select_target.ps1`, 39 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `complaints` 8/48
+2. `payment_allocations` 8/60
+3. `receipts` 7/20
+4. `chart_of_accounts` 7/38
+5. `notification_deliveries` 7/42
+6. `approval_requests` 7/52
+7. `user_branch_assignments` 7/572
+8. `departments` 7/636
+9. `user_role_assignments` 7/636
+10. `customer_consents` 6/18
+11. `document_retention_policies` 6/36
+12. `document_links` 6/54
+
+Slice 39's measured target is `complaints`.
+
+**Owner direction at Gate 2 (2026-10-10):** after this contract is certified, the reproduced race on `app.platform_review_payment_proof` (Begin entry, observation 2) is to be assessed by priority before ordinary Batch 6 selection resumes. That assessment determines its finding identity and smallest lawful corrective scope, and corrects the disposition row's "not measured" wording through the next authorized Write Scope. Nothing in this contract repairs it, and its Gate 2 did not authorize that correction.
 
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review of the execution commit `643870e`
+
+Reviewed the committed tree against the approved Draft `b9542b9`, the Gate-2 authorization and the nine-path Write Scope. The review read the implementation and the live state, not the Execution Log.
+
+1. **Birth state (criterion 1).** The committed `app.derive_proof_reviewer` refuses, on INSERT and before any session test, a `status_code` distinct from `pending` or a non-null `reviewed_at` (23514, the guard's message). Test 152 assertions 4, 5 and 6 assert the signed-in `approved`, `rejected` and review-time cases, and 11 the session-less `approved` case; 2 and 7 accept the RPC's upload and a direct `pending` proof. Test 152 passes 16/16 on the certified stack, and both `-Finish` pgTAP passes ran it within the whole suite and reported PASS.
+2. **Reviewer (criterion 2).** The INSERT arm sets `new.reviewed_by := null` for every caller. Assertions 3 (the RPC's proof), 8 (a stated reviewer discarded at the table door) and 13 (after the platform's approval) assert a NULL reviewer.
+3. **Held controls (criterion 3).** Assertion 10 asserts that the owner's UPDATE approving its own proof changes nothing, 9 that a proof under a rival tenant is refused 42501 by RLS, and 12–13 that the platform review approves the proof and the subscription reads `active`. Assertion 14 asserts that no refused write left a row.
+4. **Function properties (criterion 4).** The migration contains exactly one statement, `create or replace function app.derive_proof_reviewer()`. On Primary and locally the function reads prosrc `b3cda129…` and definition `257a9fa2…`, SECURITY INVOKER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres}`, and the table keeps its three enabled triggers. `app.upload_subscription_payment_proof` and `app.platform_review_payment_proof` are untouched by the range. Comment-stripped and whitespace-normalized, they read `084aef4c…` and `d7e7c471…` on both sides. Raw `prosrc` differs only because Primary's stored text carries no comments, which is pre-existing and invisible to the function surface, which agrees (`b3d4fc61…`/323).
+5. **Mutation (criterion 5).** M1–M4 were recorded at Step 4 on the committed-path bytes, which are unchanged (`cadb6f05…`, `8bed225b…`). Each was installed (surface changed) and restored (surface equal to base), failing exactly 3, 8, 13 / 5, 11, 14, 16 / 6, 14 / 11, 14, 16. The causal negative fails 3, 4, 5, 6, 8, 11, 13, 14 and 16 on FX-4's pre-repair function.
+6. **Register (criterion 6).** SPP-5 reads FIXED and DEPLOYED with Cert `✅`. FX-4 carries the dated SPEC-260 sentence with Updated `10-10`, and SPP-3's Evidence line its dated correction. Against `e26733a`, no other row changed besides the freshness entry.
+7. **Disposition (criterion 7).** `subscription_payment_proofs` is `AUDITED-OPEN` / `ADVERSARIAL`, and the counts read 39 of 78 (16 `AUDITED`, 20 `AUDITED-OPEN`, 3 `PARTIAL`, 39 `NOT-RECORDED`). No other surface row changed against `e26733a`. Its Next cell's "not measured" for the review read is now stale (Begin entry, observation 2). The next authorized Write Scope corrects it.
+8. **Frozen values (criterion 8).** The committed migration and test 152 blobs hash to `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012` and `8bed225bc146d843695512a11621fb2d0380cc0308271b179a222c1eaa55dd5f`.
+9. **Agreement (criterion 9).** Primary, the evidence and the manifest agree:
+   - 248 migrations, `207f3fad…`;
+   - functions `b3d4fc61…`/323, structural `c93fb668…`/3115;
+   - 152 files / 2810 assertions, 464 HTTP assertions.
+
+   The API contract matches its generator (`d28fb567…`), and `ai-map.json` is LF. The four guard self-tests, repository consistency and `-Finish`'s parity and ledger checks pass.
+10. **Next capability (criterion 10).** The Complete commit names Batch 6 Slice 39 and `complaints` (8/48) and clears the Active Change Request.
+11. **Primary and Secondary (criterion 11).** Primary's ledger holds exactly one row for the migration, its statement MD5 `f417ebb9…` equal to the authorized file, after one guarded rename of temporary version `20261010204356`. It holds 0 tenants, subscriptions and payment proofs before and after. Secondary was never contacted.
+12. **Scope (criterion 12).** `e26733a..HEAD` changes only Write Scope paths, and `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+**Outside this contract, and not a defect in it:** the two-session race on `app.platform_review_payment_proof` stays reproduced and unrepaired. Per the owner's Gate-2 direction, it is assessed by priority before Slice 39.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
