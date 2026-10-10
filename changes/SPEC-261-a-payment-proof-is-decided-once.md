@@ -164,7 +164,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -453,6 +453,55 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
 
   Each held. No lifecycle rule requires an owner decision made after readiness: Step 5 requires exact owner authorization for the migration SHA-256 to be recorded in this log, and it now is.
 - **Not authorized:** any other migration or Primary change, SPP-3, Slice 39, another Change Request, or any change to ORVION's approval policy. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-11 — Step 6: Primary deployment
+
+- **Local recheck, immediately before the write:**
+  - HEAD `257f246ecb4add0a9f1fc1c15f3326bcbac5bd96` on the chain `4d60253 → e2dd2b3 → 2d79f77 → 257f246`, 0 behind `origin/main` `39ab45a`;
+  - Draft `4d60253`'s contract hashes to `4e798bb9…`, and since then this contract changed only its status lines and its Execution Log;
+  - the six Step 1–3 files hash to their frozen values after the stash round trip: migration `fa652cdd…` (MD5 `2539aa91…`, 4714 bytes, 94 LF, 0 CR), test 153 `679b869d…`, the proof `3c13a698…`, test 152 `ab72f990…`, register `4794c750…` and disposition record `b355ab2b…`;
+  - the working tree touches only Write Scope paths, and the stash is empty.
+- **Primary recheck, read-only:**
+  - ledger 248 `207f3fad1a5d2a5b7d640f598c2050e9`, latest `20261010160000`, the target absent by version and name, no row after it;
+  - functions `b3d4fc61…`/323;
+  - the review function: prosrc `8d81c756333a8f13e2d5715111310a64`, definition `9c8f1a3dcc08160206cad2f626d4b16f`, SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres,service_role=X/postgres}`, `search_path=""`, no comment;
+  - 0 tenants, subscriptions and payment proofs.
+- **Server-side proof:** the transmitted text hashed on Primary to MD5 `2539aa91d9bff705475fb465eaad33c4`, 4714 bytes, 94 LF, 0 CR.
+- **Apply:** that same text, through the Primary connector's `apply_migration`, returned success. A fresh read showed one new row, temporary version `20261010230810`, with one stored statement (MD5 `2539aa91…`, 4714 bytes), and 249 rows in all. The other 248 still hashed to `207f3fad…`.
+- **Reconciliation:** one guarded UPDATE renamed only that row to `20261010210000`, and it renamed 1 row. Every guard held:
+  - 249 rows;
+  - exactly one row after `20261010160000`;
+  - the other 248 hashing to `207f3fad…`;
+  - one stored statement, its MD5 equal to the file's;
+  - no existing target.
+- **Fresh post-write reads (`2026-10-10T23:08:49Z`):**
+  - ledger 249 `323eae75c4a400b4cc6f13317ec21611`, latest `20261010210000`, exactly one row for the migration, the temporary version gone;
+  - functions `724baac791a6a79c7d4328835d800f50`/323 (both Check L2/P2 and `parity_surface.sql`). Triggers `a46035c1…`/309, policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status transitions `db2165c7…`/115 and RLS `c117cbf7…`/79 are unchanged. Combined `5a9ed7ff90852acec9a128b7fe4f8c5a`/3115. Each equals the prediction;
+  - the function: prosrc `2cbc94867ea6ce5dc81cf5cd98511b25` and definition `9d58dec566dd66fb9f07bd0c35c456d1`, each equal to local. SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres,service_role=X/postgres}`, `search_path=""`, no comment, and the same identity arguments and `void` result;
+  - the table: RLS on (not forced), 3 policies, the same three enabled triggers and unchanged grants;
+  - 0 tenants, subscriptions and payment proofs. No business-data write.
+- **Secondary** `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-11 — Step 7: evidence and measured state
+
+- **The evidence file, `reports/evidence/primary-ledger-evidence.json`,** was written from the fresh post-write readings only:
+  - `read_at` `2026-10-10T23:08:49Z`;
+  - `repository_head` `257f246e…`;
+  - 249 migrations, `323eae75…`;
+  - functions `724baac7…`/323, structural `5a9ed7ff…`/3115;
+  - the ledger list appends `20261010210000_a_payment_proof_is_decided_once`.
+
+  `check_primary_ledger.ps1` recomputes 249 / `323eae75…` from the file and finds it equal to the repository's migration files.
+- **Manifest:** `Live state` reads 249 migrations, latest `20261010210000`, and the new ledger, function and structural hashes. Its dates stay 2026-10-10, the UTC date of the Primary reading. It reads `Suite **153 files / 2815 assertions**`, with the HTTP clause unchanged (464, last passed 2026-10-10). `supabase/tests` holds 153 files whose literal `plan(N)` values sum to 2815.
+- **Register:** SPP-6 reads `DEPLOYED to Primary under separate exact-byte owner authorization`, with Cert `✅`, worded without a new date.
+- **Generated artifacts:** `MASTER_API_CONTRACT.md` regenerates unchanged (`d28fb567…`; 80 RPC endpoints, 8 views, 74 tables). `ai-map.json` is regenerated and stored LF; only `generated_at` changed.
+- **CI-only guard self-tests, on this deployed state:** each passed, exit 0: `test_future_date_guard` 18/0, `test_status_contradiction_guard` 33/0, `test_primary_ledger_guard` 13/0 and `test_cold_start_state_guard` 34/0 (2.8, 2.7, 0.3 and 3.7 min). The CONTROL and restore cases that the pre-deploy drift failed at Step 4 now pass.
+- **Runtime Checkpoint** is `DONE`.
+- **Checks:**
+  - `check_primary_ledger.ps1`: RECOVER-1 `CLEAN`;
+  - `check_database_parity_evidence.ps1`: `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`;
+  - repository consistency: `CLEAN`;
+  - `git diff --check`: exit 0.
 
 ## Verification Notes
 

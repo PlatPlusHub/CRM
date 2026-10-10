@@ -8,9 +8,9 @@
 -- review notes. Assertions 3, 8 and 13 are the reviewer; 4-6 and 11 the birth state; 15-16 prove
 -- that the named trigger is what refuses (PAR-4).
 --
--- CONCURRENCY=N/A   the only read-modify-write is the platform review, executable only by `postgres`
---                   and `service_role`; its unlocked read is recorded in the disposition row and
---                   belongs to SPP-3's trigger (a second platform operator or a platform console).
+-- CONCURRENCY=N/A   this file has one session. The only read-modify-write is the platform review,
+--                   whose two-session race is SPP-6 (SPEC-261): proven by
+--                   `scripts/verify_subscription_concurrency.py` and pinned by `153_...`.
 -- OBSERVABILITY=N/A a direct-door pending proof emits no upload event and no document link. It can
 --                   only delay its own uploader's renewal: the platform reviews a proof by its id.
 -- PRIVILEGE=N/A     REVIEW_SUBSCRIPTION_PAYMENT is held by no role and cannot be granted (SPEC-227,

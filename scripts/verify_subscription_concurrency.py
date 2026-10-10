@@ -1,4 +1,5 @@
-"""Two-session proofs that a subscription transition is judged on the row it replaces (SUB-4, SUB-5).
+"""Two-session proofs that a subscription transition is judged on the row it replaces (SUB-4, SUB-5),
+and that a payment proof is decided once (SPP-6).
 
 Every case holds one writer's transaction open, proves through pg_blocking_pids that the second
 writer is WAITING on it (never by timing), releases the first, and then asserts the final state and
@@ -209,6 +210,169 @@ def case_g():
     return 'key-share not blocked by the job; a writer was'
 
 
+def upload(owner):
+    return f"""begin; set local role authenticated;
+    select set_config('request.jwt.claims','{{"sub":"{owner}","aal":"aal2"}}',true);
+    select app.upload_subscription_payment_proof('renewal.pdf','pdf',1024,'race');"""
+
+
+def proof(owner):
+    return psql(upload(owner) + "commit;").splitlines()[-1]
+
+
+def review(p, approve, period=None):
+    # The platform path: service_role, session-less, with terms only when a period is given.
+    terms = f",'professional','{period}'" if period else ''
+    return f"begin; set local role service_role; select app.platform_review_payment_proof('{p}',{approve},'race'{terms});"
+
+
+def decided(t):
+    """proof states | subscription state/period | review and activation events | security decisions"""
+    return psql(f"""select concat_ws(' | ',
+      (select string_agg(status_code, ',' order by status_code) from public.subscription_payment_proofs where tenant_id='{t}'),
+      (select subscription_status_code || '/' || coalesce(billing_period_code, '-') from public.subscriptions where tenant_id='{t}'),
+      coalesce((select string_agg(event_type_code || ':' || coalesce(previous_state, '-') || '->' || new_state, ',' order by seq)
+        from public.events where tenant_id='{t}' and entity_type='subscription'
+         and event_type_code <> 'subscription_payment_proof_uploaded'), '-'),
+      coalesce((select string_agg(payload->>'decision', ',' order by seq) from public.security_events
+        where tenant_id='{t}' and security_event_type_code='subscription_payment_reviewed'), '-'));""")
+
+
+# A tenant paying its renewal in its grace period (no grace end set), so its writes stay open: a proof
+# fixture left read_only would block every later suite's cross-tenant write to its documents' policies.
+PAYING = 'grace_period'
+APPROVED = 'subscription_payment_approved:pending->approved'
+REJECTED = 'subscription_payment_rejected:pending->rejected'
+ACTIVATED = 'subscription_activated:grace_period->active'
+
+
+def refused_as(out, status):
+    return f'payment proof is already {status}, only a pending proof can be reviewed' in out
+
+
+def race(first, second, refused):
+    """A holds its review open; B's review of the same proof must WAIT on A, then be refused."""
+    a = session('_first', first)
+    a.ready()
+    b = session('_second', second)
+    wait_blocked(b, a)
+    assert a.finish()[0] == 0
+    rc, out = b.finish()
+    assert rc != 0 and refused_as(out, refused), f'second review not refused as {refused}: rc={rc} out={out!r}'
+
+
+def case_h():
+    """SPP-6: an approval with terms commits while a rejection waits. The rejection must re-read the
+    approved proof and be refused, never leave a rejected proof behind an activated subscription."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    race(review(p, 'true', 'annual'), review(p, 'false'), 'approved')
+    assert decided(t) == f'approved | active/annual | {APPROVED},{ACTIVATED} | approved', decided(t)
+    return 'observed overlap, rejection refused, one decision, one activation'
+
+
+def case_i():
+    """SPP-6: a rejection commits while an approval with terms waits. The approval must be refused;
+    canon 26 has no move from rejected to approved, and the tenant is not activated."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    race(review(p, 'false'), review(p, 'true', 'annual'), 'rejected')
+    assert decided(t) == f'rejected | grace_period/- | {REJECTED} | rejected', decided(t)
+    return 'observed overlap, approval refused, not activated'
+
+
+def case_j():
+    """SPP-6: two approvals with different terms. The second must be refused, so the first
+    reviewer's terms stand and the tenant is activated once."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    race(review(p, 'true', 'annual'), review(p, 'true', 'monthly'), 'approved')
+    assert decided(t) == f'approved | active/annual | {APPROVED},{ACTIVATED} | approved', decided(t)
+    return "observed overlap, second approval refused, first reviewer's terms kept"
+
+
+def case_k():
+    """The lock never decides by itself: a review that rolls back releases the waiting review, which
+    re-reads the proof as pending and decides it, once."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    a = session('_k_rollback', review(p, 'true', 'annual'))
+    a.ready()
+    b = session('_k_reject', review(p, 'false'))
+    wait_blocked(b, a)
+    assert a.finish('rollback;')[0] == 0
+    rc, out = b.finish()
+    assert rc == 0, f'the released review failed: {out!r}'
+    assert decided(t) == f'rejected | grace_period/- | {REJECTED} | rejected', decided(t)
+    return 'observed overlap, rollback released the waiter, one decision'
+
+
+def case_l():
+    """No new blocking: a review holds the proof and the subscription until it commits. A tenant's
+    new upload, whose foreign-key check takes FOR KEY SHARE on the subscription, and a document link
+    to the held proof, whose check takes FOR KEY SHARE on the proof (the statement below is the one
+    PostgreSQL's RI check issues), must both finish while the review is open. A second review proves
+    the review really holds the proof."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    a = session('_l_review', review(p, 'true', 'annual'))
+    a.ready()
+    b = session('_l_upload', "set lock_timeout='5s';\n" + upload(owner))
+    b.ready()
+    c = session('_l_fk', f"""begin; set local lock_timeout='5s';
+    select 1 from only public.subscription_payment_proofs x where tenant_id='{t}' and id='{p}' for key share of x;""")
+    c.ready()
+    d = session('_l_review2', review(p, 'false'))
+    wait_blocked(d, a)
+    assert a.finish()[0] == 0
+    assert b.finish()[0] == 0
+    assert c.finish()[0] == 0
+    rc, out = d.finish()
+    assert rc != 0 and refused_as(out, 'approved'), f'second review not refused: rc={rc} out={out!r}'
+    assert decided(t) == f'approved,pending | active/annual | {APPROVED},{ACTIVATED} | approved', decided(t)
+    return 'upload and key-share not blocked by the review; a second review was'
+
+
+def case_m():
+    """Lock order: the lifecycle job holds the tenant's subscription row while a review with terms
+    starts. The review locks the proof, then waits on the subscription inside the activation; the job
+    never touches a proof, so the review completes once the job commits, without a deadlock."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    a = session('_m_job', JOB)
+    a.ready()
+    b = session('_m_review', review(p, 'true', 'annual'))
+    wait_blocked(b, a)
+    assert a.finish()[0] == 0
+    rc, out = b.finish()
+    assert 'deadlock' not in out and rc == 0, f'the review failed: rc={rc} out={out!r}'
+    assert decided(t) == f'approved | active/annual | {APPROVED},{ACTIVATED} | approved', decided(t)
+    return 'review waited on the subscription, no deadlock, decided once'
+
+
+def case_n():
+    """Controls, one session at a time: a review whose activation fails rolls back with its decision;
+    a single approval and a single rejection each decide once; a later review of either is refused."""
+    t, owner = tenant(PAYING)
+    p = proof(owner)
+    rc, out = session('_n_fail', review(p, 'true', 'annual').replace("'professional'", "'no-such-plan'")).finish()
+    assert rc != 0 and 'unknown or inactive plan_code' in out, f'activation did not fail: rc={rc} out={out!r}'
+    assert decided(t) == 'pending | grace_period/- | - | -', f'a failed activation kept its decision: {decided(t)}'
+    rc, out = session('_n_approve', review(p, 'true', 'annual')).finish()
+    assert rc == 0, out
+    rc, out = session('_n_again', review(p, 'true', 'monthly')).finish()
+    assert rc != 0 and refused_as(out, 'approved'), f'replayed approval not refused: rc={rc} out={out!r}'
+    assert decided(t) == f'approved | active/annual | {APPROVED},{ACTIVATED} | approved', decided(t)
+    u, owner2 = tenant(PAYING)
+    q = proof(owner2)
+    rc, out = session('_n_reject', review(q, 'false')).finish()
+    assert rc == 0, out
+    rc, out = session('_n_late', review(q, 'true', 'annual')).finish()
+    assert rc != 0 and refused_as(out, 'rejected'), f'approval of a rejected proof not refused: rc={rc} out={out!r}'
+    assert decided(u) == f'rejected | grace_period/- | {REJECTED} | rejected', decided(u)
+    return 'failed activation rolled back; single decisions held; replays refused'
+
+
 CASES = [
     ('SUSPENSION AFTER REDEMPTION', case_a),
     ('REDEMPTION AFTER SUSPENSION', case_b),
@@ -217,6 +381,13 @@ CASES = [
     ('LOCK ORDER', case_e),
     ('SUSPENSION AFTER RENEWAL', case_f),
     ('FOREIGN KEY CHECK DURING LIFECYCLE', case_g),
+    ('REJECTION AFTER APPROVAL', case_h),
+    ('APPROVAL AFTER REJECTION', case_i),
+    ('APPROVAL AFTER APPROVAL', case_j),
+    ('REVIEW AFTER ROLLED-BACK REVIEW', case_k),
+    ('UPLOAD DURING REVIEW', case_l),
+    ('REVIEW DURING LIFECYCLE', case_m),
+    ('SINGLE REVIEWS', case_n),
 ]
 
 
