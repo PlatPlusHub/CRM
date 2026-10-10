@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -444,8 +444,17 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-10-10 — Gate 1 approval and execution started
 
+- **Authority:** the owner's SPEC-257 Gate 1 approval of 2026-10-10 for Draft `8820aee4a723f5f6ae5662d1190cbd6eadac24ac`, contract SHA-256 `7f3479b4b6202394f626440b6bc949a277094afa3bcf286b3a00588d607cb144`, covering SR-1 and SR-2. Verified before acting: HEAD was that commit, the working tree was clean, and the contract file and its committed blob both hash to that value. The frozen prototype files hash to migration `2da54597b05972dbb12d75c9ce0fc2600a9d610ed86664d859e85dba6ddfed0b`, test 149 `8e69bab0610d83a196644abbf4e3ce53df06f61bcd498e7d56790a27766ca7e4` and test 83 `16235efe12063c32dcfe0107c8f6423f4349df8f6d3eed246e7f6b90dd2f4a34`. Approval was committed at `6656cfd`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 149 are absent. Test 83 is at its `3af104b` bytes (`868ecc18…`). The register, disposition record, API contract and Primary evidence file are unchanged since `3af104b`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 4 commits with 0 merges and was 0 behind.
+- **The session-less exemption is not an ordinary caller's path.** The owner asked that this be checked. The guard's UPDATE latitude keys on `auth.uid()` being null. Probed in a rolled-back transaction on the frozen migration:
+  - Only `authenticated` holds privileges on `service_requests` (INSERT, SELECT, UPDATE); `anon` and PUBLIC hold none, and an `anon` UPDATE was refused with "permission denied".
+  - A token for `authenticated` with no `sub` has a null `auth.uid()` and a null tenant. It saw 0 rows, its UPDATE forging `resolved_at` and reopening a closed request reached 0 rows, and its INSERT was refused by RLS.
+  - PostgREST serves only `public` and `graphql_public` (`supabase/config.toml`). Neither holds a `set_config` function, and no migration sets `request.jwt.*`.
+  - The probed request stayed `closed`, with no forged resolution time and no reopen event.
+- **No Primary write is authorized.** Gate 2 stands before Step 6. Secondary is never contacted.
 ## Verification Notes
 
 None.
