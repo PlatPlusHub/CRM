@@ -14,11 +14,11 @@ Foundation Completion Programme Batch 6 Slice 35: give `public.service_requests`
 
 The surface is canon 24's Service Request: operational work a customer asks for after booking, linked to the customer and optionally to the booking or booking item it concerns. `authenticated` holds table-level INSERT, SELECT and UPDATE, and both RPCs, `app.create_service_request` and `app.advance_service_request`, are SECURITY INVOKER through that same grant, so PostgREST serves the table beside them.
 
-After this change one invariant holds on both doors: **a service request begins `requested`, unresolved and unarchived, owned and filed by whoever opens it, with exactly one `service_request_created` event.**
+After this change one invariant holds on both doors: **a service request begins `requested`, unresolved and unarchived, owned and filed by whoever opens it, with exactly one `service_request_created` event; and no signed-in UPDATE moves its owner or filing scope afterwards.**
 
-Record the surface `AUDITED-OPEN` and close this surface's instances of **ENTRY-1** and **ARCH-2**. Record **SR-2**, the table door after creation, as OPEN and do not repair it.
+Record the surface `AUDITED-OPEN` and close this surface's instances of **ENTRY-1** and **ARCH-2**. Record **SR-2**, the lifecycle evidence the table door loses after creation, as OPEN and do not repair it.
 
-This contract does not touch `app.advance_service_request`, the UPDATE door, canon 26, 27, 28 or 29, any other surface, n8n or any Phase-8 work.
+This contract does not touch `app.advance_service_request`, any UPDATE other than one moving the owner or filing scope, canon 26, 27, 28 or 29, any other surface, n8n or any Phase-8 work.
 
 ## Business Reason
 
@@ -41,12 +41,14 @@ Measured at `3af104b` on the local stack in rolled-back transactions, by an `emp
 - **Someone else's request:** a direct INSERT filed under the employee's branch named a colleague in another branch as owner. It persisted, and that colleague then read the row through owner-based RLS.
 - **No event:** none of those rows emitted `service_request_created`. The same actor's RPC wrote `requested`, owned and filed under itself, with one event.
 - **No branch:** test 149 shows an employee with no primary branch assignment creating a request directly, which the RPC refuses.
+- **Two statements to the same exposure:** after a legitimate RPC creation, the same employee moved the owner to a colleague in another branch, or the filing scope to another branch, by a direct UPDATE, and that branch's colleague then read both requests. A same-department colleague took a request over the same way. No event recorded either move. No RPC moves a service request's owner or filing scope, and canon 28 defines no reassignment act or permission for one (CREATE, RESOLVE and VIEW_SERVICE_REQUEST only).
 
 A request is customer work. Its owner and branch decide who sees it and who answers for it, a request born closed never appears as open work, and one born archived carries a narrative nobody was authorized to write.
 
 ### The repair
 One migration, in SPEC-220's shape:
-- `app.guard_service_request_creation()`, SECURITY INVOKER with an empty `search_path` and PUBLIC EXECUTE revoked, is attached as the row-level BEFORE INSERT trigger `service_requests_guard_creation`.
+- `app.guard_service_request_integrity()`, SECURITY INVOKER with an empty `search_path` and PUBLIC EXECUTE revoked, is attached as the row-level BEFORE INSERT OR UPDATE trigger `service_requests_guard_integrity`, the shape of `app.guard_document_integrity` (SPEC-216).
+  - On UPDATE, a signed-in caller cannot change `owner_user_id`, `owner_branch_id` or `owner_department_id` (23514): what no sanctioned writer ever changes, the table door cannot change either. Every other UPDATE passes through untouched, and session-less platform writes are exempt.
   - For every caller it requires `requested` with a null `resolved_at`, and no archive field (23514).
   - For a signed-in caller it resolves `app.current_user_id()` and `app.current_placement()`, refuses with 42501 when there is no actor or branch, and derives `owner_user_id`, `owner_branch_id` and `owner_department_id`.
   - Session-less platform writes keep their nullable owner.
@@ -61,7 +63,9 @@ No table, column, grant, policy, permission, event type or catalog value is adde
 - **Widening `service_requests_enforce_archive_authority` to INSERT:** it would authorize and stamp an archive at creation, which no RPC does. Refusing at entry is what `documents` chose for ARCH-2 (SPEC-216).
 - **An entry-state row in `app.status_transitions`:** ENTRY-1 weighed and declined promotion three times, because it changes INSERT behaviour on surfaces no slice has read.
 - **Revoking INSERT from `authenticated`:** the RPC is SECURITY INVOKER and inserts through that grant. Making it a definer would move its RLS and capability semantics, which is a larger change than the defect.
-- **Repairing the UPDATE door here:** see SR-2.
+- **Charging a permission for reassignment:** canon 28 defines none for service requests, and choosing one would be policy. Refusing the move is the fail-closed reading of the sole sanctioned writer, and canon 28's owner-ratified note 1 already lets a department colleague continue a request when its owner is absent, without reassignment. A reassignment act, if canon ever defines one, belongs to SR-2's design.
+- **A second guard for the owner rule:** the creation guard already owns the owner fields; its UPDATE arm is three lines.
+- **Repairing the lifecycle evidence here:** see SR-2.
 
 ### Held, recorded so a later slice does not rediscover it
 - **The UPDATE door's edges:** `app.status_transitions` charges RESOLVE_SERVICE_REQUEST on every status change. CREATE_SERVICE_REQUEST and RESOLVE_SERVICE_REQUEST are held by exactly the same roles (owner, ceo, branch_manager, department_manager, senior_employee, employee), so `guard_write_capability`'s either-permission rule on UPDATE escalates nobody.
@@ -70,14 +74,13 @@ No table, column, grant, policy, permission, event type or catalog value is adde
 - **Customer–booking coherence:** both doors accept a request under one customer naming another customer's booking in the same tenant. No canon rule states coherence, and no surface in the repository enforces it, so it is recorded here and not invented.
 
 ### SR-2 (Low), recorded and not repaired here
-After creation, the table door keeps neither the lifecycle evidence nor the RPC's rules. This is CHAT-2's shape on this surface. Measured at `3af104b` by the same employee:
-- A legal direct UPDATE moved a request `requested -> in_progress -> resolved` with no transition event and no `resolved_at`.
+After creation, the table door keeps no lifecycle evidence. This is CHAT-2's shape on this surface. Measured at `3af104b` by the same employee, and re-measured on the repaired prototype:
+- A legal direct UPDATE moved a request `requested -> in_progress -> resolved -> closed` with no transition event, and with `resolved_at` forged to 2001-01-01.
 - A later UPDATE wrote `resolved_at` 2019-05-05 with no status change.
-- The employee moved the owner to a colleague, though no RPC moves a service request's owner.
 - `app.advance_service_request` reopened `closed -> in_progress` with a null reason, although canon 27 requires one.
 - The table accepts a blank title, which the RPC refuses.
 
-Every actor here already holds the authority the RPC charges. What is lost is evidence and normalization, not authority. The trigger for repairing it is a service-request lifecycle-authority design that keeps `app.advance_service_request(p_reason)` semantics on both doors, as CHAT-2 awaits for conversations.
+Every actor here already holds the authority the RPC charges, and every edge is the canon-26 graph's: `requested -> closed` is refused, and archiving, the archiver and the archive reason each still cost ARCHIVE_RECORD on UPDATE (re-measured: all three refused to the employee; a branch manager's archive was stamped by the server). What is lost is evidence and normalization, not authority. The trigger for repairing it is a service-request lifecycle-authority design that keeps `app.advance_service_request(p_reason)` semantics on both doors, as CHAT-2 awaits for conversations.
 
 ## Risks
 
@@ -85,6 +88,7 @@ Every actor here already holds the authority the RPC charges. What is lost is ev
   - A signed-in direct INSERT now gets the creator's own owner and placement, whatever it supplies.
   - A non-`requested`, resolved or archived entry is refused for every caller.
   - Nothing legitimate creates either today: the only session-less writer is test 111's `requested` fixture, there is no seed, and both HTTP suites that create requests use the RPC.
+- **Signed-in reassignment stops.** A CREATE or RESOLVE holder can no longer move a request's owner or filing scope at the table. No RPC or HTTP suite does it, and no canon act defines it; department visibility covers an absent owner. The platform's session-less path keeps it.
 - **The event moves.** Each successful INSERT emits `service_request_created` once, from the trigger, and the RPC no longer emits it itself. A refused INSERT emits nothing. Test 149 pins exactly one event per door.
 - **The attribution inventory.** Test 83 assertion 23 pins the users-FK columns that no BEFORE trigger derives. The new guard derives `service_requests.owner_user_id`, so exactly that member leaves the expected list. Its query, assertion 22 and every other member stay unchanged. This is the consumer whose omission cancelled SPEC-219.
 - **Primary deployment** adds two functions and two triggers and replaces one function body, and nothing else. It requires separate exact-byte owner authorization (Gate 2); approving this contract does not authorize it. Primary holds no service requests.
@@ -179,17 +183,17 @@ Applicability: APPLICABLE
 
 | Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
 | --- | --- | --- | --- |
-| A signed-in INSERT is `requested`, unresolved and unarchived, owned and filed by its creator | `scope_isolation` RLS; `app.advance_service_request`; `app.status_transitions`; `app.enforce_archive_authority` | WRITE | The prototype was a scratch worktree at `3af104b`, with the migration applied with its ledger row on a stack reset from the main checkout. Migration SHA-256 `210d977efdb6d9ec214c7f808ebd2d5adeaf06bb1dbe442c5a142f29499da532`, md5 `cfc42c33746eab39bacf52949ce84199`, 6847 bytes, 151 LF lines, ASCII. A forged owner and a forged filing scope were replaced by the creator's own; the colleague in the other branch then saw 0 rows. Closed, resolved, archived and archiver-named entries were refused 23514. An employee with no primary branch was refused 42501. The UPDATE door is unchanged: `app.advance_service_request` still advances and emits once. |
+| A signed-in INSERT is `requested`, unresolved and unarchived, owned and filed by its creator | `scope_isolation` RLS; `app.advance_service_request`; `app.status_transitions`; `app.enforce_archive_authority` | WRITE | The prototype was a scratch worktree at `3af104b`, with the migration applied with its ledger row on a stack reset from the main checkout. Migration SHA-256 `67d8c76e5b7aecaa68aa5a2733113b22dfbbe2d7dfd9bc22938ca7a7d3d66198`, md5 `64c524af293b90636980f4459b0d4968`, 7957 bytes, 167 LF lines, ASCII. A forged owner and a forged filing scope were replaced by the creator's own; the colleague in the other branch then saw 0 rows. After creation, a signed-in move of the owner or filing scope was refused 23514, while an ordinary edit succeeded. Closed, resolved, archived and archiver-named entries were refused 23514. An employee with no primary branch was refused 42501. The UPDATE door is unchanged: `app.advance_service_request` still advances and emits once. |
 | `service_request_created` moves from the RPC body to an AFTER INSERT producer | `public.events`; `app.customer_timeline`; `verify_journey_branches.ps1` and `verify_lifecycle_branches.ps1` (RPC creation) | WRITE | Before: a direct creation emitted 0 events and the RPC emitted 1. Prototype: each direct and RPC creation emitted exactly 1, with the RPC's payload and the creator as actor, and reached the customer timeline. A refused creation emitted none. Both HTTP suites pass unchanged (85/0 and 122/0). |
 | Session-less INSERT | test 111's fixture; future platform writers | VERIFY | The entry state binds a session-less write too (a session-less `closed` creation is refused 23514). A session-less `requested` creation keeps its null owner and emits once with a null actor. Test 111 passes unchanged (57/57). |
-| Creation ownership becomes trigger-derived | `83_actor_attribution_test.sql` assertion 23 | WRITE | Its query lists users-FK columns that `authenticated` can write and no BEFORE trigger derives. The guard removes `service_requests.owner_user_id` from that measured set, and on the prototype only assertion 23 failed until exactly that member was removed. Test 83: SHA-256 `868ecc18194cd7e7e12add2f60eb336cee342a2b411ddc08e789892ce568bc62`, 21202 bytes → `16235efe12063c32dcfe0107c8f6423f4349df8f6d3eed246e7f6b90dd2f4a34`, 21170 bytes, a one-line diff deleting `service_requests.owner_user_id, `. Then 23/23. |
-| Test 149 | `supabase/tests` | WRITE | SHA-256 `67f87269178f4e2f76bb84986b72120e65f2a260971b7be46326899316d5f375`, `plan(31)`, 15808 bytes, LF, ASCII: 31/31 on the prototype. Its bytes differ from the first prototype run only by one reworded header comment; the focused run, Pass A, the causal negative and M1–M8 were re-run on these bytes. On the unrepaired schema 18 fail, each for its intended reason: 5, 6, 7, 8, 9, 12, 13, 14, 15, 17, 21, 22, 25, 27, 28, 29, 30, 31. |
+| Creation ownership becomes trigger-derived and fixed against signed-in UPDATEs | `83_actor_attribution_test.sql` assertion 23 | WRITE | Its query lists users-FK columns that `authenticated` can write and no BEFORE trigger derives. The guard removes `service_requests.owner_user_id` from that measured set, and on the prototype only assertion 23 failed until exactly that member was removed. Test 83: SHA-256 `868ecc18194cd7e7e12add2f60eb336cee342a2b411ddc08e789892ce568bc62`, 21202 bytes → `16235efe12063c32dcfe0107c8f6423f4349df8f6d3eed246e7f6b90dd2f4a34`, 21170 bytes, a one-line diff deleting `service_requests.owner_user_id, `. Then 23/23. |
+| Test 149 | `supabase/tests` | WRITE | SHA-256 `734daa1933918d4cec6c3cd04e6d118c49e3a941e011a0fb722d97cf101dae2d`, `plan(34)`, 16727 bytes, LF, ASCII: 34/34 on the prototype. On the unrepaired schema 20 fail, each for its intended reason: 5, 6, 7, 8, 9, 12, 13, 15, 16, 17, 18, 20, 24, 25, 28, 30, 31, 32, 33, 34. |
 | The generated API contract | `MASTER_API_CONTRACT.md` | WRITE | The canonical generator against the prototype reports 80 RPC endpoints (80 with HTTP evidence), 8 views and 74 tables. It is byte-identical to the committed contract (SHA-256 `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`): no grant, table or client RPC moves. Step 7 regenerates it, and it stays unchanged. |
-| Suite, HTTP and smoke | full pgTAP; the six HTTP suites; `scripts/verify_database.sql` | VERIFY | On the prototype, in `-Finish`'s order on a main-checkout reset: pgTAP Pass A 149 files / 2728 assertions PASS (2697 + 31); HTTP 35 + 40 + 85 + 122 + 122 + 60 = 464 passed, 0 failed; Pass B 149 / 2728 PASS; smoke `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`; plan sum 149 / 2728. |
-| Structural surface on Primary | `scripts/parity_surface.sql`; `primary-ledger-evidence.json` | WRITE | The local reset equalled the recorded Primary values (245 migrations, `43bf5befaf466ec422d8eaaf5261d250`; functions `258738c5fea4dd5ff1040cf65997390b`/320; triggers `d07aa82d8ce6e3d8b3adba9310ba657f`/306; combined `902311907ba7e192b285bd43e091ff8d`/3109). With the migration, functions became `95be2321c81ec143a5bd41125314540c`/322, triggers `de38ec421253587c43c894b63afa5b28`/308 and combined `9c8a785ab0201b92dac43deb8674ec8b`/3113. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. The 246-file ledger fingerprint is `a6500a25aeb035493ac37f18cb46fb32`. |
-| Measured state that moves | manifest (`Live state`, suite figure, coverage, Last Completed, Current Module, Next capability); `primary-ledger-evidence.json`; `ai-map.json` | WRITE | 245 → 246 migrations, latest `20261010120000`; 148 → 149 files and 2697 → 2728 assertions; coverage 35 → 36 of 78. HTTP (464), tables (78), catalog (71/622), views (8) and client RPCs (80) do not move. Primary values are written only from fresh post-deploy readings. |
+| Suite, HTTP and smoke | full pgTAP; the six HTTP suites; `scripts/verify_database.sql` | VERIFY | On the prototype, in `-Finish`'s order on a main-checkout reset: pgTAP Pass A 149 files / 2731 assertions PASS (2697 + 34); HTTP 35 + 40 + 85 + 122 + 122 + 60 = 464 passed, 0 failed; Pass B 149 / 2731 PASS; smoke `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`; plan sum 149 / 2731. |
+| Structural surface on Primary | `scripts/parity_surface.sql`; `primary-ledger-evidence.json` | WRITE | The local reset equalled the recorded Primary values (245 migrations, `43bf5befaf466ec422d8eaaf5261d250`; functions `258738c5fea4dd5ff1040cf65997390b`/320; triggers `d07aa82d8ce6e3d8b3adba9310ba657f`/306; combined `902311907ba7e192b285bd43e091ff8d`/3109). With the migration, functions became `cc0dbed5b3bf2a2dc373a083ed0305f0`/322, triggers `2b835f0a0297ee9054d4f1816539bdd1`/308 and combined `73996e60e19e163794a314c8b26777ee`/3113. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. The 246-file ledger fingerprint is `a6500a25aeb035493ac37f18cb46fb32`. |
+| Measured state that moves | manifest (`Live state`, suite figure, coverage, Last Completed, Current Module, Next capability); `primary-ledger-evidence.json`; `ai-map.json` | WRITE | 245 → 246 migrations, latest `20261010120000`; 148 → 149 files and 2697 → 2731 assertions; coverage 35 → 36 of 78. HTTP (464), tables (78), catalog (71/622), views (8) and client RPCs (80) do not move. Primary values are written only from fresh post-deploy readings. |
 | SR-1 fixed, SR-2 recorded, ENTRY-1 and ARCH-2 annotated; the surface `AUDITED-OPEN` | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; Checks 21, 22, 24, 25 | WRITE | Test 149's `-- ATTACK-CLASSES:` line and negative assertions satisfy Check 24 for `service_requests`. SR-1's and SR-2's Owner field is `—`, so Check 25 reads no owner decision. The disposition row names this contract as its session. On the prototype, Checks 21, 24 and 25 pass. Check 22 passes once this file exists. |
-| CI-only guard self-tests and repository consistency | `scripts/test_*_guard.ps1` (four); `scripts/check_repository_consistency.ps1` | VERIFY | On the prototype, future-date (18/0) and status-contradiction (33/0) pass. Primary-ledger (11 passed, 2 failed) and cold-start (25 passed, 9 failed) fail ONLY their CONTROL and restore cases, which require an untouched copy of the repository to be CLEAN; every mutation case passes. Repository consistency reports exactly the pre-deploy measured-state drift: `manifest says 245 migrations, repository holds 246`; latest `20261009120000` vs `20261010120000`; ledger fingerprint `43bf5bef…` vs `a6500a25…`; `148 test files` vs 149; `2697 assertions` vs 2728; RECOVER-1 ledger evidence. These are not waived: Step 7 makes them true, and Step 8 requires them green. |
+| CI-only guard self-tests and repository consistency | `scripts/test_*_guard.ps1` (four); `scripts/check_repository_consistency.ps1` | VERIFY | On the prototype, future-date (18/0) and status-contradiction (33/0) pass. Primary-ledger (11 passed, 2 failed) and cold-start (25 passed, 9 failed) fail ONLY their CONTROL and restore cases, which require an untouched copy of the repository to be CLEAN; every mutation case passes. Repository consistency reports exactly the pre-deploy measured-state drift: `manifest says 245 migrations, repository holds 246`; latest `20261009120000` vs `20261010120000`; ledger fingerprint `43bf5bef…` vs `a6500a25…`; `148 test files` vs 149; `2697 assertions` vs 2731; RECOVER-1 ledger evidence. These are not waived: Step 7 makes them true, and Step 8 requires them green. |
 
 Unresolved Material Consumers: None
 
@@ -214,18 +218,19 @@ Applicability: APPLICABLE
 
 Existing Mechanism Reusable: NO
 
-Existing Mechanism: `app.enforce_status_transition` fires on UPDATE only. `app.enforce_archive_authority` fires on UPDATE only. `app.guard_write_capability` charges CREATE_SERVICE_REQUEST but checks no entry state, creator or event, and RLS judges scope against caller-supplied owner fields. Only the RPC supplies the correct creation values and the event. This contract reuses `app.record_event`, `app.current_placement()`, `app.current_user_id()`, the capability trigger and the existing RLS and foreign keys. No shared entry or event framework is earned (ENTRY-1 declined promotion three times).
+Existing Mechanism: `app.enforce_status_transition` fires on UPDATE only. `app.enforce_archive_authority` fires on UPDATE only. `app.guard_write_capability` charges CREATE_SERVICE_REQUEST (or RESOLVE_SERVICE_REQUEST on UPDATE) but checks no entry state, creator, owner move or event, and RLS judges scope against caller-supplied owner fields, so a creator's WITH CHECK passes for a move it makes itself. Only the RPC supplies the correct creation values and the event. This contract reuses `app.record_event`, `app.current_placement()`, `app.current_user_id()`, the capability trigger and the existing RLS and foreign keys. No shared entry or event framework is earned (ENTRY-1 declined promotion three times).
 
-Added Property: A successful INSERT through either door begins `requested`, unresolved and unarchived, under the actual creator and placement for a signed-in caller, and emits exactly one `service_request_created` with the RPC's payload. A refused INSERT emits none.
+Added Property: A successful INSERT through either door begins `requested`, unresolved and unarchived, under the actual creator and placement for a signed-in caller, and emits exactly one `service_request_created` with the RPC's payload. A refused INSERT emits none. Afterwards no signed-in UPDATE moves the owner or filing scope.
 
 Causal Negative: These are the pre-repair measurements in Business Reason, at `3af104b`:
 - direct creation `closed` with `resolved_at` 2020-01-01;
 - direct creation archived with a colleague as `archived_by` and a forged reason;
 - direct creation naming a colleague in another branch as owner, readable by that colleague;
-- zero `service_request_created` events for every direct creation.
+- zero `service_request_created` events for every direct creation;
+- after a legitimate creation, a direct UPDATE moving the owner or filing scope to another branch, which that branch then read.
 
-On the unrepaired schema, test 149 fails assertions 5, 6, 7, 8, 9, 12, 13, 14, 15, 17, 21, 22, 25, 27, 28, 29, 30 and 31, each for its intended reason. The causes are:
-- the forged owner or filing kept;
+On the unrepaired schema, test 149 fails assertions 5, 6, 7, 8, 9, 12, 13, 15, 16, 17, 18, 20, 24, 25, 28, 30, 31, 32, 33 and 34, each for its intended reason. The causes are:
+- the forged owner or filing kept, at creation or by a later UPDATE;
 - no event;
 - no exception where 23514 or 42501 was required;
 - the colleague seeing 2 rows;
@@ -234,13 +239,14 @@ On the unrepaired schema, test 149 fails assertions 5, 6, 7, 8, 9, 12, 13, 14, 1
 Positive Test Design: The tenant has two branches, each with a sales department. The employee and the trainee are placed in Main / Sales and the colleague in Other / Other Sales; a fourth employee has no branch assignment; there is one customer. Positive controls:
 - the employee's direct creations persist under the employee and Main / Sales despite a forged owner or filing scope;
 - each direct and RPC creation emits exactly one event with the RPC's payload and reaches the customer timeline;
-- `app.advance_service_request` still advances and emits once;
+- `app.advance_service_request` still advances and emits once, and an ordinary edit of the request still succeeds;
 - a session-less `requested` creation keeps its null owner and emits once with a null actor.
 
 Negative Test Design:
 - **Entry state:** `closed` entry, and `requested` with a resolution time, are refused 23514, signed in and session-less.
 - **Archive:** archived entry, and an archiver-named entry, are refused 23514.
 - **Placement:** an employee with no primary branch is refused 42501.
+- **Owner after creation:** the creator's direct UPDATE moving the owner to a colleague in another branch, or the filing scope to another branch, is refused 23514.
 - **Capability:** a trainee without CREATE_SERVICE_REQUEST is refused 42501.
 - **Tenant:** a row under another tenant is refused 42501 by RLS.
 - **Visibility:** the colleague named as owner, and the branch named as filing scope, see 0 rows.
@@ -257,31 +263,33 @@ A mutant whose installation is not proven is a harness error, never a kill.
 
 | Mutant | Change | Expected to fail |
 | --- | --- | --- |
-| M1 | the entry-state arm removed | 12, 13, 17, 25 |
-| M2 | the `resolved_at` conjunct removed | 13, 17 |
-| M3 | the archive arm removed | 14, 15, 17 |
-| M4 | the archive arm reads only `is_archived` | 15, 17 |
-| M5 | the owner derivation removed | 5, 6, 21 |
-| M6 | the placement requirement removed | 22 |
-| M7 | the event producer dropped | 7, 8, 9, 11, 17, 27, 29 |
-| M8 | the RPC keeps its own event call | 11, 17 |
+| M1 | the entry-state arm removed | 15, 16, 20, 28 |
+| M2 | the `resolved_at` conjunct removed | 16, 20 |
+| M3 | the archive arm removed | 17, 18, 20 |
+| M4 | the archive arm reads only `is_archived` | 18, 20 |
+| M5 | the owner derivation removed | 5, 6, 24 |
+| M6 | the placement requirement removed | 25 |
+| M7 | the event producer dropped | 7, 8, 9, 11, 20, 30, 32 |
+| M8 | the RPC keeps its own event call | 11, 20 |
+| M9 | the UPDATE owner arm removed | 12, 13 |
+| M10 | the UPDATE arm checks only `owner_user_id` | 13 |
 
-Prototype result: base surface `6ebd87bed615ae0c045ac9f0c9a1b9a7`. Every installation changed the surface, and every rollback returned it to the base. All eight were killed, exactly as listed.
+Prototype result: base surface `bf50c715b0de97e0ce75c8a0c3d613bc`. Every installation changed the surface, and every rollback returned it to the base. All ten were killed, exactly as listed.
 
 Post-Implementation Proof Obligation: All of the following, on the final bytes and through canonical `-Finish`:
 - the focused test, a clean reset from the main checkout, pgTAP Pass A, the declared HTTP suites, pgTAP Pass B and smoke;
-- the out-of-file mutations M1–M8 and the pre-repair causal negative;
+- the out-of-file mutations M1–M10 and the pre-repair causal negative;
 - the generated artifacts, the four CI-only guard self-tests, repository consistency and `git diff --check`;
 - fresh Primary evidence, parity evidence and the Primary ledger check.
 
 ## Implementation Steps
 
 1. **Check** that `supabase/migrations/20261010120000_a_service_request_begins_requested_under_its_creator.sql` is absent.
-   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `210d977efdb6d9ec214c7f808ebd2d5adeaf06bb1dbe442c5a142f29499da532`, md5 `cfc42c33746eab39bacf52949ce84199`, 6847 bytes.
-   - Its statements create `app.guard_service_request_creation()` with its BEFORE INSERT trigger, and `app.emit_service_request_created()` with its AFTER INSERT trigger, each with PUBLIC EXECUTE revoked. They then replace `app.create_service_request(...)` without its event call. A comment block precedes them, stating the authority and SR-1's measurements.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `67d8c76e5b7aecaa68aa5a2733113b22dfbbe2d7dfd9bc22938ca7a7d3d66198`, md5 `64c524af293b90636980f4459b0d4968`, 7957 bytes.
+   - Its statements create `app.guard_service_request_integrity()` with its BEFORE INSERT OR UPDATE trigger, and `app.emit_service_request_created()` with its AFTER INSERT trigger, each with PUBLIC EXECUTE revoked. They then replace `app.create_service_request(...)` without its event call. A comment block precedes them, stating the authority and SR-1's measurements.
    - If the target exists with different bytes, stop.
 2. **Check** that `supabase/tests/149_a_service_request_begins_requested_under_its_creator_test.sql` is absent.
-   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `67f87269178f4e2f76bb84986b72120e65f2a260971b7be46326899316d5f375`, `select plan(31);`.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `734daa1933918d4cec6c3cd04e6d118c49e3a941e011a0fb722d97cf101dae2d`, `select plan(34);`.
    - Its `-- ATTACK-CLASSES:` line reads `AUTH TENANT DOOR STATE OBSERVABILITY PRIVILEGE INPUT=N/A BUSINESS=N/A CONCURRENCY=N/A REPLAY=N/A`, with each `N/A` reason in its header.
    - Then, in `supabase/tests/83_actor_attribution_test.sql`, delete only `service_requests.owner_user_id, ` from assertion 23's expected list, giving SHA-256 `16235efe12063c32dcfe0107c8f6423f4349df8f6d3eed246e7f6b90dd2f4a34`.
    - If a target carries content other than its `3af104b` bytes or its frozen value, stop.
@@ -302,7 +310,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 4. **Check** for a `Pre-deploy readiness gate` Execution Log entry. If absent, run and record, with actual counts, exits and exact SHA-256 values:
    - a clean local reset from the main checkout; test 149 and the focused tests 83, 111 and 125;
    - pgTAP Pass A, all six HTTP suites, then pgTAP Pass B without reset; smoke and the plan sum;
-   - the mutation evidence M1–M8, and the causal negative;
+   - the mutation evidence M1–M10, and the causal negative;
    - the API-contract and map generators;
    - the scope check, `git diff --check` and repository consistency.
 
@@ -336,7 +344,7 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 7. **Check** that fresh Primary evidence contains the new migration exactly once. If so:
    - Update `reports/evidence/primary-ledger-evidence.json` from those readings only.
    - In `_ORVION_CANONICAL/manifest.md`, set `Live state` from the same readings, with 464 HTTP assertions last passed on the Step-4 date.
-   - Confirm that `supabase/tests` holds 149 files whose literal `plan(N)` values sum to 2728, then set `Suite **149 files / 2728 assertions**`. If either differs, stop.
+   - Confirm that `supabase/tests` holds 149 files whose literal `plan(N)` values sum to 2731, then set `Suite **149 files / 2731 assertions**`. If either differs, stop.
    - Set Batch 6 coverage to 36 of 78, all thirty-six at `ADVERSARIAL`.
    - Mark SR-1 `DEPLOYED` with Cert `✅`, worded without a date beneath the register's freshness line.
    - Regenerate `MASTER_API_CONTRACT.md` and `ai-map.json` (stored LF) with the canonical generators.
@@ -362,16 +370,17 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ## Acceptance Criteria
 
 - [ ] A direct INSERT by a signed-in CREATE_SERVICE_REQUEST holder persists the request under the creator and the creator's placement, whatever owner or filing scope it supplies; the colleague it named sees 0 rows; an employee with no primary branch is refused 42501.
+- [ ] After creation, a signed-in UPDATE cannot move the request's owner or filing scope (23514), while an ordinary edit succeeds.
 - [ ] A request cannot be created `closed`, with a resolution time, archived or naming an archiver, signed in or session-less (23514).
 - [ ] Each successful direct and RPC creation emits exactly one `service_request_created` event, with the RPC's state and payload and the creator (or null) as actor, and reaches the customer timeline; a refused creation emits none.
 - [ ] `app.create_service_request` differs from `3af104b`'s only by the removed event call, with signature, security mode, `search_path` and ACL unchanged. `app.advance_service_request` is byte-identical and still advances and emits once.
 - [ ] The held controls stay held: a trainee is refused at the table; a row under another tenant is refused by RLS; session-less `requested` creation keeps its null owner.
-- [ ] Mutants M1–M8 are each killed against test 149, with installation and restoration proven. The causal negative is recorded.
+- [ ] Mutants M1–M10 are each killed against test 149, with installation and restoration proven. The causal negative is recorded.
 - [ ] Test 83 assertion 23's expected list drops only `service_requests.owner_user_id`; its query, assertion 22 and every other member are unchanged.
 - [ ] SR-1 is fixed and deployed in the register. SR-2 is recorded OPEN, Low, and unrepaired. ENTRY-1 and ARCH-2 each record this surface's closure; CHAT-1 and CHAT-2 are unchanged.
 - [ ] `service_requests` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 36 of 78. No other surface's row changed.
 - [ ] The migration, test 149 and test 83 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (246 migrations; 149 files / 2728 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [ ] Primary, the recorded evidence, the manifest (246 migrations; 149 files / 2731 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
 - [ ] The manifest names Batch 6 Slice 36 and its measured target as the next capability, with no Active Change Request.
 - [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
 - [ ] No file outside Write Scope was created, modified or deleted.
@@ -397,13 +406,13 @@ None.
 ## Notes
 
 - **EARN IT.**
-  - SR-1 was reproduced by an employee proven first to hold the capability, and by test 149 failing 18 assertions for their intended reasons on the unrepaired schema.
+  - SR-1 was reproduced by an employee proven first to hold the capability, at creation and by a later owner move, and by test 149 failing 20 assertions for their intended reasons on the unrepaired schema.
   - Each arm of the guard and the producer is pinned by an installed, killed mutant.
 - **WORTH IT.** A capability holder could create customer work already closed or archived, in a narrative nobody authorized, or in a colleague's name, which the colleague's branch could then read. None of it left the event canon 26 requires.
-- **SIMPLIFY IT WITHOUT WEAKENING.** One guard and one producer, in the shape SPEC-220 already proved, plus one call removed from the RPC. Nothing is added beyond them: no table, column, grant, policy, permission, event type or shared framework. The UPDATE door, its permission charges and `app.advance_service_request` are untouched.
+- **SIMPLIFY IT WITHOUT WEAKENING.** One guard and one producer, in the shapes SPEC-220 and SPEC-216 already proved, plus one call removed from the RPC. Nothing is added beyond them: no table, column, grant, policy, permission, event type or shared framework. The UPDATE door, its permission charges and `app.advance_service_request` are untouched.
 - **Owner authorization (2026-10-10).** The owner's directive resumes Batch 6 at Slice 35 through the existing lifecycle. `CR_LIFECYCLE.md` makes `Draft -> Approved` a human act, so this Draft stops at Gate 1. Approval, when given, still does not authorize any Primary write; Gate 2 is separate.
 - **Deliberately not changed:**
-  - SR-2: the direct lifecycle UPDATE, `resolved_at`, owner moves, the reopen reason and the blank title;
+  - SR-2: the direct lifecycle UPDATE's events, `resolved_at`, the reopen reason and the blank title;
   - customer–booking coherence;
   - canon 24, 26, 27, 28 and 29;
   - CHAT-1 and CHAT-2;
