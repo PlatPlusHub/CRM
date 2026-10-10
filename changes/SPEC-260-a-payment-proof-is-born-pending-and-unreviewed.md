@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -358,7 +358,33 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-10-10 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-260 Gate 1 approval of 2026-10-10 for Draft `b9542b9a86e1d8aeab4b7c5c1bebfb7767d23ca3`, contract SHA-256 `70f5ae61fb2cfea6dd51ecadc6f3fa6bfb8e0103d90195cb6cec9d453d1a255d`, migration SHA-256 `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012`, test 152 SHA-256 `8bed225bc146d843695512a11621fb2d0380cc0308271b179a222c1eaa55dd5f`. Verified before acting:
+  - HEAD was that commit and the working tree was clean;
+  - the contract file and its committed blob both hash to that value;
+  - the frozen prototype files in the scratch worktree hash to the approved migration and test values, and the prototype's register and disposition record to `b5bbeb2b…` and `5201e336…`;
+  - Write Scope is the nine paths above.
+
+  Approval was committed at `c61e208`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 152 are absent from the repository. The register, disposition record, API contract and Primary evidence file are unchanged since `e26733a`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
+- **The owner's four observations, assessed before any step:**
+  1. **Session-less INSERT.** In the approved function the INSERT arm returns before the `auth.uid() is null` branch, so the birth rule binds every caller. Test 152 assertion 11 runs session-less as `postgres` and is refused, and mutant M4, which exempts session-less writers, is killed by assertions 11, 14 and 16. A row trigger fires for `service_role` as for any role; only `session_replication_role = replica` skips it, and only a superuser can set that. No platform path inserts a proof: `app.upload_subscription_payment_proof` is the only function that does. Step 4 also inserts a born-approved proof as `service_role` in a rolled-back transaction and records the refusal. No implementation is added.
+  2. **Concurrent platform reviews: REPRODUCED, independent of SPP-5, and not repaired by this contract.** On the local stack at `b9542b9` (prototype migration applied), two committed fixture tenants each held one pending proof uploaded through the RPC. Session A called `app.platform_review_payment_proof` session-less and held its transaction for 6 s; session B called it on the same proof 2 s later. `pg_stat_activity` showed B waiting (`wait_event_type = Lock`), and once A committed, B proceeded:
+     - **R1, A approves with terms (`professional`, `annual`), B rejects:** the proof ends `rejected` while the subscription is `active` / `annual`. The events read `subscription_payment_approved`, `subscription_activated` (`read_only -> active`), then `subscription_payment_rejected` from `pending`, a state the proof no longer held. There are two security events, `approved` and `rejected`.
+     - **R2, A approves (`annual`), B approves (`monthly`):** one proof approved twice, two `subscription_payment_approved` events, two `subscription_activated` events (the second `active -> active`), two security events, and the subscription ends on B's `monthly` terms.
+
+     The function reads the proof without a lock and updates it by id alone, so a second review that waited still writes. `47_…` assertion 16 holds only for sequential reviews. It is SUB-4's class (SPEC-250) one row earlier, reachable only by `postgres` and `service_role`. It is routed, unrepaired, to a separate corrective contract after this one, as the owner directed, and named in the Gate-2 package. The fixture tenants are erased by Step 4's reset from the main checkout. **Correction to the frozen disposition row:** Step 3's row, frozen by hash, says the race was "read from the code and not measured". It is now measured. Step 3 is applied as frozen, and the row's Next is corrected by that corrective contract.
+  3. **Review-note provenance: no consumer misattributes it.** `review_notes` has two writers, the upload RPC and the platform review, and no reader: no function, view, materialized view or policy in the local catalog, and no Edge Function or script in the repository. The review's event records the platform's own `p_notes`, never the stored column. Recorded as a non-defect; no schema change.
+  4. **Reviewer identity:** the repair derives `reviewed_by` as NULL and invents no platform identity. SPP-3 stays separate and owed on its own trigger, and the platform authorization boundary is unchanged.
+- **Worktrees.** Read-only inventory, nothing modified:
+  - `wt251` is clean at `578f3fb`;
+  - `wt255` at `33e4db6` has 6 entries in `git status`, and `C:\w234` at `6c48fbb` has 15;
+  - `owt/p2` is clean at `7fe62ed`.
+
+  Unique work cannot be ruled out in the two dirty worktrees, and all four stay untouched. `wt260` holds only this contract's prototype bytes; its results are prototype evidence, never certification.
+- **No Primary write is authorized.** Gate 2 stands before Step 6. Secondary is never contacted.
 
 ## Verification Notes
 
