@@ -148,7 +148,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -448,6 +448,59 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   - 0 tenants, 0 quotations, 0 quotation lines.
 - **Predicted delta on Primary:** ledger 247 / `f2fd129466f76536d53779a131cda874`; functions `b526e294da3ac335350d2ad3758971e4`/323; the guard's prosrc `671c776f…` to `94fbaa14ed2af00aa74dd1d89225138e`, and its comment restated; combined `2e608d8e6162a3a466583fe2bb327566`/3115. Triggers, policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. No business row is written.
 - **Stop at Gate 2.** No exact-byte owner authorization for the migration is recorded. Step 5 stops here. Secondary was not contacted.
+
+### 2026-10-10 — Human Gate 2: owner authorization
+
+- **Authority:** the owner's SPEC-258 Gate 2 authorization of 2026-10-10. It covers exactly the migration `supabase/migrations/20261010140000_a_quotation_line_stays_on_its_quotation_at_its_own_price.sql`, SHA-256 `663e759db30c6d594c08b9fae1fd6b8beb52fdcee42ff5ece0f74ab89270fd91`, MD5 `0e7fbc0eb122af8a81106824b9b0ae2b`, 5900 bytes, 94 lines, ASCII, LF-only, to Primary `vrvtsxexkiiiivlkdxzp` only, by the approved procedure. Nothing else on Primary, and nothing on Secondary `brplkqmbzffpxqgkkdzo`.
+
+### 2026-10-10 — Step 6: Primary deployment
+
+- **Local recheck, immediately before the write:**
+  - HEAD `86fd9f00e01a70bec006709a434df0578602afcf` on the chain `cb9573b → 0263b41 → 4d14161 → 86fd9f0`, 0 behind `origin/main`;
+  - since Draft `cb9573b`, this contract changed only its status lines and its Execution Log;
+  - the migration hashes to its frozen identity (5900 bytes, 94 LF, 0 CR, ASCII), and test 150 to `9eea06b3…`; the register and disposition record hash as Step 3 left them;
+  - the working tree touches only Write Scope paths.
+- **Primary recheck, read-only:**
+  - URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+  - ledger 246 `a6500a25aeb035493ac37f18cb46fb32`, latest `20261010120000`, the target absent by version and name, no row after it;
+  - all ten structural surfaces equal the recorded evidence: functions `e3d51808…`/323, combined `f56111d6…`/3115;
+  - the guard: prosrc `671c776f138de165d6f2e89a59183d63`, definition `f2b1fac44aa750a76cb79b92a1bdba04`, SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`, comment `QUO-2: …`;
+  - the table: five enabled triggers, RLS on, `authenticated` INSERT, SELECT and UPDATE only;
+  - 0 tenants, quotations, quotation lines and events.
+- **Server-side proof:** the transmitted text hashed on Primary to MD5 `0e7fbc0eb122af8a81106824b9b0ae2b`, 5900 bytes, 94 LF, 0 CR.
+- **Apply:** that same text, through the Primary connector's `apply_migration`, returned success. A fresh read showed one new row, temporary version `20261010144827`, with one stored statement, MD5 `0e7fbc0e…`, 5900 bytes, and 247 rows in all.
+- **Reconciliation:** one guarded UPDATE renamed only that row to `20261010140000`. Every guard held, and it renamed 1 row:
+  - 247 rows;
+  - exactly one row after `20261010120000`;
+  - the other 246 hashing to `a6500a25…`;
+  - the statement MD5 equal to the file's;
+  - no existing target.
+- **Fresh post-write reads:**
+  - ledger 247 `f2fd129466f76536d53779a131cda874`, latest `20261010140000`, exactly one row for the migration, the temporary version gone;
+  - functions `b526e294da3ac335350d2ad3758971e4`/323, the other nine surfaces unchanged, combined `2e608d8e6162a3a466583fe2bb327566`/3115;
+  - the guard: prosrc `94fbaa14ed2af00aa74dd1d89225138e`, definition `1478a3e9138cdccf0feb0e260353be0a` and comment MD5 `8935802527ad541b515227dfc999f766`, each equal to local; SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`;
+  - the same five enabled triggers, RLS on, unchanged grants;
+  - 0 tenants, quotations, quotation lines and events. No business-data write.
+- **Secondary** `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-10 — Step 7: evidence and measured state
+
+- **The evidence file, `reports/evidence/primary-ledger-evidence.json`,** was written from the fresh post-write readings only:
+  - `read_at` `2026-10-10T14:50:44Z`;
+  - `repository_head` `86fd9f00…`;
+  - 247 migrations, `f2fd1294…`;
+  - functions `b526e294…`/323, structural `2e608d8e…`/3115;
+  - the ledger list appends `20261010140000_a_quotation_line_stays_on_its_quotation_at_its_own_price`.
+- **Manifest:** `Live state` reads 247 migrations, the new ledger, function and structural hashes, and `Suite **150 files / 2778 assertions**`, with 464 HTTP assertions last passed 2026-10-10. Coverage reads 37 of 78, all thirty-seven at `ADVERSARIAL`. `supabase/tests` holds 150 files whose literal `plan(N)` values sum to 2778.
+- **Register:** QUO-9 and QUO-10 read `DEPLOYED to Primary under separate exact-byte owner authorization`, with Cert `✅`.
+- **Generated artifacts:** `MASTER_API_CONTRACT.md` regenerates unchanged (80 RPC endpoints, 8 views, 74 tables). `ai-map.json` is regenerated and stored LF.
+- **Runtime Checkpoint** is `DONE`.
+- **Checks:**
+  - `check_primary_ledger.ps1`: RECOVER-1 `CLEAN`;
+  - `check_database_parity_evidence.ps1`: `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`;
+  - repository consistency: `CLEAN`;
+  - `git diff --check`: exit 0.
+- **CI-only guard self-tests, on this deployed state:** `test_future_date_guard`, `test_status_contradiction_guard`, `test_primary_ledger_guard` and `test_cold_start_state_guard` each pass, exit 0 (3.6, 3.1, 0.3 and 4.1 min). The CONTROL and restore cases that the pre-deploy drift failed at Step 4 now pass.
 
 ## Verification Notes
 
