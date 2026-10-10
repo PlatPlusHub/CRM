@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -204,7 +204,13 @@ Every file is written LF. The "from" hashes are the committed bytes at `ef2e948`
 
 ## Execution Log
 
-None.
+### 2026-10-10 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-256 Gate 1 approval of 2026-10-10, conditional on a bounded Notes equivalence check. Verified before acting: the Draft commit is `2820d5c5c46841071db947500fa17512829e07f2`, the contract's SHA-256 is `96f3c0ad99e4ad20aea69ada7576c31c494d35b323c817d3bd09e82511948edf`, equal to the committed blob, the working tree was clean, and a read-only probe derived profiles `CONTROL,REPOSITORY` and returned `APPROVAL_EVIDENCE: PASS`. Approval was committed at `9a2fddf`.
+- **Notes equivalence:** every byte outside `## Notes` equals the clone-proven Draft. The Notes bullet that differs names only SPEC-255 and SPEC-256, both already allocated, and the whole contract names the same set of SPEC identities as the clone-proven Draft. Reservation keys on the literal identity token, so the bare error string in that bullet reserves nothing. At HEAD the allocator's cursor is this contract and the next free identity follows it directly, unmentioned in any tracked file.
+- **Publication range:** `origin/main..HEAD` holds 27 commits with 0 merges and is 0 behind. It carries SPEC-251's, SPEC-252's, SPEC-254's and SPEC-255's commits, none rewritten.
+- **Preconditions:** each of the four files in this checkout equals its "from" hash, and each prototype file equals its "to" hash.
+- **No Primary write is authorized or expected.** Secondary is never contacted.
 
 ## Verification Notes
 
