@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -196,11 +196,11 @@ Every file is written LF. The "from" hashes are the committed bytes at `ef2e948`
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_agent_continuity.ps1` (`dbfbf8a9…`) decides range allocation activation once from the original base, judges each commit's allocation against its own first parent whenever that base or that parent carries the marker, and makes no net-diff allocation call in range mode; its local allocation call is unchanged.
-- [ ] `scripts/test_agent_continuity.ps1` (`057dc455…`) carries cases 191c to 191l and mutants M1 to M5 in family `K-range`, no longer carries `K first-parent activation marker`, anchors the two ORIGIN mutants it re-targets on the repaired lines, and passes in `-Finish`.
-- [ ] `CR_LIFECYCLE.md` (`cdc316bb…`) states that a range whose base carries the marker judges every commit even where an intermediate state lacks it, and its three marker lines are byte-unchanged.
-- [ ] The register (`b9f1ddeb…`) records CTRL-7 fixed by this contract in a new row and a new dated `Last updated:` line, demoting the previous one to `Previously:`, and no other row changes.
-- [ ] At Complete, the manifest names this contract, its `Next capability` is still Batch 6 Slice 35, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
+- [x] `scripts/check_agent_continuity.ps1` (`dbfbf8a9…`) decides range allocation activation once from the original base, judges each commit's allocation against its own first parent whenever that base or that parent carries the marker, and makes no net-diff allocation call in range mode; its local allocation call is unchanged.
+- [x] `scripts/test_agent_continuity.ps1` (`057dc455…`) carries cases 191c to 191l and mutants M1 to M5 in family `K-range`, no longer carries `K first-parent activation marker`, anchors the two ORIGIN mutants it re-targets on the repaired lines, and passes in `-Finish`.
+- [x] `CR_LIFECYCLE.md` (`cdc316bb…`) states that a range whose base carries the marker judges every commit even where an intermediate state lacks it, and its three marker lines are byte-unchanged.
+- [x] The register (`b9f1ddeb…`) records CTRL-7 fixed by this contract in a new row and a new dated `Last updated:` line, demoting the previous one to `Previously:`, and no other row changes.
+- [x] At Complete, the manifest names this contract, its `Next capability` is still Batch 6 Slice 35, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
 
 ## Execution Log
 
@@ -218,21 +218,74 @@ Every file is written LF. The "from" hashes are the committed bytes at `ef2e948`
 - **Applied exactly as prototyped.** All four full SHA-256s equal the frozen "to" values: `dbfbf8a9…` (evaluator), `057dc455…` (suite), `cdc316bb…` (`CR_LIFECYCLE.md`), `b9f1ddeb…` (register). The files are byte copies of the prototype the disposable clone certified.
 - **Diff:** 4 files changed, 123 insertions(+), 14 deletions(-). Every file is LF, and `git diff --check` is clean.
 
+### 2026-10-10 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once on the clean committed tree at `49eb169`, through `scripts/run_timed.ps1` with `concurrent=0` from start to end, watched by `scripts/watch_run.ps1 -QuietMinutes 10`. No other verification job ran beside it.
+- Every step printed `PASS`:
+
+  | Step | Time |
+  | --- | --- |
+  | `test_agent_continuity.ps1` | 34.6 min |
+  | cold-start guard | 6.1 min |
+  | status-contradiction guard | 3.8 min |
+  | Primary-ledger guard | 0.3 min |
+  | future-date guard | 3.3 min |
+  | repository consistency, `git diff --check` and `scripts/readiness_population.ps1` | 0.4 min together |
+
+  The result was `LOCAL_CERTIFY: READY` in 49.0 min, `exit=0`. This is this contract's own certification. The disposable-clone runs recorded in Notes remain supporting evidence only.
+
+### 2026-10-10 — Step 4 executed
+
+- The manifest's `Last Completed` names this contract, and its Active pointer is `None.`. `Current Module`, `Next capability` (Batch 6 Slice 35) and the open-decision line (MAIL-1, RET-1, PH8-10) are byte-unchanged. The manifest is 6779 characters, with a longest line of 1151.
+- `ai-map.json` was regenerated with `scripts/generate-ai-map.ps1` and converted to LF.
+- **Cosmetic, recorded rather than repaired:** in the Steps 1-2 entry above, the inline code naming the `CR_LIFECYCLE.md` check lost its outer double backticks, so it renders as two spans. The check text it names is exact, and the log is append-only.
+
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review
 
+Checked against the committed tree at `49eb169` and the Step 4 working state, not against the Execution Log:
+
+1. **Evaluator.** Its blob equals `dbfbf8a9…`. Against `ef2e948` it changes exactly two non-comment lines:
+   - the per-commit gate reads `if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){`;
+   - the range-mode net-diff call `elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}` is replaced by `$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)`, set from the original base before `Validate-PublicationSegments` substitutes segment bounds.
+
+   The local call `if(-not $BaseRef){Validate-SpecAllocation $records $base -CheckOrigination}` is unchanged, and no other `Validate-SpecAllocation` call exists in range mode.
+2. **Suite.** Its blob equals `057dc455…`.
+   - It carries cases 191c to 191l, each popped into family `K-range`.
+   - It carries the five new `K-range` mutants M1 to M5 through `MutationKillRangeAt`.
+   - It no longer carries `K first-parent activation marker`.
+   - The two ORIGIN mutants it re-targets are anchored on the repaired gate and on the activation assignment.
+   - It passed inside this contract's `-Finish`.
+3. **`CR_LIFECYCLE.md`.** Its blob equals `cdc316bb…`. It is one line changed against `ef2e948`, the allocation-marker paragraph with the added sentence. The `SPEC Allocation Enforcement`, `Historical CR Immutability Enforcement` and `Evidence Character Enforcement` lines equal `ef2e948`'s, and the first two equal `origin/main`'s.
+4. **Register.** Its blob equals `b9f1ddeb…`. Against `ef2e948` the changes are exactly:
+   - the new CTRL-7 row, Medium, fixed by this contract;
+   - a new `Last updated: 2026-10-10` line;
+   - the previous line demoted to `Previously:`.
+
+   No other row changes.
+5. **Manifest at Complete.** It is as Step 4 records, within 7000 characters and 1200 per line, and `ai-map.json` holds no CR.
+6. **Scope.** This contract's commits change only its own file under `changes/`. SPEC-255, SPEC-254, SPEC-252 and SPEC-251 are unmodified by it. `origin/main..HEAD` holds 30 commits, no merges, 0 behind. It touches 13 paths, none under `supabase/`, and each is in this Write Scope or in the Write Scope of the earlier contract in the same range that changed it. No Primary or Secondary access occurred.
+
+Review Gate:
+- Steps 1 to 4 match the Implementation Steps byte for byte.
+- No section was restructured.
+- Nothing was guessed.
+- The cosmetic rendering flaw is recorded in the Execution Log.
+- Supersedes / Depends On names no superseded file.
+
+Verdict: Confirmed Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
