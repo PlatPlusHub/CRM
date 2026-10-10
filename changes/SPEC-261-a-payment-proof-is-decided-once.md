@@ -397,6 +397,63 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
   All stay untouched.
 - **Gate 2 stands before Step 6.** The same authorization grants an advance, one-time, exact-byte Gate 2 for this migration to Primary `vrvtsxexkiiiivlkdxzp` only. It takes effect only after Step 4's readiness requirements pass, and it is recorded at Step 5 only if they do. Secondary is never contacted.
 
+### 2026-10-11 — Steps 1–3 applied; pre-deploy readiness gate
+
+- **Steps 1–3.** The migration, test 153 and the proof were absent or carried their `39ab45a` bytes. They were written byte-for-byte from the frozen prototype. Test 152, the register and the disposition record received exactly Consumer Closure's edits (the prototype's anchored-edit script, each anchor matching once). All six files hash to their frozen values:
+  - migration `fa652cddd384989256ddbdef593486b51a7bb23739ae1639c5ab83a342a9ca1c`, MD5 `2539aa91d9bff705475fb465eaad33c4`, 4714 bytes;
+  - test 153 `679b869d…`; the proof `3c13a698…`; test 152 `ab72f990…`;
+  - register `4794c750…`; disposition record `b355ab2b…`.
+
+  Each is LF with no CR or other control byte.
+- **Byte identity.** Those six files are the bytes the Pre-Approval evidence measured. That evidence is carried by identity, not re-run: the clean reset, pgTAP A/B 153 / 2815, the proof 15/0, smoke, the causal negative (`11 passed, 4 failed`) and M1–M6.
+- **The narrow check.** The pending migration was applied to the local stack with `npx supabase migration up`: ledger 249, latest `20261010210000`. `npx supabase test db` on tests 153, 152 and 47 alone: `Files=3, Tests=40`, `Result: PASS`.
+  - The function reads `prosrc` MD5 `2cbc94867ea6ce5dc81cf5cd98511b25`, SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres,service_role=X/postgres}`, no comment, and the same identity arguments and `void` result.
+  - `parity_surface.sql` locally: functions `724baac791a6a79c7d4328835d800f50`/323, combined `5a9ed7ff90852acec9a128b7fe4f8c5a`/3115. The other nine surfaces each equal the recorded Primary value. Ledger 249 `323eae75c4a400b4cc6f13317ec21611`.
+- **The four CI-only guard self-tests, on this working tree:** the four run with Steps 1–3 applied:
+  - `test_future_date_guard` passed 18/0 (exit 0, 3.0 min);
+  - `test_status_contradiction_guard` passed 33/0 (exit 0, 2.9 min);
+  - `test_primary_ledger_guard` failed only its two CONTROL cases, 11/2 (0.2 min);
+  - `test_cold_start_state_guard` failed only its nine CONTROL, second-direction CONTROL and restore cases (CONTROL; A2, C2 and E CONTROL; A-, B-, C- and D-restore; second direction), 25/9 (3.7 min).
+
+  Each failing case requires an untouched copy of the repository to be CLEAN, which the drift below prevents until Step 7. Every mutation case passed. This is the same pattern as SPEC-260's Step 4. Step 7's run, where each must pass, stays mandatory.
+- **Scope.** `git status` shows exactly the six Step 1–3 paths, all in Write Scope, and the stash is empty. `git diff --check` exit 0.
+- **Repository consistency:** `REPOSITORY CONSISTENCY: 6 issue(s)`. This is exactly the pre-deploy drift that Consumer Closure lists:
+  - 248 vs 249 migrations;
+  - latest `20261010160000` vs `20261010210000`;
+  - fingerprint `207f3fad…` vs `323eae75…`;
+  - 152 vs 153 files, and 2810 vs 2815 assertions;
+  - RECOVER-1 ledger evidence.
+
+  The counter counts RECOVER-1 once; Consumer Closure's "7" counted its two internal issues separately. Checks 21–28 are clean.
+- **Fresh Primary baseline, read-only (`vrvtsxexkiiiivlkdxzp`, URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`):**
+  - ledger 248 `207f3fad1a5d2a5b7d640f598c2050e9`, latest `20261010160000`; no row for the target version or name, and none after `20261010160000`;
+  - functions (Check L2/P2) `b3d4fc61413a43ef1ea60bc27a323b6e`/323;
+  - `parity_surface.sql`'s ten surfaces equal the recorded evidence, combined `c93fb668bb243fa19274bed2605889ab`/3115;
+  - `app.platform_review_payment_proof`: `prosrc` MD5 `8d81c756333a8f13e2d5715111310a64`, definition MD5 `9c8f1a3dcc08160206cad2f626d4b16f`. It is SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres,service_role=X/postgres}`, with no comment and the same identity arguments as locally;
+  - `subscription_payment_proofs`: RLS on (not forced), 3 policies, and three triggers all enabled (`derive_reviewer`, `derive_uploader`, `enforce_catalog_codes`). Grants: `authenticated` INSERT, SELECT and UPDATE; `service_role` DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE;
+  - 0 tenants, 0 subscriptions, 0 payment proofs.
+- **Predicted delta on Primary:**
+  - ledger 249 / `323eae75c4a400b4cc6f13317ec21611`, latest `20261010210000`;
+  - functions `724baac791a6a79c7d4328835d800f50`/323, combined `5a9ed7ff90852acec9a128b7fe4f8c5a`/3115;
+  - the review's `prosrc` becoming the transmitted text, MD5 `2cbc94867ea6ce5dc81cf5cd98511b25`, as locally.
+
+  Its security mode, owner, configuration, ACL and comment, and the table's triggers, policies, RLS and grants, are unchanged. No other surface moves, and no business row is written.
+
+### 2026-10-11 — Human Gate 2: owner authorization
+
+- **Authority:** the owner's one-time SPEC-261 completion authorization of 2026-10-11, §3. It grants an advance, one-time, exact-byte Gate 2 for exactly the migration `supabase/migrations/20261010210000_a_payment_proof_is_decided_once.sql`: SHA-256 `fa652cddd384989256ddbdef593486b51a7bb23739ae1639c5ab83a342a9ca1c`, MD5 `2539aa91d9bff705475fb465eaad33c4`, 4714 bytes, LF. It covers Primary `vrvtsxexkiiiivlkdxzp` only, by the approved procedure.
+- **Its condition:** it takes effect only after every Gate 2 readiness requirement has passed. The pre-deploy readiness gate above records each requirement the authorization names:
+  - the frozen bytes and both hashes;
+  - the local readiness and adversarial evidence;
+  - the current Primary ledger and the target's absence;
+  - the function's definition, owner, privileges, security mode and `search_path`, and the structural surfaces;
+  - local-to-Primary baseline agreement and the exact predicted delta;
+  - zero business rows;
+  - an unchanged Write Scope.
+
+  Each held. No lifecycle rule requires an owner decision made after readiness: Step 5 requires exact owner authorization for the migration SHA-256 to be recorded in this log, and it now is.
+- **Not authorized:** any other migration or Primary change, SPP-3, Slice 39, another Change Request, or any change to ORVION's approval policy. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
 ## Verification Notes
 
 None.
