@@ -1,0 +1,398 @@
+# Change Request — SPEC-260
+
+## Status
+
+[x] Draft
+[ ] Approved
+[ ] In Progress
+[ ] Complete
+[ ] Cancelled
+
+## Objective
+
+Foundation Completion Programme Batch 6 Slice 38: give `public.subscription_payment_proofs` a truthful disposition and close **SPP-5**.
+
+The surface is canon 31's `subscription_payment_proofs`: a tenant's bank-transfer proof for a subscription renewal, which the Platform Owner reviews. `authenticated` holds table-level INSERT, SELECT and UPDATE, and `app.upload_subscription_payment_proof` is SECURITY INVOKER through that same grant, so PostgREST serves the table beside it.
+
+After this change one invariant holds on both doors and for every caller: **a payment proof is born `pending` and unreviewed, with no reviewer, and only `app.platform_review_payment_proof` decides it.**
+
+Record the surface `AUDITED-OPEN`, because SPP-3 (the platform reviewer's identity) stays owed on its own trigger.
+
+This contract does not touch any grant, policy, constraint, permission charge, state transition, canon document, other surface, n8n or any Phase-8 work.
+
+## Business Reason
+
+### Selection
+`scripts/batch6_select_target.ps1`, run at `e26733a`, lists 40 surfaces still `NOT-RECORDED`. `subscription_payment_proofs` and `complaints` tie on both of its sort keys: Exposure 8 and coverage 48 (Score -40 each).
+- The order inside the tie is not a measurement. The catalog query returns rows in `relname` order, with `complaints` first, and the printed order reverses it, so `Sort-Object` did not preserve its input on equal keys.
+- The tie was broken on the control shape read from the catalog.
+  - `complaints` carries seven triggers: a capability guard, the status-transition machine with 9 recorded transitions, the subscription write gate, archive authority, catalog codes, `created_by` derivation and `updated_at`.
+  - `subscription_payment_proofs` carries three: catalog codes and two attribution derivations. It has no state or entry rule, holds a direct INSERT and UPDATE grant, and sits where a payment proof leads to paid access.
+
+### Authority
+- **Canon 28 (Subscription permissions, Notes):** "Subscription proof review is platform owner action. Tenant users may upload proof but cannot approve their own subscription renewal." REVIEW_SUBSCRIPTION_PAYMENT is held by no role, and SPEC-227 (`20260927120000`, SUB-3) refuses granting it.
+- **Canon 31:** `reviewed_by nullable`, `reviewed_at nullable`.
+- **The sole sanctioned writer, `app.upload_subscription_payment_proof`** (WP-04-B, `202607054500`): it charges MANAGE_TENANT_SETTINGS and writes `pending` with no review time. **The sole decider, `app.platform_review_payment_proof`:** session-less and SECURITY DEFINER, it decides only a `pending` proof and does not fill `reviewed_by`, which cannot name a platform operator (SPP-3).
+- **FX-4** (`202607058900`) added `app.derive_proof_reviewer` so that the reviewer is derived, never accepted, and so that `83_…` assertion 22 holds with no exemption list.
+
+### SPP-5 (Medium) — a payment proof was born already reviewed
+Measured at `e26733a` on the local stack in rolled-back transactions, by a tenant `owner` holding MANAGE_TENANT_SETTINGS, on a lapsed tenant:
+- **The upload named its uploader as reviewer.** The RPC's own proof was born `pending` with `reviewed_by` set to the owner who uploaded it. FX-4's trigger copied `app.derive_created_by` and stamps the session user on INSERT. The platform's session-less approval then left that name in place, so every approved proof recorded the tenant as its reviewer. FX-4 and SPP-3 record the column as NULL after every review, and on this path it never was.
+- **The table door admitted a decided proof.** A direct INSERT created a proof born `approved`, uploaded 40 days earlier and reviewed 39 days earlier, with review notes "transfer confirmed by platform". Another was born `rejected`. Neither passed through the platform review, which then refuses either as already decided.
+- **Held:** the owner's UPDATE to `approved` changed 0 rows (no role holds REVIEW_SUBSCRIPTION_PAYMENT), and DELETE has no grant.
+
+Canon 28 forbids exactly what the record then said: the tenant decided its own renewal proof, on every proof through the sanctioned door. A tenant could also file a platform decision the platform never made. Medium, as ENTRY-1's born-decided rows are. It stays below SPP-2's High: only the holders of MANAGE_TENANT_SETTINGS, who upload proofs anyway, reach the door, and nothing reads a proof's status to grant access. Read-only on Primary `vrvtsxexkiiiivlkdxzp`: 0 proofs, so no stored row carries the false name.
+
+It is ENTRY-1's class on a table outside ENTRY-1's list, which names only tables with a transition machine. ENTRY-1's row and count are unchanged.
+
+### The repair
+One migration replaces the body of `app.derive_proof_reviewer()`. That function is already the row-level BEFORE INSERT OR UPDATE trigger `subscription_payment_proofs_derive_reviewer`: SECURITY INVOKER, `search_path=""`, owner `postgres`, ACL `{postgres=X/postgres}`.
+- **On INSERT, for every caller:** a `status_code` other than `pending`, or any `reviewed_at`, is refused (23514, "a payment proof is created pending and unreviewed; only app.platform_review_payment_proof decides it"), and `reviewed_by` is derived as NULL.
+- **On UPDATE:** unchanged. A session-less write keeps its values, and a signed-in one stamps the reviewer once.
+
+No table, column, grant, policy, constraint, trigger, permission, event type, catalog value or state transition is added or changed. `app.upload_subscription_payment_proof` and `app.platform_review_payment_proof` are unchanged.
+
+### Rejected
+- **A policy WITH CHECK arm (`status_code = 'pending'`):** it binds only RLS-subject callers, answers with RLS's generic message, and re-transcribes a policy that test 50 pins. It also leaves the reviewer stamp, which a policy cannot repair.
+- **A second trigger for the birth rule:** the reviewer trigger already fires on INSERT for every caller and already owns the review columns.
+- **Silently setting `pending`:** a forged decision would be quietly turned into a pending proof. Refusing names the conflict, as SPEC-257 chose for ENTRY-1.
+- **Refusing a stated `reviewed_by`:** an actor column is derived, never accepted (FX-3, FX-4). The stated value is discarded, as `uploaded_by`'s already is.
+- **Dropping the reviewer trigger:** `83_…` assertion 22 requires a BEFORE trigger deriving every actor column, with no exemption list, and FX-4's reason for the UPDATE arm stands.
+- **Revoking INSERT and making the upload RPC SECURITY DEFINER:** that is a larger change and adds a definer door, which defends nothing this repair does not.
+- **Locking the proof in `app.platform_review_payment_proof`:** see Held.
+
+### Held, recorded so a later slice does not rediscover it
+- **Authority:** an `employee` without MANAGE_TENANT_SETTINGS is refused 42501 (`47_…` 19). REVIEW_SUBSCRIPTION_PAYMENT cannot be granted (`131_…`), and the owner's UPDATE is pinned by test 152 assertion 10.
+- **Tenant:** a proof under another tenant is refused by RLS (assertion 9). The foreign keys are tenant-qualified.
+- **Replay:** a second review of a decided proof is refused (`47_…` 16).
+- **Observability:** a direct pending proof emits no upload event and no document link. It can only delay its own uploader's renewal, because the platform reviews a proof by its id.
+- **`uploaded_at`:** writable at the table door like every `created_at`, and read by no function, view or policy.
+- **Document:** a direct proof may name any document of its own tenant, which the owner can already read and upload.
+- **`review_notes`:** the upload stores its note in `review_notes`, and the platform's review keeps it unless it writes its own. That is the RPC's design, and no reader is misled about who decided.
+- **Write gate:** the table has no subscription write gate, by design, because a lapsed tenant must pay its way back (`35_…`).
+- **Concurrency, read from the code and not measured:** `app.platform_review_payment_proof` reads the proof without a lock, so two concurrent reviews could each pass the `pending` check. Only `postgres` and `service_role` can execute it, and there is one platform operator. The disposition row routes it to SPP-3's trigger (a second platform operator or a platform console), where the reviewer's identity is also owed.
+
+## Risks
+
+- **Changed INSERT semantics, for every caller.** A proof inserted with a status other than `pending`, or with a review time, is refused 23514, and a stated `reviewed_by` is discarded.
+  - Every pgTAP fixture that writes a proof directly writes `pending` with no review time (tests 35, 47 and 62).
+  - The only HTTP producer is the RPC (`verify_journey_branches.ps1`).
+  - The whole suite passes unchanged on the prototype.
+  - A future historical import of decided proofs would have to insert `pending` and then review, which no path does today.
+- **Mechanism substitution.** A proof inserted with an unknown status code now meets this guard's 23514 before `app.enforce_catalog_codes`, because the triggers fire in name order. No test inserts an unknown status.
+- **Primary deployment** replaces one function body and nothing else. It requires separate exact-byte owner authorization (Gate 2); approving this contract does not authorize it. Primary holds no proofs.
+- **Workstation, not in scope:** resets for this contract run from the main checkout. A reset from a scratch git worktree leaves local storage without `bucketid_objname`.
+
+## Supersedes / Depends On
+
+None.
+
+## Write Scope
+
+- `changes/SPEC-260-a-payment-proof-is-born-pending-and-unreviewed.md`
+- `supabase/migrations/20261010160000_a_payment_proof_is_born_pending_and_unreviewed.sql`
+- `supabase/tests/152_a_payment_proof_is_born_pending_and_unreviewed_test.sql`
+- `reports/master/MASTER_GAP_REGISTER.md`
+- `reports/master/MASTER_SURFACE_DISPOSITION.md`
+- `reports/master/MASTER_API_CONTRACT.md`
+- `reports/evidence/primary-ledger-evidence.json`
+- `_ORVION_CANONICAL/manifest.md`
+- `ai-map.json`
+
+## Out of Scope — Files Forbidden to Modify
+
+- `supabase/migrations/202607054000_subscription_lifecycle_and_platform_authority.sql`
+- `supabase/migrations/202607054500_subscription_payment_proof_lifecycle.sql`
+- `supabase/migrations/202607054800_subscription_payment_proof_scope.sql`
+- `supabase/migrations/202607056500_action_attributions_are_derived.sql`
+- `supabase/migrations/202607058900_who_did_this_is_derived_never_accepted.sql`
+- `supabase/migrations/20260927120000_platform_authority_cannot_be_granted.sql`
+- `supabase/tests/35_subscription_write_gate_test.sql`
+- `supabase/tests/47_payment_proof_lifecycle_test.sql`
+- `supabase/tests/48_document_storage_test.sql`
+- `supabase/tests/50_policy_role_scope_test.sql`
+- `supabase/tests/62_action_attribution_test.sql`
+- `supabase/tests/80_subscription_licensing_test.sql`
+- `supabase/tests/83_actor_attribution_test.sql`
+- `supabase/tests/88_parent_state_on_every_door_test.sql`
+- `supabase/tests/89_finance_periphery_parent_state_test.sql`
+- `supabase/tests/106_otp_challenge_subject_authority_test.sql`
+- `supabase/tests/131_platform_authority_cannot_be_granted_test.sql`
+- `reports/architecture-decision-records.md`
+- `reports/master/MASTER_EXECUTION_PLAN.md`
+- `_ORVION_CANONICAL/09_saas_plans_and_access.md`
+- `_ORVION_CANONICAL/26_state_machines.md`
+- `_ORVION_CANONICAL/27_event_catalog.md`
+- `_ORVION_CANONICAL/28_permissions_matrix.md`
+- `_ORVION_CANONICAL/31_schema_draft.md`
+- `scripts/verify_database.sql`
+- `scripts/verify_api_end_to_end.ps1`
+- `scripts/verify_care_journeys.ps1`
+- `scripts/verify_journey_branches.ps1`
+- `scripts/verify_lifecycle_branches.ps1`
+- `scripts/verify_role_journeys.ps1`
+- `scripts/verify_storage_end_to_end.ps1`
+- `scripts/batch6_select_target.ps1`
+- `scripts/check_agent_continuity.ps1`
+- `scripts/check_repository_consistency.ps1`
+- `scripts/generate-ai-map.ps1`
+- `scripts/generate-api-contract.ps1`
+
+## Required Reading
+
+- `AGENTS.md`; `CR_LIFECYCLE.md`; `ENGINEERING_METHOD.md` §§1–5
+- `_ORVION_CANONICAL/28_permissions_matrix.md` (Subscription permissions and Notes); `_ORVION_CANONICAL/31_schema_draft.md` (`subscription_payment_proofs`); `_ORVION_CANONICAL/09_saas_plans_and_access.md`
+- `reports/master/MASTER_GAP_REGISTER.md` (SPP-1/SPP-2, SPP-3, FX-4, PP-4, DOC-6, SUB-3, ENTRY-1, PAR-4); `reports/master/MASTER_SURFACE_DISPOSITION.md`; `reports/master/MASTER_EXECUTION_PLAN.md` Batch 6 method and EC-1…EC-11
+- `supabase/migrations/202607054500_subscription_payment_proof_lifecycle.sql`; `supabase/migrations/202607058900_who_did_this_is_derived_never_accepted.sql`; `supabase/migrations/20260927120000_platform_authority_cannot_be_granted.sql`
+- Current local `app.upload_subscription_payment_proof`, `app.platform_review_payment_proof`, `app.derive_proof_reviewer`, `app.derive_proof_uploader`, and the table's grants, policies and triggers
+- Tests 35, 47, 62, 83 and 131
+
+## Runtime Checkpoint
+
+Resume Step: 1
+Blocker: None
+Recovery Attempt: 0
+
+## Required Capabilities
+
+- docker
+- supabase-local
+- supabase-primary
+- github
+
+## Additional Verification
+
+- `pwsh -NoProfile -File scripts/verify_journey_branches.ps1`
+
+## Pre-Approval Evidence
+
+Change Class: Significant
+
+### Consumer Closure
+
+Applicability: APPLICABLE
+
+| Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
+| --- | --- | --- | --- |
+| A proof is born `pending`, with no review time, for every caller | `app.upload_subscription_payment_proof`; `app.platform_review_payment_proof`; the table's INSERT door | WRITE | The prototype is a scratch worktree at `e26733a`, with the migration applied with its ledger row on a stack reset from the main checkout. Migration SHA-256 `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012`, md5 `f417ebb93516cb2c82f2b8e34da654cc`, 3208 bytes, 54 LF lines, ASCII. A proof born `approved` (backdated, with forged review notes), born `rejected`, or `pending` with a review time was refused 23514, signed in and session-less. The RPC's upload and a direct `pending` proof were accepted. |
+| The reviewer is NULL at birth | `reviewed_by`; FX-4; SPP-3; `83_…` assertion 22 | WRITE | The RPC's proof and a direct proof stating the employee as reviewer each read no reviewer. After the platform's approval the proof reads `approved`, with no reviewer and a review time, and the subscription `active`. The function still assigns `new.reviewed_by`, so test 83 passes 23/23. |
+| The UPDATE door and the platform review | `scope_update`; SUB-3; the session-less arm | VERIFY | Unchanged: the owner's UPDATE to `approved` changes nothing; the platform review approves and reactivates (test 152 assertions 10, 12 and 13; test 47 19/19; test 131 31/31). |
+| Tests naming this table or its RPCs | tests 35, 47, 48, 50, 62, 80, 83, 88, 89, 106, 131 | VERIFY | On the final bytes each passes unchanged: 27/27, 19/19, 12/12, 5/5, 9/9, 19/19, 23/23, 25/25, 21/21, 16/16, 31/31. |
+| Test 152 | `supabase/tests` | WRITE | SHA-256 `8bed225bc146d843695512a11621fb2d0380cc0308271b179a222c1eaa55dd5f`, `plan(16)`, 12369 bytes, 195 LF lines, ASCII: 16/16 on the prototype. With FX-4's pre-repair function installed inside its own transaction, it fails assertions 3, 4, 5, 6, 8, 11, 13, 14 and 16. |
+| The generated API contract | `MASTER_API_CONTRACT.md` | WRITE | The canonical generator against the prototype is byte-identical to the committed contract (`d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`): 80 RPC endpoints (80 with HTTP evidence), 8 views and 74 tables. Step 7 regenerates it, and it stays unchanged. |
+| Suite, HTTP and smoke | full pgTAP; the six HTTP suites; `scripts/verify_database.sql` | VERIFY | On the prototype, in `-Finish`'s order on a main-checkout reset: pgTAP Pass A `Files=152, Tests=2810` PASS; HTTP 35 + 40 + 85 + 122 + 122 + 60 = 464 passed, 0 failed; Pass B 152 / 2810 PASS; smoke `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`; plan sum 152 / 2810. That run carried a migration and test 152 differing from the final bytes only in comment lines, so the function's `prosrc` was identical. Test 152, the focused tests, the causal negative and M1–M4 were rerun on the final bytes. |
+| Structural surface on Primary | `scripts/parity_surface.sql`; `primary-ledger-evidence.json` | WRITE | With the migration, the function surface becomes `b3d4fc61413a43ef1ea60bc27a323b6e`/323 and the combined surface `c93fb668bb243fa19274bed2605889ab`/3115. The other nine surfaces each equal the recorded Primary value. The 248-file ledger fingerprint is `207f3fad1a5d2a5b7d640f598c2050e9`. `app.derive_proof_reviewer`'s `prosrc` md5 moves from `037078ce190d9980d8429f74ec63545c` (read on Primary 2026-10-10) to `b3cda129c52b83db7739125b93c3e112`. It stays SECURITY INVOKER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres}`. |
+| Measured state that moves | manifest (`Live state`, suite figure, coverage, Last Completed, Current Module, Next capability); `primary-ledger-evidence.json`; `ai-map.json` | WRITE | 247 → 248 migrations, latest `20261010160000`; 151 → 152 files and 2794 → 2810 assertions; coverage 38 → 39 of 78. HTTP (464), tables (78), catalog (71/622), views (8) and client RPCs (80) do not move. Primary values are written only from fresh post-deploy readings. |
+| SPP-5 fixed; FX-4 and SPP-3 corrected; the surface `AUDITED-OPEN` | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; Checks 2, 21, 22, 24, 25 | WRITE | Test 152's `-- ATTACK-CLASSES:` line and negative assertions satisfy Check 24. SPP-5's Owner field is `—`, so Check 25 reads no owner decision. The coverage line becomes 16 `AUDITED`, 20 `AUDITED-OPEN` and 39 `NOT-RECORDED`. On the prototype the record edits produce register SHA-256 `b5bbeb2b5a6b0aabc9d54cd28d8e5621041aeb55031caabae3c3688a5a92af27` and disposition SHA-256 `5201e33682f5b236ecbdc0625a7b5755e78459d062871d5b36cd5dca5f0648d4`. |
+| Repository consistency | `scripts/check_repository_consistency.ps1` | VERIFY | On the prototype, exactly the pre-deploy measured-state drift: `manifest says 247 migrations, repository holds 248`; latest `20261010140000` vs `20261010160000`; ledger fingerprint `f2fd1294…` vs `207f3fad…`; `151 test files` vs 152; `2794 assertions` vs 2810; RECOVER-1 ledger evidence (2). Checks 21 to 28 are clean, and `git diff --check` is clean. These are not waived: Step 7 makes them true, and Step 8 requires them green. |
+| CI-only guard self-tests | `scripts/test_*_guard.ps1` (four) | VERIFY | Not run on the prototype, where the drift above can only fail their CONTROL cases. They read the manifest, the register, the disposition record, the evidence file and the migrations, all in Write Scope. Step 4 runs all four on the working tree, where only that drift may fail; Step 7 runs them on the deployed state, where each must pass. |
+
+Unresolved Material Consumers: None
+
+### Execution-Boundary Satisfiability
+
+Applicability: APPLICABLE
+
+Irreversible Action Step: Step 6 (Primary deployment)
+
+| Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
+| --- | --- | --- | --- | --- |
+| Clean reset, focused tests, pgTAP A/B, the six HTTP suites, smoke and mutation proof | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 4 |
+| SPP-5 and the disposition describe the local evidence | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 4 |
+| Manifest, recorded Primary evidence and Primary ledger agree | AFTER_IRREVERSIBLE_ACTION | Step 1 | Step 7 | Step 8 |
+| Manifest suite and coverage figures equal the files and the disposition record | BEFORE_COMPLETION | Step 2 | Step 7 | Step 8 |
+| API contract and map match their generators | BEFORE_COMPLETION | Step 1 | Step 7 | Step 8 |
+| The four CI-only guard self-tests pass | BEFORE_COMPLETION | Step 1 | Step 7 | Step 8 |
+
+### Permanent-Control Admission
+
+Applicability: APPLICABLE
+
+Existing Mechanism Reusable: YES
+
+Existing Mechanism: `app.derive_proof_reviewer()` is already the table's row-level BEFORE INSERT OR UPDATE trigger for every caller, and already owns the review columns (FX-4). Its INSERT arm stamped the session user as reviewer and judged nothing else. `app.enforce_catalog_codes` accepts any approval status, and the INSERT policy judges only the tenant and MANAGE_TENANT_SETTINGS. This contract changes that one function's INSERT arm and adds no trigger, function, constraint or framework.
+
+Added Property: Through either door and for every caller, a payment proof is born `pending`, with no review time and no reviewer; only `app.platform_review_payment_proof` decides it, and that decision records no tenant reviewer.
+
+Causal Negative: These are the pre-repair measurements in Business Reason, at `e26733a`:
+- the RPC's proof born with its uploader as reviewer, kept through the platform's approval;
+- a direct proof born `approved`, backdated, with forged review notes;
+- a direct proof born `rejected`.
+
+With FX-4's pre-repair function (`202607058900`, its exact text) installed inside test 152's own transaction, test 152 fails assertions 3, 4, 5, 6, 8, 11, 13, 14 and 16, each for its intended reason: the uploader named as reviewer, no exception where 23514 was required, the stated reviewer replaced by the session user, decided rows left behind, and the restored trigger not refusing.
+
+Positive Test Design: One lapsed tenant with one branch and department; an `owner` and an `employee`; a rival tenant with a subscription and a payment-proof document. Positive controls:
+- the owner is proven first (`app.current_user_id()`, MANAGE_TENANT_SETTINGS and VIEW_SUBSCRIPTION_STATUS held, REVIEW_SUBSCRIPTION_PAYMENT not);
+- the RPC uploads a pending proof attributed to its uploader;
+- a direct pending proof lands, its uploader derived and its stated reviewer discarded;
+- the platform approves and reactivates the subscription.
+
+Negative Test Design:
+- **Birth state:** born `approved` (backdated, with forged review notes), born `rejected`, and `pending` with a review time are refused 23514 with the guard's message, signed in; born `approved` is refused session-less.
+- **Reviewer:** none at birth, through either door, and none after the platform's approval.
+- **Authority:** the owner's UPDATE to `approved` changes nothing.
+- **Tenant:** a proof under the rival tenant is refused 42501 with RLS's message.
+- **Partial writes:** only the two accepted proofs exist after every refusal.
+- **PAR-4:** with `subscription_payment_proofs_derive_reviewer` dropped inside a savepoint, a proof is born `approved`; after the rollback the identical insert is refused again.
+
+Non-Empty Population Obligation: Two tenants, one branch and department, two placed users with their roles, two subscriptions and a rival document. Every write and refusal is counted by row; no zero-row operation satisfies an assertion. The rival INSERT uses a literal one-row VALUES list.
+
+Mutation Obligation: Out of file, record a surface: the md5 of `app.derive_proof_reviewer`'s source with the table's trigger definitions. For each mutant:
+1. Install it inside test 152's own transaction and prove the surface differs.
+2. Run test 152 and record the failing assertions.
+3. Prove after the rollback that the surface equals the base.
+
+A mutant whose installation is not proven is a harness error, never a kill.
+
+| Mutant | Change | Expected to fail |
+| --- | --- | --- |
+| M1 | the reviewer stamped from the session on INSERT | 3, 8, 13 |
+| M2 | the status arm removed | 5, 11, 14, 16 |
+| M3 | the review-time arm removed | 6, 14 |
+| M4 | session-less writers exempted from the birth rule | 11, 14, 16 |
+
+Prototype result: base surface `106e640855e2e9ab13de468c63ab40b1`. Every installation changed the surface, and every rollback returned it to the base. All four were killed, exactly as listed.
+
+Post-Implementation Proof Obligation: All of the following, on the final bytes and through canonical `-Finish`:
+- the focused tests, a clean reset from the main checkout, pgTAP Pass A, the declared HTTP suite, pgTAP Pass B and smoke;
+- the out-of-file mutations M1–M4 and the pre-repair causal negative;
+- the generated artifacts, the four CI-only guard self-tests, repository consistency and `git diff --check`;
+- fresh Primary evidence, parity evidence and the Primary ledger check.
+
+## Implementation Steps
+
+1. **Check** that `supabase/migrations/20261010160000_a_payment_proof_is_born_pending_and_unreviewed.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012`, md5 `f417ebb93516cb2c82f2b8e34da654cc`, 3208 bytes.
+   - Its one statement replaces `app.derive_proof_reviewer()` with the function above. A comment block precedes it, stating the authority and SPP-5's measurements.
+   - If the target exists with different bytes, stop.
+2. **Check** that `supabase/tests/152_a_payment_proof_is_born_pending_and_unreviewed_test.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `8bed225bc146d843695512a11621fb2d0380cc0308271b179a222c1eaa55dd5f`, `select plan(16);`.
+   - Its `-- ATTACK-CLASSES:` line reads `AUTH TENANT DOOR STATE INPUT BUSINESS CONCURRENCY=N/A OBSERVABILITY=N/A PRIVILEGE=N/A REPLAY=N/A`, with each `N/A` reason in its header.
+   - If the target exists with different bytes, stop.
+3. **Check** whether `reports/master/MASTER_GAP_REGISTER.md` already contains an `SPP-5` row. If not, make these edits and nothing else:
+   - **Register:**
+     - a 2026-10-10 Slice-38 freshness entry, with the previous one demoted to `Previously:`;
+     - after the SPP-1/SPP-2 row, a new row SPP-5 (Medium, `M`), FIXED by SPEC-260 locally with Primary pending and Cert `🛡`, with the measurements above, Owner `—` and this contract as session;
+     - at the end of FX-4's Status cell, a dated SPEC-260 sentence stating that its INSERT arm named the uploader as reviewer and that SPP-5 repairs it, with FX-4's Updated date set to `10-10`;
+     - after the sentence in SPP-3's Evidence line that the column stays null after every review, a dated correction stating that from `202607058900` until SPEC-260 it did not.
+   - **Disposition:**
+     - a freshness entry, with the previous one demoted;
+     - coverage 39 of 78 (16 `AUDITED`, 20 `AUDITED-OPEN`, 3 `PARTIAL`, 39 `NOT-RECORDED`) and the "All 39" line;
+     - the `subscription_payment_proofs` row `AUDITED-OPEN` / `ADVERSARIAL` / SPEC-260 / SPP-5, SPP-3, FX-4, with its evidence and its swept non-defects. Its Next names SPP-3's trigger and, at that trigger, the platform review's unlocked read.
+
+   The two files must then hash to the prototype's: register `b5bbeb2b5a6b0aabc9d54cd28d8e5621041aeb55031caabae3c3688a5a92af27`, disposition `5201e33682f5b236ecbdc0625a7b5755e78459d062871d5b36cd5dca5f0648d4`. If a target carries content other than its `e26733a` bytes before the edits, stop.
+4. **Check** for a `Pre-deploy readiness gate` Execution Log entry. If absent, run and record, with actual counts, exits and exact SHA-256 values:
+   - a clean local reset from the main checkout; test 152 and the focused tests 35, 47, 48, 50, 62, 80, 83, 88, 89, 106 and 131;
+   - pgTAP Pass A, all six HTTP suites, then pgTAP Pass B without reset; smoke and the plan sum;
+   - the mutation evidence M1–M4 and the causal negative;
+   - the API-contract and map generators;
+   - the four `scripts/test_*_guard.ps1` on the working tree;
+   - the scope check, `git diff --check` and repository consistency.
+
+   Treat as expected at this boundary only:
+   - an undeployed Primary;
+   - the pre-deploy repository-consistency drift listed in Consumer Closure, and guard self-test CONTROL cases that fail only because of it.
+
+   Read a fresh Primary baseline, read-only:
+   - the project URL, the full ordered ledger and the absence of the target migration;
+   - the function and structural surfaces;
+   - `subscription_payment_proofs`' triggers; `app.derive_proof_reviewer`'s text md5, security mode, owner, configuration and ACL;
+   - the tenant and payment-proof counts.
+
+   Record the predicted delta.
+5. **Check** that exact owner authorization for the migration SHA-256 is recorded in the Execution Log. If absent, stop after Step 4 and present the Gate-2 package. Approval of this contract does not authorize deployment.
+6. **Check** that Primary `vrvtsxexkiiiivlkdxzp` lacks `20261010160000_a_payment_proof_is_born_pending_and_unreviewed`. If it is absent and deployment is separately authorized:
+   - Immediately re-read HEAD, the hashes, the project URL, the full ordered ledger, target absence, the business counts, the table's triggers and the function's md5.
+   - On an exact match, prove the transmitted text's md5 server-side, then apply only the authorized migration through the Primary connector.
+   - If the connector assigns a temporary version, rename only that one newly inserted ledger row. The rename requires:
+     - exactly one new row;
+     - its stored statement md5 equal to the file's;
+     - no existing target version.
+   - Read fresh:
+     - the ledger, the function surface and all ten structural surfaces;
+     - the table's triggers;
+     - the function's definition, security mode, owner, configuration and ACL;
+     - the business counts.
+
+   Never contact Secondary `brplkqmbzffpxqgkkdzo`.
+7. **Check** that fresh Primary evidence contains the new migration exactly once. If so:
+   - Update `reports/evidence/primary-ledger-evidence.json` from those readings only.
+   - In `_ORVION_CANONICAL/manifest.md`, set `Live state` from the same readings, with 464 HTTP assertions last passed on the Step-4 date.
+   - Confirm that `supabase/tests` holds 152 files whose literal `plan(N)` values sum to 2810, then set `Suite **152 files / 2810 assertions**`. If either differs, stop.
+   - Set Batch 6 coverage to 39 of 78, all thirty-nine at `ADVERSARIAL`.
+   - Mark SPP-5 `DEPLOYED` with Cert `✅`, worded without a date beneath the register's freshness line.
+   - Regenerate `MASTER_API_CONTRACT.md` and `ai-map.json` (stored LF) with the canonical generators.
+   - Run the four `scripts/test_*_guard.ps1` and require each to pass.
+   - Set the Runtime Checkpoint to DONE.
+   - Run `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, repository consistency and `git diff --check`.
+
+   If Primary is unproven, stop.
+8. **Check** for a `Post-deploy local certification` Execution Log entry. If absent:
+   - Run canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` and require `LOCAL_CERTIFY: READY`. Record the mode, status and step that run prints.
+   - Independently Review the committed implementation against every Acceptance Criterion, under `## Verification Notes`. After `Verdict: Confirmed Complete`, do all of the following in the Complete commit:
+     - transition to Complete and clear `Active Change Request`;
+     - run `scripts/batch6_select_target.ps1` and record its Top-12;
+     - set `Last Completed` to SPEC-260 / Slice 38;
+     - set `Current Module` to Foundation Completion Programme Batch 6 resuming at Slice 39;
+     - set `Next capability` to **Foundation Completion Programme — Batch 6 Slice 39**, naming the measured first target, followed by the existing Phase-8 order, closed-chapter and standing-fact sentences unchanged;
+     - keep the manifest within 7000 characters;
+     - regenerate `ai-map.json` LF.
+   - Prove the committed range with `-Gate -BaseRef origin/main`, publish the exact committed candidate with `scripts/publish_candidate.ps1` and require exact-SHA candidate CI.
+   - Promote the same accepted SHA, require main CI, and run `-Certify` for `REMOTE_CERTIFY: READY`.
+   - Verify synchronized clean refs.
+
+## Acceptance Criteria
+
+- [ ] A proof inserted with a status other than `pending`, or with a review time, is refused 23514 with the guard's message, signed in and session-less; the RPC's upload and a direct `pending` proof are accepted.
+- [ ] A proof has no reviewer at birth, through either door, and none after the platform's approval; a stated reviewer is discarded.
+- [ ] The held controls stay held: the owner's UPDATE approving its own proof changes nothing; a proof under another tenant is refused by RLS; the platform review approves and reactivates the subscription.
+- [ ] `app.derive_proof_reviewer` keeps its trigger, SECURITY INVOKER, owner `postgres`, `search_path=""` and ACL `{postgres=X/postgres}`; `app.upload_subscription_payment_proof` and `app.platform_review_payment_proof` are unchanged.
+- [ ] Mutants M1–M4 are each killed against test 152, with installation and restoration proven. The causal negative is recorded.
+- [ ] SPP-5 is fixed and deployed in the register, and FX-4's and SPP-3's statements are corrected.
+- [ ] `subscription_payment_proofs` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 39 of 78. No other surface's row changed.
+- [ ] The migration and test 152 matched their frozen SHA-256 values when applied.
+- [ ] Primary, the recorded evidence, the manifest (248 migrations; 152 files / 2810 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [ ] The manifest names Batch 6 Slice 39 and its measured target as the next capability, with no Active Change Request.
+- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [ ] No file outside Write Scope was created, modified or deleted.
+
+## Execution Log
+
+None.
+
+## Verification Notes
+
+None.
+
+## Review Gate
+
+- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [ ] No file outside Write Scope was modified, created or deleted.
+- [ ] No section was added, removed or restructured outside the approved steps.
+- [ ] Every Acceptance Criteria item is confirmed true.
+- [ ] Any step that could not be resolved deterministically was reported, not guessed.
+- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [ ] The repository is in a clean, releasable state.
+
+## Notes
+
+- **EARN IT.**
+  - SPP-5 was reproduced by an owner on a lapsed tenant, through the RPC and at the table door, and the held doors were measured beside it.
+  - Test 152 fails 9 assertions for their intended reasons with FX-4's pre-repair function installed.
+  - Each arm of the repair is pinned by an installed, killed mutant, and the trigger itself by PAR-4's pair.
+  - Primary was read, not written: 0 proofs, ledger 247, latest `20261010140000`, and the function's `prosrc` md5 `037078ce…`.
+- **WORTH IT.**
+  - The record of who decided a payment proof said the tenant decided it, on every proof through the sanctioned door, which is the one thing canon 28 says a tenant cannot do.
+  - A tenant could also file a platform decision the platform never made.
+- **SIMPLIFY IT WITHOUT WEAKENING.**
+  - One existing function's INSERT arm, in SPEC-257's entry-state shape. No trigger, table, column, grant, policy, constraint, permission or other function changes.
+  - Every legitimate upload, through either door, still works.
+- **Owner direction (2026-10-10).** The owner named Batch 6 Slice 38 and authorized PLAN and Draft preparation only. `CR_LIFECYCLE.md` makes `Draft -> Approved` a human act, so this Draft stops at Gate 1. Approval, when given, still does not authorize any Primary write; Gate 2 is separate.
+- **Deliberately not changed:**
+  - `app.platform_review_payment_proof`'s unlocked read (Held, routed to SPP-3's trigger);
+  - the upload note's home in `review_notes`;
+  - `uploaded_at`, which has no reader;
+  - `scripts/batch6_select_target.ps1`'s order inside a tie, which is visible in its output and decides nothing;
+  - canon 09, 26, 27, 28 and 31;
+  - the n8n workflow, PH8-10 and Phase 8;
+  - the registered worktrees `wt251`, `wt255`, `owt/p2` and `C:\w234`.
