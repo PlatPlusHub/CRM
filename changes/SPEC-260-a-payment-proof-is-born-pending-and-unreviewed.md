@@ -386,6 +386,66 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   Unique work cannot be ruled out in the two dirty worktrees, and all four stay untouched. `wt260` holds only this contract's prototype bytes; its results are prototype evidence, never certification.
 - **No Primary write is authorized.** Gate 2 stands before Step 6. Secondary is never contacted.
 
+### 2026-10-10 — Pre-deploy readiness gate (Steps 1–4)
+
+- **Steps 1–3 applied exactly as frozen** in the working tree, uncommitted until after deployment:
+  - migration `cadb6f05e9c4f642b8b27fe6f93c91ae098eb674667eef84c47f2deba506c012` (md5 `f417ebb93516cb2c82f2b8e34da654cc`, 3208 bytes, 54 LF, 0 CR, ASCII), copied byte-for-byte from the prototype;
+  - test 152 `8bed225bc146d843695512a11621fb2d0380cc0308271b179a222c1eaa55dd5f`;
+  - the register (`b5bbeb2b5a6b0aabc9d54cd28d8e5621041aeb55031caabae3c3688a5a92af27`): the Slice-38 freshness entry, row SPP-5 after SPP-1/SPP-2, FX-4's dated sentence and Updated `10-10`, and SPP-3's dated correction;
+  - the disposition record (`5201e33682f5b236ecbdc0625a7b5755e78459d062871d5b36cd5dca5f0648d4`): its freshness entry, coverage 39 of 78 (16 `AUDITED`, 20 `AUDITED-OPEN`, 3 `PARTIAL`, 39 `NOT-RECORDED`), "All 39", and the `subscription_payment_proofs` row `AUDITED-OPEN` / `ADVERSARIAL`.
+
+  Each hash equals its frozen value, and no other line of either record changed.
+- **Clean baseline, from the main checkout.** `npx supabase db reset` (exit 0, 1.6 min) applied the migration through the canonical loader.
+  - The race and prototype fixtures were gone: 0 tenants with their ids.
+  - Ledger 248, `207f3fad1a5d2a5b7d640f598c2050e9`, latest `20261010160000`. The canonical loader stores the migration as split statements, so the ledger row's joined md5 reads `4bdd1b85…`, not the file's.
+  - Every structural surface equals the prototype's: functions `b3d4fc61413a43ef1ea60bc27a323b6e`/323 and combined `c93fb668bb243fa19274bed2605889ab`/3115; the other nine equal the recorded Primary evidence.
+  - `app.derive_proof_reviewer` reads `prosrc` md5 `b3cda129c52b83db7739125b93c3e112`, SECURITY INVOKER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`. The table keeps its three enabled triggers: `derive_reviewer`, `derive_uploader` and `enforce_catalog_codes`.
+- **Focused tests, each passing in full:** 35 27/27, 47 19/19, 48 12/12, 50 5/5, 62 9/9, 80 19/19, 83 23/23, 88 25/25, 89 21/21, 106 16/16, 131 31/31, 152 16/16.
+- **Suites, in `-Finish`'s order:**
+  - pgTAP Pass A: `Files=152, Tests=2810`, `Result: PASS`;
+  - HTTP: 35 + 40 + 85 + 122 + 122 + 60 = 464 passed, 0 failed;
+  - pgTAP Pass B, without reset: 152 / 2810 PASS;
+  - smoke: `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`;
+  - plan sum 152 files / 2810.
+- **Mutation evidence, on the committed-path bytes:** base surface `106e640855e2e9ab13de468c63ab40b1`. M1–M4 each installed (surface changed) and restored (surface equal to base), failing exactly 3,8,13 / 5,11,14,16 / 6,14 / 11,14,16. With FX-4's pre-repair function installed, test 152 fails 3,4,5,6,8,11,13,14,16, as frozen.
+- **Observation 1, the session-less INSERT boundary, measured (rolled back):**
+  - `app.upload_subscription_payment_proof` is the only function that inserts a proof.
+  - As `postgres`, session-less, a proof born `approved` is refused 23514 with the guard's message, and a session-less `pending` proof is accepted with no reviewer.
+  - The local image grants `service_role` only REFERENCES, TRIGGER and TRUNCATE here, so its INSERT is refused for want of a grant. **Primary's platform image grants `service_role` INSERT, SELECT, UPDATE and DELETE on this table** (PAR-5; read below). With that grant emulated inside the transaction, a `service_role` proof born `approved` is refused 23514 by the repaired function. Against FX-4's pre-repair logic (its statements with the comments omitted, `prosrc` md5 `138886b4…`), the identical insert was **accepted, born `approved`**: on Primary today a service-role writer can file a decided proof, and this repair closes that door. After the rollback the function read `b3cda129…` again and the grant was gone.
+- **Generated artifacts:** the API-contract generator, written to a scratch file, is byte-identical to the committed contract (`d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`): 80 RPC endpoints, 8 views, 74 tables. `ai-map.json`, stored LF, changes only its `generated_at`. That regeneration was not kept; Step 7 regenerates it.
+- **Scope:** `origin/main..` plus untracked touches exactly the manifest, `ai-map.json`, this contract, the register, the disposition record, the migration and test 152, all in Write Scope. `git diff --check` exit 0.
+- **Repository consistency:** exactly the expected pre-deploy drift, 6 issues in all:
+  - 247 vs 248 migrations;
+  - latest `20261010140000` vs `20261010160000`;
+  - fingerprint `f2fd1294…` vs `207f3fad…`;
+  - 151 vs 152 files and 2794 vs 2810 assertions;
+  - RECOVER-1 (2 issues).
+
+  Checks 21–28 are clean.
+- **The four CI-only guard self-tests, on this working tree:** all four run on the working tree with Steps 1–3 applied:
+  - `test_future_date_guard` passed (exit 0, 3.6 min);
+  - `test_status_contradiction_guard` passed (exit 0, 3.7 min);
+  - `test_primary_ledger_guard` failed only its two CONTROL cases (0.3 min);
+  - `test_cold_start_state_guard` failed only its nine CONTROL, second-direction CONTROL and restore cases (CONTROL; A2, C2 and E CONTROL; A-, B-, C- and D-restore; second direction; 4.2 min).
+
+  Each failing case requires an untouched copy of the repository to be CLEAN, which the drift above prevents until Step 7. Every mutation case passed. No guard needs a file outside Write Scope. Step 7's run, where each must pass, stays mandatory.
+- **Fresh Primary baseline, read-only (`vrvtsxexkiiiivlkdxzp`, URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`):**
+  - ledger 247, `f2fd129466f76536d53779a131cda874`, latest `20261010140000`; no row for the target version or name, and none after `20261010140000`;
+  - functions `b526e294da3ac335350d2ad3758971e4`/323;
+  - `parity_surface.sql`'s ten surfaces equal the recorded evidence: combined `2e608d8e6162a3a466583fe2bb327566`/3115;
+  - `subscription_payment_proofs` carries its three triggers, all enabled, RLS on; grants `authenticated` INSERT, SELECT and UPDATE, and `service_role` DELETE, INSERT, REFERENCES, SELECT, TRIGGER, TRUNCATE and UPDATE;
+  - `app.derive_proof_reviewer`: `prosrc` md5 `037078ce190d9980d8429f74ec63545c` (definition `745eb8c2792ac249688c3f224afac186`), SECURITY INVOKER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`;
+  - 0 tenants, 0 subscriptions, 0 payment proofs.
+- **Predicted delta on Primary:**
+  - ledger 248 / `207f3fad1a5d2a5b7d640f598c2050e9`, latest `20261010160000`;
+  - functions `b3d4fc61413a43ef1ea60bc27a323b6e`/323;
+  - the function's `prosrc` from `037078ce…` to `b3cda129c52b83db7739125b93c3e112`;
+  - combined `c93fb668bb243fa19274bed2605889ab`/3115.
+
+  Triggers, policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. No business row is written.
+- **Material finding outside this contract (Begin entry, observation 2):** the two-session race on `app.platform_review_payment_proof` stays reproduced and unrepaired. It is routed to a separate corrective contract after this one.
+- **Stop at Gate 2.** No exact-byte owner authorization for the migration is recorded. Step 5 stops here. Secondary was not contacted.
+
 ## Verification Notes
 
 None.
