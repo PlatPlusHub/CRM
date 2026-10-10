@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -341,18 +341,18 @@ Post-Implementation Proof Obligation: All of the following exit 0 on the final b
 
 ## Acceptance Criteria
 
-- [ ] `supabase/tests/151_a_totp_enrollment_record_decides_nothing_test.sql` exists with SHA-256 `84e9ca2399ecabfb3f782892cfb00a5b2821b438e59aa8c5d15b9da2b8834e73`. It:
+- [x] `supabase/tests/151_a_totp_enrollment_record_decides_nothing_test.sql` exists with SHA-256 `84e9ca2399ecabfb3f782892cfb00a5b2821b438e59aa8c5d15b9da2b8834e73`. It:
   - declares `plan(16)` and the ten attack classes;
   - pins that a planted active enrollment does not satisfy step-up at `aal1`, and revoked ones do not withdraw it at `aal2`;
   - pins the human boundary, DELETE and `anon` to their messages or rows;
   - carries the tripwire, with the reading mutant proven installed, named, and restored md5-identical.
-- [ ] `MASTER_SURFACE_DISPOSITION.md` records `totp_enrollments` as `AUDITED-OPEN` / `ADVERSARIAL` / `SPEC-259-a-totp-enrollment-record-decides-nothing` / `IDENT-3, OTP-2, AUTH-1`. Coverage reads 38 of 78, with 16 `AUDITED`, 19 `AUDITED-OPEN` and 40 `NOT-RECORDED`, and no other row changed.
-- [ ] `_ORVION_CANONICAL/manifest.md`'s Batch 6 surface coverage line reads `**38 of 78 surfaces have a recorded audit disposition**, all thirty-eight at` `ADVERSARIAL`, equal to the disposition record's Coverage.
-- [ ] The manifest's suite figure reads `151 files / 2794 assertions`, and `ai-map.json` agrees with the manifest by value and is stored LF. `MASTER_API_CONTRACT.md` is byte-identical to its generator's output.
-- [ ] The four CI-only guard self-tests pass, and `-Finish` reports `LOCAL_CERTIFY: READY`.
-- [ ] `MASTER_GAP_REGISTER.md` is unchanged.
-- [ ] No file under `supabase/migrations/` changed, and no database object was created, altered or dropped. Primary was not written, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `MASTER_SURFACE_DISPOSITION.md` records `totp_enrollments` as `AUDITED-OPEN` / `ADVERSARIAL` / `SPEC-259-a-totp-enrollment-record-decides-nothing` / `IDENT-3, OTP-2, AUTH-1`. Coverage reads 38 of 78, with 16 `AUDITED`, 19 `AUDITED-OPEN` and 40 `NOT-RECORDED`, and no other row changed.
+- [x] `_ORVION_CANONICAL/manifest.md`'s Batch 6 surface coverage line reads `**38 of 78 surfaces have a recorded audit disposition**, all thirty-eight at` `ADVERSARIAL`, equal to the disposition record's Coverage.
+- [x] The manifest's suite figure reads `151 files / 2794 assertions`, and `ai-map.json` agrees with the manifest by value and is stored LF. `MASTER_API_CONTRACT.md` is byte-identical to its generator's output.
+- [x] The four CI-only guard self-tests pass, and `-Finish` reports `LOCAL_CERTIFY: READY`.
+- [x] `MASTER_GAP_REGISTER.md` is unchanged.
+- [x] No file under `supabase/migrations/` changed, and no database object was created, altered or dropped. Primary was not written, and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -407,19 +407,84 @@ The four `scripts/test_*_guard.ps1` were run on `7172de1` in the main checkout, 
 - `test_cold_start_state_guard`, 4.25 min.
 
 The Runtime Checkpoint is set to `DONE` before canonical `-Finish`.
+
+### 2026-10-10 — Step 5: local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `9222a38`, in EXECUTE mode, with profiles DATABASE and REPOSITORY and nothing else running (`run_timed` `concurrent=0`). It reported `LOCAL_CERTIFY: READY` in 4.8 min, and every verification passed:
+- `npx supabase db reset`;
+- pgTAP Pass A;
+- `verify_role_journeys.ps1`;
+- pgTAP Pass B;
+- `scripts/verify_database.sql`;
+- `check_database_parity_evidence.ps1`;
+- `check_repository_consistency.ps1`;
+- `git diff --check`.
+
+`-Finish` prints one `PASS` line per verification and deletes a successful command's log, so it shows no pgTAP totals. They are fixed by what it did prove:
+- `pg_prove` fails a file whose run count differs from its `plan(N)`;
+- Check 15 passed on the manifest figure of 151 files whose plans sum to 2794.
+
+The prototype's run on identical test bytes, in `-Finish`'s own order, printed `Files=151, Tests=2794` in both passes and `122 passed, 0 failed`. The suite was not rerun to print them again (EARN IT).
+
+Afterwards, the local stack read:
+- `app.mfa_satisfied()` md5 `e084071e938b7e897da84c3938b19950`;
+- 0 `totp_enrollments` rows;
+- 0 triggers on the table;
+- 0 views, and 0 functions in any schema, `BEGIN ATOMIC` bodies included, that name it.
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review of `9222a38`
+
+Reviewed the committed tree against the approved Draft `09be095` and the six-path Write Scope. The review read the committed blobs, the diff from `d1165fb` and the live local stack, not the Execution Log.
+
+1. **Test (criterion 1).** The committed blob of `151_a_totp_enrollment_record_decides_nothing_test.sql` hashes to `84e9ca2399ecabfb3f782892cfb00a5b2821b438e59aa8c5d15b9da2b8834e73`.
+   - It declares `plan(16)` and all ten attack classes.
+   - Assertions 4-6 pin both directions of step-up.
+   - Assertions 7-11 pin the human boundary, DELETE and `anon`, each to its message or row.
+   - Assertion 12 is the tripwire, and 13-16 install, prove, name and restore the reading mutant.
+   - Both `-Finish` passes ran it and reported PASS. Afterwards the gate's md5 was `e084071e…`.
+2. **Disposition (criterion 2).** Against `d1165fb`, the record changes only the `totp_enrollments` row, the Coverage line, the `All 38` line and the freshness entry.
+   - The row reads `AUDITED-OPEN` / `ADVERSARIAL` / `SPEC-259-a-totp-enrollment-record-decides-nothing` / `IDENT-3, OTP-2, AUTH-1`.
+   - Coverage reads `38 of 78 recorded · 16 AUDITED · 19 AUDITED-OPEN · 3 PARTIAL · 0 EXEMPT · 40 NOT-RECORDED`.
+3. **Manifest coverage (criterion 3).** The line reads `**38 of 78 surfaces have a recorded audit disposition**, all thirty-eight at`, equal to Coverage.
+4. **Suite and generated artifacts (criterion 4).**
+   - The suite figure reads `151 files / 2794 assertions`; Check 15 measured that figure and passed.
+   - `ai-map.json` has 0 CR bytes, and repository consistency, which compares it by value, reports CLEAN.
+   - `MASTER_API_CONTRACT.md` is unchanged from `d1165fb`, and its generator reproduced it.
+5. **Certification (criterion 5).** The four guard self-tests exited 0 on `7172de1`. `-Finish` reported `LOCAL_CERTIFY: READY` on `9222a38`, whose only change since `7172de1` is this contract's log and checkpoint.
+6. **Register (criterion 6).** `d1165fb..HEAD` does not touch `MASTER_GAP_REGISTER.md`.
+7. **No database change (criterion 7).** `d1165fb..HEAD` touches nothing under `supabase/migrations/` or `reports/evidence/`.
+   - The live gate's md5, 0 views, 0 triggers and 0 functions naming the table equal the Draft's recorded baseline.
+   - Primary was only read, during Draft preparation, and never written. Secondary was never contacted.
+8. **Scope (criterion 8).** `d1165fb..HEAD` changes exactly five paths, all in Write Scope: this contract, test 151, the disposition record, the manifest and `ai-map.json`.
+
+**The owner's two distinctions hold.**
+- The tripwire is described by what it reads, which Steps 1-4's log records, and the disposition row states its blind spots.
+- The test is stated as replacing none of AUTH-1's retirement, which stays owed on its own trigger.
+- The four Supabase Auth concerns stay UNPROVEN and outside this contract.
+
+**Is this still the simplest defensible design, given the results?** Yes.
+- **The results confirmed the premise.** The plant and the revocation each moved nothing, and every boundary held. Each of M1-M6 was killed by the assertion aimed at it.
+- **No alternative tested better.**
+  - A revoke, a cardinality rule or a retirement each adds or removes machinery that defends no behaviour nothing reads.
+  - Without a test, Check 22 fails, and the reader-side gap that the in-file mutant proved stays open.
+- **The one real residual is the tripwire's blind spots.** The `BEGIN ATOMIC` form was proven on the local stack.
+  - Widening the scan would change approved bytes for a form no migration uses.
+  - The tripwire also ends with the table when AUTH-1's retirement fires.
+  - So it is recorded, not built.
+- **Nothing was found to remove.** The redundant policy assertion was already dropped before freezing.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
