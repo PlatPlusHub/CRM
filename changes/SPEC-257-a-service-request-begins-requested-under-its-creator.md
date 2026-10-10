@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -423,24 +423,24 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A direct INSERT by a signed-in CREATE_SERVICE_REQUEST holder persists the request under the creator and the creator's placement, whatever owner or filing scope it supplies; the colleague it named sees 0 rows; an employee with no primary branch is refused 42501.
-- [ ] After creation, a signed-in UPDATE cannot move the request's owner or filing scope or blank its title (23514), while an ordinary edit succeeds.
-- [ ] A request cannot be created `closed`, with a resolution time, archived, naming an archiver or with a blank title, signed in or session-less (23514).
-- [ ] Each successful direct and RPC creation emits exactly one `service_request_created` event, with the RPC's state and payload and the creator (or null) as actor, and reaches the customer timeline; a refused creation emits none.
-- [ ] Each change of status, direct or through `app.advance_service_request`, emits exactly one canon-26 event with its old and new states, its reason and the session's actor (or null). The reopen is `service_request_reopened` at `warning`. A no-op status UPDATE, a field-only UPDATE and a refused move emit none.
-- [ ] A signed-in caller's `resolved_at` is `now()` on entering `resolved` and is otherwise kept, whatever the statement supplies; a session-less write keeps the value it carries.
-- [ ] A closed request cannot be reopened without a reason, directly or through the RPC (23514); the RPC reopens with one; a reason is consumed by the transition it was handed to.
-- [ ] `app.create_service_request` differs from `3af104b`'s only by the removed event call. `app.advance_service_request` differs only by its event call and the actor lookup that call used being replaced by the reason hand-off; its transition map, permission charge and UPDATE are byte-identical. Both keep their signature, security mode, `search_path` and ACL.
-- [ ] The held controls stay held: a trainee is refused at the table; a row under another tenant is refused by RLS; session-less `requested` creation keeps its null owner; every edge and its permission are unchanged.
-- [ ] Mutants M1–M20 are each killed against test 149, with installation and restoration proven. The causal negative is recorded.
-- [ ] Test 83 assertion 23's expected list drops only `service_requests.owner_user_id`; its query, assertion 22 and every other member are unchanged.
-- [ ] SR-1 and SR-2 are fixed and deployed in the register. ENTRY-1 and ARCH-2 each record this surface's closure; CHAT-1 and CHAT-2 are unchanged.
-- [ ] `service_requests` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 36 of 78. No other surface's row changed.
-- [ ] The migration, test 149 and test 83 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (246 migrations; 149 files / 2745 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 36 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A direct INSERT by a signed-in CREATE_SERVICE_REQUEST holder persists the request under the creator and the creator's placement, whatever owner or filing scope it supplies; the colleague it named sees 0 rows; an employee with no primary branch is refused 42501.
+- [x] After creation, a signed-in UPDATE cannot move the request's owner or filing scope or blank its title (23514), while an ordinary edit succeeds.
+- [x] A request cannot be created `closed`, with a resolution time, archived, naming an archiver or with a blank title, signed in or session-less (23514).
+- [x] Each successful direct and RPC creation emits exactly one `service_request_created` event, with the RPC's state and payload and the creator (or null) as actor, and reaches the customer timeline; a refused creation emits none.
+- [x] Each change of status, direct or through `app.advance_service_request`, emits exactly one canon-26 event with its old and new states, its reason and the session's actor (or null). The reopen is `service_request_reopened` at `warning`. A no-op status UPDATE, a field-only UPDATE and a refused move emit none.
+- [x] A signed-in caller's `resolved_at` is `now()` on entering `resolved` and is otherwise kept, whatever the statement supplies; a session-less write keeps the value it carries.
+- [x] A closed request cannot be reopened without a reason, directly or through the RPC (23514); the RPC reopens with one; a reason is consumed by the transition it was handed to.
+- [x] `app.create_service_request` differs from `3af104b`'s only by the removed event call. `app.advance_service_request` differs only by its event call and the actor lookup that call used being replaced by the reason hand-off; its transition map, permission charge and UPDATE are byte-identical. Both keep their signature, security mode, `search_path` and ACL.
+- [x] The held controls stay held: a trainee is refused at the table; a row under another tenant is refused by RLS; session-less `requested` creation keeps its null owner; every edge and its permission are unchanged.
+- [x] Mutants M1–M20 are each killed against test 149, with installation and restoration proven. The causal negative is recorded.
+- [x] Test 83 assertion 23's expected list drops only `service_requests.owner_user_id`; its query, assertion 22 and every other member are unchanged.
+- [x] SR-1 and SR-2 are fixed and deployed in the register. ENTRY-1 and ARCH-2 each record this surface's closure; CHAT-1 and CHAT-2 are unchanged.
+- [x] `service_requests` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 36 of 78. No other surface's row changed.
+- [x] The migration, test 149 and test 83 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (246 migrations; 149 files / 2745 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 36 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -540,19 +540,70 @@ No business-data write and no fixture was made on Primary. Secondary `brplkqmbzf
 - **Checks:** the four CI-only guard self-tests pass: cold-start 34/0, status-contradiction 33/0, primary-ledger 13/0 and future-date 18/0. `check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` reports `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`, Primary's structure matching local at `f56111d6…`; repository consistency reports `REPOSITORY CONSISTENCY: CLEAN`, the six pre-deploy issues resolved; `git diff --check` is clean.
 - **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
+### 2026-10-10 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `5398ac0` in VERIFY mode, with profiles DATABASE and REPOSITORY and nothing else running. It reported `LOCAL_CERTIFY: READY` in 6.4 minutes, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; the declared `verify_journey_branches.ps1` and `verify_lifecycle_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+Before it, on the same committed state, the four CI-only guard self-tests passed (Step 7). The mutation evidence (the causal negative and M1–M20) and the six HTTP suites (464/0) were recorded in Step 4 on the same migration and test bytes, which are unchanged, so they were not repeated.
+
+**Selector after SPEC-257** (`scripts/batch6_select_target.ps1`, 42 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `quotation_items` 8/36
+2. `totp_enrollments` 8/38
+3. `subscription_payment_proofs` 8/48
+4. `complaints` 8/48
+5. `payment_allocations` 8/60
+6. `receipts` 7/20
+7. `chart_of_accounts` 7/38
+8. `notification_deliveries` 7/42
+9. `approval_requests` 7/52
+10. `user_branch_assignments` 7/560
+11. `user_role_assignments` 7/618
+12. `departments` 7/624
+
+Slice 36's measured target is `quotation_items`.
+
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review of the execution commit `5398ac0`
+
+Reviewed the committed tree against the approved Draft `8820aee`, the Gate-2 authorization and the ten-path Write Scope. The review read the implementation and the live state, not the Execution Log.
+
+1. **Entry by a signed-in creator (criterion 1).** In the committed guard, the INSERT arm derives `owner_user_id`, `owner_branch_id` and `owner_department_id` from `app.current_user_id()` and `app.current_placement()` for every signed-in caller, whatever the statement supplies, and refuses 42501 without a branch. Test 149 asserts the creator's ownership and placement, the named colleague's 0 rows and the 42501. Both `-Finish` pgTAP passes ran it within the whole suite and reported PASS. It passed 48/48 alone in Step 4 on these bytes.
+2. **Owner, filing scope and title after creation (criterion 2).** The UPDATE arm refuses a signed-in change to the owner triple (23514); the title rule precedes both arms. Test 149 asserts both refusals, the blank-title UPDATE refusal and an ordinary retitle that lives.
+3. **Entry state (criterion 3).** `requested`, a null `resolved_at` and four null archive fields are required of every caller before the session-less return. Test 149 refuses each, signed in and session-less, including a blank title.
+4. **One created event (criterion 4).** One AFTER INSERT producer records `service_request_created` with the RPC's state and payload. The create RPC's own call is gone. Test 149 asserts exactly one event per door, its shape, the customer timeline row, the null actor session-less and none for a refused creation.
+5. **One transition event (criterion 5).** `service_requests_emit_transition` fires AFTER UPDATE OF `service_request_status_code` only `WHEN` the status changes (tgtype 17 on Primary). It maps each state entered with a `case`, and the reopen at `warning`. The advance RPC's own call is gone. Test 149 asserts the direct walk's event string, exactly one event per RPC move, the reopen's severity and reason, and none for a no-op, a field-only or a refused move.
+6. **`resolved_at` (criterion 6).** The guard stamps `now()` on entering `resolved` for a signed-in caller and otherwise keeps the old value. Test 149 asserts the server time over a forged value and the session-less latitude.
+7. **The reopen (criterion 7).** The guard refuses a signed-in `closed -> in_progress` without a non-blank `app.transition_reason` (23514); the RPC hands `coalesce(p_reason, '')`, so a null reason is refused there too. The producer clears the setting. Test 149 asserts the direct and RPC refusals, the reasoned reopen and the consumed reason.
+8. **The two RPCs (criterion 8).** Diffed against their `3af104b` sources:
+   - `202607051500`'s `app.create_service_request` differs only by its removed `record_event` call.
+   - `202607050900`'s `app.advance_service_request` differs only by its `record_event` call and the `v_actor` lookup being replaced by the `set_config` hand-off. Its values map, `app.authorize` charge and UPDATE are byte-identical.
+   - The new statement also omits the old source's explicit `security invoker` clause. That is PostgreSQL's default, and the function is unchanged by it: Primary read `prosecdef = false` before and after the write.
+   - Both keep their signatures, `search_path=""` and ACL `{postgres=X/postgres,authenticated=X/postgres}`, read on Primary.
+9. **Held controls (criterion 9).** Test 149 asserts the trainee's table refusal, RLS's refusal under another tenant and the session-less null owner. `status_transitions` reads `db2165c7…`/115 on Primary before and after the write.
+10. **Mutation evidence (criterion 10).** M1–M20 and the causal negative were recorded in Step 4 on these migration and test bytes, which are unchanged (`2da54597…`, `8e69bab0…`).
+11. **Test 83 (criterion 11).** Against `3af104b`, only assertion 23's expected list changes, dropping `service_requests.owner_user_id`. Its query, assertion 22 and every other member are unchanged.
+12. **Register (criterion 12).** SR-1 and SR-2 read FIXED and DEPLOYED with Cert ✅. ENTRY-1 and ARCH-2 each record this surface's closure and nothing else. CHAT-1 and CHAT-2 are unchanged.
+13. **Disposition (criterion 13).** `service_requests` is `AUDITED` / `ADVERSARIAL`, and the counts read 36 of 78 (15 `AUDITED`, 18 `AUDITED-OPEN`, 42 `NOT-RECORDED`). No other surface row changed against `3af104b`.
+14. **Frozen values (criterion 14).** The committed migration, test 149 and test 83 hash to `2da54597…`, `8e69bab0…` and `16235efe…`.
+15. **Agreement (criterion 15).** Primary, the evidence and the manifest agree: 246 migrations, `a6500a25…`, functions `e3d51808…`/323, structural `f56111d6…`/3115, 149 files / 2745 assertions, 464 HTTP assertions. The API contract matches its generator, `ai-map.json` is LF, and the four guard self-tests and repository consistency pass.
+16. **Next capability (criterion 16).** The Complete commit names Batch 6 Slice 36 and `quotation_items` (8/36) and clears the Active Change Request.
+17. **Primary and Secondary (criterion 17).** Primary's ledger holds exactly one row for the migration, its statement md5 `351e1ac5…` equal to the authorized file, after one guarded rename. It holds 0 tenants, service requests and events before and after. Secondary was never contacted.
+18. **Scope (criterion 18).** `3af104b..HEAD` changes only Write Scope paths, and `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
