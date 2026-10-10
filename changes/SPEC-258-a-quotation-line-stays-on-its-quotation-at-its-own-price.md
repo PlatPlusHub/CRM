@@ -399,6 +399,56 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   - `wt258` holds only this contract's prototype bytes. Its results are prototype evidence, never certification.
 - **No Primary write is authorized.** Gate 2 stands before Step 6. Secondary is never contacted.
 
+### 2026-10-10 — Pre-deploy readiness gate (Steps 1–4)
+
+- **Steps 1–3 applied exactly as frozen** in the working tree, uncommitted until after deployment:
+  - migration `663e759db30c6d594c08b9fae1fd6b8beb52fdcee42ff5ece0f74ab89270fd91` (md5 `0e7fbc0eb122af8a81106824b9b0ae2b`, 5900 bytes, LF), copied byte-for-byte from the prototype;
+  - test 150 `9eea06b3756dbe3ded9d8f27946ae352e51f422cd9f3605f65623534b8cb582c`;
+  - the register's Slice-36 freshness entry and rows QUO-9 and QUO-10 (Medium, `M`, Cert `🛡`, Owner `—`) after QUO-8;
+  - the disposition's freshness entry, coverage 37 of 78 (16 `AUDITED`, 18 `AUDITED-OPEN`, 3 `PARTIAL`, 41 `NOT-RECORDED`), "All 37", and the `quotation_items` row `AUDITED` / `ADVERSARIAL`. No other line of either file changed.
+- **Clean baseline, from the main checkout.** `npx supabase db reset` (exit 0, 2.5 min) applied the migration through the canonical loader. The prototype state was gone: 0 tenants with the prototype fixture ids. Ledger 247, `f2fd129466f76536d53779a131cda874`, latest `20261010140000`. Every structural surface equals the prototype's: functions `b526e294da3ac335350d2ad3758971e4`/323, triggers `a46035c1…`/309, combined `2e608d8e6162a3a466583fe2bb327566`/3115. The guard reads prosrc md5 `94fbaa14ed2af00aa74dd1d89225138e`, SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`.
+- **Focused tests, each passing in full:** 03 1/1, 07 2/2, 08 2/2, 10 9/9, 54 6/6, 56 12/12, 57 12/12, 58 27/27, 68 11/11, 73 13/13, 83 23/23, 84 17/17, 88 25/25, 112 16/16, 120 30/30, 150 33/33.
+- **Suites, in `-Finish`'s order:**
+  - pgTAP Pass A: `Files=150, Tests=2778`, `Result: PASS`;
+  - HTTP: 35 + 40 + 85 + 122 + 122 + 60 = 464 passed, 0 failed;
+  - pgTAP Pass B, without reset: 150 / 2778 PASS;
+  - smoke: `ALL CHECKS PASSED (78 tables, … 71/622 catalog, …)`;
+  - plan sum 150 files / 2778.
+- **Mutation evidence, on the committed-path bytes:** base surface `f794641305cca8b756af1516ae060060`. M1–M6 each installed (surface changed) and restored (surface equal to base), failing exactly 19,21,23,26,29,33 / 12,13,14,15 / 7,8,9,11,14,15,18,28,33 / 4,6,14,15 / 31 / 27.
+- **Two sessions against the canonically applied guard:** a direct INSERT racing a send waited (`pg_stat_activity` `waiting=1`), then was refused 23514 "a sent quotation cannot have its lines changed". The quotation stayed `sent` with 1 line, 1,000, and a `quotation_sent` of 1,000. The first attempt in the run's script invoked WSL's `bash`, which has no distribution, and did not run. It was rerun through Git Bash, and this is that result.
+- **Precision, measured on the canonical state (rolled back):**
+  - quantity 1.555 at 100 through the RPC is refused 23514, "(156.0000); it cannot be 155.5000";
+  - 33.33335 x 3 is refused, "(100.0002); it cannot be 100.0001";
+  - test 112's two table-door shapes are refused by the guard's total arm, "(0.0000); it cannot be -900.0000" and "(1000.0000); it cannot be -1.0000".
+
+  Every existing caller listed in the Gate-1 entry passed in the suites above.
+- **Generated artifacts:** the API-contract generator, written to a scratch file, is byte-identical to the committed contract (`d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`): 80 RPC endpoints, 8 views, 74 tables. `ai-map.json`, stored LF, changes only its `generated_at`.
+- **Scope:** `origin/main..` plus untracked touches exactly the manifest, `ai-map.json`, this contract, the register, the disposition record, the migration and test 150, all in Write Scope. `git diff --check` exit 0.
+- **Repository consistency:** exactly the expected pre-deploy drift:
+  - 246 vs 247 migrations;
+  - latest `20261010120000` vs `20261010140000`;
+  - fingerprint `a6500a25…` vs `f2fd1294…`;
+  - 149 vs 150 files and 2745 vs 2778 assertions;
+  - RECOVER-1 (2 issues): 6 issues in all.
+
+  Checks 21–28 are clean.
+- **The four CI-only guard self-tests, run on this working tree as the Gate-1 entry committed:**
+  - `test_future_date_guard` passed (exit 0, 3.7 min);
+  - `test_status_contradiction_guard` passed (exit 0, 3.7 min);
+  - `test_primary_ledger_guard` failed only its two CONTROL cases (0.3 min);
+  - `test_cold_start_state_guard` failed only its nine CONTROL, second-direction CONTROL and restore cases (A2, C2 and E CONTROL; A-, B-, C- and D-restore; 5.4 min).
+
+  Each failing case requires an untouched copy of the repository to be CLEAN, which the drift above prevents until Step 7. Every mutation case passed. No guard needs a file outside Write Scope.
+- **Fresh Primary baseline, read-only (`vrvtsxexkiiiivlkdxzp`, URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`):**
+  - ledger 246, `a6500a25aeb035493ac37f18cb46fb32`, latest `20261010120000`; no row for the target version or name, and none after `20261010120000`;
+  - functions `e3d5180863b8482178efde66465a47b4`/323;
+  - `parity_surface.sql`'s ten surfaces equal the recorded evidence: combined `f56111d6426fb29d91ff6cb41ce1ada2`/3115;
+  - `quotation_items` carries its five triggers, all enabled: `enforce_catalog_codes` 23, `enforce_subscription_write_gate` 31, `guard_financial_capability` 23, `guard_parent_editable` 23, `recompute_total` 29;
+  - the guard: prosrc md5 `671c776f138de165d6f2e89a59183d63` (definition `f2b1fac44aa750a76cb79b92a1bdba04`), SECURITY DEFINER, owner `postgres`, ACL `{postgres=X/postgres}`, `search_path=""`, comment `QUO-2: …`;
+  - 0 tenants, 0 quotations, 0 quotation lines.
+- **Predicted delta on Primary:** ledger 247 / `f2fd129466f76536d53779a131cda874`; functions `b526e294da3ac335350d2ad3758971e4`/323; the guard's prosrc `671c776f…` to `94fbaa14ed2af00aa74dd1d89225138e`, and its comment restated; combined `2e608d8e6162a3a466583fe2bb327566`/3115. Triggers, policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. No business row is written.
+- **Stop at Gate 2.** No exact-byte owner authorization for the migration is recorded. Step 5 stops here. Secondary was not contacted.
+
 ## Verification Notes
 
 None.
