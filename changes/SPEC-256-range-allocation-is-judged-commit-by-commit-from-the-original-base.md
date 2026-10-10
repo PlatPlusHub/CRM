@@ -212,6 +212,12 @@ Every file is written LF. The "from" hashes are the committed bytes at `ef2e948`
 - **Preconditions:** each of the four files in this checkout equals its "from" hash, and each prototype file equals its "to" hash.
 - **No Primary write is authorized or expected.** Secondary is never contacted.
 
+### 2026-10-10 — Steps 1-2 executed
+
+- **Checks:** `$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)` and `so removing it inside a range cannot suspend enforcement (`SPEC-256`)` were each absent, so both steps applied.
+- **Applied exactly as prototyped.** All four full SHA-256s equal the frozen "to" values: `dbfbf8a9…` (evaluator), `057dc455…` (suite), `cdc316bb…` (`CR_LIFECYCLE.md`), `b9f1ddeb…` (register). The files are byte copies of the prototype the disposable clone certified.
+- **Diff:** 4 files changed, 123 insertions(+), 14 deletions(-). Every file is LF, and `git diff --check` is clean.
+
 ## Verification Notes
 
 None.

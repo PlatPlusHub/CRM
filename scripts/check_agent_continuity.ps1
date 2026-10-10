@@ -925,7 +925,9 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
         # Pre-activation commits are not retroactively judged; after activation a
         # later correction cannot erase the earlier illegal allocation, which a net
         # BASE..HEAD diff can never see.
-        if(Allocation-ActiveAt "$commit^"){
+        # SPEC-256. A range whose ORIGINAL base is already under enforcement judges every commit,
+        # so removing the marker inside the range cannot suspend the rule (case 191g).
+        if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){
             try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck -CheckOrigination -StateRef $commit}catch{throw "$($_.Exception.Message)@$short"}
         }
 
@@ -1839,14 +1841,16 @@ try{
     # retroactively to history that predates the marker. Reservation, unlike
     # allocation, is never gated by it.
     # SPEC-202. The local call judges origination from the WORKING TREE, where a newly
-    # authored contract sits at exactly the state it is being created in. The range
-    # ENDPOINT call deliberately does NOT check origination: its records are a net
-    # BaseRef..HeadRef diff, so a contract born `Draft` and completed inside the range
-    # appears simply as "added" with endpoint status `Complete`, and judging that state
-    # would refuse a history this repository explicitly calls legal (SPEC-165). Only the
-    # per-commit walk can see the state a contract actually had when it appeared.
+    # authored contract sits at exactly the state it is being created in.
+    # SPEC-256. In range mode allocation has ONE authority: the per-commit walk, which judges
+    # each allocation against its own parent and alone sees the state a contract had when it
+    # appeared. A net-diff call here judged the whole range against the BASE's reservations, so
+    # an identity reserved inside the unpublished range and lawfully skipped read
+    # SPEC_ID_NOT_NEXT (SPEC-254, after SPEC-252's Notes reserved 253). That call was also the
+    # only guard for a range that removes the marker, so activation is decided here, once, from
+    # the ORIGINAL base, before Validate-PublicationSegments substitutes segment bounds.
     if(-not $BaseRef){Validate-SpecAllocation $records $base -CheckOrigination}
-    elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}
+    $script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)
     $script:PublicationSegments=@()
     if($BaseRef){$script:PublicationSegments=@(Get-PublicationSegments)}
     $m=Manifest

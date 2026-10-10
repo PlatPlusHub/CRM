@@ -2306,6 +2306,92 @@ exit 0
     $r=RunRange $base
     Assert '192 SPEC-ALLOCATION ACTIVATION: allocation before the marker is not retroactively judged' ($r.Text-notmatch'SPEC_ID_NOT_NEXT') $r.Text
     Pop 'K-activation' 'accept'
+    # 191c-191l. SPEC-256. In range mode the per-commit walk is the ONE allocation authority. A
+    # net-diff call judged the whole range against the BASE's reservations, so an identity reserved
+    # inside the unpublished range and lawfully skipped read SPEC_ID_NOT_NEXT (SPEC-254). That call
+    # was also the only guard for a range that removes the marker, so activation is now decided once
+    # from the ORIGINAL base. Each refusal below is SPEC_ID_NOT_NEXT or SPEC_ID_HISTORICALLY_RESERVED
+    # carrying the allocating commit, which only Validate-SpecAllocation raises; each has a control
+    # of the same shape that is accepted. Builders never reset: MutationKillRangeAt commits the
+    # mutant first, and a reset would discard it.
+    $krOn="# fixture lifecycle`n`nSPEC Allocation Enforcement: 1`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n"
+    $krOff="# fixture lifecycle`n`nno marker here`n`nHistorical CR Immutability Enforcement: 5d78aacd5335278c5b03edb0b3f969bd86e6b9c4`n"
+    $krScope='allowed.txt;_ORVION_CANONICAL/manifest.md;CR_LIFECYCLE.md'
+    function KrPlan{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None');Commit 'plan-baseline';(git -C $root rev-parse HEAD).Trim()}
+    function KrDraft([string]$Rel,[string]$Id){Put $Rel (ContractText -Id $Id -Status Draft -Scope $krScope -Evidence (EvidenceText))}
+    function KrApprove([string]$Rel,[string]$Id){Put $Rel (ContractText -Id $Id -Status Approved -Scope $krScope -Evidence (EvidenceText));Put '_ORVION_CANONICAL/manifest.md' (ManifestText $Rel);Commit "approve-$Id"}
+    function KrReserveSkip([switch]$NoReserve){
+        $b=KrPlan
+        if(-not $NoReserve){Put 'allowed.txt' "a note naming $(FxId 1) once";Commit 'reserve-inside-range'}
+        KrDraft "changes/$(FxId 2)-after.md" (FxId 2);Commit 'allocate-after';KrApprove "changes/$(FxId 2)-after.md" (FxId 2);$b
+    }
+    function KrReserveTake{
+        $b=KrPlan
+        Put 'allowed.txt' "a note naming $(FxId 1) once";Commit 'reserve-inside-range'
+        Put 'allowed.txt' 'baseline';Commit 'delete-the-note'
+        KrDraft "changes/$(FxId 1)-taken.md" (FxId 1);Commit 'take-reserved';KrApprove "changes/$(FxId 1)-taken.md" (FxId 1);$b
+    }
+    function KrTwoLegal{
+        $b=KrPlan
+        Put "changes/$(FxId 1)-first.md" (ContractText -Id (FxId 1) -Status Draft -Scope 'allowed.txt');Commit 'first'
+        $rel="changes/$(FxId 2)-second.md";$s="allowed.txt;_ORVION_CANONICAL/manifest.md;changes/$(FxId 1)-first.md"
+        Put $rel (ContractText -Id (FxId 2) -Status Draft -Scope $s);Commit 'second'
+        Put $rel (ContractText -Id (FxId 2) -Status Approved -Scope $s);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $rel);Commit 'approve-second';$b
+    }
+    function KrToggle([int]$Off){
+        $b=KrPlan;$rel="changes/$(FxId $Off)-window.md"
+        Put 'CR_LIFECYCLE.md' $krOff;Commit 'marker-off'
+        KrDraft $rel (FxId $Off);Commit 'allocate-while-off'
+        Put 'CR_LIFECYCLE.md' $krOn;Commit 'marker-on'
+        KrApprove $rel (FxId $Off);$b
+    }
+    function KrActivate([int]$Off){
+        KrPlan|Out-Null;Put 'CR_LIFECYCLE.md' $krOff;Commit 'pre-marker-base';$b=(git -C $root rev-parse HEAD).Trim();$rel="changes/$(FxId $Off)-activated.md"
+        Put 'CR_LIFECYCLE.md' $krOn;Commit 'activate-in-range'
+        KrDraft $rel (FxId $Off);Commit 'allocate-after-activation';KrApprove $rel (FxId $Off);$b
+    }
+    function KrSegments([int]$Off){
+        Rebase (ContractText -Resume DONE -Scope $krScope -Evidence (EvidenceText));$b=(git -C $root rev-parse HEAD).Trim()
+        Put 'CR_LIFECYCLE.md' $krOff
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $krScope -Evidence (EvidenceText) -Closeable)
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'first-segment-complete-marker-off'
+        $id=FxId $Off;$rel="changes/$id-second.md"
+        KrDraft $rel $id;Commit 'second-draft-while-off'
+        KrApprove $rel $id
+        Put $rel (ContractText -Id $id -Status 'In Progress' -Resume DONE -Scope $krScope -Evidence (EvidenceText));Put 'CR_LIFECYCLE.md' $krOn;Commit 'second-inprogress-marker-on'
+        Put $rel (ContractText -Id $id -Status Complete -Resume DONE -Scope $krScope -Evidence (EvidenceText) -Closeable);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'second-complete';$b
+    }
+    Reset-Fixture;$r=RunRange (KrReserveSkip)
+    Assert '191c SPEC-ALLOCATION RANGE-RESERVATION: an identity reserved inside the range is lawfully skipped' ($r.Code-eq0) $r.Text
+    Pop 'K-range' 'accept'
+    Reset-Fixture;$r=RunRange (KrReserveSkip -NoReserve)
+    Assert '191d SPEC-ALLOCATION RANGE-RESERVATION: the same skip with no reservation is refused at its commit' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT:[0-9]+:[0-9]+@[0-9a-f]{7}') $r.Text
+    Pop 'K-range' 'reject'
+    Reset-Fixture;$r=RunRange (KrReserveTake)
+    Assert '191e SPEC-ALLOCATION RANGE-RESERVATION: an identity reserved and deleted inside the range cannot be taken' ($r.Code-ne0-and$r.Text-match'SPEC_ID_HISTORICALLY_RESERVED:SPEC-[0-9]+:[0-9a-f]+@[0-9a-f]{7}') $r.Text
+    Pop 'K-range' 'reject'
+    Reset-Fixture;$r=RunRange (KrTwoLegal)
+    Assert '191f SPEC-ALLOCATION RANGE-RESERVATION: two ordinary allocations in one range are accepted' ($r.Code-eq0) $r.Text
+    Pop 'K-range' 'accept'
+    Reset-Fixture;$r=RunRange (KrToggle 50)
+    Assert '191g SPEC-ALLOCATION RANGE-ACTIVATION: removing the marker inside the range does not suspend allocation' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT:[0-9]+:[0-9]+@[0-9a-f]{7}') $r.Text
+    Pop 'K-range' 'reject'
+    Reset-Fixture;$r=RunRange (KrToggle 1)
+    Assert '191h SPEC-ALLOCATION RANGE-ACTIVATION: the same marker removal with the next identity is accepted' ($r.Code-eq0) $r.Text
+    Pop 'K-range' 'accept'
+    Reset-Fixture;$r=RunRange (KrActivate 50)
+    Assert '191i SPEC-ALLOCATION RANGE-ACTIVATION: activation inside the range judges later allocations' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT:[0-9]+:[0-9]+@[0-9a-f]{7}') $r.Text
+    Pop 'K-range' 'reject'
+    Reset-Fixture;$r=RunRange (KrActivate 1)
+    Assert '191j SPEC-ALLOCATION RANGE-ACTIVATION: activation inside the range admits the next identity' ($r.Code-eq0) $r.Text
+    Pop 'K-range' 'accept'
+    Reset-Fixture;$r=RunRange (KrSegments 50)
+    Assert '191k SPEC-ALLOCATION RANGE-ACTIVATION: the original base governs every publication segment' ($r.Code-ne0-and$r.Text-match'SPEC_ID_NOT_NEXT:[0-9]+:[0-9]+@[0-9a-f]{7}') $r.Text
+    Pop 'K-range' 'reject'
+    Reset-Fixture;$r=RunRange (KrSegments 1)
+    Assert '191l SPEC-ALLOCATION RANGE-ACTIVATION: the same two segments with the next identity are accepted' ($r.Code-eq0-and$r.Text-match('CR: '+(FxId 1))) $r.Text
+    Pop 'K-range' 'accept'
+
 
     # 193. The routine Gate must stay a LOCAL, deterministic check. The stub bin
     # already shadows npx and docker, so an invocation of either - and by extension
@@ -2580,11 +2666,24 @@ exit 0
     foreach($m in @(
         @{N='K per-commit range invocation';E='SPEC_ID_NOT_NEXT'
           F='try{Validate-SpecAllocation $records "$commit^" -SkipMarkerCheck -CheckOrigination -StateRef $commit}catch{throw "$($_.Exception.Message)@$short"}';R=''}
-        @{N='K first-parent activation marker';E='SPEC_ID_NOT_NEXT'
-          F='if(Allocation-ActiveAt "$commit^"){';R='if($false){'}
     )){
         MutationKillRange "APPROVAL-EVIDENCE MUTATION POPULATION: $($m.N)" $m.E $m.F $m.R
     }
+    # SPEC-256. Range activation and the single range authority, each predicate killed on the one
+    # scenario only it refuses. The first restores the net-diff call this contract removed.
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: K net-diff range allocation call restored' `
+        {KrReserveSkip} 'ORVION: READY' `
+        '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)' `
+        '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef);if($script:RangeAllocationActive){Validate-SpecAllocation $records $base -SkipMarkerCheck}' 'K-range'
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: K range-base activation term' `
+        {KrToggle 50} 'SPEC_ID_NOT_NEXT' 'if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){' 'if(Allocation-ActiveAt "$commit^"){' 'K-range'
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: K first-parent activation term' `
+        {KrActivate 50} 'SPEC_ID_NOT_NEXT' 'if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){' 'if($script:RangeAllocationActive){' 'K-range'
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: K range-base activation is computed' `
+        {KrToggle 50} 'SPEC_ID_NOT_NEXT' '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)' '$script:RangeAllocationActive=$false' 'K-range'
+    MutationKillRangeAt 'APPROVAL-EVIDENCE MUTATION POPULATION: K activation survives segment substitution' `
+        {KrSegments 50} 'SPEC_ID_NOT_NEXT' 'if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){' 'if((Allocation-ActiveAt $BaseRef)-or(Allocation-ActiveAt "$commit^")){' 'K-range'
+
 
     # CTRL-1. The two load-bearing halves of the repaired activation, each killed on a scenario
     # only it can refuse. Inverting the ancestry test makes every ref read as pre-activation, which
@@ -2728,12 +2827,15 @@ exit 0
         Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'osm-complete'
         $b
     }
+    # SPEC-256 re-anchors these two on the repaired lines: forcing the per-commit gate on must still
+    # judge a pre-activation range, and a range endpoint that judged origination, now absent
+    # altogether, must still be refused by the born-and-completed lifecycle.
     MutationKillRangeAt 'ORIGINATION STATE MUTATION: the activation marker keeps the rule forward-only' `
-        {OsBuildPre} 'ORVION: READY' 'if(Allocation-ActiveAt "$commit^"){' 'if($true){' 'ORIGIN'
+        {OsBuildPre} 'ORVION: READY' 'if($script:RangeAllocationActive-or(Allocation-ActiveAt "$commit^")){' 'if($true){' 'ORIGIN'
     MutationKillRangeAt 'ORIGINATION STATE MUTATION: origination must be Draft' `
         {OsBuildPost} 'ORIGINATION_NOT_DRAFT' "            if(`$st-ne'Draft'){throw ""ORIGINATION_NOT_DRAFT:`$(`$r.Path):`$st""}" '            if($false){}' 'ORIGIN'
     MutationKillRangeAt 'ORIGINATION STATE MUTATION: the range endpoint is excluded' `
-        {OsBuildLifecycle} 'MODE: VERIFY' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck}' 'elseif(Allocation-ActiveAt $BaseRef){Validate-SpecAllocation $records $base -SkipMarkerCheck -CheckOrigination}' 'ORIGIN'
+        {OsBuildLifecycle} 'MODE: VERIFY' '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)' '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef);if($script:RangeAllocationActive){Validate-SpecAllocation $records $base -SkipMarkerCheck -CheckOrigination}' 'ORIGIN'
 
     # ---- SEGMENTED PUBLICATION: committed range, receipt, and tail ----
     function Build-SegmentedFixture([string]$SecondScope='context.txt;_ORVION_CANONICAL/manifest.md',[string]$FirstExtra='',[switch]$StopAtApproved,[switch]$KeepFirstPointer){
