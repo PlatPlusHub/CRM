@@ -182,7 +182,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -488,6 +488,57 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   - 0 tenants, 0 service requests, 0 events.
 - **Predicted delta on Primary:** one ledger row (246, `a6500a25…`); functions 323 and triggers 309, matching the local values; three functions and three triggers added and two function bodies replaced; no other surface and no business row changes.
 - **Stop:** Step 5 finds no Gate-2 authorization for the migration's SHA-256. Primary was read only. Secondary was not contacted.
+
+### 2026-10-10 — Human Gate 2: owner authorization
+
+The owner authorized deployment to Primary `vrvtsxexkiiiivlkdxzp` of only `supabase/migrations/20261010120000_a_service_request_begins_requested_under_its_creator.sql`, SHA-256 `2da54597b05972dbb12d75c9ce0fc2600a9d610ed86664d859e85dba6ddfed0b`, MD5 `351e1ac51761c1b9a62133e381b072a3`, through the existing SPEC-257 deployment procedure. The authorization covers exactly that one migration and, if the connector assigns a temporary version, the guarded reconciliation of that one new ledger row under exact MD5 verification. No other Primary change is authorized.
+
+**Conditions:**
+- A fresh preflight runs immediately before the write: repository identity, the frozen file hashes, the target project, the complete ledger, the existing object fingerprints and the business counts.
+- The transmitted bytes are proven server-side before execution.
+- Any material difference from the Gate-2 package aborts the deployment, with no improvised repair and no broadened scope.
+- If the connection fails or the outcome is ambiguous, the actual state is established by fresh read-only verification first, and a possibly applied migration is never replayed.
+- After the write, the ledger, the migration fingerprint, the functions, the triggers, the grants, the RLS protections and the business counts are verified against the expected state.
+
+After a successful deployment, SPEC-257 continues through its authorized lifecycle to remote certification and synchronization. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-10 — Step 6: Primary deployment
+
+**Prewrite recheck, every condition exact:**
+- refs: HEAD `2bd67ae6f5ba8bb003ea5ba62d340c6845a54fce`; `origin/main` `3af104b`; this contract's file and its HEAD blob both `b0901798…`;
+- the files: migration SHA-256 `2da54597…`, md5 `351e1ac51761c1b9a62133e381b072a3`, 14009 bytes, 0 CR; test 149 `8e69bab0…`, test 83 `16235efe…`, register `86095783…` and disposition `96e1e6a8…` unchanged; `git status` only Write Scope paths;
+- project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+- ledger 245, `43bf5befaf466ec422d8eaaf5261d250`, latest `20261009120000`; the target absent by version and name, and no row after `20261009120000`;
+- all ten surfaces and combined `902311907ba7e192b285bd43e091ff8d`/3109, equal to the Gate-2 package;
+- `service_requests` carried its 7 existing triggers; `app.create_service_request` text md5 `763f11d0…` and `app.advance_service_request` `acf9d556…`, each SECURITY INVOKER with ACL `{postgres=X/postgres,authenticated=X/postgres}`; the three new functions and three new triggers absent;
+- 0 tenants, service requests and events.
+
+The first RPC read hashed `pg_get_functiondef` and so differed from the package's text md5; re-read as the package was taken (`md5(prosrc)`), both matched exactly. Nothing was written before that.
+
+**Write:**
+- The text to transmit was first proven server-side, read-only, to hash to md5 `351e1ac51761c1b9a62133e381b072a3`, 14009 bytes, 287 LF, 0 CR.
+- That text was applied through `apply_migration` as `a_service_request_begins_requested_under_its_creator`. The connector assigned the temporary version `20261010114442`; its single stored statement has md5 `351e1ac5…` and 14009 bytes, equal to the file.
+- One guarded CTE UPDATE renamed only that row to `20261010120000`. The guard required 246 rows, exactly one after `20261009120000`, the other 245 hashing to the baseline `43bf5bef…`, the statement md5 to match and no existing target. All five held, and 1 row was renamed.
+
+**Fresh postwrite reads, every value equal to the frozen prediction:**
+- **Ledger:** 246, `a6500a25aeb035493ac37f18cb46fb32`, latest `20261010120000`; exactly one row for the migration, under the target version, its statement md5 `351e1ac5…`; the temporary version is gone.
+- **Surfaces:** functions `e3d5180863b8482178efde66465a47b4`/323 (the Check L2/P2 expression reads the same); triggers `a46035c1b6ce74d5d87fa46a40571e16`/309; policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status_transitions `db2165c7…`/115 and rls_enabled `c117cbf7…`/79 unchanged; `_combined` `f56111d6426fb29d91ff6cb41ce1ada2`/3115.
+- **The five functions:** text md5 `c0c9b1e4…` (guard), `c42a393b…` (created producer), `694bae4e…` (transition producer), `e630aad4…` (create RPC) and `abcec12f…` (advance RPC), each byte-equal to the local stack's, full definitions too. Each is SECURITY INVOKER, owner `postgres`, `search_path=""`; the two RPCs keep ACL `{postgres=X/postgres,authenticated=X/postgres}`, and the three trigger functions hold `{postgres=X/postgres}`.
+- **The table:** 10 triggers, all enabled: the 7 before, plus `service_requests_guard_integrity` (BEFORE INSERT OR UPDATE, tgtype 23), `service_requests_emit_created` (AFTER INSERT, 5) and `service_requests_emit_transition` (AFTER UPDATE OF `service_request_status_code`, 17). Row level security is on. Table grants are `authenticated` INSERT, SELECT and UPDATE only.
+- **Business rows:** 0 tenants, service requests and events.
+
+**Behaviour on the deployed bytes** is proven locally on the byte-identical functions, because no business data or fixture is written on Primary. Test 149 48/48, the full suite 149/2745 on both passes, the six HTTP suites 464/0, the causal negative and M1–M20 were all recorded on these bytes.
+
+No business-data write and no fixture was made on Primary. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-10 — Step 7: evidence and measured state
+
+- **Evidence:** `reports/evidence/primary-ledger-evidence.json` was rewritten from the fresh readings only: 246 migrations, `a6500a25…`, functions `e3d51808…`/323, structural `f56111d6…`/3115, head `2bd67ae`, read at 2026-10-10T11:45:52Z. Its ledger is the Primary ledger read with its own `read_query`; it hashes to `a6500a25aeb035493ac37f18cb46fb32` and equals the repository's 246 migration files. The file is stored LF.
+- **Manifest:** `supabase/tests` holds 149 files whose `plan(N)` values sum to 2745. `Live state` reads 246 migrations, latest `20261010120000`, the same hashes and counts, last verified and re-read from Primary 2026-10-10; `Suite **149 files / 2745 assertions**`; and 464 HTTP assertions, last passed 2026-10-10 in the Step-4 run. Batch 6 coverage is 36 of 78, all thirty-six at `ADVERSARIAL`. Tables (78), catalog (71/622) and client RPCs (80) do not move. The manifest measures 6847 characters.
+- **Register:** SR-1 and SR-2 are marked DEPLOYED with Cert `✅`, worded without a new date. No other row changed in this step.
+- **Generators:** `MASTER_API_CONTRACT.md` regenerates unchanged (SHA-256 `d28fb5672ca9c0795a99a74746069c973e1392edcc5e3d2a5a315348138175fd`). `ai-map.json` was regenerated and stored LF; only its timestamp changed.
+- **Checks:** the four CI-only guard self-tests pass: cold-start 34/0, status-contradiction 33/0, primary-ledger 13/0 and future-date 18/0. `check_primary_ledger.ps1` reports `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence.ps1` reports `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`, Primary's structure matching local at `f56111d6…`; repository consistency reports `REPOSITORY CONSISTENCY: CLEAN`, the six pre-deploy issues resolved; `git diff --check` is clean.
+- **Checkpoint:** the Runtime Checkpoint is DONE, so Step 8's `-Finish` runs in VERIFY mode.
 
 ## Verification Notes
 
