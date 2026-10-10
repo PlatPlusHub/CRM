@@ -76,7 +76,7 @@ None. It depends on SPEC-255, which is Complete locally at `ef2e948` and unpubli
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
