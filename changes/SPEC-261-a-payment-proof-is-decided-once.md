@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -362,19 +362,19 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
 
 ## Acceptance Criteria
 
-- [ ] `app.platform_review_payment_proof` locks the proof it judges (`for no key update`) before its `pending` check. Of two concurrent reviews of one proof, the waiter is refused with the existing message, whatever either decides (H, I, J and L).
-- [ ] No race leaves a rejected proof behind an activation, an approved proof that was rejected, a second decision, a second activation or the second reviewer's terms. Each records one decision event and one security event, with a true from-state.
-- [ ] A rolled-back review releases its waiter to decide once (K). A failed activation rolls back its decision, and single approvals, rejections and refused replays behave as before (N).
-- [ ] An upload and a document link's key-share check are not made to wait by an open review (L). A review waiting on the lifecycle job's subscription completes without a deadlock (M).
-- [ ] The function keeps its signature, owner `postgres`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres,service_role=X/postgres}` and no comment. Its only code change is the lock clause.
-- [ ] `scripts/verify_subscription_concurrency.py` runs all fourteen cases plus fault isolation, each independently, and is named in Additional Verification. Test 153 runs in every CI database job. Tests 47, 131, 148 and 152 pass, and Test 152's assertions are unchanged.
-- [ ] Mutants M1–M6 are each killed, with installation and restoration proven, and the causal negative is recorded.
-- [ ] SPP-6 (Medium) is FIXED and DEPLOYED in the register. The `subscription_payment_proofs` row names SPEC-261 and SPP-6, carries the SPP-6 evidence and no longer says the race is unmeasured. It stays `AUDITED-OPEN` on SPP-3, coverage stays 39 of 78, and no other row of either record changed.
-- [ ] The migration, Tests 153 and 152, and the proof matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (249 migrations; 153 files / 2815 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 39 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] `app.platform_review_payment_proof` locks the proof it judges (`for no key update`) before its `pending` check. Of two concurrent reviews of one proof, the waiter is refused with the existing message, whatever either decides (H, I, J and L).
+- [x] No race leaves a rejected proof behind an activation, an approved proof that was rejected, a second decision, a second activation or the second reviewer's terms. Each records one decision event and one security event, with a true from-state.
+- [x] A rolled-back review releases its waiter to decide once (K). A failed activation rolls back its decision, and single approvals, rejections and refused replays behave as before (N).
+- [x] An upload and a document link's key-share check are not made to wait by an open review (L). A review waiting on the lifecycle job's subscription completes without a deadlock (M).
+- [x] The function keeps its signature, owner `postgres`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres,service_role=X/postgres}` and no comment. Its only code change is the lock clause.
+- [x] `scripts/verify_subscription_concurrency.py` runs all fourteen cases plus fault isolation, each independently, and is named in Additional Verification. Test 153 runs in every CI database job. Tests 47, 131, 148 and 152 pass, and Test 152's assertions are unchanged.
+- [x] Mutants M1–M6 are each killed, with installation and restoration proven, and the causal negative is recorded.
+- [x] SPP-6 (Medium) is FIXED and DEPLOYED in the register. The `subscription_payment_proofs` row names SPEC-261 and SPP-6, carries the SPP-6 evidence and no longer says the race is unmeasured. It stays `AUDITED-OPEN` on SPP-3, coverage stays 39 of 78, and no other row of either record changed.
+- [x] The migration, Tests 153 and 152, and the proof matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (249 migrations; 153 files / 2815 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 39 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -503,19 +503,95 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes:
   - repository consistency: `CLEAN`;
   - `git diff --check`: exit 0.
 
+
+### 2026-10-11 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `a4ba775` with nothing else running. It ran in VERIFY mode (`STATUS: In Progress`, `STEP: DONE`), with profiles DATABASE and REPOSITORY plus the declared `python scripts/verify_subscription_concurrency.py`. It reported `LOCAL_CERTIFY: READY` in 4.2 min, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; the two-session proof; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+The four CI-only guard self-tests passed earlier on the same committed content (Step 7). The causal negative and M1–M6 were recorded before approval on the same migration, test and proof bytes, which are unchanged, so they were not repeated. Test 153's assertions are checked by both pgTAP passes.
+
+**Selector after SPEC-261** (`scripts/batch6_select_target.ps1`, 39 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `complaints` 8/48
+2. `payment_allocations` 8/60
+3. `receipts` 7/20
+4. `chart_of_accounts` 7/38
+5. `notification_deliveries` 7/42
+6. `approval_requests` 7/52
+7. `user_branch_assignments` 7/572
+8. `departments` 7/636
+9. `user_role_assignments` 7/636
+10. `customer_consents` 6/18
+11. `document_retention_policies` 6/36
+12. `document_links` 6/54
+
+The ranking is unchanged from SPEC-260. Slice 39's measured target is `complaints`.
 ## Verification Notes
 
-None.
+### 2026-10-11 — Independent Review of the execution commit `a4ba775`
+
+Reviewed the committed tree against the approved Draft `4d60253`, the owner's Gate-2 authorization and the eleven-path Write Scope. The review read the implementation and the live state, not the Execution Log.
+
+1. **The lock (criterion 1).** The committed migration's one statement replaces `app.platform_review_payment_proof`.
+   - Comment-stripped and whitespace-normalized, its body equals the only earlier definition (`202607054500`) with ` for no key update` added to the proof read, and with no other difference.
+   - The lock precedes the `pending` check, which keeps its 23514 message.
+   - Test 153 pins this (assertions 1–3), and both `-Finish` pgTAP passes ran it.
+   - The two-session proof passed inside `-Finish`. In H, I, J and L the waiter is observed blocked and then refused "already approved" or "already rejected".
+2. **No double decision (criterion 2).** The proof's `decided()` reads the proof status, the subscription state and terms, the decision and activation events with their from-states, and the security decisions. H and J assert `approved | active/annual | subscription_payment_approved:pending->approved,subscription_activated:grace_period->active | approved`. I asserts `rejected | grace_period/- | subscription_payment_rejected:pending->rejected | rejected`. Each records one decision event, one security event, a true from-state, and at most one activation, on the first reviewer's terms.
+3. **Error behaviour and single reviews (criterion 3).**
+   - K: a rolled-back review's waiter decides once.
+   - N: a failed activation (`unknown or inactive plan_code`) leaves `pending | grace_period/- | - | -`; a single approval activates once; a single rejection leaves the subscription untouched; and both replays are refused.
+4. **No new waiting, no deadlock (criterion 4).**
+   - L: an upload and a proof key-share check finish under `lock_timeout` while a review is open, and a second review is refused.
+   - M: a review waiting on the lifecycle job's subscription completes as `approved | active/annual`.
+5. **Function properties (criterion 5).** Primary and the certified local stack read the same `prosrc` `2cbc94867ea6ce5dc81cf5cd98511b25` and definition `9d58dec566dd66fb9f07bd0c35c456d1`. The function is SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres,service_role=X/postgres}`, with no comment and the same identity arguments and `void` result. Test 153 assertion 5 pins the security mode, path and grants.
+6. **Harness and tests (criterion 6).**
+   - The proof defines the seven SPEC-250 cases and H–N, each with its own tenant, plus fault isolation. It is named in Additional Verification and passed in `-Finish`.
+   - Tests 47, 131, 148 and 152 passed in both full passes.
+   - Test 152's diff against `39ab45a` is lines 11–13 of its CONCURRENCY comment only.
+7. **Mutation (criterion 7).** M1–M6 and the causal negative (`11 passed, 4 failed`; test 153 failing 1 and 2) were recorded in Pre-Approval Evidence on the frozen bytes. The committed migration, test 153 and proof blobs hash to those bytes.
+8. **Records (criterion 8).**
+   - **Register:** SPP-6 reads Medium, FIXED and DEPLOYED, with Cert `✅`. Against `39ab45a`, the register changed only its freshness entry and that row.
+   - **Disposition:** the `subscription_payment_proofs` row names `SPEC-261-a-payment-proof-is-decided-once` and `SPP-5, SPP-6, SPP-3, FX-4`, and carries the SPP-6 evidence. Its Next is SPP-3's trigger, and it stays `AUDITED-OPEN` / `ADVERSARIAL`.
+   - The only remaining "not measured" in the disposition record is the freshness entry recording the correction. Against `39ab45a`, the record changed only the freshness entry and that row. The per-state counts are unchanged, and coverage reads 39 of 78.
+9. **Frozen values (criterion 9).** The committed blobs hash to the approved values:
+   - migration `fa652cddd384989256ddbdef593486b51a7bb23739ae1639c5ab83a342a9ca1c` (MD5 `2539aa91d9bff705475fb465eaad33c4`, 4714 bytes);
+   - test 153 `679b869d…`;
+   - test 152 `ab72f990…`;
+   - the proof `3c13a698…`.
+
+   Primary's stored statement MD5 is `2539aa91…`.
+10. **Agreement (criterion 10).** Primary, the evidence and the manifest agree:
+    - 249 migrations, `323eae75…`;
+    - functions `724baac7…`/323, structural `5a9ed7ff…`/3115;
+    - 153 files / 2815 assertions (plan sum recounted), 464 HTTP assertions.
+
+    The API contract matches its generator (`d28fb567…`), and `ai-map.json` is LF. The four guard self-tests passed on the deployed content, and repository consistency and `-Finish`'s parity and ledger checks pass.
+11. **Next capability (criterion 11).** The Complete commit keeps Batch 6 Slice 39 and `complaints` (8/48), which the selector re-measured, and clears the Active Change Request.
+12. **Primary and Secondary (criterion 12).**
+    - Primary's ledger holds exactly one row for the migration, after one guarded rename of temporary version `20261010230810`.
+    - It holds 0 tenants, subscriptions and payment proofs before and after.
+    - No other surface moved.
+    - Secondary was never contacted.
+13. **Scope (criterion 13).** `39ab45a..HEAD` changes ten paths, all in Write Scope. `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+**Outside this contract, and not a defect in it:**
+- SPP-3, the platform decision recording no reviewer, stays owed on its trigger.
+- Two approvals of two different proofs each activate the subscription, as in sequence. This is held as activation semantics.
+- The certified local stack keeps the proof's committed fixture tenants until the next reset; this is local only.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
