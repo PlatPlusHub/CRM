@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -373,7 +373,31 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-10-10 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-258 Gate 1 approval of 2026-10-10 for Draft `cb9573b0fbcd8163c901149563498adf02319c5f`, contract SHA-256 `9f1aff002a47b7d763bd260df9cbd2ee24b8e1b4c4f60babda0c573b43b3e14e`, covering QUO-9, QUO-10 and the foreign-tenant disclosure the contract documents. Verified before acting: HEAD was that commit, the working tree was clean, and the contract file and its committed blob both hash to that value. The frozen prototype files in the scratch worktree hash to migration `663e759db30c6d594c08b9fae1fd6b8beb52fdcee42ff5ece0f74ab89270fd91` and test 150 `9eea06b3756dbe3ded9d8f27946ae352e51f422cd9f3605f65623534b8cb582c`. Approval was committed at `0263b41`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 150 are absent from the repository. The register, disposition record, API contract and Primary evidence file are unchanged since `44c09d8`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
+- **Correction to Consumer Closure's CI-only guard row.** The Draft said the four `scripts/test_*_guard.ps1` suites pin only the manifest's open-decision enumeration. That is incomplete, and the owner asked that it be checked. Read from the scripts:
+  - `test_cold_start_state_guard.ps1` attacks Checks 10, 14, 16, 20 and 25, over the manifest and the register;
+  - `test_future_date_guard.ps1` attacks Check 12, which reads every dated entry this contract adds;
+  - `test_status_contradiction_guard.ps1` attacks Check 2 over the register and the disposition record;
+  - `test_primary_ledger_guard.ps1` attacks RECOVER-1 over the evidence file and the migrations.
+
+  Each reads a file this contract changes. Step 4 therefore also runs all four on the working tree with Steps 1–3 applied, so that a guard needing a file outside Write Scope is found before the irreversible step (SPEC-240's failure). Only the drift Step 7 removes may fail there. Step 7's run stays mandatory.
+- **Precision against the existing RPC callers.** The owner asked that the precision behaviour be covered and tested against the existing callers. `app.add_quotation_item` is unchanged. Every existing caller passes a price and quantity within the columns' precision:
+  - `verify_api_end_to_end.ps1` 18000 x 2;
+  - `verify_lifecycle_branches.ps1` 30000 and 24000 at the default quantity;
+  - tests 39, 73, 84, 88, 112 and 120, using whole-number prices (including 0) and quantities of 1.
+
+  Test 150 assertion 4 pins an in-precision fractional line (33.3333 x 1.5, stored as 50.0000). All of these run in Step 4's suites. The over-precise refusal named in Risks is measured again on the canonical state at Step 4. No rounding or pricing rule is added: a value the columns can hold behaves exactly as before.
+- **Worktrees.** Read-only inventory, nothing modified:
+  - `wt251`'s three never-pushed scratch commits have no equivalent patch on `origin/main`.
+  - `wt255` carries 4 modified files, and `C:\w234` 15, whose content differs from `origin/main`.
+  - Unique work cannot be ruled out in any of the three, and all three stay untouched.
+  - `owt/p2` is clean on a commit `origin/main` contains.
+  - `wt258` holds only this contract's prototype bytes. Its results are prototype evidence, never certification.
+- **No Primary write is authorized.** Gate 2 stands before Step 6. Secondary is never contacted.
 
 ## Verification Notes
 
