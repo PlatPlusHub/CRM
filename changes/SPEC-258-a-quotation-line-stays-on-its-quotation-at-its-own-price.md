@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -355,21 +355,21 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A line whose total is not its quantity times its unit price in the column's type, including one that omits its total, is refused 23514 on INSERT and UPDATE, signed in and session-less; the RPC's rounded product is accepted.
-- [ ] A line whose currency is not its quotation's is refused 23514 on INSERT and UPDATE.
-- [ ] No caller can change a line's `quotation_id` (23514); a sent quotation keeps its lines, and its `quotation_sent` and `quotation_accepted` events agree with them.
-- [ ] A direct line write racing a send of the same quotation waits for it and is refused, as the RPC is; recorded in two sessions against the repaired guard.
-- [ ] A signed-in caller naming another tenant's quotation is refused 42501 by RLS, and the guard reports nothing of that quotation.
-- [ ] The held controls stay held: the denied employee's price change is refused 42501; a line on a sent quotation is refused 23514; the RPC and a consistent direct write still add lines to a draft.
-- [ ] `app.guard_quotation_item_parent_editable` keeps its trigger, SECURITY DEFINER, owner `postgres`, `search_path=""` and ACL `{postgres=X}`; `app.add_quotation_item`, `app.advance_quotation` and `app.recompute_quotation_total` are unchanged.
-- [ ] Mutants M1–M6 are each killed against test 150, with installation and restoration proven, and M5 also in two sessions. The causal negative is recorded.
-- [ ] QUO-9 and QUO-10 are fixed and deployed in the register.
-- [ ] `quotation_items` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 37 of 78. No other surface's row changed.
-- [ ] The migration and test 150 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (247 migrations; 150 files / 2778 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 37 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A line whose total is not its quantity times its unit price in the column's type, including one that omits its total, is refused 23514 on INSERT and UPDATE, signed in and session-less; the RPC's rounded product is accepted.
+- [x] A line whose currency is not its quotation's is refused 23514 on INSERT and UPDATE.
+- [x] No caller can change a line's `quotation_id` (23514); a sent quotation keeps its lines, and its `quotation_sent` and `quotation_accepted` events agree with them.
+- [x] A direct line write racing a send of the same quotation waits for it and is refused, as the RPC is; recorded in two sessions against the repaired guard.
+- [x] A signed-in caller naming another tenant's quotation is refused 42501 by RLS, and the guard reports nothing of that quotation.
+- [x] The held controls stay held: the denied employee's price change is refused 42501; a line on a sent quotation is refused 23514; the RPC and a consistent direct write still add lines to a draft.
+- [x] `app.guard_quotation_item_parent_editable` keeps its trigger, SECURITY DEFINER, owner `postgres`, `search_path=""` and ACL `{postgres=X}`; `app.add_quotation_item`, `app.advance_quotation` and `app.recompute_quotation_total` are unchanged.
+- [x] Mutants M1–M6 are each killed against test 150, with installation and restoration proven, and M5 also in two sessions. The causal negative is recorded.
+- [x] QUO-9 and QUO-10 are fixed and deployed in the register.
+- [x] `quotation_items` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 37 of 78. No other surface's row changed.
+- [x] The migration and test 150 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (247 migrations; 150 files / 2778 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 37 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -502,19 +502,65 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
   - `git diff --check`: exit 0.
 - **CI-only guard self-tests, on this deployed state:** `test_future_date_guard`, `test_status_contradiction_guard`, `test_primary_ledger_guard` and `test_cold_start_state_guard` each pass, exit 0 (3.6, 3.1, 0.3 and 4.1 min). The CONTROL and restore cases that the pre-deploy drift failed at Step 4 now pass.
 
+### 2026-10-10 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `bb1fdf2` in VERIFY mode, with profiles DATABASE and REPOSITORY and nothing else running. It reported `LOCAL_CERTIFY: READY` in 5.2 min, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; the declared `verify_api_end_to_end.ps1` and `verify_lifecycle_branches.ps1`; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+That is the same profile as SPEC-257's 6.4 min and SPEC-250's 5.0 min, so the three are comparable.
+
+Before it, on the same committed state, the four CI-only guard self-tests passed (Step 7). The mutation evidence (M1–M6), the two-session race against the canonically applied guard, and the six HTTP suites (464/0) were recorded in Step 4 on the same migration and test bytes, which are unchanged, so they were not repeated.
+
+**Selector after SPEC-258** (`scripts/batch6_select_target.ps1`, 41 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `totp_enrollments` 8/38
+2. `subscription_payment_proofs` 8/48
+3. `complaints` 8/48
+4. `payment_allocations` 8/60
+5. `receipts` 7/20
+6. `chart_of_accounts` 7/38
+7. `notification_deliveries` 7/42
+8. `approval_requests` 7/52
+9. `user_branch_assignments` 7/566
+10. `user_role_assignments` 7/624
+11. `departments` 7/630
+12. `customer_consents` 6/18
+
+Slice 37's measured target is `totp_enrollments`.
+
 ## Verification Notes
 
-None.
+### 2026-10-10 — Independent Review of the execution commit `bb1fdf2`
+
+Reviewed the committed tree against the approved Draft `cb9573b`, the Gate-2 authorization and the nine-path Write Scope. The review read the implementation and the live state, not the Execution Log.
+
+1. **Total (criterion 1).** The committed guard compares `total_amount` with `quantity * unit_price` held in a `public.quotation_items.total_amount%type` variable, for every caller, and raises 23514. Test 150 assertions 7, 8, 9, 11 and 28 assert the stated, omitted, total-only and price-only cases and the session-less case; assertion 4 asserts the RPC's rounded 33.3333 x 1.5 line. Both `-Finish` pgTAP passes ran it within the whole suite and reported PASS.
+2. **Currency (criterion 2).** The guard refuses a `currency_code` other than the quotation's, on INSERT and UPDATE (23514). Assertions 12 and 13 assert both; 14 asserts every line of the quotation agrees.
+3. **Move (criterion 3).** The guard's first statement refuses any change of `quotation_id` on UPDATE, for every caller (23514). Assertions 19, 21, 23 and 29 assert the denied, draft-to-draft, sent-to-draft and session-less moves; 26 asserts the sent and accepted events both read 1,000 against the quotation's one 1,000 line.
+4. **Race (criterion 4).** The guard reads the quotation `for update`. At Step 4, against the canonically applied guard, the direct INSERT racing a send waited and was refused, and the quotation kept 1 line and 1,000. Assertion 31 pins the clause as a labelled text tripwire, and M5 was also killed in two sessions on the prototype.
+5. **Tenant (criterion 5).** For a signed-in caller the guard reads only `app.current_tenant_id()`'s quotations, so a foreign quotation is left to RLS. Assertion 27 asserts 42501 against a rival tenant's SENT quotation; at `44c09d8` the guard answered 23514 with that quotation's state.
+6. **Held controls (criterion 6).** Assertions 17 (42501 on the denied price change), 24 (23514 on a line added to a sent quotation), 2–5 and 10 (the RPC and consistent direct writes on a draft) pass.
+7. **Function properties (criterion 7).** The migration contains only `create or replace function app.guard_quotation_item_parent_editable()` and its `comment on function`. On Primary and locally the guard is SECURITY DEFINER, owner `postgres`, `search_path=""`, ACL `{postgres=X/postgres}`, and `quotation_items` keeps its five triggers. `app.advance_quotation` reads `24157c0c…` on both sides. `app.add_quotation_item` and `app.recompute_quotation_total` read raw prosrc `fd098c9a…` / `ae0f9fac…` locally and `349fd18e…` / `77e8f549…` on Primary. With CR bytes removed, both sides read `349fd18e…` / `77e8f549…`: local carries 44 and 36 CR bytes from older migrations' working copies, Primary none. That is pre-existing, outside this contract's change, and invisible to the whitespace-normalised surfaces, which agree.
+8. **Mutation (criterion 8).** M1–M6 were recorded at Step 4 on the committed-path bytes, which are unchanged (`663e759d…`, `9eea06b3…`), each installed and restored, failing exactly as tabled; M5 also in two sessions on the prototype. The causal negative fails 19 assertions on the pre-repair guard.
+9. **Register (criterion 9).** QUO-9 and QUO-10 read FIXED and DEPLOYED with Cert `✅`. No other row changed against `44c09d8`.
+10. **Disposition (criterion 10).** `quotation_items` is `AUDITED` / `ADVERSARIAL`, and the counts read 37 of 78 (16 `AUDITED`, 18 `AUDITED-OPEN`, 3 `PARTIAL`, 41 `NOT-RECORDED`). No other surface row changed against `44c09d8`.
+11. **Frozen values (criterion 11).** The committed migration and test 150 blobs hash to `663e759db30c6d594c08b9fae1fd6b8beb52fdcee42ff5ece0f74ab89270fd91` and `9eea06b3756dbe3ded9d8f27946ae352e51f422cd9f3605f65623534b8cb582c`.
+12. **Agreement (criterion 12).** Primary, the evidence and the manifest agree: 247 migrations, `f2fd1294…`, functions `b526e294…`/323, structural `2e608d8e…`/3115, 150 files / 2778 assertions, 464 HTTP assertions. The API contract matches its generator, `ai-map.json` is LF, and the four guard self-tests and repository consistency pass.
+13. **Next capability (criterion 13).** The Complete commit names Batch 6 Slice 37 and `totp_enrollments` (8/38) and clears the Active Change Request.
+14. **Primary and Secondary (criterion 14).** Primary's ledger holds exactly one row for the migration, its statement MD5 `0e7fbc0e…` equal to the authorized file, after one guarded rename. It holds 0 tenants, quotations, quotation lines and events before and after. Secondary was never contacted.
+15. **Scope (criterion 15).** `44c09d8..HEAD` changes only Write Scope paths, and `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created or deleted.
-- [ ] No section was added, removed or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created or deleted.
+- [x] No section was added, removed or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
