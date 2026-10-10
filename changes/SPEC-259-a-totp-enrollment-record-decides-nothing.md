@@ -174,7 +174,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -398,6 +398,15 @@ None yet.
   - `ai-map.json` was regenerated and stored LF.
   - `generate-api-contract.ps1` reproduced `MASTER_API_CONTRACT.md` byte-identical (80 RPC endpoints, 8 reporting views, 74 tables), so it is unchanged.
 - **Checks.** `git diff --check` exit 0. `check_repository_consistency.ps1`: `REPOSITORY CONSISTENCY: CLEAN`.
+### 2026-10-10 — Step 5: guard self-tests on the committed Steps 1-4
+
+The four `scripts/test_*_guard.ps1` were run on `7172de1` in the main checkout, and each exited 0:
+- `test_future_date_guard`, 3.40 min;
+- `test_status_contradiction_guard`, 3.33 min;
+- `test_primary_ledger_guard`, 0.26 min;
+- `test_cold_start_state_guard`, 4.25 min.
+
+The Runtime Checkpoint is set to `DONE` before canonical `-Finish`.
 ## Verification Notes
 
 None.
