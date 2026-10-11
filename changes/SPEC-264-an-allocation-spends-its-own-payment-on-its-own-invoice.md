@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -493,6 +493,24 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - [ ] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
+
+### 2026-10-11 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-264 revised-Draft approval (2026-10-11). It approves Gate 1 for Draft `cd5f7f420b50d68840ef74832a1ce221d2b35b98`, contract SHA-256 `8cdfb5e1c65ce2c2dc19bd0c6ea81cc5c98f933b61a082a440ef294451c695ba`, to close PAY-6, PAY-7, PAY-8, FIN-12, PAY-10 and PAY-11, keeps the owner's same-customer decision, and accepts the settled-state floor without establishing any policy for unsettling an invoice. The first Draft's identities are superseded and its authorizations unused. Verified before acting:
+  - HEAD was the Draft commit, 2 ahead of and 0 behind `origin/main` `1d25f40`, with 0 merges, and the working tree was clean;
+  - the contract file and its committed blob both hash to the approved value (71340 bytes);
+  - the frozen prototype files in the scratchpad `s40` hash to their Step 1–2 values, LF with 0 CR: migration `ee389adb…` (MD5 `42e94bec…`, 26690 bytes), test 155 `86cadadd…` (44771 bytes), test 126 `f90fcd2a…` (15326 bytes), test 72 `3ad92d5e…` (15739 bytes), `verify_database.sql` `8cd405c6…` (14432 bytes), canon 27 `ced9d93b…` (16289 bytes);
+  - the four edited files' committed bases are their `1d25f40` bytes: test 126 `618d3eab…`, test 72 `b430e242…`, `verify_database.sql` `33c0cfdb…`, canon 27 `ee1c3794…`;
+  - Write Scope is the thirteen paths above.
+
+  Approval was committed at `59bf144`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 155 are absent.
+- **Worktrees.** A read-only inventory; nothing was modified.
+  - `wt251` is clean at `578f3fb`, and `owt/p2` is clean at `7fe62ed`.
+  - `wt255` at `33e4db6` has 6 entries, `wt260` at `e26733a` has 4, `wt261` at `39ab45a` has 6, and `C:\w234` at `6c48fbb` has 15.
+
+  All stay untouched.
+- **Gate 2 stands before Step 6.** The same approval grants a separate, advance, one-time, exact-byte Gate 2 for migration `20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice.sql`, SHA-256 `ee389adb2aff9253ad1f283805419a488696e579336da2b0e81b968749cc559f` (26690 bytes, LF), to Primary `vrvtsxexkiiiivlkdxzp` only, conditional on the frozen artifact identities, a fresh Primary baseline with the migration absent, and every existing deployment safeguard. It takes effect only after Step 4's readiness requirements pass, and it is recorded at Step 5 only if they do. Secondary is never contacted.
 
 ## Verification Notes
 
