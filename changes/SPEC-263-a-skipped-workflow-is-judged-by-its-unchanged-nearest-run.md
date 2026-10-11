@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -236,17 +236,20 @@ Every file is written LF. The "from" hashes are the committed bytes at `f61ed84`
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-11 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-263 exact-identity approval and completion authorization (2026-10-11). It approves Gate 1 for Draft `15338ec3ac27f4389fc4ccb2b62edd54c39a7c54`, contract SHA-256 `7fbff1c901f2d96ba097d41ba698f1bd4d4c5a9277933a9e2624104bce0d54af`, to close CTRL-8. Verified before acting:
+  - HEAD was the Draft commit, 1 ahead of and 0 behind `origin/main` `f61ed84`, and the working tree was clean;
+  - the contract file hashes to the approved value, and the Draft commit changed only this file;
+  - the four prototype files in the scratchpad clone `c263` hash to their Step 1–2 "to" values (`925c2394…`, `2ed7975e…`, `75c7c967…`, `0cca07b7…`), and the committed files hash to their "from" values (`dbfbf8a9…`, `057dc455…`, `cdc316bb…`, `9f3541f7…`);
+  - Write Scope is the seven paths above.
+
+  Approval was committed at `be9622a`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
+- **Worktrees.** A read-only inventory; nothing was modified: `wt251` at `578f3fb`, `wt255` at `33e4db6`, `wt260` at `e26733a`, `wt261` at `39ab45a`, `owt/p2` at `7fe62ed` and `C:\w234` at `6c48fbb`. All stay untouched.
+- **No database, Primary or Secondary action** belongs to this contract. Migration `20261011090000` is not reapplied.
 
 ## Verification Notes
-
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
 
 ## Review Gate
 
