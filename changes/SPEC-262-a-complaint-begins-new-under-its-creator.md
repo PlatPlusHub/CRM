@@ -186,7 +186,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -495,6 +495,45 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ### 2026-10-11 — Human Gate 2: owner authorization
 
 The owner's SPEC-262 exact-identity approval (2026-10-11) grants a separate, advance, one-time, exact-byte Gate 2: deploy only `supabase/migrations/20261011090000_a_complaint_begins_new_under_its_creator.sql`, SHA-256 `55d54a8a26265f6ea7aaee3708906ca4c25d9ae79cbe4ab831ff17278adecb02`, MD5 `43ed834051349c20b746b721236b639a`, 15,136 bytes, LF, to Primary `vrvtsxexkiiiivlkdxzp` only, conditional on every mandatory readiness check passing; no other migration and no business-data change is authorized, and Secondary is never contacted. Its conditions hold as recorded in the entry above: the frozen bytes exist in the scratchpad and in the repository and match in full; the Draft contract, Write Scope and other frozen artifacts match; the readiness checks passed with only the drift the contract names; the Primary baseline was read independently, the target is absent, and the predicted effect is exact. Step 6 re-reads everything immediately before the write.
+
+### 2026-10-11 — Step 6: Primary deployment
+
+- **Local recheck, immediately before the write:**
+  - HEAD `9fa595705fd59d078d538dac100bc6ccb3c5c2c8` on the chain `122fd65 → 2ca3f10 → 359cb5e → 9fa5957`, 0 behind `origin/main` `88bc20a`;
+  - Draft `122fd65`'s contract hashes to `f3e4dedc…`, and since then this contract changed only its status lines and its Execution Log;
+  - after the stash round trip the five Step 1–3 files hash to their recorded values: migration `55d54a8a…` (MD5 `43ed8340…`, 15136 bytes, 311 LF, 0 CR), test 154 `7045e732…`, test 83 `2aa3576c…`, register `e8ad4552…`, disposition record `494a94ca…`; the scratchpad copy of the migration hashes to the same value;
+  - the working tree touches only Write Scope paths, and the stash is empty.
+- **Primary recheck, read-only:** project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 249 `323eae75c4a400b4cc6f13317ec21611`, latest `20261010210000`, the target absent by version and name, no row after it; `complaints` with its 7 triggers; `app.create_complaint` prosrc `64e9efb3…` and `app.advance_complaint` `c8b81938…`; the three new functions absent; 0 tenants, complaints and events.
+- **Server-side proof:** the transmitted text hashed on Primary to MD5 `43ed834051349c20b746b721236b639a`, 15136 bytes, 311 LF, 0 CR.
+- **Apply:** that same text, through the Primary connector's `apply_migration`, returned success, once. A fresh read showed one new row, temporary version `20261011012026`, with one stored statement (MD5 `43ed8340…`, 15136 bytes), and 250 rows in all; the other 249 still hashed to `323eae75…`.
+- **Reconciliation:** one guarded UPDATE renamed only that row to `20261011090000`, and it renamed 1 row. Every guard held:
+  - 250 rows;
+  - exactly one row after `20261010210000`;
+  - the other 249 hashing to `323eae75…`;
+  - one stored statement, its MD5 equal to the file's;
+  - no existing target.
+- **Fresh post-write reads (`2026-10-11T01:21:19Z`):**
+  - ledger 250 `24b8778b6d9e955a8472affb07712858`, latest `20261011090000`, exactly one row for the migration, the temporary version gone;
+  - functions `3d7eb4e3550f7cec15815defb600272d`/326 (both Check L2/P2 and `parity_surface.sql`) and triggers `61f9789b320a4eb988542b83beee36ca`/312; policies `b67d466a…`/125, constraints `cea733ef…`/525, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status transitions `db2165c7…`/115 and RLS `c117cbf7…`/79 unchanged; combined `a23669c9c5c31f56bed4f7e8d265c534`/3121. Each equals the prediction;
+  - `complaints` carries the 10 enabled triggers `derive_created_by`, `emit_created`, `emit_transition`, `enforce_archive_authority`, `enforce_catalog_codes`, `enforce_status_transition`, `enforce_subscription_write_gate`, `guard_integrity`, `guard_write_capability`, `set_updated_at`, identical to local;
+  - the five functions: `app.advance_complaint` prosrc `3e50de12…` / definition `97f58f7b…`, `app.create_complaint` `d23d3b01…` / `6620bd34…`, `app.emit_complaint_created` `b1ba2f27…` / `7fe32e91…`, `app.emit_complaint_transition` `aaf9bb23…` / `b6ccfc44…`, `app.guard_complaint_integrity` `1c2c4979…` / `b7d7f288…`, each equal to local; all SECURITY INVOKER, owner `postgres`, `search_path=""`; the two RPCs keep ACL `{postgres=X/postgres,authenticated=X/postgres}` and the three new functions hold `{postgres=X/postgres}`;
+  - the table: RLS on (not forced), 1 policy, grants `authenticated` INSERT, SELECT, UPDATE, unchanged;
+  - 0 tenants, complaints and events. No business-data write.
+- **Secondary** `brplkqmbzffpxqgkkdzo` was not contacted.
+
+### 2026-10-11 — Step 7: evidence and measured state
+
+- **The evidence file, `reports/evidence/primary-ledger-evidence.json`,** was written from the fresh post-write readings only: `read_at` `2026-10-11T01:21:19Z`; `repository_head` `9fa59570…`; 250 migrations, `24b8778b…`; functions `3d7eb4e3…`/326, structural `a23669c9…`/3121; the ledger list appends `20261011090000_a_complaint_begins_new_under_its_creator`. `check_primary_ledger.ps1` recomputes it and finds it equal to the repository's migration files.
+- **Manifest:** `Live state` reads 250 migrations, latest `20261011090000`, and the new ledger, function and structural hashes and counts, verified and re-read 2026-10-11. It reads `Suite **154 files / 2868 assertions**`, with the HTTP clause unchanged (464). `supabase/tests` holds 154 files whose literal `plan(N)` values sum to 2868. Batch 6 coverage reads 40 of 78, all forty at `ADVERSARIAL`.
+- **Register:** COMP-2 and COMP-3 read `DEPLOYED to Primary under separate exact-byte owner authorization`, with Cert `✅`, worded without a new date.
+- **Generated artifacts:** `MASTER_API_CONTRACT.md` regenerates unchanged (`d28fb567…`; 80 RPC endpoints, 8 views, 74 tables). `ai-map.json` is regenerated and stored LF; only `generated_at` changed.
+- **CI-only guard self-tests, on this deployed state:** cold-start 34 passed, 0 failed; future-date 18/0; primary-ledger 13/0; status-contradiction 33/0.
+- **Runtime Checkpoint** is `DONE`.
+- **Checks:**
+  - `check_primary_ledger.ps1`: RECOVER-1 `CLEAN`;
+  - `check_database_parity_evidence.ps1`: `DATABASE PARITY: CLEAN` and `PRIMARY PARITY EVIDENCE: CLEAN`;
+  - repository consistency: `CLEAN`;
+  - `git diff --check`: exit 0.
 
 ## Verification Notes
 
