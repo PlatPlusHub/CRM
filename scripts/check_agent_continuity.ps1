@@ -1104,6 +1104,9 @@ function Glob-Regex([string]$Pattern){
 # GitHub syntax and a reader that knows only one of them is silently wrong about
 # the other. The key is matched exactly, so `paths:` never also swallows
 # `paths-ignore:`.
+# A full-line comment between bullets is part of the list, not its end (SPEC-263).
+# `repository-consistency.yml` documents its paths that way, and stopping at the
+# first comment read two of its fourteen push globs.
 function Trigger-List([string]$Body,[string]$Key){
     $m=[regex]::Match($Body,"(?m)^[ \t]*$([regex]::Escape($Key)):[ \t]*(?<inline>\[[^\]\r\n]*\])?[ \t]*\r?\n?")
     if(!$m.Success){return @()}
@@ -1113,6 +1116,7 @@ function Trigger-List([string]$Body,[string]$Key){
     $items=@()
     foreach($line in @($Body.Substring($m.Index+$m.Length)-split'\r?\n')){
         if($line-match'^\s*-\s*"?(?<v>[^"\r\n]+?)"?\s*$'){$items+=$Matches['v'].Trim()}
+        elseif($line-match'^\s*#'){continue}
         elseif($line.Trim()){break}
     }
     $items
@@ -1676,6 +1680,68 @@ function Finish-Checks($c,[string[]]$profiles,[string]$rel){
     }
 }
 
+# A path-filtered workflow that produced no run on this SHA (SPEC-263). GitHub runs it on
+# a push only when that push changes a path it watches, so a bookkeeping commit pushed on
+# its own never runs it - while the receipt, derived from the whole contract's Write Scope,
+# still expects it. Measured on `f61ed84`: Migration CI ran and passed on `a87fa92`, the
+# Complete commit changed three non-database files, and certification failed on a run GitHub
+# was never going to start.
+#
+# The verdict is carried forward from ONE run only: the workflow's nearest push run on the
+# target branch at an ancestor of this SHA. It counts only if git proves that no path the
+# workflow watches, and not its own definition, differs between that SHA and this one - so
+# the same workflow run here would read byte-identical inputs. That run is then judged like
+# any other: still running is PENDING, any conclusion but success is FAILED. An older
+# success never outranks a nearer failure. Everything else leaves the workflow MISSING and
+# fails closed: a workflow with no `paths:` filter, a filter this reader cannot read
+# exactly, not exactly one definition, no qualifying run, an unreadable query, or a watched
+# path that changed. Renames are split into delete and add, so a file moved out of a watched
+# directory still counts as a watched change.
+function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
+    $no={param($why)[pscustomobject]@{Runs=@();From='';Why=$why}}
+    $dir=Join-Path $Root '.github/workflows'
+    $defs=@(if(Test-Path -LiteralPath $dir){Get-ChildItem -LiteralPath $dir -File|Where-Object{$_.Extension-in @('.yml','.yaml')}|Where-Object{
+        ([regex]::Match([IO.File]::ReadAllText($_.FullName),'(?m)^name:\s*(?<v>.+?)\s*$')).Groups['v'].Value-ceq$Workflow}})
+    if($defs.Count-ne1){return (& $no "$($defs.Count) workflow definitions are named $Workflow")}
+    $def=".github/workflows/$($defs[0].Name)"
+    $text=[IO.File]::ReadAllText($defs[0].FullName)
+    $push=[regex]::Match($text,'(?ms)^  push:[ \t]*\r?\n(?<b>(?:[ \t]{4,}.*\r?\n|[ \t]*\r?\n)*)')
+    $body=if($push.Success){$push.Groups['b'].Value}else{''}
+    $globs=@(Trigger-List $body 'paths')
+    if(!$globs.Count){return (& $no "$Workflow watches every path, so it must run on this SHA")}
+    # Read exactly or not at all: every bullet must have become one glob of the forms
+    # `Glob-Regex` translates. A trailing comment or an unusual quote would otherwise drop
+    # or garble a glob, and a watched set read short is the one error that certifies falsely.
+    $block=[regex]::Match($body,'(?m)^[ \t]*paths:[ \t]*\r?\n')
+    $bullets=0
+    if($block.Success){foreach($line in @($body.Substring($block.Index+$block.Length)-split'\r?\n')){
+        if($line-match'^\s*-'){$bullets++}elseif($line-match'^\s*#'-or!$line.Trim()){continue}else{break}}}
+    if(($block.Success-and$bullets-ne$globs.Count)-or@($globs|Where-Object{$_-cnotmatch'^[A-Za-z0-9_./*-]+$'}).Count){
+        return (& $no "the path filter of $Workflow cannot be read exactly")
+    }
+    $raw=gh run list --workflow $Workflow --branch $Target --event push --limit 100 --json 'attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName' 2>$null
+    if($LASTEXITCODE-ne0-or!$raw){return (& $no "gh could not read the runs of $Workflow on $Target")}
+    try{$parsed=$raw|ConvertFrom-Json}catch{return (& $no "gh returned runs of $Workflow this command cannot parse")}
+    # Nearness is position in this SHA's own ancestry, never the order gh returns.
+    $order=@{};$i=0
+    foreach($c in @(git -C $Root rev-list --topo-order $Sha)){$order[("$c").Trim()]=$i++}
+    if($LASTEXITCODE-ne0){return (& $no "the ancestry of $Sha cannot be read")}
+    $best=@();$near=[int]::MaxValue
+    foreach($run in @($parsed)){
+        $s=("$($run.headSha)").Trim()
+        if(("$($run.workflowName)").Trim()-cne$Workflow-or("$($run.headBranch)").Trim()-ne$Target-or("$($run.event)").Trim()-ne'push'){continue}
+        if(!$order.ContainsKey($s)){continue}
+        if($order[$s]-lt$near){$near=$order[$s];$best=@($run)}elseif($order[$s]-eq$near){$best+=$run}
+    }
+    if(!$best.Count){return (& $no "no run of $Workflow on $Target at an ancestor of this SHA")}
+    $from=("$($best[0].headSha)").Trim()
+    $changed=@((git -C $Root diff --no-renames --name-only -z $from $Sha --)-join''-split"`0"|Where-Object{$_})
+    if($LASTEXITCODE-ne0){return (& $no "the paths changed since $from cannot be read")}
+    $watched=@($changed|Where-Object{$p=$_;$p-eq$def-or@($globs|Where-Object{$p-match(Glob-Regex $_)}).Count})
+    if($watched.Count){return (& $no "$($watched[0]) changed after its nearest run at $from")}
+    [pscustomobject]@{Runs=$best;From=$from;Why=''}
+}
+
 # POST_PUSH evidence has exactly ONE honest owner, and it is this.
 #
 # An Acceptance Criterion reading "the workflows are green on the exact final SHA"
@@ -1778,6 +1844,18 @@ function Certify-Remote {
         Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING so far: $($missing-join', ') — $($running.Count) run(s) on this SHA have not completed"
         exit 1
     }
+    # Every run on this SHA has settled. A missing workflow may now carry its nearest run
+    # forward under the proof `Inherited-Run` states (SPEC-263), and that run joins the
+    # judgement below exactly as a run on this SHA would. Anything it refuses stays missing.
+    $kept=@()
+    foreach($w in $missing){
+        $proof=Inherited-Run $w $sha $target
+        if(!$proof.Runs.Count){Write-Output "NOT INHERITED: $w — $($proof.Why)";$kept+=$w;continue}
+        foreach($r in $proof.Runs){Write-Output "INHERITED: $w from $($proof.From) run $($r.databaseId) attempt $($r.attempt) $($r.status)/$($r.conclusion) — no path it watches changed since"}
+        $runs+=$proof.Runs
+    }
+    $missing=$kept
+    $running=@($runs|Where-Object{$_.status-ne'completed'})
     if($missing.Count){
         Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING: $($missing-join', ') produced no run on this SHA. Success on any other SHA proves nothing about this one."

@@ -84,7 +84,7 @@ None. SPEC-262 is Complete and is neither modified nor re-certified by this cont
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -248,6 +248,21 @@ Every file is written LF. The "from" hashes are the committed bytes at `f61ed84`
 - **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
 - **Worktrees.** A read-only inventory; nothing was modified: `wt251` at `578f3fb`, `wt255` at `33e4db6`, `wt260` at `e26733a`, `wt261` at `39ab45a`, `owt/p2` at `7fe62ed` and `C:\w234` at `6c48fbb`. All stay untouched.
 - **No database, Primary or Secondary action** belongs to this contract. Migration `20261011090000` is not reapplied.
+
+### 2026-10-11 — Steps 1 and 2: the evaluator, its suite, the lifecycle sentence and the register
+
+- **Checks.** `function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){` was absent from the evaluator, and the `SPEC-263` sentence was absent from `CR_LIFECYCLE.md`. Each of the four files held exactly its "from" hash.
+- **Applied** by a byte copy from the prototype clone `c263`; each result was re-hashed:
+
+  | File | From | To (measured) |
+  | --- | --- | --- |
+  | `scripts/check_agent_continuity.ps1` | `dbfbf8a9…` | `925c2394729aa8a61a0f9d87f233a040e2665f34e90cd25f6e318c7049983ef1` |
+  | `scripts/test_agent_continuity.ps1` | `057dc455…` | `2ed7975ef33dd9441704765a0a21f3db0214a410c46df71608cd14d9c2acbed3` |
+  | `CR_LIFECYCLE.md` | `cdc316bb…` | `75c7c9672f618b8d3686a4d170582ff0e95e5a07c3a690f0b0f38b27c1a9c0e9` |
+  | `reports/master/MASTER_GAP_REGISTER.md` | `9f3541f7…` | `0cca07b7ecd4f8df020d6c288ba28ef0341d9538ec75f269cd1515ffd7be6dd0` |
+
+- **Shape.** The evaluator gains 78 lines and loses none. Across the four files: 235 insertions, 4 deletions; `git diff --check` is clean.
+- **Step 3.** The Runtime Checkpoint is committed as `Resume Step: DONE` with this entry. `-Finish` runs next, once, alone, on the clean committed tree.
 
 ## Verification Notes
 

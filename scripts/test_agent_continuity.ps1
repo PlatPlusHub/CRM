@@ -1237,8 +1237,9 @@ try{
     [IO.File]::WriteAllText((Join-Path $stubBin 'gh.ps1'),@'
 $a=$args
 function Arg([string]$n){$i=[array]::IndexOf($a,$n);if($i-ge0){$a[$i+1]}else{''}}
-$sha=Arg '--commit';$branch=Arg '--branch';$evt=Arg '--event'
+$sha=Arg '--commit';$branch=Arg '--branch';$evt=Arg '--event';$wf=Arg '--workflow'
 Add-Content -LiteralPath $env:ORVION_STUB_GH_LOG -Value "gh $($a -join ' ')"
+if($sha){
 $f=Join-Path $env:ORVION_STUB_GH "$sha.json"
 if(!(Test-Path -LiteralPath $f)){'[]';exit 0}
 # Assign before wrapping: ConvertFrom-Json emits a JSON array as ONE pipeline item, so
@@ -1246,7 +1247,13 @@ if(!(Test-Path -LiteralPath $f)){'[]';exit 0}
 # below would nest it another level deep.
 $parsed=Get-Content -Raw -LiteralPath $f|ConvertFrom-Json
 $rows=@($parsed)
+}else{
+# A `--workflow` query spans commits (SPEC-263): every payload, read in file-name order,
+# so a case decides the order rows come back in by how it names its files.
+$rows=@();foreach($p in @(Get-ChildItem -LiteralPath $env:ORVION_STUB_GH -Filter '*.json'|Sort-Object Name)){$parsed=Get-Content -Raw -LiteralPath $p.FullName|ConvertFrom-Json;$rows+=@($parsed)}
+}
 if(!$env:ORVION_STUB_GH_PERMISSIVE){
+    if($wf){$rows=@($rows|Where-Object{$_.workflowName-eq$wf})}
     if($branch){$rows=@($rows|Where-Object{$_.headBranch-eq$branch})}
     if($evt){$rows=@($rows|Where-Object{$_.event-eq$evt})}
 }
@@ -1352,6 +1359,149 @@ exit 0
     git -C $root reset --hard $sha --quiet;$r=RunCertify
     Assert '149 a target ref that moved past the certified SHA is FAILED, never READY' ($r.Code-ne0-and$r.Text-match'TARGET_REF_MOVED'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
     git -C $root push origin +"$sha`:refs/heads/main" --quiet 2>$null
+
+    # ---- A path-filtered workflow GitHub never started may carry its nearest run (SPEC-263) ----
+    # Measured on `f61ed84`: Migration CI ran and passed on `a87fa92`, the Complete commit
+    # changed three non-database files, GitHub therefore started no Migration CI run, and the
+    # receipt - derived from the whole contract's Write Scope - still expected one. Every SHA
+    # below is a real fixture commit pushed to the sandbox remote, so ancestry and changed paths
+    # are git's answer, never the stub's. `Db` watches `supabase/migrations/**`.
+    function GhAdd([object[]]$Runs,[string]$File){[IO.File]::WriteAllText((Join-Path $ghDir "$File.json"),(ConvertTo-Json @($Runs) -Depth 6 -AsArray))}
+    function RunAt([string]$Name,[string]$Sha,[string]$Status='completed',[string]$Conclusion='success',[string]$Branch='main',[string]$Evt='push'){Run1 $Name $Status $Conclusion $Branch $Evt $Sha}
+    function PushHead([string]$Message){Commit $Message;git -C $root push origin main --quiet 2>$null;(git -C $root rev-parse HEAD).Trim()}
+    function ExpectFlow([string]$Flow='Db'){Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';target='main';expected=@('Always',$Flow)}}
+    function InhBase{Reset-Fixture;$script:iB=(git -C $root rev-parse HEAD).Trim()}
+    function InhRestore{Remove-Item Env:ORVION_STUB_GH_PERMISSIVE -ErrorAction SilentlyContinue;git -C $root checkout main --quiet 2>$null;git -C $root push origin +"$($script:iB):refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
+    function InhCase([string]$Name,[string]$Kind,[scriptblock]$Build,[scriptblock]$Pass){
+        & $Build;$r=RunCertify;Pop 'CERT-INHERIT' $Kind
+        Assert $Name (& $Pass $r) $r.Text
+        InhRestore
+    }
+    function YamlFlow([string]$Name,[string[]]$PathLines){(@("name: $Name",'on:','  push:','    paths:')+@($PathLines|ForEach-Object{"      $_"}))-join[char]10}
+    # The f61ed84 shape: the implementation pushed with its own Db run, then a bookkeeping commit alone.
+    function InhImpl([string]$Status='completed',[string]$Conclusion='success'){
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iS=PushHead 'inh-implement'
+        Put 'allowed.txt' 'complete';$script:iH=PushHead 'inh-complete'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH
+        GhAdd @((RunAt 'Always' $script:iS),(RunAt 'Db' $script:iS $Status $Conclusion)) 'w-impl'
+    }
+    function InhDbHead([string]$Conclusion){
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iH=PushHead 'inh-db-head'
+        ExpectFlow;GhRuns @((Run1 'Always'),(Run1 'Db' 'completed' $Conclusion)) $script:iH
+        GhAdd @((RunAt 'Db' $script:iB 'completed' $(if($Conclusion-eq'success'){'failure'}else{'success'}))) 'w-old'
+    }
+    function InhUnrun{
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iH=PushHead 'inh-db-head-unrun'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt 'Db' $script:iB)) 'w-old'
+    }
+    # A watched file changed and changed back: the nearer run (failed) and the older run
+    # (green) saw byte-identical Db inputs. Rows are returned oldest-LAST, so a reader that
+    # trusted gh's order or preferred success would pick the green one.
+    function InhNearer{
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iM=PushHead 'inh-change'
+        Remove-Item -LiteralPath (Join-Path $root 'supabase/migrations/20260102_impl.sql') -Force;$script:iN=PushHead 'inh-revert'
+        Put 'allowed.txt' 'complete';$script:iH=PushHead 'inh-complete'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH
+        GhAdd @((RunAt 'Db' $script:iN 'completed' 'failure'),(RunAt 'Db' $script:iM),(RunAt 'Db' $script:iB)) 'w-order'
+    }
+    function InhDefinition{
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iS=PushHead 'inh-implement'
+        Put '.github/workflows/db.yml' ((YamlFlow 'Db' @('- "supabase/migrations/**"','- "supabase/config.toml"'))+[char]10+'# definition edited'+[char]10);$script:iH=PushHead 'inh-definition'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt 'Db' $script:iS)) 'w-impl'
+    }
+    function InhUnfiltered{
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iS=PushHead 'inh-implement'
+        Put 'allowed.txt' 'complete';$script:iH=PushHead 'inh-complete'
+        ExpectFlow;GhRuns @((Run1 'Db')) $script:iH;GhAdd @((RunAt 'Always' $script:iS)) 'w-always'
+    }
+    function InhForeign([string]$Flow,[string]$Branch='main',[string]$Evt='push'){InhImpl;GhAdd @((RunAt $Flow $script:iS 'completed' 'success' $Branch $Evt)) 'w-impl';$env:ORVION_STUB_GH_PERMISSIVE='1'}
+    function InhSide{
+        InhBase
+        git -C $root checkout -b inh-side --quiet;Put 'context.txt' 'side';Commit 'inh-side';$script:iX=(git -C $root rev-parse HEAD).Trim();git -C $root checkout main --quiet
+        git -C $root branch -D inh-side --quiet
+        Put 'allowed.txt' 'complete';$script:iH=PushHead 'inh-complete'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt 'Db' $script:iX)) 'w-side'
+    }
+    function InhRename{
+        InhBase
+        Put 'supabase/migrations/20260102_impl.sql' 'select 2;';$script:iS=PushHead 'inh-implement'
+        Remove-Item -LiteralPath (Join-Path $root 'supabase/migrations/20260102_impl.sql') -Force;Put 'archive/20260102_impl.sql' 'select 2;';$script:iH=PushHead 'inh-rename'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt 'Db' $script:iS)) 'w-impl'
+    }
+    # A custom filter under test is introduced BEFORE the run it is inherited from, so its
+    # definition is identical at both ends and only the head's own change is judged.
+    function InhFilter([string]$Flow,[string[]]$PathLines,[string]$HeadPath){
+        InhBase
+        Put ".github/workflows/$($Flow.ToLowerInvariant()).yml" ((YamlFlow $Flow $PathLines)+[char]10);$script:iS=PushHead 'inh-filter'
+        Put $HeadPath 'head change';$script:iH=PushHead 'inh-head'
+        ExpectFlow $Flow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt $Flow $script:iS)) 'w-filter'
+    }
+    function InhDuplicate{
+        InhBase
+        Put '.github/workflows/a-dup.yml' ((YamlFlow 'Db' @('- "nothing.txt"'))+[char]10);$script:iS=PushHead 'inh-duplicate'
+        Put 'allowed.txt' 'complete';$script:iH=PushHead 'inh-complete'
+        ExpectFlow;GhRuns @((Run1 'Always')) $script:iH;GhAdd @((RunAt 'Db' $script:iS)) 'w-dup'
+    }
+    $commented=@('- "allowed-never.txt"','# the next path is watched as well','- "context.txt"')
+
+    InhCase 'INH-0 MUST-ACCEPT: a database head with its own green Db run is READY and inherits nothing' 'accept' {InhDbHead 'success'} {param($r)$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-notmatch'INHERITED'}
+    InhCase 'INH-0b a database head whose own Db run failed is FAILED, and an older green run cannot rescue it' 'reject' {InhDbHead 'failure'} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-notmatch'INHERITED'}
+    InhCase 'INH-1 MUST-ACCEPT: a bookkeeping head after a green implementation carries Db forward and is READY' 'accept' {InhImpl} {param($r)$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match"INHERITED: Db from $($script:iS) run \d+ attempt 1 completed/success"}
+    InhCase 'INH-2 a bookkeeping head after a failed implementation run is FAILED' 'reject' {InhImpl 'completed' 'failure'} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match"INHERITED: Db from $($script:iS) .*completed/failure"-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+    InhCase 'INH-3 a bookkeeping head after an implementation run still in progress is PENDING' 'reject' {InhImpl 'in_progress' ''} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: PENDING'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+    InhCase 'INH-4 a database head without its own Db run is REQUIRED_WORKFLOW_MISSING despite an older green run' 'reject' {InhUnrun} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-match'NOT INHERITED: Db .*supabase/migrations/20260102_impl\.sql changed'}
+    InhCase 'INH-5 the nearest run decides: an older green run never outranks a nearer failure' 'reject' {InhNearer} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match"INHERITED: Db from $($script:iN) .*completed/failure"}
+    InhCase 'INH-6 a workflow whose own definition changed since its run is not inherited' 'reject' {InhDefinition} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-match'NOT INHERITED: Db .*\.github/workflows/db\.yml changed'}
+    InhCase 'INH-7 a workflow with no path filter must run on the exact SHA' 'reject' {InhUnfiltered} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Always'-and$r.Text-match'NOT INHERITED: Always .*watches every path'}
+    InhCase 'INH-8 a run on another branch is never inherited' 'reject' {InhForeign 'Db' 'orvion-preflight'} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+    InhCase 'INH-9 a run under another event is never inherited' 'reject' {InhForeign 'Db' 'main' 'workflow_dispatch'} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+    InhCase 'INH-10 a run of another workflow is never inherited' 'reject' {InhForeign 'Docs'} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+    InhCase 'INH-11 a run at a SHA outside this SHA''s ancestry is never inherited' 'reject' {InhSide} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Db .*no run of Db on main at an ancestor'}
+    InhCase 'INH-12 a watched file renamed out of its directory is a watched change' 'reject' {InhRename} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Db .*supabase/migrations/20260102_impl\.sql changed'}
+    InhCase 'INH-13 MUST-ACCEPT: a comment between filter bullets is read through, and an unwatched head inherits' 'accept' {InhFilter 'Commented' $commented 'allowed.txt'} {param($r)$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match'INHERITED: Commented from'}
+    InhCase 'INH-13b a path listed after a comment is still watched' 'reject' {InhFilter 'Commented' $commented 'context.txt'} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Commented .*context\.txt changed'}
+    InhCase 'INH-14 a quoted bullet with a trailing comment makes the filter unreadable, never shorter' 'reject' {InhFilter 'Trailing' @('- "allowed-never.txt"','- "context.txt" # watched','- "other.txt"') 'context.txt'} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Trailing .*cannot be read exactly'}
+    InhCase 'INH-15 a bare bullet with a trailing comment makes the filter unreadable, never garbled' 'reject' {InhFilter 'Bare' @('- context.txt # watched') 'context.txt'} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Bare .*cannot be read exactly'}
+    InhCase 'INH-16 two definitions with one name are never resolved by guessing' 'reject' {InhDuplicate} {param($r)$r.Code-ne0-and$r.Text-match'NOT INHERITED: Db .*2 workflow definitions are named Db'}
+    InhCase 'INH-17 inherited evidence does not survive a target ref that moved on' 'reject' {InhImpl;Put 'allowed.txt' 'moved on';$null=PushHead 'inh-moved';git -C $root reset --hard $script:iH --quiet} {param($r)$r.Code-ne0-and$r.Text-match'TARGET_REF_MOVED'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
+
+    # Each load-bearing predicate is bypassed in a disposable evaluator outside the fixture,
+    # against the SAME pushed history the pristine evaluator judged. A kill requires the
+    # mutant to reach the named wrong verdict, so a mutant that merely crashes is not one.
+    function CertMutant([string]$Name,[scriptblock]$Build,[string]$Expect,[string]$Shows,[string]$Find,[string]$Replace){
+        & $Build;$pristine=RunCertify
+        $src=Get-Content -Raw -LiteralPath $control
+        $count=[regex]::Matches($src,[regex]::Escape($Find)).Count
+        $p=Join-Path $sandbox 'cert-mutant.ps1'
+        if($count-eq1){[IO.File]::WriteAllText($p,$src.Replace($Find,$Replace),[Text.UTF8Encoding]::new($false))}
+        $installed=$count-eq1-and(Test-Path -LiteralPath $p)-and([IO.File]::ReadAllText($p)).Contains($Replace)
+        $mutated=if($installed){$o=& pwsh -NoProfile -File $p -Certify -Root $root 2>&1;[pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}}else{[pscustomobject]@{Text='mutant not installed';Code=1}}
+        Remove-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+        InhRestore;Pop 'CERT-INHERIT' 'mutation'
+        Assert $Name ($installed-and($pristine.Text-match$Expect)-and($mutated.Text-notmatch$Expect)-and($mutated.Text-match$Shows)) "installed=$installed count=$count`npristine=$($pristine.Text)`nmutated=$($mutated.Text)"
+    }
+    $vFail='REMOTE_CERTIFY: FAILED';$vReady='REMOTE_CERTIFY: READY';$vPend='REMOTE_CERTIFY: PENDING'
+    CertMutant 'INH-M1 nearness by ancestry, not row order' {InhNearer} $vFail $vReady 'if($order[$s]-lt$near){$near=$order[$s];$best=@($run)}elseif($order[$s]-eq$near){$best+=$run}' '$best=@($run)'
+    CertMutant 'INH-M2 ancestry filter' {InhSide} $vFail $vReady 'if(!$order.ContainsKey($s)){continue}' 'if($false){continue}'
+    CertMutant 'INH-M3 watched-glob term' {InhUnrun} $vFail $vReady '$p-eq$def-or@($globs|Where-Object{$p-match(Glob-Regex $_)}).Count' '$p-eq$def'
+    CertMutant 'INH-M4 own-definition term' {InhDefinition} $vFail $vReady '$p-eq$def-or@(' '@('
+    CertMutant 'INH-M5 renames split into delete and add' {InhRename} $vFail $vReady 'diff --no-renames --name-only -z' 'diff --name-only -z'
+    CertMutant 'INH-M6 unfiltered workflow refused' {InhUnfiltered} $vFail $vReady 'if(!$globs.Count){return' 'if($false){return'
+    CertMutant 'INH-M7 every bullet became a glob' {InhFilter 'Trailing' @('- "allowed-never.txt"','- "context.txt" # watched','- "other.txt"') 'context.txt'} $vFail $vReady '($block.Success-and$bullets-ne$globs.Count)-or' '($false)-or'
+    CertMutant 'INH-M8 glob character set' {InhFilter 'Bare' @('- context.txt # watched') 'context.txt'} $vFail $vReady '-or@($globs|Where-Object{$_-cnotmatch''^[A-Za-z0-9_./*-]+$''}).Count' '-or$false'
+    CertMutant 'INH-M9 comment lines inside a trigger list' {InhFilter 'Commented' $commented 'allowed.txt'} $vReady $vFail 'elseif($line-match''^\s*#''){continue}' 'elseif($false){continue}'
+    CertMutant 'INH-M10 exactly one definition' {InhDuplicate} $vFail $vReady 'if($defs.Count-ne1)' 'if($defs.Count-lt1)'
+    CertMutant 'INH-M11 inherited run must name the workflow' {InhForeign 'Docs'} $vFail $vReady '("$($run.workflowName)").Trim()-cne$Workflow-or' '$false-or'
+    CertMutant 'INH-M12 inherited run must be on the target' {InhForeign 'Db' 'orvion-preflight'} $vFail $vReady '("$($run.headBranch)").Trim()-ne$Target-or' '$false-or'
+    CertMutant 'INH-M13 inherited run must be a push' {InhForeign 'Db' 'main' 'workflow_dispatch'} $vFail $vReady '-or("$($run.event)").Trim()-ne''push''){continue}' '){continue}'
+    CertMutant 'INH-M14 inherited run joins the judgement' {InhImpl 'completed' 'failure'} $vFail $vReady '$runs+=$proof.Runs' '$null=$proof.Runs'
+    CertMutant 'INH-M15 settlement re-read after inheritance' {InhImpl 'in_progress' ''} $vPend $vFail ('$missing=$kept'+[char]10+'    $running=@(') ('$missing=$kept'+[char]10+'    $null=@(')
 
     # The expected set is DERIVED from the workflow files' own push triggers, never
     # hardcoded — a fixed list would fail a change that legitimately triggers less.
@@ -3086,7 +3236,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
