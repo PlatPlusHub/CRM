@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -455,6 +455,24 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - [ ] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
+
+### 2026-10-11 — Gate 1 approval and execution started
+
+- **Authority:** the owner's SPEC-262 exact-identity approval (2026-10-11). It approves Gate 1 for Draft `122fd657647916720f6b21f002c20f03f752b0dd`, contract SHA-256 `f3e4dedc5d4f64a930729170545db9285b59269b2025c7487f2b9e810e9e04a9`, to close COMP-2 and COMP-3 with this surface's ENTRY-1 and ARCH-2 instances. Verified before acting:
+  - HEAD was the Draft commit, 1 ahead of and 0 behind `origin/main` `88bc20a`, and the working tree was clean;
+  - the contract file and its committed blob both hash to the approved value;
+  - the frozen prototype files in the scratchpad `p262` hash to their Step 1–2 values: migration `55d54a8a…` (MD5 `43ed8340…`, 15136 bytes, 311 LF, 0 CR), test 154 `7045e732…` (24728 bytes), test 83 `2aa3576c…` (21144 bytes); the committed test 83 is its `88bc20a` bytes `16235efe…`;
+  - Write Scope is the ten paths above.
+
+  Approval was committed at `2ca3f10`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Preconditions:** the migration and test 154 are absent. Test 83, the register, the disposition record, the API contract, the Primary evidence file and the manifest's measured state are unchanged since `88bc20a`.
+- **Publication range:** before this commit, `origin/main..HEAD` held 2 commits with 0 merges and was 0 behind.
+- **Worktrees.** A read-only inventory; nothing was modified.
+  - `wt251` is clean at `578f3fb`, and `owt/p2` is clean at `7fe62ed`.
+  - `wt255` at `33e4db6` has 6 entries, `wt260` at `e26733a` has 4, `wt261` at `39ab45a` has 6, and `C:\w234` at `6c48fbb` has 15.
+
+  All stay untouched.
+- **Gate 2 stands before Step 6.** The same approval grants a separate, advance, one-time, exact-byte Gate 2 for migration SHA-256 `55d54a8a26265f6ea7aaee3708906ca4c25d9ae79cbe4ab831ff17278adecb02` (MD5 `43ed834051349c20b746b721236b639a`, 15136 bytes, LF) to Primary `vrvtsxexkiiiivlkdxzp` only. It takes effect only after Step 4's readiness requirements pass, and it is recorded at Step 5 only if they do. Secondary is never contacted.
 
 ## Verification Notes
 
