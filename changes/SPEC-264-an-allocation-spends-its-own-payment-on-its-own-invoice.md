@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -474,23 +474,23 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] An allocation's payment, invoice, currency, rate, creator and creation time cannot be changed by any caller (23514), the platform included. The employee's amount change is still refused 42501. Assigning the fixed fields their own values succeeds; a supplied converted amount is discarded; an UPDATE that leaves the amount alone keeps the converted amount it was written with.
-- [ ] At commit, an allocation of a non-customer payment, in a currency other than its payment's, to another customer's invoice, from a customer-less payment, or beyond its payment's amount is refused (23514), for every caller. An allocated payment cannot shrink below, redirect, re-denominate or re-customer beneath its allocations. Growing a payment succeeds.
-- [ ] A cross-currency allocation requires an exchange rate in the tenant for exactly its pair, positive and finite, and stores the derived invoice-currency value. A same-currency allocation carries neither (23514 for a rate).
-- [ ] The invoice ceiling counts each allocation in the invoice's currency, and an allocation write takes the invoice's advisory lock (the key `app.record_payment` takes) and the payment's. Two concurrent door allocations cannot together exceed an invoice or a payment.
-- [ ] After an allocation write, a `paid` invoice's allocations cannot total less than its total and a `partially_paid` invoice's cannot total nothing (23514), for every caller and under concurrency; no invoice status is moved by this contract.
-- [ ] Every allocation is born with exactly one `payment_allocation_created` event carrying its payment, invoice, currency, rate and both amounts, and every real change of its amounts records exactly one `payment_allocation_amount_changed` (`warning`) with both amounts before and after, its actor (NULL on the platform path) and its time, on the RPC and the door alike. A no-op UPDATE and a refused write record nothing. The code is registered, in canon 27, and counted by smoke.
-- [ ] `app.record_payment` differs from its `20260928180000` definition only in its already-allocated sum reading the invoice-currency amount. It keeps its signature, security mode, `search_path` and ACL; its partial and full payments and its `paid` derivation are unchanged.
-- [ ] The held controls stay held: PAY-1 on INSERT, FIN-3's capability, the tenant-qualified foreign keys, the void guard, no DELETE grant, and a customer merge with allocated payments.
-- [ ] Mutants M1–M37 are each killed against test 155, with installation and restoration proven. The causal negative, the three two-session races and the floor race's lock-removed negative control are recorded.
-- [ ] Test 126 changes only assertion 23's expected count (10 → 11) and description; test 72 gains only its seven-line harness flush; `verify_database.sql` moves only its catalog pin to 623; canon 27 gains only the one entry.
-- [ ] PAY-6, PAY-7, PAY-8, FIN-12, PAY-10 and PAY-11 are fixed and deployed in the register, and PAY-9 is recorded OPEN with its trigger. PAY-1 to PAY-5, FIN-10 and FIN-11 are unchanged.
-- [ ] `payment_allocations` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 41 of 78. No other surface's row changed.
-- [ ] The migration, test 155, test 126, test 72, `verify_database.sql` and canon 27 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (251 migrations; 71/623 catalog; 155 files / 2936 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree. The four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 41 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] An allocation's payment, invoice, currency, rate, creator and creation time cannot be changed by any caller (23514), the platform included. The employee's amount change is still refused 42501. Assigning the fixed fields their own values succeeds; a supplied converted amount is discarded; an UPDATE that leaves the amount alone keeps the converted amount it was written with.
+- [x] At commit, an allocation of a non-customer payment, in a currency other than its payment's, to another customer's invoice, from a customer-less payment, or beyond its payment's amount is refused (23514), for every caller. An allocated payment cannot shrink below, redirect, re-denominate or re-customer beneath its allocations. Growing a payment succeeds.
+- [x] A cross-currency allocation requires an exchange rate in the tenant for exactly its pair, positive and finite, and stores the derived invoice-currency value. A same-currency allocation carries neither (23514 for a rate).
+- [x] The invoice ceiling counts each allocation in the invoice's currency, and an allocation write takes the invoice's advisory lock (the key `app.record_payment` takes) and the payment's. Two concurrent door allocations cannot together exceed an invoice or a payment.
+- [x] After an allocation write, a `paid` invoice's allocations cannot total less than its total and a `partially_paid` invoice's cannot total nothing (23514), for every caller and under concurrency; no invoice status is moved by this contract.
+- [x] Every allocation is born with exactly one `payment_allocation_created` event carrying its payment, invoice, currency, rate and both amounts, and every real change of its amounts records exactly one `payment_allocation_amount_changed` (`warning`) with both amounts before and after, its actor (NULL on the platform path) and its time, on the RPC and the door alike. A no-op UPDATE and a refused write record nothing. The code is registered, in canon 27, and counted by smoke.
+- [x] `app.record_payment` differs from its `20260928180000` definition only in its already-allocated sum reading the invoice-currency amount. It keeps its signature, security mode, `search_path` and ACL; its partial and full payments and its `paid` derivation are unchanged.
+- [x] The held controls stay held: PAY-1 on INSERT, FIN-3's capability, the tenant-qualified foreign keys, the void guard, no DELETE grant, and a customer merge with allocated payments.
+- [x] Mutants M1–M37 are each killed against test 155, with installation and restoration proven. The causal negative, the three two-session races and the floor race's lock-removed negative control are recorded.
+- [x] Test 126 changes only assertion 23's expected count (10 → 11) and description; test 72 gains only its seven-line harness flush; `verify_database.sql` moves only its catalog pin to 623; canon 27 gains only the one entry.
+- [x] PAY-6, PAY-7, PAY-8, FIN-12, PAY-10 and PAY-11 are fixed and deployed in the register, and PAY-9 is recorded OPEN with its trigger. PAY-1 to PAY-5, FIN-10 and FIN-11 are unchanged.
+- [x] `payment_allocations` is `AUDITED-OPEN` / `ADVERSARIAL` in the disposition record, and coverage is 41 of 78. No other surface's row changed.
+- [x] The migration, test 155, test 126, test 72, `verify_database.sql` and canon 27 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (251 migrations; 71/623 catalog; 155 files / 2936 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree. The four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 41 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -610,17 +610,112 @@ The owner's SPEC-264 revised-Draft approval (2026-10-11) grants a separate, adva
   - The four CI-only guard self-tests pass: cold-start 34/0, future-date 18/0, primary-ledger 13/0, status-contradiction 33/0.
   - The Runtime Checkpoint is set to DONE.
 
+  Closing checks on the synchronized tree:
+  - `check_primary_ledger.ps1`: `RECOVER-1 LEDGER EVIDENCE: CLEAN`, 251 / `f678a3ef…`.
+  - `check_database_parity_evidence.ps1`: `PRIMARY PARITY EVIDENCE: CLEAN`.
+  - Repository consistency: `REPOSITORY CONSISTENCY: CLEAN`. The six pre-deploy findings resolved exactly as predicted, and the owner's one-time exception expired.
+  - `git diff --check`: exit 0.
+
+  Committed at `3619fad`. The pre-commit Gate reported `STEP: DONE` and `REPOSITORY: clean`.
+
+### 2026-10-11 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `3619fad`, with nothing else running.
+- It ran in VERIFY mode (`STATUS: In Progress`, `STEP: DONE`), with profiles DATABASE and REPOSITORY plus the three declared HTTP suites.
+- It reported `LOCAL_CERTIFY: READY` in 5.8 min, exit 0.
+- Every mandatory verification passed in that run: reset; pgTAP Pass A; `verify_api_end_to_end.ps1`; `verify_journey_branches.ps1`; `verify_lifecycle_branches.ps1`; pgTAP Pass B; smoke; `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+
+Three earlier results were not repeated, because what they ran on is unchanged:
+- The four CI-only guard self-tests passed on the same committed content at Step 7.
+- M1–M37, the causal negative, the three races and the lock-removed negative control ran at Step 4, against the committed migration and test bytes.
+
+This contract's Review Gate holds no remote item. The implementation and the Complete commit are therefore published together as one range, as Step 8 states.
+
+**Selector after SPEC-264** (`scripts/batch6_select_target.ps1`, 37 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `receipts` 7/20
+2. `chart_of_accounts` 7/38
+3. `notification_deliveries` 7/42
+4. `approval_requests` 7/52
+5. `user_branch_assignments` 7/584
+6. `departments` 7/648
+7. `user_role_assignments` 7/648
+8. `customer_consents` 6/18
+9. `document_retention_policies` 6/36
+10. `document_links` 6/54
+11. `exchange_rates` 6/66
+12. `user_permission_grants` 6/88
+
+Slice 41's measured target is `receipts`.
+
 ## Verification Notes
+
+### 2026-10-11 — Independent Review of the execution commit `3619fad`
+
+Reviewed the committed tree against three references: the approved Draft `cd5f7f4`, the owner's Gate 2 authorization and the thirteen-path Write Scope. The review read the committed migration in full, the extracted function definitions, the range diffs, the certified local stack and fresh Primary readings. It did not rely on the Execution Log alone.
+
+1. **Fixed fields (criterion 1).**
+   - **The rule.** `app.guard_payment_allocation_link()` (SECURITY DEFINER, `search_path=""`, PUBLIC revoked; BEFORE INSERT OR UPDATE, row) refuses 23514 on any distinct `id`, `tenant_id`, `payment_id`, `invoice_id`, `currency_code`, `exchange_rate_id`, `created_by` or `created_at`. It has no session-less exit, so the platform is bound too.
+   - **Amount-only UPDATE.** An UPDATE that leaves `allocated_amount` alone restores the stored converted amount and returns before any derivation. FIN-3's guard, still installed, refuses the employee's amount change 42501.
+   - **Proof.** Test 155 passed in both `-Finish` pgTAP passes. M1–M5, M22 and M24 are killed by it.
+2. **Payment coherence (criterion 2).**
+   - **The rule.** `app.enforce_payment_allocation_coherence()` is fired by two deferred constraint triggers: `payment_allocations_within_payment_amount` (INSERT/UPDATE) and `payments_amount_covers_allocations` (UPDATE). Both are read on Primary with `tgdeferrable` true.
+   - **What it refuses.** At commit, a non-`customer_payment`, a foreign currency, a foreign customer and an over-allocation each raise 23514. A customer-less payment fails the `is distinct from` customer test against any invoice's customer.
+   - **Proof.** M11–M16, M18 and M21 are killed.
+3. **Cross-currency (criterion 3).** The guard requires an `exchange_rate_id` in the tenant for exactly the allocation→invoice pair. The rate must be positive and finite, so NaN and Infinity are excluded. The guard derives `allocated_amount * rate`. A same-currency allocation with a rate is refused 23514, and its converted amount is nulled. M6–M10, M19, M20, M23 and M33 are killed.
+4. **Invoice ceiling and locks (criterion 4).**
+   - **The rule.** `app.enforce_invoice_allocation_ceiling()` sums `coalesce(allocated_amount_invoice_currency, allocated_amount)`. On an allocation write it takes `pg_advisory_xact_lock(hashtextextended(invoice_id::text, 0))`, the key `app.record_payment` takes. The coherence function takes the payment's key.
+   - **Concurrency.** The Step 4 races on the final bytes refused the second session each time. The lock-removed negative control let both commit, and the definition was restored to `bf4357fa…`.
+   - **Primary.** Primary's definition is the same `bf4357fa…`.
+5. **The floor (criterion 5).** After an allocation write only, `paid` with less than the total, or `partially_paid` with 0, raises 23514. No statement in the migration writes `invoices.status_code`. The floor race held, and M30–M32, M35 and M36 are killed.
+6. **History (criterion 6).**
+   - **The producer.** One producer, `app.emit_payment_allocation_event()`, is fired by `payment_allocations_emit_created` (AFTER INSERT) and `payment_allocations_emit_amount_changed`. The second fires AFTER UPDATE only `when` either amount is distinct.
+   - **The event.** It records `info` on creation and `warning` on change, with payment, invoice, currency, rate and both amounts, adding both previous amounts on a change. Its actor is left to `app.record_event`, so it is NULL on the platform path.
+   - **The code.** `payment_allocation_amount_changed` is registered: system, active, `sort_order` 935, read on Primary. It is in canon 27, and smoke counts 623.
+   - **Proof.** M25–M29, M34 and M37 are killed.
+7. **`app.record_payment` (criterion 7).** Extracted from the committed files, the 100-line definition differs from its only earlier one (`20260928180000`) in a single line: the `v_already` sum now reads `coalesce(allocated_amount_invoice_currency, allocated_amount)`. Both Primary and local keep SECURITY INVOKER, `search_path=""` and ACL `{postgres=X/postgres,authenticated=X/postgres}`. The three HTTP suites passed inside `-Finish`.
+8. **Held controls (criterion 8).** The migration touches no grant, policy, foreign key, `guard_financial_capability`, `guard_invoice_void` or the PAY-1 INSERT rule. On Primary the grants (`6727f6d8…`/189) and policies (`b67d466a…`/125) are unchanged. Tests 10, 38, 68, 87, 88, 89, 96, 110, 113, 126 and 140, and the merge cases in test 155, passed in both `-Finish` passes.
+9. **Mutation (criterion 9).**
+   - **The run.** M1–M37 ran at Step 4, against the reset stack carrying the committed migration, with test 155's committed bytes.
+   - **The surface.** The base surface was `919a84f1…`. Every installation changed it, every rollback restored it, and all thirty-seven mutants were killed with their frozen assertions.
+   - **Causal negative.** It was measured on the unrepaired 250 stack: 50 failures, the frozen list.
+   - **Races.** The three races and the floor race's lock-removed negative control are recorded.
+10. **Edited files (criterion 10).**
+    - Test 126 changes only assertion 23 (`10` → `11` and its description).
+    - Test 72 gains seven lines and loses none.
+    - `verify_database.sql` moves only its banner, CHECK 6b with its three-line comment, and its notice, all from 622 to 623.
+    - Canon 27 gains nine lines and loses none.
+11. **Register (criterion 11).** The range adds PAY-6, PAY-7, PAY-8, PAY-10, PAY-11 and FIN-12, each FIXED and DEPLOYED with Cert `✅`. It adds PAY-9 OPEN with its reopening trigger, and changes the freshness line. PAY-1 to PAY-5, FIN-10 and FIN-11 are unchanged.
+12. **Disposition (criterion 12).** Against `1d25f40`, only four things changed: the freshness entry, the coverage line, "All 41" and the `payment_allocations` row (`AUDITED-OPEN` / `ADVERSARIAL`). Its 78 rows count 17 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL` and 37 `NOT-RECORDED`: 41 of 78.
+13. **Frozen values (criterion 13).** The committed blobs hash to the approved values: migration `ee389adb…`, test 155 `86cadadd…`, test 126 `f90fcd2a…`, test 72 `3ad92d5e…`, `verify_database.sql` `8cd405c6…`, canon 27 `ced9d93b…`. Primary's stored statement MD5 is `42e94bec60ab7a10b7de7f5bb76db807`, 26690 bytes.
+14. **Agreement (criterion 14).**
+    - **The same values everywhere.** Primary, the evidence and the manifest agree: 251 migrations, `f678a3ef…`; functions `708dbe89…`/329; structural `76c93098…`/3130; 71/623 catalog; 155 files / 2936 assertions; 464 HTTP assertions.
+    - **Generated files.** The API contract matches its generator (`d28fb567…`), and `ai-map.json` is LF.
+    - **Checks.** The four guard self-tests passed on the deployed content, and repository consistency is CLEAN inside `-Finish`.
+15. **Next capability (criterion 15).** The Complete commit names Batch 6 Slice 41 and `receipts` (7/20), which the selector measured on the certified stack, and clears the Active Change Request.
+16. **Primary and Secondary (criterion 16).**
+    - **The writes.** Primary received two writes: the one authorized migration, applied once (an earlier attempt was proven unapplied), and one guarded rename of temporary version `20261011141637`.
+    - **Its state.** It holds 0 tenants, invoices, payments, allocations and events, both before and after. Only the function, trigger and constraint surfaces moved.
+    - **Secondary** was never contacted.
+17. **Scope (criterion 17).** `1d25f40..3619fad` changes twelve paths, all in Write Scope. `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+**The governance exception, as exercised.** Boot was BLOCKED on the working tree at the start of this session, on exactly the six pre-deploy findings the contract predicted. It was not reported READY. The owner granted a one-time exception for Steps 6 and 7 only, and it is recorded above. It expired when repository consistency became CLEAN at Step 7, before `-Finish`.
+
+**Outside this contract, and not a defect in it:**
+- PAY-9 (the booking-scoped balance) stays OPEN with its trigger.
+- The unsettle-an-invoice policy question stays an owner question (Notes).
+- PAY-5 and FIN-11 keep the row `AUDITED-OPEN`.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
