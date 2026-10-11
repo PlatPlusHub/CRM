@@ -221,7 +221,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 6
 Blocker: None
 Recovery Attempt: 0
 
@@ -537,6 +537,38 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ### 2026-10-11 — Human Gate 2: owner authorization
 
 The owner's SPEC-264 revised-Draft approval (2026-10-11) grants a separate, advance, one-time, exact-byte Gate 2: deploy only `supabase/migrations/20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice.sql`, SHA-256 `ee389adb2aff9253ad1f283805419a488696e579336da2b0e81b968749cc559f`, 26,690 bytes, LF, to Primary `vrvtsxexkiiiivlkdxzp` only, subject to every existing deployment safeguard; no other migration is authorized, the migration is never reapplied under uncertainty, and Secondary is never contacted. Its conditions hold as recorded in the entry above: the frozen bytes exist in the scratchpad and in the repository and match in full; the approved contract and the other frozen artifacts — test 155 `86cadadd…`, test 126 `f90fcd2a…`, test 72 `3ad92d5e…`, `verify_database.sql` `8cd405c6…`, canon 27 `ced9d93b…` — match; the readiness checks passed with only the drift the contract names; the Primary baseline was read independently, the target is absent, and the predicted effect is limited to the approved scope. Step 6 re-reads everything immediately before the write.
+
+### 2026-10-11 — Resume at Step 6: blocked Boot diagnosed; owner's one-time continuation authorization
+
+- **Boot was BLOCKED, not READY.** On the working tree, `-Boot` returned `ORVION: BLOCKED` / `REPOSITORY_CONSISTENCY_FAILED` with 6 issues. They are exactly the Consumer Closure list and nothing else: Check 9's 250 vs 251 migrations, latest `20261011090000` vs `20261011120000`, and ledger `24b8778b…` vs `f678a3ef…`; Check 15's 154 vs 155 test files and 2868 vs 2936 assertions; and Check 19's RECOVER-1, where only `20261011120000` is absent from Primary. Checks 1–8, 10–14, 16–18 and 20–28 are clean.
+- **Why they were expected.** They are produced by Steps 1–3's uncommitted files before deployment. Only Step 7 can make them true, because Step 7 writes from fresh post-deploy readings. Writing the manifest earlier would assert a Primary state that does not exist.
+- **What Boot did not reach, and its substitutes.** Boot threw at the repository guard, before its Git, frozen-authority and capability stages. Substitutes:
+  - **Git, read by hand:** after a fetch, 5 ahead / 0 behind `origin/main` `1d25f40` with 0 merges; the range touches only this contract, the manifest and `ai-map.json`; the working tree touched only Write Scope paths; `git diff --check` exit 0.
+  - **Contract identity:** the Draft blob hashes to `8cdfb5e1…`, and only the Status and the Execution Log changed after it.
+  - **Frozen files:** all eight files hash to their recorded values, LF with 0 CR.
+  - **Boot itself:** with the eight files parked (`git stash push --include-untracked`, after a byte-exact copy to scratch), `-Boot` on the committed state returned `ORVION: READY`, `MODE: EXECUTE`, `GIT: clean | ahead 5 / behind 0`, `REPOSITORY: clean` and `BLOCKER: none`.
+- **Session entrypoint:** this session runs through the terminal CLI. The transcript records `entrypoint: cli` only, `CLAUDE_CODE_ENTRYPOINT=cli`, and the process is the npm `claude.exe` under an interactive pwsh. It is not `claude-vscode`.
+- **Checkpoint.** `Resume Step` read 1, although the entries above record Steps 1–5. Each of Steps 1–5 is a re-check, and each is satisfied:
+  - Steps 1–2: the six files exist with their frozen bytes.
+  - Step 3: the register holds the `PAY-6` row.
+  - Step 4: the `Pre-deploy readiness gate` entry exists.
+  - Step 5: the Gate 2 authorization is recorded.
+
+  The checkpoint is therefore set to 6. Nothing is skipped.
+- **Fresh Primary baseline, read-only, before the write:** every value equals Step 4's baseline:
+  - project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+  - ledger 250 `24b8778b6d9e955a8472affb07712858`, latest `20261011090000`; the target is absent by version and by name, and no row follows it;
+  - 0 tenants, invoices, payments, allocations and events; `catalog_values` 622, `event_type` 187, `payment_allocation_amount_changed` absent;
+  - the same 6 `payment_allocations` and 10 `payments` triggers, all enabled;
+  - `app.record_payment` `c6b1efb7…` / `b51c7634…`, INVOKER; `app.enforce_invoice_allocation_ceiling` `77636b76…` / `ec34d628…`, DEFINER; both keep `search_path=""` and their recorded ACLs;
+  - the three new functions are absent.
+- **Transmitted text, proved server-side.** One read-only `select md5(...)` returned `42e94bec60ab7a10b7de7f5bb76db807`, 26690 bytes, 493 LF, equal to the file. The text includes line 483 (`drop trigger …`), so Supabase's human confirmation was raised and accepted in the terminal.
+- **Owner authorization (2026-10-11), one-time.** It is a narrowly bounded exception to continue past exactly those six findings, only during Steps 6 and 7:
+  - Every other check and safeguard stays enforceable, and no guard is disabled, modified or bypassed.
+  - The existing Gate 2 is reaffirmed for migration `ee389adb2aff9253ad1f283805419a488696e579336da2b0e81b968749cc559f`, to Primary `vrvtsxexkiiiivlkdxzp` only.
+  - A ledger correction is allowed only as this contract's Step 6 states it.
+  - Repository consistency must be genuinely CLEAN before `-Finish`.
+  - The exception expires when the six findings resolve, or at any new mandatory blocker.
 
 ## Verification Notes
 
