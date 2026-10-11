@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -435,24 +435,24 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A direct INSERT by a signed-in CREATE_COMPLAINT holder persists the complaint under the creator and the creator's placement, whatever owner or filing scope it supplies; the colleague it named sees 0 rows; an employee with no primary branch is refused 42501.
-- [ ] After creation, a signed-in UPDATE cannot move the complaint's owner or filing scope or blank its title (23514), while an ordinary edit succeeds.
-- [ ] A complaint cannot be created other than `new`, with a resolution time, a closure time, a resolution note, archived, naming an archiver or with a blank title (23514); the entry state binds session-less creation too.
-- [ ] Each successful direct and RPC creation emits exactly one `complaint_created` event at `warning`, with the RPC's state and payload and the creator (or null) as actor, and reaches the customer timeline; a refused creation emits none.
-- [ ] Each change of status, direct or through `app.advance_complaint`, emits exactly one canon-26 event with its old and new states, its reason and the session's actor (or null). The reopen is `complaint_reopened` at `warning`. A no-op status UPDATE, a field-only UPDATE and a refused move emit none.
-- [ ] A signed-in caller's `resolved_at`, `closed_at` and `resolution_notes` are the server's: stamped on the transition that owns them and otherwise kept, whatever the statement supplies; the RPC's resolving reason is the resolution note; a session-less write keeps the values it carries.
-- [ ] A closed complaint cannot be reopened without a reason, directly or through the RPC (23514); the RPC reopens with one, clearing `closed_at`; a reason is consumed by the transition it was handed to.
-- [ ] `app.create_complaint` differs from `88bc20a`'s only by the removed event call. `app.advance_complaint` differs only by its event call and the actor lookup that call used being replaced by the reason hand-off; its transition map, permission charge and UPDATE are byte-identical. Both keep their signature, security mode, `search_path` and ACL.
-- [ ] The held controls stay held: a trainee is refused at the table; a row under another tenant is refused by RLS; session-less `new` creation keeps its null owner; every edge and its permission are unchanged.
-- [ ] Mutants M1–M26 are each killed against test 154, with installation and restoration proven. The causal negative is recorded.
-- [ ] Test 83 assertion 23's expected list drops only `complaints.owner_user_id`; its query, assertion 22 and every other member are unchanged.
-- [ ] COMP-2 and COMP-3 are fixed and deployed in the register. ENTRY-1 and ARCH-2 each record this surface's closure; COMP-1, SR-1 and SR-2 are unchanged.
-- [ ] `complaints` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 40 of 78. No other surface's row changed.
-- [ ] The migration, test 154 and test 83 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (250 migrations; 154 files / 2868 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 40 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A direct INSERT by a signed-in CREATE_COMPLAINT holder persists the complaint under the creator and the creator's placement, whatever owner or filing scope it supplies; the colleague it named sees 0 rows; an employee with no primary branch is refused 42501.
+- [x] After creation, a signed-in UPDATE cannot move the complaint's owner or filing scope or blank its title (23514), while an ordinary edit succeeds.
+- [x] A complaint cannot be created other than `new`, with a resolution time, a closure time, a resolution note, archived, naming an archiver or with a blank title (23514); the entry state binds session-less creation too.
+- [x] Each successful direct and RPC creation emits exactly one `complaint_created` event at `warning`, with the RPC's state and payload and the creator (or null) as actor, and reaches the customer timeline; a refused creation emits none.
+- [x] Each change of status, direct or through `app.advance_complaint`, emits exactly one canon-26 event with its old and new states, its reason and the session's actor (or null). The reopen is `complaint_reopened` at `warning`. A no-op status UPDATE, a field-only UPDATE and a refused move emit none.
+- [x] A signed-in caller's `resolved_at`, `closed_at` and `resolution_notes` are the server's: stamped on the transition that owns them and otherwise kept, whatever the statement supplies; the RPC's resolving reason is the resolution note; a session-less write keeps the values it carries.
+- [x] A closed complaint cannot be reopened without a reason, directly or through the RPC (23514); the RPC reopens with one, clearing `closed_at`; a reason is consumed by the transition it was handed to.
+- [x] `app.create_complaint` differs from `88bc20a`'s only by the removed event call. `app.advance_complaint` differs only by its event call and the actor lookup that call used being replaced by the reason hand-off; its transition map, permission charge and UPDATE are byte-identical. Both keep their signature, security mode, `search_path` and ACL.
+- [x] The held controls stay held: a trainee is refused at the table; a row under another tenant is refused by RLS; session-less `new` creation keeps its null owner; every edge and its permission are unchanged.
+- [x] Mutants M1–M26 are each killed against test 154, with installation and restoration proven. The causal negative is recorded.
+- [x] Test 83 assertion 23's expected list drops only `complaints.owner_user_id`; its query, assertion 22 and every other member are unchanged.
+- [x] COMP-2 and COMP-3 are fixed and deployed in the register. ENTRY-1 and ARCH-2 each record this surface's closure; COMP-1, SR-1 and SR-2 are unchanged.
+- [x] `complaints` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 40 of 78. No other surface's row changed.
+- [x] The migration, test 154 and test 83 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (250 migrations; 154 files / 2868 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree, and the four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 40 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -535,17 +535,78 @@ The owner's SPEC-262 exact-identity approval (2026-10-11) grants a separate, adv
   - repository consistency: `CLEAN`;
   - `git diff --check`: exit 0.
 
+### 2026-10-11 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `a87fa92` with nothing else running. It ran in VERIFY mode (`STATUS: In Progress`, `STEP: DONE`), with profiles DATABASE and REPOSITORY plus the declared `verify_care_journeys.ps1` and `verify_journey_branches.ps1`. It reported `LOCAL_CERTIFY: READY` in 8.1 min, and every mandatory verification passed in that run:
+- reset; pgTAP Pass A; the care HTTP suite; the journey HTTP suite; pgTAP Pass B; smoke;
+- `check_database_parity_evidence.ps1`, repository consistency, `git diff --check` and `check_primary_ledger.ps1`.
+
+The four CI-only guard self-tests passed on the same committed content (Step 7). M1–M26 and the causal negative ran at Step 4 on the committed migration and test bytes, which are unchanged, so they were not repeated. Test 154's assertions are checked by both pgTAP passes.
+
+**The implementation was published before Complete, because this contract's Review Gate asks for candidate CI, main CI and `REMOTE_CERTIFY: READY` on the exact SHA, and the Gate requires every Review Gate item checked at the Complete transition.** Checking that item before those facts existed would have been false, so the implementation SHA was published first with the existing mechanisms, and the Complete commit follows it and is published, CI-verified and certified again as Step 8 states:
+- `-Gate -BaseRef origin/main` on `88bc20a..a87fa92` (In Progress): exit 0;
+- `scripts/publish_candidate.ps1`: `a87fa92` → `orvion-preflight`; candidate CI on that exact SHA: Agent Control `38102949240`, Repository Consistency `38102949286`, Migration CI `38102949263` and ORVION Acceptance `38102949218` (16.1 min), all success on attempt 1;
+- `main` fast-forwarded `88bc20a..a87fa92` by pushing that exact SHA; main CI: Repository Consistency `38103963732`, Agent Control `38103963772` and Migration CI `38103963744`, all success on attempt 1;
+- `-Certify` at `a87fa92`, target `main`: `REMOTE_CERTIFY: READY`.
+
+**Selector after SPEC-262** (`scripts/batch6_select_target.ps1`, 38 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `payment_allocations` 8/60
+2. `receipts` 7/20
+3. `chart_of_accounts` 7/38
+4. `notification_deliveries` 7/42
+5. `approval_requests` 7/52
+6. `user_branch_assignments` 7/578
+7. `departments` 7/642
+8. `user_role_assignments` 7/642
+9. `customer_consents` 6/18
+10. `document_retention_policies` 6/36
+11. `document_links` 6/54
+12. `exchange_rates` 6/60
+
+Slice 40's measured target is `payment_allocations`.
+
 ## Verification Notes
+
+### 2026-10-11 — Independent Review of the execution commit `a87fa92`
+
+Reviewed the committed tree against the approved Draft `122fd65`, the owner's Gate-2 authorization and the ten-path Write Scope. The review read the implementation, the certified local stack and Primary, not the Execution Log.
+
+1. **Creation under the creator (criterion 1).** The guard derives `owner_user_id`, `owner_branch_id` and `owner_department_id` from `app.current_user_id()` and `app.current_placement()` for a signed-in INSERT and refuses 42501 without an actor or branch. Test 154 assertions 3–6 (forged owner and filing replaced), 26 (the named colleague sees 0 rows) and 27 (no primary branch, 42501) passed in both `-Finish` pgTAP passes; mutants M7 and M8 are killed by them.
+2. **No reassignment, no blank title (criterion 2).** The UPDATE arm refuses a signed-in change to any of the three scope columns and every caller's blank title (23514); assertions 12, 13, 14 (an ordinary edit succeeds) and 49 pin it; M11, M12 and M22 are killed.
+3. **Entry state (criterion 3).** The INSERT arm requires `new` with null `resolved_at`, `closed_at` and `resolution_notes` and no archive field, before the session test, so it binds session-less creation too. Assertions 15–20, 30 and 48 pin it; M1–M6 are killed.
+4. **The created event (criterion 4).** `complaints_emit_created` (AFTER INSERT, row, enabled, `tgtype` 5) records `complaint_created` at `warning` with the RPC's payload keys and the session's actor or null; `app.create_complaint` no longer records it. Assertions 7–11, 22, 32 and 34 pin one event per creation, its payload, the timeline and the absence of events for refused creations; M9, M10 and M25 are killed.
+5. **Transition events (criterion 5).** `complaints_emit_transition` (AFTER UPDATE OF `complaint_status_code`, `WHEN` the status changes, `tgtype` 17) maps the entered state with a `case` and records `complaint_reopened` at `warning`, every other move at `info`, with the old and new states, the consumed reason and the actor. Assertions 24, 37, 44, 47 and 50 pin exactly one event per move on both doors and none for a no-op or field-only update; M13, M14, M21 and M23 are killed. The care HTTP suite passed inside `-Finish`.
+6. **Server-owned times and note (criterion 6).** For a signed-in caller the guard stamps `resolved_at` and takes the trimmed `app.transition_reason` as `resolution_notes` on entering `resolved`, stamps `closed_at` on entering `closed`, clears it on entering `in_progress`, and otherwise keeps all three; session-less writes keep what they carry. Assertions 38, 40, 41, 45 and 51 pin it; M17, M18, M19, M20 and M26 are killed.
+7. **The reasoned reopen (criterion 7).** The guard refuses `closed -> in_progress` without a non-blank reason; the producer clears the reason after each move. Assertions 39, 42, 43, 45 and 46 pin it; M15, M16 and M24 are killed.
+8. **RPC fidelity (criterion 8).** Extracted from the committed files, `app.create_complaint` differs from its only earlier definition (`202607051500`) by the six-line `record_event` call alone, and `app.advance_complaint` from its only earlier definition (`202607057000`) by its `v_actor` declaration, its actor lookup replaced by `perform set_config('app.transition_reason', coalesce(p_reason, ''), true)`, and its removed `record_event` call; its transition map, permission charge and UPDATE are byte-identical. On Primary and the certified local stack both keep SECURITY INVOKER, owner `postgres`, `search_path=""` and ACL `{postgres=X/postgres,authenticated=X/postgres}`.
+9. **Held controls (criterion 9).** Assertions 21 (rival tenant, 42501), 28–29 (trainee, 42501) and 31 (session-less nullable owner) passed; tests 32 (11/11) and 54 (6/6) passed in both full passes, and `parity_surface.sql`'s status-transition surface is unchanged (`db2165c7…`/115) on both sides.
+10. **Mutation (criterion 10).** M1–M26 ran at Step 4 against the reset stack carrying the committed migration, with test 154's committed bytes: base surface `10856b75…`, every installation changed it, every rollback restored it, all twenty-six killed with their frozen assertions. The causal negative (35 failures, the frozen list) was measured on the unrepaired 249 stack with the committed test 154.
+11. **Test 83 (criterion 11).** Its diff against `88bc20a` is one line, identical after removing `complaints.owner_user_id, `; it passed 23/23.
+12. **Records (criterion 12).** The register holds COMP-2 and COMP-3 after SR-2, Medium, FIXED and DEPLOYED with Cert `✅`, Owner `—`. ENTRY-1's and ARCH-2's rows keep their prior text as an exact prefix and append their SPEC-262 entries. COMP-1, SR-1 and SR-2 are unchanged.
+13. **Disposition (criterion 13).** Against `88bc20a` the record changed its freshness entry, the coverage line, "All 40" and the `complaints` row only. Its rows count 17 `AUDITED`, 20 `AUDITED-OPEN`, 3 `PARTIAL` and 38 `NOT-RECORDED`: 40 of 78.
+14. **Frozen values (criterion 14).** The committed blobs hash to the approved values: migration `55d54a8a26265f6ea7aaee3708906ca4c25d9ae79cbe4ab831ff17278adecb02`, test 154 `7045e732…`, test 83 `2aa3576c…`. Primary's stored statement MD5 is `43ed834051349c20b746b721236b639a`.
+15. **Agreement (criterion 15).** Primary, the evidence and the manifest agree: 250 migrations, `24b8778b…`; functions `3d7eb4e3…`/326, structural `a23669c9…`/3121; 154 files / 2868 assertions (plan sum recounted); 464 HTTP assertions. The API contract matches its generator (`d28fb567…`), and `ai-map.json` is LF. The four guard self-tests passed on the deployed content, and `-Finish`'s parity, ledger and consistency checks passed.
+16. **Next capability (criterion 16).** The Complete commit names Batch 6 Slice 40 and `payment_allocations` (8/60), which the selector measured on the certified stack, and clears the Active Change Request.
+17. **Primary and Secondary (criterion 17).** Primary's ledger holds exactly one row for the migration, after one guarded rename of temporary version `20261011012026`; it holds 0 tenants, complaints and events before and after; only the function and trigger surfaces moved. Secondary was never contacted.
+18. **Scope (criterion 18).** `88bc20a..a87fa92` changes nine paths, all in Write Scope; `MASTER_API_CONTRACT.md` regenerates unchanged.
+
+**Review Gate, item 6 (CI and remote certification):** candidate CI on the implementation SHA `a87fa92` ran and succeeded on attempt 1 (Agent Control `38102949240`, Repository Consistency `38102949286`, Migration CI `38102949263`, ORVION Acceptance `38102949218`); `main` was fast-forwarded to that exact SHA and its CI succeeded (Repository Consistency `38103963732`, Agent Control `38103963772`, Migration CI `38103963744`); `-Certify` read those runs from GitHub and returned `REMOTE_CERTIFY: READY`. The Complete commit is published, CI-verified and certified again under Step 8.
+
+**Outside this contract, and not a defect in it:**
+- Customer–booking coherence is accepted by both doors and stated by no canon rule; recorded in the disposition row.
+- TRANS-1's duplicated transition map stays as it was.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every Acceptance Criterion is proven against the live repository and runtime, not the Execution Log.
-- [ ] The committed migration, test 154 and test 83 match their frozen SHA-256 values.
-- [ ] Mutants M1–M26 and the causal negative are recorded.
-- [ ] Primary was written only under separate exact-byte owner authorization, and Secondary was never contacted.
-- [ ] Repository, local stack and Primary agree on the ledger, function surface and structural surfaces.
-- [ ] Candidate and main CI passed on the exact SHA, and `REMOTE_CERTIFY: READY`.
-- [ ] No file outside Write Scope changed.
+- [x] Every Acceptance Criterion is proven against the live repository and runtime, not the Execution Log.
+- [x] The committed migration, test 154 and test 83 match their frozen SHA-256 values.
+- [x] Mutants M1–M26 and the causal negative are recorded.
+- [x] Primary was written only under separate exact-byte owner authorization, and Secondary was never contacted.
+- [x] Repository, local stack and Primary agree on the ledger, function surface and structural surfaces.
+- [x] Candidate and main CI passed on the exact SHA, and `REMOTE_CERTIFY: READY`.
+- [x] No file outside Write Scope changed.
 
 ## Notes
 
