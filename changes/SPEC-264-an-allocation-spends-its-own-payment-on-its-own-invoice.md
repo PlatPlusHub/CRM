@@ -221,7 +221,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 6
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -569,6 +569,46 @@ The owner's SPEC-264 revised-Draft approval (2026-10-11) grants a separate, adva
   - A ledger correction is allowed only as this contract's Step 6 states it.
   - Repository consistency must be genuinely CLEAN before `-Finish`.
   - The exception expires when the six findings resolve, or at any new mandatory blocker.
+
+### 2026-10-11 — Step 6, deployment attempt 1: refused unapplied (confirmation expired)
+
+- **Before the write.** Repository consistency again reported exactly the same six findings and nothing else. Every Step 6 pre-write reading matched the baseline exactly.
+- **The call.** Checkpoint commit `719c24d` was in place and the eight files were restored byte-exact. `apply_migration` was then sent once, with the text the md5 proof had verified.
+- **The result.** The call waited 23 min 25 s for Supabase's human confirmation dialog, then returned `Invalid or expired requestState`: the confirmation token expired before it was answered. For comparison, the md5 proof's confirmation was answered within 8 s.
+- **Nothing was applied, proven read-only immediately afterwards:**
+  - ledger 250 `24b8778b6d9e955a8472affb07712858`, latest `20261011090000`, no new row by version or name;
+  - `catalog_values` 622, and the new code absent;
+  - the three new functions absent; triggers 6 and 10;
+  - `app.record_payment` definition `b51c7634…` and the ceiling's prosrc `77636b76…` unchanged.
+- **Status.** The migration has not been applied, so a later attempt is its first application, not a reapplication. Step 6 stays the Resume Step, and the attempt waits for the owner to be present to answer the dialog promptly.
+
+### 2026-10-11 — Step 6 deployed (attempt 2); Step 7 synchronized
+
+- **Authority.** The owner, present at the terminal, authorized one further attempt, conditional on reverifying everything first.
+- **Reverified before the write:**
+  - the eight files hash to their frozen values (migration MD5 `42e94bec…`);
+  - HEAD `719c24d` is 6 ahead / 0 behind `origin/main` `1d25f40`;
+  - repository consistency still reports exactly the six predicted findings;
+  - the Primary pre-write reading equals the baseline exactly.
+- **Deployment.** `apply_migration` sent the proven text once. The owner answered Supabase's confirmation, and the call returned `success`.
+- **Ledger rename.** The connector stored version `20261011141637`. Each guard held: exactly one row after `20261011090000`, 251 rows, one stored statement with MD5 `42e94bec…` (26690 bytes), and no `20261011120000` row. One guarded UPDATE, carrying every condition in its WHERE clause, renamed that row alone to `20261011120000`, and returned exactly that row.
+- **Fresh Primary readings (read at `2026-10-11T14:17:36Z`), each equal to the prediction:**
+  - ledger 251 `f678a3ef5790582c39635136c8aa202d`, latest `20261011120000`, nothing after it;
+  - Check L2/P2 functions `708dbe893149ea2b97e6893fea449925`/329;
+  - `parity_surface.sql`: functions `708dbe89…`/329, triggers `c6f7bb53…`/316, constraints `e669286c…`/527, combined `76c930988563bd06f86c65e429fdb8fc`/3130; policies `b67d466a…`/125, grants `6727f6d8…`/189, columns `448db887…`/1134, views `10bb212a…`/16, indexes `22a4d58c…`/300, status transitions `db2165c7…`/115 and RLS `c117cbf7…`/79 unchanged;
+  - `payment_allocations` has 9 enabled triggers (adding `guard_link`, `within_payment_amount` deferred, and `emit_amount_changed`); `payments` has 11 (adding `amount_covers_allocations` deferred);
+  - the five functions' prosrc and definition MD5s, SECURITY DEFINER/INVOKER modes, `search_path=""` and ACLs equal the local stack's (251 / `f678a3ef…`): `record_payment` `085950d8…`/`94dd903a…`, `enforce_invoice_allocation_ceiling` `2faaac12…`/`bf4357fa…`, `guard_payment_allocation_link` `e4ec8ade…`/`723419a5…`, `enforce_payment_allocation_coherence` `9353cd11…`/`45c3f95a…`, `emit_payment_allocation_event` `9987bb91…`/`a6762849…`;
+  - `catalog_values` 623, `catalog_types` 71, `event_type` 188; `payment_allocation_amount_changed` is system, active, at `sort_order` 935;
+  - 0 tenants, invoices, payments, allocations and events.
+- **Writes and contacts.** Primary received only the authorized migration and the one guarded rename. Secondary `brplkqmbzffpxqgkkdzo` was not contacted.
+- **Step 7, written from those readings:**
+  - `primary-ledger-evidence.json`: 251 entries equal to the migration files, recomputing to `f678a3ef…`.
+  - Manifest `Live state`: 251 / `20261011120000` / `f678a3ef…`, functions `708dbe89…` (329), structural `76c93098…` (3,130), 71/623 catalog, Suite **155 files / 2936 assertions** (the plan sum, confirmed by Check 15's count), and 464 HTTP assertions unchanged.
+  - Batch 6 coverage: 41 of 78, all forty-one `ADVERSARIAL`.
+  - Register: PAY-6, PAY-7, PAY-8, FIN-12, PAY-10 and PAY-11 marked `DEPLOYED` with Cert `✅`, in the SPEC-262 wording.
+  - `MASTER_API_CONTRACT.md` regenerated byte-identical (`d28fb567…`). `ai-map.json` regenerated, with only `generated_at` moved, and normalized to LF.
+  - The four CI-only guard self-tests pass: cold-start 34/0, future-date 18/0, primary-ledger 13/0, status-contradiction 33/0.
+  - The Runtime Checkpoint is set to DONE.
 
 ## Verification Notes
 

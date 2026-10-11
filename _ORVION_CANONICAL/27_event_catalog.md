@@ -585,6 +585,15 @@ Requires:
 - Payment
 - Allocated amount
 
+## payment_allocation_amount_changed
+
+Severity: warning
+
+Requires:
+
+- Payment allocation
+- Allocated amount before and after
+
 ## receipt_issued
 
 Severity: info

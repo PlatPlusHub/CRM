@@ -103,6 +103,13 @@ select throws_ok(
   null, null,
   'and the RPC still refuses one more piastre, exactly as before');
 
+-- SPEC-264: the two payments above COMMIT here, as they would in production, so their allocation
+-- checks run against the state they wrote. Left pending, the first 'set constraints all immediate'
+-- below would judge them against a later probe's invoice -- PAY-11's floor then refuses assertion 12
+-- for a paid invoice raised to 1500, which is the pgTAP pending-check trap, not the probe's rule.
+set constraints all immediate;
+set constraints all deferred;
+
 -- =============================================================================================
 -- 8-10. THE REPRODUCTION, on the direct path, from BOTH directions.
 -- =============================================================================================
