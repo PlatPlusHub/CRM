@@ -316,6 +316,45 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - **Preconditions:** the migration and test 156 are absent from the tree.
 - **Gate 2 stands before Step 6.** The same authorization grants a separate, exact-byte Gate 2 for migration `20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql`, SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, to Primary `vrvtsxexkiiiivlkdxzp` only. It is valid only if every pre-deployment condition passes: exact content, HEAD and scope, project identity, the expected ledger with the migration absent, the function and structural fingerprints, the business counts and receipt objects, the mandatory local and adversarial tests, no unexpected drift, and the readiness gate. It is recorded at Step 5 only if Step 4 passes. It covers no other migration. Secondary is never contacted.
 
+### 2026-10-12 — Steps 1-3 applied; Pre-deploy readiness gate (Step 4)
+
+- **Steps 1–2.** The migration and test 156 were absent and were created LF, ASCII, byte-identical to their pinned values: migration `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc` (md5 `9a352fdd0d3caec23e1e1c36a43200ff`, 9882 bytes), test 156 `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2`.
+- **Step 3.** The register held SPEC-265's completed edits, the case Step 3 admits.
+  - Register: a Slice-41 freshness entry, with the D4 entry demoted to `Previously:`, and rows RCPT-1 (High) and RCPT-2, RCPT-3 and RCPT-4 (Medium), each leading `FIXED … locally; Primary deployment pending` with Cert `🛡` and Owner `—`.
+  - Disposition: the freshness entry; coverage 42 of 78 (18 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 36 `NOT-RECORDED`); the "All 42" line; the `receipts` row `AUDITED` / `ADVERSARIAL`.
+- **Step 4**, from the main checkout with the pinned CLI 2.109, HEAD `dff42ea`, under `scripts/run_timed.ps1` with `concurrent=0`:
+  - **Causal negative.** A clean reset with the migration held aside gave 251 migrations, latest `20261011120000`. Test 156 failed assertions 3, 4, 5, 6 and 7, then aborted on `trigger "receipts_guard_issue" … does not exist`, as predicted.
+  - **Fingerprints, unrepaired local:** `app.issue_receipt` md5 `fdb063de930b6fb43662df89d070ae8c`, SECURITY INVOKER, ACL `{postgres=X/postgres,authenticated=X/postgres}`; four `receipts` triggers; functions `708dbe893149ea2b97e6893fea449925`/329; structural `_combined` `76c930988563bd06f86c65e429fdb8fc`/3130.
+  - **Fingerprints, after a clean reset with the migration:** 252 migrations, latest `20261012120000`; `app.issue_receipt` md5 `b2e09f264b27a0f5643353c2fe78c5fb`, with the same mode and ACL; triggers `receipts_emit_issued` and `receipts_guard_issue` added. The structural surface moves exactly as predicted: functions `e6a65849bc390360dcb53b2be4f1a0b8`/331 (+2), triggers `d0b98a16e51bb805a93e14737cd5e1b3`/318 (+2), and `_combined` `02dcc5a1076506289a6f7ff81894fb4d`/3134. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged.
+  - **Focused tests:** test 156 33/33, test 10 9/9, test 53 12/12, test 68 11/11, test 155 68/68.
+  - **Full suite:** pgTAP Pass A `Files=156, Tests=2969`, PASS. HTTP: `verify_api_end_to_end` 35/0, `verify_journey_branches` 85/0, `verify_lifecycle_branches` 122/0. pgTAP Pass B without reset: 2969, PASS. Smoke: `ALL CHECKS PASSED (78 tables, … 71/623 catalog, …)`. 156 files whose literal `plan(N)` values sum to 2969.
+  - **Mutants M1–M15, all killed.** Each failing set equals the Mutation Obligation table: M1 15,20,27,28; M2 21–25,27; M3 22; M4 23; M5 11,12,29,33; M6 3,5–10,13,14,19,27,33; M7 3,4,5,7,9,27; M8 3; M9 4; M10 8,9,14,19,33; M11 24,25,27; M12 30; M13 10,33; M14 5,10,33; M15 32.
+    - **Harness strengthened.** For every mutant, the harness now proves installation from a changed function-source, trigger or privilege fingerprint. It proves restoration as byte-equal to the migration's definitions and 33/33 before the next mutant.
+    - **First run stopped as a harness error, not a verdict.** M1's restore was not byte-equal: on Windows, a text-mode pipe turned the migration's LF into CRLF inside the restored function body. The prototype harness had the same flaw and did not check for it. The SQL is now sent as bytes, and the rerun on a fresh reset gave the result above and `ALL RESTORED`.
+  - **Generators.** `MASTER_API_CONTRACT.md` regenerates byte-identical to the committed file (80 RPC endpoints, 8 reporting views, 74 tables), so it is unchanged, as predicted. `ai-map.json` changes only its timestamp.
+  - **Guard self-tests:**
+    - `test_future_date_guard` 18/0 and `test_status_contradiction_guard` 33/0;
+    - `test_cold_start_state_guard` 25/9 and `test_primary_ledger_guard` 11/2. Every failure is a CONTROL or restore case that requires a CLEAN guard: cold-start CONTROL, A2, A-restore, B-restore, C2, C-restore, D-restore, E-CONTROL and the second-direction CONTROL; primary-ledger's two CONTROL cases. Every MUTATION case passes. This is the drift Consumer Closure predicts, and Step 8 requires them green.
+  - **Scope and consistency.** `git status` shows only Write Scope paths, and `git diff --check` is clean. Repository consistency reports exactly the six predicted items:
+    - manifest 251 vs 252 migrations;
+    - the latest migration;
+    - the ledger fingerprint (files `5f13c62d2f609e7794a0193a2f203c50`);
+    - 155 vs 156 test files;
+    - 2936 vs 2969 assertions;
+    - RECOVER-1 counting two of them.
+  - **Fresh Primary baseline**, read-only through `supabase-primary`:
+    - project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+    - ledger 251 rows, `f678a3ef5790582c39635136c8aa202d`, latest `20261011120000`, with the target absent;
+    - functions `708dbe893149ea2b97e6893fea449925`/329 and structural `_combined` `76c930988563bd06f86c65e429fdb8fc`/3130, both equal to the recorded evidence and to the unrepaired local stack;
+    - `app.issue_receipt` md5 `fdb063de930b6fb43662df89d070ae8c`, SECURITY INVOKER, with the same ACL; the same four `receipts` triggers; neither new function present;
+    - 0 tenants, customers, bookings, invoices, payments, receipts and events.
+
+    No drift from the approved baseline. **Predicted delta on Primary:** ledger 252 with `20261012120000` once; functions 331 with `e6a65849…`; triggers 318; `_combined` `02dcc5a1…`/3134; no business row written.
+- **Readiness verdict: PASS.** Every pre-deployment condition of the owner's Gate 2 holds.
+
+### 2026-10-12 — Gate 2 recorded (Step 5)
+
+- The owner's execution authorization of 2026-10-12 grants, separately from Gate 1, an exact-byte deployment of `20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql`, SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, to Primary `vrvtsxexkiiiivlkdxzp` only, valid only if every pre-deployment condition passes. Step 4 shows they do. It authorizes no other migration and no business-data write. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
