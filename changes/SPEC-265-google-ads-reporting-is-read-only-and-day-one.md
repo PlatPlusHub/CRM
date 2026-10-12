@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -176,16 +176,16 @@ Every file is written LF. Each SHA-256 below is of the LF form, as Git stores it
 
 ## Acceptance Criteria
 
-- [ ] Canon 01 names read-only Google Ads reporting as a Day-1 integration and excludes modifying Google Ads; SHA-256 `189a5248…`.
-- [ ] Canon 18 records reporting and the never-modify rule, separate from ADR-0023; SHA-256 `ac01a571…`.
-- [ ] Canon 32 carries the Day-1 capability section without reordering Phase 8's (A)–(H); SHA-256 `1338bd17…`.
-- [ ] ADR-0030 exists after ADR-0029 with ADR-0024's record fields, and no earlier ADR changed; SHA-256 `4c783f7d…`.
-- [ ] The catalog carries the registry row and §5 (supported, partially supported and unavailable data; access; synchronization; how it meets ORVION's records); SHA-256 `d72e6135…`.
-- [ ] The register carries GADS-1, leading `OPEN` with Owner Decision `—`; no other row changed; SHA-256 `8f65e76a…`.
-- [ ] The plan's closure queue carries PAY-9 and GADS-1 as rows 11 and 12, and no class, order or criterion changed; SHA-256 `029646d7…`.
-- [ ] At Complete the manifest's SHA-256 is `4c77f44e…`, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
-- [ ] No migration, test, script, Primary object, n8n object, credential or Google Ads setting changed.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] Canon 01 names read-only Google Ads reporting as a Day-1 integration and excludes modifying Google Ads; SHA-256 `189a5248…`.
+- [x] Canon 18 records reporting and the never-modify rule, separate from ADR-0023; SHA-256 `ac01a571…`.
+- [x] Canon 32 carries the Day-1 capability section without reordering Phase 8's (A)–(H); SHA-256 `1338bd17…`.
+- [x] ADR-0030 exists after ADR-0029 with ADR-0024's record fields, and no earlier ADR changed; SHA-256 `4c783f7d…`.
+- [x] The catalog carries the registry row and §5 (supported, partially supported and unavailable data; access; synchronization; how it meets ORVION's records); SHA-256 `d72e6135…`.
+- [x] The register carries GADS-1, leading `OPEN` with Owner Decision `—`; no other row changed; SHA-256 `8f65e76a…`.
+- [x] The plan's closure queue carries PAY-9 and GADS-1 as rows 11 and 12, and no class, order or criterion changed; SHA-256 `029646d7…`.
+- [x] At Complete the manifest's SHA-256 is `4c77f44e…`, its open-decision line is MAIL-1, RET-1 and PH8-10, and `ai-map.json` is regenerated LF.
+- [x] No migration, test, script, Primary object, n8n object, credential or Google Ads setting changed.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -216,20 +216,36 @@ Every file is written LF. Each SHA-256 below is of the LF form, as Git stores it
 - `scripts/readiness_population.ps1` exits 0: 473 finding ids, 341 settled, 132 not settled; open decisions MAIL-1, PH8-10, RET-1; every derived id is named in the gate section.
 - `scripts/check_repository_consistency.ps1`: `REPOSITORY CONSISTENCY: CLEAN`.
 - No migration, test, script, Primary object, n8n object, credential or Google Ads setting was touched.
+### 2026-10-12 — Local certification
+
+- `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` on the clean committed tree at `fca214d` (profile REPOSITORY plus the Additional Verification command): repository consistency PASS, `git diff --check` PASS, `scripts/readiness_population.ps1` PASS, `LOCAL_CERTIFY: READY` in 0.5 min with 0 concurrent scripts.
+
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-10-12 — Review
+
+Re-checked against the committed tree at `fca214d`, not against the Execution Log:
+- **Hashes:** each of the seven document blobs at HEAD hashes to its pinned LF SHA-256 (`189a5248…`, `ac01a571…`, `1338bd17…`, `4c783f7d…`, `d72e6135…`, `8f65e76a…`, `029646d7…`), and the manifest with `Active Change Request: None.` hashes to `4c77f44e…`.
+- **Range `f6c30d0..HEAD`:** exactly the ten Write Scope paths changed. The only removed lines are canon 18's former purpose sentence, which Step 1 widens, and the register's and plan's former `Last updated` entries, each kept as `Previously:`.
+  - Canon 32 and the ADR file lose no line, so Phase 8's (A)–(H) and every earlier ADR are byte-unchanged.
+  - ADR-0030 sits between ADR-0029 (line 299) and `## Programme lesson numbering` (line 383).
+- **Register:** GADS-1 leads `OPEN` with Owner Decision `—`; no other row changed.
+- **Plan:** rows 11 (PAY-9) and 12 (GADS-1) were added after row 10; no class, order or criterion changed.
+- **Manifest:** the open-decision line is still MAIL-1, RET-1 and PH8-10, and `ai-map.json` is the generator's output.
+- **Nothing else touched:** no migration, test, script or workflow changed. No Primary, n8n, credential or Google Ads call was made.
+- **Checks:** `readiness_population.ps1` exits 0, repository consistency is CLEAN, and `LOCAL_CERTIFY: READY`.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
