@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -259,22 +259,22 @@ Every file is written LF. The "from" hashes are the committed bytes at `6c8b500`
 
 ## Acceptance Criteria
 
-- [ ] `scripts/generate-ai-map.ps1` writes `ai-map.json` and `repository-index.md` LF, with no timestamp, and two runs give identical bytes.
-- [ ] `scripts/generate-ai-map.ps1 -Check` exits 0 on the committed tree and 1 naming each stale file otherwise.
-- [ ] Check 7 runs the reproduction, and Check 20 and `repository-consistency.yml` cover the generator.
-- [ ] `scripts/repository-all.ps1` no longer generates the index itself.
-- [ ] The write closure binds `ai-map.json` and `repository-index.md` to any `_ORVION_CANONICAL/*.md` contract, and test 234 passes.
-- [ ] Assertion 158 requires the three live_state names and no timestamp.
-- [ ] `scripts/readiness_population.ps1 -Registry` lists every `NOT-RECORDED` surface at `B6-EXIT` and every Live deferred item with its state, and exits 0 with `REGISTRY: complete`.
-- [ ] `scripts/readiness_selftest.ps1` reports 33 passed, 0 failed, with M1–M15 killed.
-- [ ] `reports/future-backlog.md` holds the Live deferred items table, each row with a registry boundary, and the triage record.
-- [ ] The Action registry states the two kinds of member that need no row, and OPS-4 is pruned from its row.
-- [ ] The register carries CTRL-12, CTRL-13 and CTRL-14 as FIXED, and OPS-4 as FIXED at its trigger.
-- [ ] The manifest copies no unguarded figure, names the selector for the next slice, and stays within 7000 characters and 1200 per line.
-- [ ] `GOVERNANCE.md` §2 names the generator for both projections, version 1.19.
-- [ ] The CONTROL suites pass.
-- [ ] Repository consistency is CLEAN.
-- [ ] `git diff --check` is clean.
+- [x] `scripts/generate-ai-map.ps1` writes `ai-map.json` and `repository-index.md` LF, with no timestamp, and two runs give identical bytes.
+- [x] `scripts/generate-ai-map.ps1 -Check` exits 0 on the committed tree and 1 naming each stale file otherwise.
+- [x] Check 7 runs the reproduction, and Check 20 and `repository-consistency.yml` cover the generator.
+- [x] `scripts/repository-all.ps1` no longer generates the index itself.
+- [x] The write closure binds `ai-map.json` and `repository-index.md` to any `_ORVION_CANONICAL/*.md` contract, and test 234 passes.
+- [x] Assertion 158 requires the three live_state names and no timestamp.
+- [x] `scripts/readiness_population.ps1 -Registry` lists every `NOT-RECORDED` surface at `B6-EXIT` and every Live deferred item with its state, and exits 0 with `REGISTRY: complete`.
+- [x] `scripts/readiness_selftest.ps1` reports 33 passed, 0 failed, with M1–M15 killed.
+- [x] `reports/future-backlog.md` holds the Live deferred items table, each row with a registry boundary, and the triage record.
+- [x] The Action registry states the two kinds of member that need no row, and OPS-4 is pruned from its row.
+- [x] The register carries CTRL-12, CTRL-13 and CTRL-14 as FIXED, and OPS-4 as FIXED at its trigger.
+- [x] The manifest copies no unguarded figure, names the selector for the next slice, and stays within 7000 characters and 1200 per line.
+- [x] `GOVERNANCE.md` §2 names the generator for both projections, version 1.19.
+- [x] The CONTROL suites pass.
+- [x] Repository consistency is CLEAN.
+- [x] `git diff --check` is clean.
 
 ## Execution Log
 
@@ -300,17 +300,73 @@ Every file is written LF. The "from" hashes are the committed bytes at `6c8b500`
   - `scripts/readiness_selftest.ps1`: `== 33 passed, 0 failed ==`, exit 0.
   - `REPOSITORY CONSISTENCY: CLEAN`, Checks 7 and 29 included. `git diff --check` is clean.
 
+### 2026-10-12 — Local certification (Step 3)
+
+- The Runtime Checkpoint was committed as `Resume Step: DONE` at `ca7b5a6`.
+- **Memory.** The pre-approval re-run of `test_agent_continuity.ps1` had been stopped by the host at 1.7 GB free. Before this run, the eleven local ORVION containers were stopped with `docker stop` and the WSL page cache was dropped, raising free memory from 1.9 GB to 3.1 GB. No Docker setting was changed. `-Finish` for this contract runs no DATABASE profile, so it needs no container. Free memory read 4.4 GB and 4.8 GB during the run. The containers were started again afterwards, all healthy.
+- Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once, alone, on that clean committed tree, under `scripts/run_timed.ps1` (`concurrent=0`) and followed by `scripts/watch_run.ps1`. `core.autocrlf` was `true`, from the system configuration only.
+- It ran profiles CI, CONTROL and REPOSITORY plus this contract's Additional Verification, and reported `LOCAL_CERTIFY: READY` in 33.6 min, exit 0.
+- Every step passed:
+  - `test_agent_continuity.ps1` in 21.0 min, in full, test 234 and assertion 158 included;
+  - `test_cold_start_state_guard.ps1` in 5.4 min;
+  - `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1`;
+  - repository consistency, Checks 7 and 29 included;
+  - `git diff --check`;
+  - `readiness_selftest.ps1`, `readiness_population.ps1 -Registry` and `generate-ai-map.ps1 -Check`.
+
+### 2026-10-12 — Step 4
+
+- The manifest's `Last Completed` names this contract and its Active pointer is `None.`. `Next capability` and the open-decision line are as Step 1 wrote them. It holds 6718 characters, its longest line 1144.
+- `scripts/generate-ai-map.ps1` regenerated `ai-map.json`; `repository-index.md` reproduced byte-identical. `-Check` prints `GENERATED: ai-map.json and repository-index.md reproduce from their sources`.
+
 ## Verification Notes
+
+### 2026-10-12 — Independent Review of the execution commit `ca7b5a6`
+
+The review was made by a separate agent, read-only on the repository. Every experiment that changed a file ran in a disposable clone at `ca7b5a6` under the job's scratch directory. It checked the committed tree against the approved Draft `022646f` and its pinned hashes, and did not rely on the Execution Log.
+
+1. **Contract.** The `022646f` blob hashes to `1afd913f…8593a`, 26557 bytes. Split by heading, only Status, Runtime Checkpoint and Execution Log differ at `ca7b5a6`. Every frozen section is byte-identical.
+2. **Scope.** `6c8b500..ca7b5a6` changes exactly the sixteen Write Scope paths. This contract is the only file added, and nothing is deleted.
+3. **Hashes.** All fifteen files match their "from" hash at `6c8b500` and their "to" hash at `ca7b5a6`, with the manifest's pointer and `ai-map.json`'s `active_change_request` read as `None.`. Every file has 0 CR.
+4. **Generator (criteria 1–4).**
+   - Two runs in the clone gave byte-identical files with no CR, no BOM and no `generated_at`.
+   - `-Check` exits 0 on the committed tree and does not write. It exits 1 naming the stale files when:
+     - a `31_schema_draft.md` version changes, naming both files;
+     - the manifest's phase changes, naming `ai-map.json` only;
+     - `repository-index.md` is edited by hand, naming that file only.
+   - Check 7 fails the guard on the `31_schema_draft.md` change, which none of its three by-value comparisons covers.
+   - Check 20 and both path lists in `repository-consistency.yml` name the generator. `repository-all.ps1` only calls it.
+5. **Approval rule (criteria 5–6).** Both closure entries use `^_ORVION_CANONICAL/[^/]+\.md$`. Test 234 exists and passes inside `test_agent_continuity.ps1`. Assertion 158 requires the three `live_state` names and no timestamp.
+6. **Registry (criteria 7–11).**
+   - `-Registry` exits 0, reading DUE NOW 58, BLOCKED 21, NOT DUE 36, ACCEPTED RESIDUAL 27, FUTURE-ONLY 58; backlog 10 live items, DUE NOW 1, NOT DUE 9; `REGISTRY: complete`.
+   - The 36 implicit members equal the 36 `NOT-RECORDED` rows of `MASTER_SURFACE_DISPOSITION.md`.
+   - `readiness_selftest.ps1`: 33 passed, 0 failed, R16–R19 passed, M1–M15 killed.
+   - Docker 2375 is a live item at `B6-EXIT`, DUE NOW.
+   - The plan's two paragraphs are present, and OPS-4 is pruned from its row.
+   - CTRL-12, CTRL-13 and CTRL-14 are FIXED by this contract, and OPS-4 is FIXED at its trigger.
+7. **Manifest and documents (criteria 12–13).** None of the removed figures remains. The selector is named. `GOVERNANCE.md` is at 1.19, with the generator named for both projections.
+8. **Checks (criteria 14–16).** The `-Finish` log at `ca7b5a6` holds every suite PASS and `LOCAL_CERTIFY: READY`. Repository consistency is CLEAN, and `git diff --check 6c8b500 HEAD` is clean.
+9. **Nothing weakened.**
+   - No assertion, case or check was removed.
+   - Assertion 158 and the write closure are stricter.
+   - The backlog summary that could not fail is replaced by one that can.
+   - Dated backlog sections and register rows are appended to, not rewritten. The previous `Last updated:` is kept as `Previously:`.
+10. **Observations, not blocking, and outside this contract's approved bytes:**
+    - If the Live deferred items table's `Boundary` header is renamed, its rows are skipped and the check reports `0 live items` and passes. R19 covers only a missing table. This is an unguarded path in the new control, and it needs its own contract.
+    - Check 7 skips the reproduction when `scripts/generate-ai-map.ps1` is absent. Check 20 still names that file.
+    - A comment in `generate-ai-map.ps1` says "Ordinal order", while the code sorts with the invariant culture, as the Draft states.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
