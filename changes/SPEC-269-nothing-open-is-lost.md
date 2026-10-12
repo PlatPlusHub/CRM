@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -269,30 +269,30 @@ Every file is written LF. The "from" hashes are the committed bytes at `04f541e`
 
 ## Acceptance Criteria
 
-- [ ] The gate section of `MASTER_EXECUTION_PLAN.md` holds the Action registry, with its state rules and both tables.
-- [ ] The boundaries table has exactly one `NEXT` (`B6-EXIT`) and nothing `REACHED`.
-- [ ] The classification table classifies every derived open member exactly once, including PAY-9, OD-1…OD-9, APP-1 and CTRL-11.
-- [ ] The class vocabulary holds the five release classes plus `REQUIRED CAPABILITY`, `TERMINAL IN SUBSTANCE` and `SURFACE`, in the section and in `scripts/readiness_population.ps1`.
-- [ ] `scripts/readiness_population.ps1 -Registry` exits 0 with `REGISTRY: complete`.
-- [ ] `scripts/readiness_selftest.ps1` reports 26 passed, 0 failed, with M1–M12 killed.
-- [ ] Check 29 runs in every guard run of `scripts/check_repository_consistency.ps1`.
-- [ ] Check 27 anchors the four decision rules by their definition bullets, their ratification line, "A lesson is promoted" and "Nothing open is lost".
-- [ ] `scripts/test_cold_start_state_guard.ps1` passes in full, including section F: F1 (four rules deleted, Check 27 fails), F2 (PAY-9's registry row removed, `UNCLASSIFIED: PAY-9`), F3 (`B6-EXIT` REACHED, `OVERDUE: ENTRY-1`), F4 (PAY-9's register row deleted, `UNKNOWN ID: PAY-9`), and F-restore.
-- [ ] `scripts/test_cold_start_state_guard.ps1` derives its open-decision count from the manifest's enumeration instead of a pinned number.
-- [ ] `scripts/test_agent_continuity.ps1` passes in full on a CRLF Windows checkout, INH-M15 included.
-- [ ] `CertMutant` still requires an exact-once anchor, an installed mutant, the pristine verdict and the mutated verdict.
-- [ ] Both workflows run `readiness_selftest` with its own exit check.
-- [ ] `repository-consistency.yml` triggers on both readiness scripts in its push and pull_request lists, and Check 20 is CLEAN.
-- [ ] The register carries CTRL-9, CTRL-10 and GOV-25 as FIXED by this contract.
-- [ ] The register carries OD-1, OD-2, OD-3, OD-5, OD-8 and OD-9 as OPEN and PROPOSED, each with decider `owner` and its proposed default.
-- [ ] The register carries APP-1 (OPEN, a required capability) and CTRL-11 (OPEN, an accepted residual with its trigger at `GATE-EVAL`).
-- [ ] The manifest's open-decision line names the six OD ids, and the manifest stays within 7000 characters and 1200 per line.
-- [ ] `reports/history/delivery-assessment-2026-10-11.md` exists with a complete seven-field HANDOFF.
-- [ ] `AGENTS.md` §4 routes "what is open, due now, blocked or waiting" to the registry.
-- [ ] `GOVERNANCE.md` §2 names the registry as part of the execution plan's ownership.
-- [ ] `ENGINEERING_METHOD.md` §3 carries "Nothing open is lost (owner-ratified 2026-10-12)".
-- [ ] Repository consistency is CLEAN.
-- [ ] `git diff --check` is clean.
+- [x] The gate section of `MASTER_EXECUTION_PLAN.md` holds the Action registry, with its state rules and both tables.
+- [x] The boundaries table has exactly one `NEXT` (`B6-EXIT`) and nothing `REACHED`.
+- [x] The classification table classifies every derived open member exactly once, including PAY-9, OD-1…OD-9, APP-1 and CTRL-11.
+- [x] The class vocabulary holds the five release classes plus `REQUIRED CAPABILITY`, `TERMINAL IN SUBSTANCE` and `SURFACE`, in the section and in `scripts/readiness_population.ps1`.
+- [x] `scripts/readiness_population.ps1 -Registry` exits 0 with `REGISTRY: complete`.
+- [x] `scripts/readiness_selftest.ps1` reports 26 passed, 0 failed, with M1–M12 killed.
+- [x] Check 29 runs in every guard run of `scripts/check_repository_consistency.ps1`.
+- [x] Check 27 anchors the four decision rules by their definition bullets, their ratification line, "A lesson is promoted" and "Nothing open is lost".
+- [x] `scripts/test_cold_start_state_guard.ps1` passes in full, including section F: F1 (four rules deleted, Check 27 fails), F2 (PAY-9's registry row removed, `UNCLASSIFIED: PAY-9`), F3 (`B6-EXIT` REACHED, `OVERDUE: ENTRY-1`), F4 (PAY-9's register row deleted, `UNKNOWN ID: PAY-9`), and F-restore.
+- [x] `scripts/test_cold_start_state_guard.ps1` derives its open-decision count from the manifest's enumeration instead of a pinned number.
+- [x] `scripts/test_agent_continuity.ps1` passes in full on a CRLF Windows checkout, INH-M15 included.
+- [x] `CertMutant` still requires an exact-once anchor, an installed mutant, the pristine verdict and the mutated verdict.
+- [x] Both workflows run `readiness_selftest` with its own exit check.
+- [x] `repository-consistency.yml` triggers on both readiness scripts in its push and pull_request lists, and Check 20 is CLEAN.
+- [x] The register carries CTRL-9, CTRL-10 and GOV-25 as FIXED by this contract.
+- [x] The register carries OD-1, OD-2, OD-3, OD-5, OD-8 and OD-9 as OPEN and PROPOSED, each with decider `owner` and its proposed default.
+- [x] The register carries APP-1 (OPEN, a required capability) and CTRL-11 (OPEN, an accepted residual with its trigger at `GATE-EVAL`).
+- [x] The manifest's open-decision line names the six OD ids, and the manifest stays within 7000 characters and 1200 per line.
+- [x] `reports/history/delivery-assessment-2026-10-11.md` exists with a complete seven-field HANDOFF.
+- [x] `AGENTS.md` §4 routes "what is open, due now, blocked or waiting" to the registry.
+- [x] `GOVERNANCE.md` §2 names the registry as part of the execution plan's ownership.
+- [x] `ENGINEERING_METHOD.md` §3 carries "Nothing open is lost (owner-ratified 2026-10-12)".
+- [x] Repository consistency is CLEAN.
+- [x] `git diff --check` is clean.
 
 ## Execution Log
 
@@ -317,17 +317,72 @@ Every file is written LF. The "from" hashes are the committed bytes at `04f541e`
   - `scripts/readiness_selftest.ps1`: `== 26 passed, 0 failed ==`, exit 0.
   - `REPOSITORY CONSISTENCY: CLEAN`, Check 29 included. `git diff --check` is clean.
 
+### 2026-10-12 — Local certification (Step 3)
+
+- The Runtime Checkpoint was committed as `Resume Step: DONE` at `5327a31`.
+- Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran once, alone, on that clean committed tree, under `scripts/run_timed.ps1` (`concurrent=0`) and followed by `scripts/watch_run.ps1`.
+- It ran profiles CI, CONTROL and REPOSITORY plus this contract's Additional Verification, and reported `LOCAL_CERTIFY: READY` in 33.8 min, exit 0.
+- Every step passed:
+  - `test_agent_continuity.ps1` in 21.1 min, on this CRLF Windows checkout, INH-M15 included;
+  - `test_cold_start_state_guard.ps1` in 5.4 min, section F included;
+  - `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1`;
+  - repository consistency, Check 29 included;
+  - `git diff --check`;
+  - `readiness_selftest.ps1`;
+  - `readiness_population.ps1 -Registry`.
+
 ## Verification Notes
+
+### 2026-10-12 — Independent Review of the execution commit `5327a31`
+
+The review checked the committed tree against the approved Draft `c5f3562` and its pinned hashes, the original prototype and the Write Scope. It did not rely on the Execution Log alone.
+
+1. **Registry (criteria 1–5).**
+   - The gate section holds the Action registry, its state rules and both tables.
+   - The boundaries table has exactly one `NEXT`, `B6-EXIT`, and nothing `REACHED`.
+   - `-Registry` exits 0 with `REGISTRY: complete`: DUE NOW 22, BLOCKED 21, NOT DUE 36, ACCEPTED RESIDUAL 28 and FUTURE-ONLY 58, 165 members. PAY-9, OD-1…OD-9, APP-1 and CTRL-11 are among them.
+   - GADS-1 and APP-1 are classified `REQUIRED CAPABILITY`, boundary `FIRST-TENANT`.
+2. **Self-test (criterion 6).** `readiness_selftest.ps1` reports `26 passed, 0 failed`, with M1–M12 killed, at Step 2 and again inside `-Finish`.
+3. **Guard (criteria 7, 8, 14).**
+   - Check 29 runs in every guard run (`check_repository_consistency.ps1` line 2497), and the guard is CLEAN.
+   - Check 27's seven new anchors are in the committed guard. The four decision rules — LEARN BEFORE GUESSING, EARN IT, WORTH IT, SIMPLIFY IT WITHOUT WEAKENING — and their ratification line are unchanged in `ENGINEERING_METHOD.md` and `AGENTS.md`.
+   - `repository-consistency.yml` names both readiness scripts in its trigger lists, and Check 20 is CLEAN.
+4. **Tests (criteria 9–12).**
+   - `test_cold_start_state_guard.ps1` passed in full inside `-Finish`, section F and its derived open-decision count included.
+   - `test_agent_continuity.ps1` passed in full on this CRLF checkout. `CertMutant`'s exact-once, installed, pristine-verdict and mutated-verdict requirements are the prototype's.
+5. **Workflows (criterion 13).** Both workflows run `readiness_selftest` with its own exit check.
+6. **Register (criteria 15–17).**
+   - CTRL-9, CTRL-10 and GOV-25 are FIXED by this contract.
+   - OD-1, OD-2, OD-3, OD-5, OD-8 and OD-9 are OPEN and PROPOSED, each with decider `owner` and a proposed default.
+   - APP-1 is OPEN as a required capability, and CTRL-11 is OPEN as an accepted residual triggered at `GATE-EVAL`.
+   - The freshness chain keeps SPEC-268's and SPEC-265's entries as `Previously:`.
+   - RCPT-1 to RCPT-4 and GADS-1 are byte-unchanged.
+7. **Manifest and documents (criteria 18–22).**
+   - The open-decision line names the six OD ids.
+   - The manifest is 6812 characters, with its longest line 1152.
+   - The delivery assessment carries its HANDOFF.
+   - `AGENTS.md` §4 routes "What is open, due now, blocked or waiting" to the registry.
+   - `GOVERNANCE.md` §2 names the registry, at version 1.18.
+   - `ENGINEERING_METHOD.md` §3 carries "Nothing open is lost (owner-ratified 2026-10-12)".
+   - `CR_LIFECYCLE.md`, which defines LEARN → VERIFY → DECIDE → IMPLEMENT → TEST → REVIEW → COMPLETE, is untouched.
+8. **Checks (criteria 23–24).** Repository consistency is CLEAN and `git diff --check` is clean.
+9. **Frozen values.**
+   - Each file matched its "from" hash at `04f541e` and its "to" hash at Step 1.
+   - Eleven files equal the original prototype once SPEC-269 is written back as SPEC-267. The plan, the register and the manifest also carry SPEC-265's and SPEC-268's committed edits.
+   - The two lines removed outside the plan, register and manifest are `GOVERNANCE.md`'s version line and its execution-plan row, both rewritten.
+10. **Scope.** `04f541e..5327a31` changes sixteen paths: the fifteen in the table and this contract. No database, Primary, Secondary, n8n or Google surface was touched, and no OD row was answered.
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
