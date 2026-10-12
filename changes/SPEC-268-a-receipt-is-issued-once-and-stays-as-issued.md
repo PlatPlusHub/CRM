@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -289,19 +289,19 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Acceptance Criteria
 
-- [ ] A receipt for a payment that is not a customer payment is refused (23514) on the RPC, the table door and the platform path.
-- [ ] A receipt's number is the tenant's per-year sequence and its issue time is the server's, on every door; a supplied number, time or tax-submission field is discarded at INSERT; one malformed stored number neither stops nor bends the sequence; a door insert holds the sequence's advisory lock.
-- [ ] Once issued, a receipt's payment, number, issue time, creator and creation time cannot be changed by any caller (23514); its tax-submission id and times change only with CREATE_RECEIPT (42501 otherwise) or on the platform path; CREATE_RECEIPT on INSERT and on the submission status is unchanged.
-- [ ] Every receipt is born with exactly one `receipt_issued` event carrying its number, payment, customer, currency and amount, on the RPC and the door alike; a refused write records nothing.
-- [ ] `app.issue_receipt` keeps its signature, SECURITY INVOKER mode, empty `search_path`, ACL and refusals, and inserts only the tenant and the payment.
-- [ ] Mutants M1–M15 are each killed against test 156, with installation and restoration proven, and the causal negative is recorded.
-- [ ] RCPT-1, RCPT-2, RCPT-3 and RCPT-4 are fixed and deployed in the register; no other row changed.
-- [ ] `receipts` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 42 of 78. No other surface's row changed.
-- [ ] The migration and test 156 matched their frozen SHA-256 values when applied.
-- [ ] Primary, the recorded evidence, the manifest (252 migrations; 71/623 catalog; 156 files / 2969 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree. The four CI-only guard self-tests and repository consistency pass.
-- [ ] The manifest names Batch 6 Slice 42 and its measured target as the next capability, with no Active Change Request.
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] No file outside Write Scope was created, modified or deleted.
+- [x] A receipt for a payment that is not a customer payment is refused (23514) on the RPC, the table door and the platform path.
+- [x] A receipt's number is the tenant's per-year sequence and its issue time is the server's, on every door; a supplied number, time or tax-submission field is discarded at INSERT; one malformed stored number neither stops nor bends the sequence; a door insert holds the sequence's advisory lock.
+- [x] Once issued, a receipt's payment, number, issue time, creator and creation time cannot be changed by any caller (23514); its tax-submission id and times change only with CREATE_RECEIPT (42501 otherwise) or on the platform path; CREATE_RECEIPT on INSERT and on the submission status is unchanged.
+- [x] Every receipt is born with exactly one `receipt_issued` event carrying its number, payment, customer, currency and amount, on the RPC and the door alike; a refused write records nothing.
+- [x] `app.issue_receipt` keeps its signature, SECURITY INVOKER mode, empty `search_path`, ACL and refusals, and inserts only the tenant and the payment.
+- [x] Mutants M1–M15 are each killed against test 156, with installation and restoration proven, and the causal negative is recorded.
+- [x] RCPT-1, RCPT-2, RCPT-3 and RCPT-4 are fixed and deployed in the register; no other row changed.
+- [x] `receipts` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 42 of 78. No other surface's row changed.
+- [x] The migration and test 156 matched their frozen SHA-256 values when applied.
+- [x] Primary, the recorded evidence, the manifest (252 migrations; 71/623 catalog; 156 files / 2969 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree. The four CI-only guard self-tests and repository consistency pass.
+- [x] The manifest names Batch 6 Slice 42 and its measured target as the next capability, with no Active Change Request.
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] No file outside Write Scope was created, modified or deleted.
 
 ## Execution Log
 
@@ -386,20 +386,87 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 - **Checks:** `check_primary_ledger` `RECOVER-1 LEDGER EVIDENCE: CLEAN` (252, `5f13c62d…`); `check_database_parity_evidence` `PRIMARY PARITY EVIDENCE: CLEAN`; `REPOSITORY CONSISTENCY: CLEAN`; `git diff --check` clean.
 - **Runtime Checkpoint:** DONE.
 
+### 2026-10-12 — Post-deploy local certification
+
+Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean, committed HEAD `22821f3` under `scripts/run_timed.ps1`, with nothing else running (`concurrent=0`), followed by `scripts/watch_run.ps1`.
+- It ran in VERIFY mode (`ORVION: READY`, `STEP: DONE`).
+- It reported `LOCAL_CERTIFY: READY` in 3.1 min, exit 0.
+- Every mandatory verification passed in that run: reset; pgTAP Pass A; `verify_api_end_to_end.ps1`; `verify_journey_branches.ps1`; `verify_lifecycle_branches.ps1`; pgTAP Pass B; smoke; `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+
+Two earlier results were not repeated, because what they ran on is unchanged:
+- The four CI-only guard self-tests passed on the same committed content at Step 7.
+- M1–M15 and the causal negative ran at Step 4, against the committed migration and test bytes.
+
+This contract's Review Gate holds no remote item. The implementation and the Complete commit are therefore published together as one range, as Step 8 states.
+
+**Selector after SPEC-268** (`scripts/batch6_select_target.ps1`, 36 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+1. `chart_of_accounts` 7/38
+2. `notification_deliveries` 7/42
+3. `approval_requests` 7/52
+4. `user_branch_assignments` 7/590
+5. `departments` 7/654
+6. `user_role_assignments` 7/654
+7. `customer_consents` 6/18
+8. `document_retention_policies` 6/36
+9. `document_links` 6/54
+10. `exchange_rates` 6/66
+11. `user_permission_grants` 6/88
+12. `catalog_values` 6/102
+
+Slice 42's measured target is `chart_of_accounts`.
+
 ## Verification Notes
 
-[Appended by the reviewing agent after independently re-checking the Execution Log
-against the live repository state. Append-only — never edit or delete a prior entry.]
+### 2026-10-12 — Independent Review of the execution commit `22821f3`
+
+The review checked the committed tree against the approved Draft `fb81eb0`, the owner's Gate 2 and the Write Scope, using the committed migration in full, the range diffs, the certified local stack and fresh Primary readings. It did not rely on the Execution Log alone.
+
+1. **Wrong-direction receipts (criterion 1).** `app.guard_receipt_issue` reads the payment's `payment_direction_code` on INSERT and raises 23514 unless it is `customer_payment`. It has no session-less exit, so the RPC, the table door and the platform path are all bound. Test 156 passed in both `-Finish` pgTAP passes, and M5 is killed.
+2. **Number and time (criterion 2).**
+   - On INSERT the guard sets `issued_at := now()` and nulls the four submission fields.
+   - It takes `pg_advisory_xact_lock(hashtextextended(tenant || ':RCP:' || year, 0))`, the key `app.issue_receipt` always took.
+   - It derives the number from `max(substring(receipt_number from '^RCP-[0-9]{4}-([0-9]+)$')::bigint)`, so a malformed stored number is skipped, not parsed.
+   - M6–M10 are killed.
+3. **Fixed once issued (criterion 3).**
+   - On UPDATE, a distinct `id`, `tenant_id`, `payment_id`, `receipt_number`, `issued_at`, `created_by` or `created_at` raises 23514 for every caller.
+   - A distinct submission id or submitted or response time calls `app.authorize('CREATE_RECEIPT')` only when `auth.uid()` is not null.
+   - `app.guard_financial_capability` is not modified.
+   - M1–M4, M11 and M12 are killed.
+4. **One event (criterion 4).** `receipts_emit_issued`, AFTER INSERT, is the only producer. `app.issue_receipt` no longer calls `app.record_event`. The payload carries the number, payment, customer, currency and amount. M13 and M14 are killed, and test 156's assertion 33 counts exactly four events.
+5. **The RPC (criterion 5).**
+   - `app.issue_receipt` keeps `(p_payment_id uuid) returns uuid`, SECURITY INVOKER and `search_path=''`. Its three refusals and its `CREATE_RECEIPT` check are unchanged, and it inserts only `(tenant_id, payment_id)`.
+   - On Primary it reads md5 `b2e09f264b27a0f5643353c2fe78c5fb`, with ACL `{postgres=X/postgres,authenticated=X/postgres}` as before.
+   - `MASTER_API_CONTRACT.md` regenerates unchanged.
+6. **Mutation (criterion 6).** M1–M15 were each killed at Step 4, every installation proven by a fingerprint and every restoration byte-equal and 33/33. The causal negative is recorded: 3–7 failed, then the run aborted on the missing trigger.
+7. **Register (criterion 7).** The range adds RCPT-1 to RCPT-4, each FIXED and DEPLOYED with Cert `✅`, and changes the freshness line, demoting the D4 entry to `Previously:`. No other row changed.
+8. **Disposition (criterion 8).** Against `2049f2e`, only four things changed: the freshness entry, the coverage line, "All 42" and the `receipts` row (`AUDITED` / `ADVERSARIAL`). Its 78 rows count 18 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL` and 36 `NOT-RECORDED`: 42 of 78.
+9. **Frozen values (criterion 9).** The committed blobs hash to the approved values: the migration `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc` (9882 bytes, 0 CR) and test 156 `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2` (18773 bytes, `plan(33)`). Primary's stored statement md5 is `9a352fdd0d3caec23e1e1c36a43200ff`.
+10. **Agreement (criterion 10).**
+    - Primary, the evidence and the manifest agree: 252 migrations, `5f13c62d…`; functions `e6a65849…`/331; structural `02dcc5a1…`/3134; 71/623 catalog; 156 files / 2969 assertions; 464 HTTP assertions.
+    - `check_primary_ledger` and `check_database_parity_evidence` are CLEAN inside `-Finish`.
+    - The four guard self-tests passed at Step 7, and repository consistency is CLEAN.
+11. **Next capability (criterion 11).** The Complete commit names Batch 6 Slice 42 and `chart_of_accounts` (7/38), measured on the certified stack, and clears the Active Change Request.
+12. **Primary and Secondary (criterion 12).**
+    - Primary received two writes: the one authorized migration, applied once after its transmitted text was proven, and one guarded rename of temporary version `20261012110339`.
+    - It holds 0 tenants, customers, bookings, invoices, payments, receipts and events, before and after. Only the function and trigger surfaces moved.
+    - Secondary was never contacted.
+13. **Scope (criterion 13).** `2049f2e..22821f3` changes eight paths, all in Write Scope. The contract's changes since the Draft are the status, the checkpoint and Execution Log entries replacing the template placeholder.
+
+**The renumbering, as exercised.** The owner's Gate 1 and Gate 2 name this contract SPEC-266. Its approved substance and the migration's bytes are unchanged; only the identity and test 156's first-line comment moved, as Notes records. The exact-byte Gate 2 applied to the bytes deployed.
+
+**Outside this contract, and not a defect in it:** canon 29's split receipts stay a product decision (Notes).
+
+Verdict: Confirmed Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
