@@ -1768,6 +1768,12 @@ The guard also fails on any of these:
 - a class or a boundary outside the vocabularies below;
 - a row with an empty Decides or Treatment cell.
 
+**DUE NOW is a deadline, not a work order.** It means "due before the `NEXT` boundary is crossed". The next executable task is always the manifest's `Next capability`, which inside Batch 6 is the first row `scripts/batch6_select_target.ps1` ranks. Only OVERDUE means a crossed boundary. Each of EC-1…EC-11 stays required for `B6-EXIT`; the guard derives EC-1 alone, and the gate's evaluation judges the rest.
+
+**Two kinds of member need no row (`SPEC-270`).** Their state comes from a boundary alone: `REACHED` is OVERDUE and fails the guard, `NEXT` is DUE NOW, and anything else is NOT DUE.
+- **Every surface `MASTER_SURFACE_DISPOSITION.md` still records as `NOT-RECORDED`** is a member at `B6-EXIT`, by EC-1. `-Registry` lists the whole remaining programme, and `B6-EXIT` cannot be recorded `REACHED` while one is unaudited. A row that classifies such a surface explicitly wins.
+- **Every row of `reports/future-backlog.md`'s Live deferred items table** names its own boundary there. A row with no known boundary also fails. The backlog keeps owning the items; this section only lends them its boundaries.
+
 **Completion evidence is uniform.** An item closes when its register status opens with the settled vocabulary, citing the contract and the tests that prove it. A surface closes when its disposition leaves `AUDITED-OPEN` or `PARTIAL`. A decision closes when the owner's answer is recorded in its authority and the id leaves the manifest's decision line.
 
 **Capture.** A new open finding, a new owner decision or a new surface obligation enters this table in the same change that registers it. The guard refuses the change otherwise. `ENGINEERING_METHOD.md` §3 "Measurement integrity" owns the capture rule.
@@ -1833,7 +1839,7 @@ The guard also fails on any of these:
 | CONV-10 | ACCEPTED RESIDUAL | engineering | `ENABLE-CLIENT-WRITES` | — | No client exposes the manual door, and it must not be exposed before the item is repaired |
 | MONEY-3, CUST-6, USR-4, ORIG-1, PLACE-2, CAP-1, DEAD-3, DEAD-4 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | CUST-6 is proven intentional; the others are latent or unproven, each with its trigger |
 | DC-15 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | `service_role` is never a client credential, and integrations use `orvion_integration` |
-| GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27, CTRL-5, CI-2, TEST-4, PERF-2, OPS-3, OPS-4, CTRL-6 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | Control plane and governance, none a Day-1 business function. The control-plane chapter is closed, and each reopens only on its own trigger |
+| GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27, CTRL-5, CI-2, TEST-4, PERF-2, OPS-3, CTRL-6 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | Control plane and governance, none a Day-1 business function. The control-plane chapter is closed, and each reopens only on its own trigger |
 | OPS-2, RLS-1, API-2, TAX-1, FIN-DOC-1 | TERMINAL IN SUBSTANCE | engineering | `GATE-EVAL` | — | Each carries a terminal verdict outside the settled vocabulary: implemented, merged, delivered, retracted, closed. Re-worded to settled at the first evaluation |
 | N1, DC-5, RC-4, R8, B3, RC-1 | TERMINAL IN SUBSTANCE | engineering | `GATE-EVAL` | — | Still `DESIGN-READY` although shipped migrations implement them in whole or part: `202607049100`, `202607054600`, `202607048900`, `202607048800`, and the subscription lifecycle. Re-verified and settled at the first evaluation |
 | R1, R2, R4, DC-7, R6, INV-1, N5, CDD-1, BF-3, CDD-2, CDD-3, CDD-5, BF-6, BF-7, CDD-6, CDD-7, CDD-9, CDD-10, CDD-11, BF-1, BF-2, BF-5, BF-8, BF-9, BF-10, BF-11, BF-12, RC-2, FOE-4, FOE-5, FOE-6, FOE-8, DEAD-2, AUDIT-5, CONV-3 | FUTURE-ONLY | engineering | `OWN-TRIGGER` | its batch | Design-accepted builds with their batch; none is a Day-1 function in canon 01 |

@@ -1079,7 +1079,10 @@ try{
     $genSrc=[IO.File]::ReadAllText((Join-Path $sourceRoot 'scripts/generate-ai-map.ps1'))
     $proj=[regex]::Match($fpSrc,'(?ms)^function AiMap-CertifiedProjection.*?^\}')
     $excluded=@([regex]::Matches($proj.Value,"'(generated_at|active_change_request|last_completed|next_capability)'")|ForEach-Object{$_.Groups[1].Value}|Select-Object -Unique|Sort-Object)
-    $emitted=@(@('generated_at','active_change_request','last_completed','next_capability')|Where-Object{$genSrc-match"(?m)^\s*$_\s*="})
+    # SPEC-270: the generator is deterministic and emits no timestamp. The projection still drops
+    # one from a map written before that, so its exclusion list is unchanged.
+    $emitted=@(@('active_change_request','last_completed','next_capability')|Where-Object{$genSrc-match"(?m)^\s*$_\s*="})
+    $stamped=$genSrc-match'(?m)^\s*generated_at\s*='
     # ---- THE CERTIFICATION TARGET IS THE BRANCH THIS PUBLISHES TO, NOT THE BRANCH
     # ---- YOU ARE STANDING ON (SPEC-180) ----
     # 144-149 prove what -Certify DOES with a target: preflight evidence never certifies a
@@ -1127,8 +1130,8 @@ try{
     git -C $root checkout -q main;git -C $root push -q origin --delete 'refs/heads/release/foo' 2>$null;git -C $root fetch -q --prune origin
 
     Assert '158 STRUCTURAL: the certified projection excludes exactly the completion-owned names the generator emits' `
-        ($proj.Success-and($excluded-join',')-eq'active_change_request,generated_at,last_completed,next_capability'-and$emitted.Count-eq4) `
-        "excluded=$($excluded-join',') emittedByGenerator=$($emitted.Count)/4 projectionFound=$($proj.Success)"
+        ($proj.Success-and($excluded-join',')-eq'active_change_request,generated_at,last_completed,next_capability'-and$emitted.Count-eq3-and-not$stamped) `
+        "excluded=$($excluded-join',') emittedByGenerator=$($emitted.Count)/3 timestamp=$stamped projectionFound=$($proj.Success)"
 
     # ---- DEFECT B: DATABASE needs a success path, not only a failure path (SPEC-164) ----
     # `LOCAL_NOT_EXECUTED` was truthful and useless: no sequence of correct actions
@@ -2298,6 +2301,12 @@ exit 0
     # green this whole evidence class exists to refuse.
     ClosureSetup;$r=Run 'Gate'
     Assert '233 WRITE-CLOSURE: a NOT-APPLICABLE contract is still held to its write closure' ($r.Code-ne0-and$r.Text-match'write closure'-and$r.Text-notmatch'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
+    Pop 'WC' 'reject'
+
+    # 234. SPEC-270: Check 7 reproduces repository-index.md from the canonical headers, so a
+    # contract that writes a canonical document must carry the index once the index exists.
+    ClosureSetup 'allowed.txt;_ORVION_CANONICAL/manifest.md;ai-map.json' 'repository-index.md';$r=Run 'Gate'
+    Assert '234 WRITE-CLOSURE SPEC-270: a canonical-document contract without the regenerated index is refused' ($r.Code-ne0-and$r.Text-match'write closure'-and$r.Text-match'repository-index') $r.Text
     Pop 'WC' 'reject'
 
     # ---- SPEC ALLOCATION ----

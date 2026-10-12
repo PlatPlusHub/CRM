@@ -43,6 +43,7 @@ on:
       - "scripts/test_primary_ledger_guard.ps1"
       - "scripts/test_cold_start_state_guard.ps1"
       - "scripts/readiness_population.ps1"
+      - "scripts/generate-ai-map.ps1"
       - "scripts/readiness_selftest.ps1"
   pull_request:
     # CI-1b (2026-09-09): THIS LIST MUST MATCH `push.paths` ABOVE, ENTRY FOR ENTRY. It did not: the
@@ -69,6 +70,7 @@ on:
       - "scripts/test_primary_ledger_guard.ps1"
       - "scripts/test_cold_start_state_guard.ps1"
       - "scripts/readiness_population.ps1"
+      - "scripts/generate-ai-map.ps1"
       - "scripts/readiness_selftest.ps1"
 
 jobs:

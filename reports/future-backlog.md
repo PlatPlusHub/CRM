@@ -10,7 +10,60 @@ Owner: maintained by the engineering/audit role during Change Requests and revie
 
 A permanent, evidence-driven record of valuable engineering ideas that are **not yet justified for immediate implementation**, so nothing important is silently forgotten or silently implemented. This is **not** a Change Request, not implementation work, and not a wish list — every entry must be backed by repository or authoritative external evidence, carry a classification, and state its trigger (when it should be reconsidered). Items graduate out of this backlog only through their own Change Request.
 
-Classifications: **Required Soon**, **Recommended**, **Nice to Have**, **Future Candidate**. Review this document at the start of each new phase and whenever a listed trigger is reached.
+Classifications: **Required Soon**, **Recommended**, **Nice to Have**, **Future Candidate**.
+
+---
+
+## Live deferred items
+
+This table is the backlog's one current list (`SPEC-270`). Each row names the latest boundary at which it must be acted on or re-triaged, as a key of the boundaries table in `MASTER_EXECUTION_PLAN.md`'s Action registry. `scripts/readiness_population.ps1` derives each row's state from that key, and Check 29 fails when a row names no known boundary or when its boundary is `REACHED` while the row is still here. An item already carried by a register finding, the execution plan, the roadmap or the integration catalog is not repeated here.
+
+| Item | Decides | Trigger | Boundary | Detail |
+| --- | --- | --- | --- | --- |
+| Disable Docker `tcp://localhost:2375` (unauthenticated daemon exposure) | owner | Recorded 2026-07-13 as failing Earn-It, deferred until "after the comprehensive review". Still listening on 2026-10-12. | `B6-EXIT` | A Docker Desktop setting, then the environment health check (Recommended, below). The row closes only on recorded evidence that nothing listens on port 2375. |
+| `users` deletion rule: deactivate-only, or add `users` to the no-physical-delete list | engineering | Before real staff records exist | `FIRST-TENANT` | Identity Lifecycle, below |
+| An invitation and activation lifecycle for staff: an invitation record, `invited_at`, `activated_at` and `invited_by`, and activation events | engineering | Staff onboarding for the first tenant. Today only the Supabase identity link exists: no such column, and no `user_invited` or `user_activated` event. | `FIRST-TENANT` | Identity Lifecycle, below |
+| A scheduled purge of expired `otp_challenges` | engineering | Staff sign-in creates OTP rows from the first tenant on. `pg_cron` is in use (lead SLA, subscription lifecycle, document reconciliation), and no OTP purge exists. | `FIRST-TENANT` | Nice to Have, below |
+| Numeric entitlement enforcement, and a producer for `usage_counters` | owner (pricing), engineering | Pricing finalization, or the first tenant approaching a ceiling. `usage_counters` has no producer. | `FIRST-SUBSCRIPTION` | Required Soon, below |
+| Booking-item cost and selling never roll up to a booking or invoice total | engineering | With invoicing depth. Re-measure at the boundary: `finance_approval_required`, the row's other half, is now read by the execution gate (`202607046200`). | `ENABLE-INVOICING` | Pre-Phase-8 Audit Orphans, below |
+| An active-tenant claim for a person with several memberships (ADR-0011) | engineering | When multi-membership UX ships; `app.current_tenant_id` serves the single-membership case today | `ENABLE-CLIENT-WRITES` | Identity Lifecycle, below |
+| Frontend design tooling and dashboard contracts (the Impeccable skill pack; KPI, widget and dashboard-permission contracts) | engineering | The first application UI | `ENABLE-CLIENT-WRITES` | Nice to Have and Repository-Improvement Evaluation, below |
+| An event-to-consumer flow map, a C4 view, and a generic automation event feed | engineering | The first n8n delivery workflow; the feed waits for a second consumer | `ENABLE-CONVERSION-DELIVERY` | Repository-Improvement Evaluation and 10-year review, below |
+| Ideas with no earned trigger: a structured address model, a capability dependency graph, a runtime AI-agent access model | engineering | Evidence of need; otherwise re-triaged at the gate's first evaluation | `GATE-EVAL` | Structural-Completeness Assessment and 10-year review, below |
+
+**Closed or carried elsewhere by the 2026-10-12 triage (`SPEC-270`).** Every other row below was checked against the repository:
+- **Done:**
+  - the reference-data seed (REF-1 RESOLVED 08-21, SPEC-133);
+  - `auth_user_id` → `auth.users` (`on delete set null` in the users migration);
+  - DB-enforced event immutability (`202607043300`, an immutability trigger);
+  - RLS before client access (`202607043300`, and no client exists, APP-1);
+  - finance-gated booking transitions (`APPROVE_BOOKING`, `ISSUE_BOOKING`, `CANCEL_BOOKING`, `REFUND_BOOKING` and `REISSUE_BOOKING` are seeded and enforced through `app.advance_booking` and `app.enforce_booking_lifecycle`; `54_transition_permission_parity_test` pins the parity; the residue is BOOK-11 and BOOK-12);
+  - `pg_cron` adoption (three jobs; the OTP purge stays above);
+  - the methodology artifacts (the ADR log; the naming audit; migration regression is Migration CI plus parity; ordering is proven by every full reset);
+  - the RPC dependency map (`scripts/impact.ps1`);
+  - read-model and quotations.
+- **Carried by a register id:**
+  - travel reference data and airports: B1;
+  - status-column naming: B6;
+  - `pg_trgm`: B7;
+  - partitioning: B8;
+  - `invoice_lines`: R3;
+  - document sequences: CDD-6;
+  - GDS and fare detail: BF-1;
+  - HR: BF-5, and the canon-32 queue;
+  - FX presentation: OD-3;
+  - the subscription lifecycle: RC-1;
+  - notification delivery: RC-2;
+  - communications identity: CDD-10.
+- **Carried by another authority:**
+  - conversion delivery: `MASTER_INTEGRATION_CATALOG.md`;
+  - customer communications and Meta research: the Phase-10 research and the communications Design Challenge, which `MASTER_EXECUTION_PLAN.md` owns;
+  - the revenue-delivery posture: ADR-0023.
+- **Standing guidance, not an obligation:**
+  - `citext`, partial indexes and generated columns;
+  - traceability.
+
+Everything below this line is the **dated record** of earlier reviews. It is not edited to reflect later state, and its triggers are carried by the table above or by the register.
 
 ---
 
@@ -243,6 +296,6 @@ Load-bearing assumptions attacked; verdicts recorded so future sessions inherit 
 ## How items enter and leave this backlog
 
 1. A review or migration surfaces an improvement not justified for immediate implementation.
-2. It is added here with a classification, a why, and a trigger — evidence required.
+2. It is added as a row of **Live deferred items**, with its decider, its trigger and the registry boundary at which it is acted on or re-triaged. Evidence is required. Check 29 refuses a row without a known boundary.
 3. When its trigger is reached and evidence justifies it, it becomes a Finding and then its own Change Request.
-4. On completion, it is removed from this backlog (git history preserves the record).
+4. On completion, or when a register id or another authority takes it over, its row is removed. Git history preserves the record. A row whose boundary is `REACHED` fails every guard run until it is acted on or re-triaged.

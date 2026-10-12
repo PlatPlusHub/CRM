@@ -40,7 +40,10 @@ $surface = Write-Fixture 'surface.md' (@(
     '| `AUDITED` | vocabulary row |',
     '| `t_one` | AUDITED-OPEN | — | s | f | n |',
     '| `t_two` | **PARTIAL** | — | s | f | n |',
-    '| `t_three` | AUDITED | — | s | f | n |', '') -join "`n")
+    '| `t_three` | AUDITED | — | s | f | n |',
+    '| `t_four` | NOT-RECORDED | — | s | f | n |', '') -join "`n")
+# t_four has a disposition: the programme-exit cases that must pass once every surface is recorded.
+$surfaceRecorded = Write-Fixture 'surface-recorded.md' (([IO.File]::ReadAllText($surface)) -replace '\| `t_four` \| NOT-RECORDED \|', '| `t_four` | AUDITED |')
 $manifest = Write-Fixture 'manifest.md' "Open owner decisions — **AA-1**, **ZZ-1**, **AA-9**. Narrative after the enumeration cites AA-2.`n"
 # The registry fixture (SPEC-269). K-MID is the boundary the state cases move; AA-9 is settled in the
 # register but still on the decision line, so it stays open; AA-2 is settled and still classified.
@@ -65,9 +68,22 @@ function Plan-Text([string[]]$Rows, [string]$Mid = 'NOT REACHED') {
 function Plan-Fixture([string[]]$Rows, [string]$Mid = 'NOT REACHED') { Write-Fixture ('plan-' + [guid]::NewGuid().ToString('N') + '.md') (Plan-Text $Rows $Mid) }
 $planFull = Plan-Fixture $rowsAll
 $noVocab  = Write-Fixture 'authority-moved.ps1' (([IO.File]::ReadAllText($Authority)) -replace '\$statusResolvedLead\s*=', '$statusSettledLeadRenamed =')
-$backlog  = Write-Fixture 'backlog.md' "| Item | Why | Trigger / when | CR? |`n|---|---|---|---|`n| live | x | at go-live | y |`n| ~~done~~ | x | Closed | y |`n"
+# SPEC-270: only the '## Live deferred items' table is evaluated; the older table is a dated record.
+function Backlog-Text([string[]]$Live) {
+    (@('# backlog', '', '## Live deferred items', '', '| Item | Decides | Trigger | Boundary | Detail |', '|---|---|---|---|---|') + $Live +
+     @('', '## A dated section', '', '| Item | Why | Trigger / when | CR? |', '|---|---|---|---|', '| old | x | at go-live | y |', '')) -join "`n"
+}
+$liveRows = @('| live later | owner | at go-live | `K-LATER` | x |', '| live now | engineering | now | `K-NEXT` | x |')
+$backlog  = Write-Fixture 'backlog.md' (Backlog-Text $liveRows)
+$script:SurfaceArg = $surface; $script:BacklogArg = $backlog
 function Fixture-Args([string]$Plan, [string]$Tsv, [string]$Register = $register) {
-    @('-Root', $Root, '-RegisterPath', $Register, '-SurfacePath', $surface, '-ManifestPath', $manifest, '-PlanPath', $Plan, '-AuthorityPath', $Authority, '-BacklogPath', $backlog, '-Tsv', $Tsv)
+    @('-Root', $Root, '-RegisterPath', $Register, '-SurfacePath', $script:SurfaceArg, '-ManifestPath', $manifest, '-PlanPath', $Plan, '-AuthorityPath', $Authority, '-BacklogPath', $script:BacklogArg, '-SurfaceBoundary', 'K-MID', '-Tsv', $Tsv)
+}
+# Runs a case with the surface or backlog fixture swapped, restoring the defaults afterwards.
+# (Parameter names differ from the defaults' names: PowerShell variables are case-insensitive.)
+function With-Inputs([string]$SurfaceFile, [string]$BacklogFile, [scriptblock]$Body) {
+    $script:SurfaceArg = $SurfaceFile; $script:BacklogArg = $BacklogFile
+    try { & $Body } finally { $script:SurfaceArg = $surface; $script:BacklogArg = $backlog }
 }
 $expectedOpen = 'AA-1 AA-10 AA-13 AA-3 AA-4 AA-5 AA-8'
 function Run-Registry([string]$Path, [string]$Plan, [string]$Register = $register) {
@@ -88,11 +104,11 @@ function Case-Fixture([string]$Path) {
     $surf = (@($pop | Where-Object Source -eq 'surface' | ForEach-Object Id | Sort-Object) -join ' ')
     $dec  = (@($pop | Where-Object Source -eq 'decision' | ForEach-Object Id | Sort-Object) -join ' ')
     $want = @{ 'AA-1' = 'DUE NOW'; 'AA-13' = 'NOT DUE'; 'AA-3' = 'NOT DUE'; 'AA-4' = 'NOT DUE'; 'AA-5' = 'ACCEPTED RESIDUAL'; 'AA-8' = 'NOT DUE'; 'AA-10' = 'FUTURE-ONLY'
-               'ZZ-1' = 'BLOCKED'; 'AA-9' = 'BLOCKED'; 'AA-2' = 'COMPLETED'; 't_one' = 'NOT DUE'; 't_two' = 'NOT DUE' }
+               'ZZ-1' = 'BLOCKED'; 'AA-9' = 'BLOCKED'; 'AA-2' = 'COMPLETED'; 't_one' = 'NOT DUE'; 't_two' = 'NOT DUE'; 't_four' = 'NOT DUE' }
     $statesOk = $x.States.Count -eq $want.Count -and @($want.Keys | Where-Object { $x.States[$_] -ne $want[$_] }).Count -eq 0
     $ok = $x.Code -eq 0 -and $open -eq $expectedOpen -and $surf -eq 't_one t_two' -and $dec -eq 'AA-1 AA-9 ZZ-1' -and $statesOk -and
           $x.Text -match 'register: 10 finding ids; settled 3; not settled 7 \(open vocabulary 5, other 1, block only 1\)' -and
-          $x.Text -match 'backlog: 1 live rows'
+          $x.Text -match 'backlog: 2 live items in .*; DUE NOW 1, NOT DUE 1'
     [pscustomobject]@{ Ok = $ok; Detail = "open=[$open] surfaces=[$surf] decisions=[$dec] " + (Show $x) }
 }
 function Case-Expect([string]$Path, [string]$Plan, [int]$Code, [string]$Pattern, [hashtable]$States = @{}, [string]$Register = $register) {
@@ -105,9 +121,14 @@ $registerClosed = Write-Fixture 'register-closed.md' (([IO.File]::ReadAllText($r
 function Case-Gap([string]$Path)       { Case-Expect $Path (Plan-Fixture ($rowsAll -replace '^\| AA-3, AA-4 ', '| AA-3 ')) 1 'UNCLASSIFIED: AA-4' @{ 'AA-4' = 'UNCLASSIFIED' } }
 function Case-Unknown([string]$Path)   { Case-Expect $Path (Plan-Fixture ($rowsAll -replace '^\| AA-10 ', '| AA-100 ')) 1 'UNKNOWN ID: AA-100' }
 function Case-Twice([string]$Path)     { Case-Expect $Path (Plan-Fixture ($rowsAll + '| AA-1 | FUTURE-ONLY | engineering | `K-LATER` | — | again |')) 1 'CLASSIFIED TWICE: AA-1' }
-function Case-Overdue([string]$Path)   { Case-Expect $Path (Plan-Fixture $rowsAll 'REACHED 2026-02-01 fixture') 1 'OVERDUE: AA-3' @{ 'AA-3' = 'OVERDUE'; 'AA-4' = 'OVERDUE'; 'AA-13' = 'OVERDUE'; 'AA-5' = 'ACCEPTED RESIDUAL' } }
-function Case-Closed([string]$Path)    { Case-Expect $Path (Plan-Fixture $rowsAll 'REACHED 2026-02-01 fixture') 0 'REGISTRY: complete' @{ 'AA-3' = 'COMPLETED'; 'AA-4' = 'COMPLETED'; 'AA-13' = 'COMPLETED' } $registerClosed }
-function Case-Due([string]$Path)       { Case-Expect $Path (Plan-Fixture $rowsAll 'NEXT') 0 'REGISTRY: complete' @{ 'AA-3' = 'DUE NOW'; 'AA-4' = 'DUE NOW'; 'AA-13' = 'DUE NOW' } }
+function Case-Overdue([string]$Path)   { Case-Expect $Path (Plan-Fixture $rowsAll 'REACHED 2026-02-01 fixture') 1 'OVERDUE: AA-3' @{ 'AA-3' = 'OVERDUE'; 'AA-4' = 'OVERDUE'; 'AA-13' = 'OVERDUE'; 'AA-5' = 'ACCEPTED RESIDUAL'; 't_four' = 'OVERDUE' } }
+function Case-Closed([string]$Path)    { With-Inputs $surfaceRecorded $backlog { Case-Expect $Path (Plan-Fixture $rowsAll 'REACHED 2026-02-01 fixture') 0 'REGISTRY: complete' @{ 'AA-3' = 'COMPLETED'; 'AA-4' = 'COMPLETED'; 'AA-13' = 'COMPLETED' } $registerClosed } }
+function Case-Due([string]$Path)       { Case-Expect $Path (Plan-Fixture $rowsAll 'NEXT') 0 'REGISTRY: complete' @{ 'AA-3' = 'DUE NOW'; 'AA-4' = 'DUE NOW'; 'AA-13' = 'DUE NOW'; 't_four' = 'DUE NOW' } }
+# SPEC-270. EC-1: with every finding closed, the programme exit is still OVERDUE while a surface is unrecorded.
+function Case-Ec1([string]$Path)       { Case-Expect $Path (Plan-Fixture $rowsAll 'REACHED 2026-02-01 fixture') 1 'OVERDUE: t_four' @{ 't_four' = 'OVERDUE'; 'AA-3' = 'COMPLETED' } $registerClosed }
+function Case-BacklogUnknown([string]$Path) { With-Inputs $surface (Write-Fixture 'backlog-unknown.md' (Backlog-Text ($liveRows + '| no boundary | owner | someday | — | x |'))) { Case-Expect $Path $planFull 1 "BACKLOG BOUNDARY: '—' on live item 'no boundary'" } }
+function Case-BacklogOverdue([string]$Path) { With-Inputs $surface (Write-Fixture 'backlog-overdue.md' (Backlog-Text ($liveRows + '| fired | owner | done | `K-DONE` | x |'))) { Case-Expect $Path $planFull 1 "OVERDUE: backlog item 'fired'" } }
+function Case-BacklogMissing([string]$Path) { With-Inputs $surface (Write-Fixture 'backlog-missing.md' "# backlog`n`n| Item | Trigger |`n|---|---|`n| x | y |`n") { Case-Expect $Path $planFull 1 "BACKLOG: .* has no '## Live deferred items' table" } }
 function Case-Opened([string]$Path)    { Case-Expect $Path $planFull 1 'UNCLASSIFIED: AA-12' @{ 'AA-12' = 'UNCLASSIFIED' } $registerOpened }
 function Case-Admitted([string]$Path)  { Case-Expect $Path (Plan-Fixture ($rowsAll + '| AA-12 | VERIFIED DEFECT | engineering | `K-NEXT` | — | new |')) 0 'REGISTRY: complete' @{ 'AA-12' = 'DUE NOW' } $registerOpened }
 function Case-Vocab([string]$Path)     { Case-Expect $Path (Plan-Fixture ($rowsAll -replace 'TERMINAL IN SUBSTANCE \| engineering \| `K-LATER`', 'MAYBE LATER | engineering | `K-NOWHERE`')) 1 "BAD CLASS: 'MAYBE LATER'[\s\S]*UNKNOWN BOUNDARY: 'K-NOWHERE'" }
@@ -131,7 +152,11 @@ foreach ($t in @(
     @('R12 a newly registered open finding is UNCLASSIFIED until a row admits it', 'Case-Opened'),
     @('R13 admitting it with a row clears the failure and derives its state', 'Case-Admitted'),
     @('R14 a class or boundary outside the vocabularies fails', 'Case-Vocab'),
-    @('R15 an empty Treatment cell fails', 'Case-Empty'))) {
+    @('R15 an empty Treatment cell fails', 'Case-Empty'),
+    @('R16 an unrecorded surface is OVERDUE once its programme exit is REACHED (EC-1)', 'Case-Ec1'),
+    @('R17 a live backlog item without a registry boundary fails', 'Case-BacklogUnknown'),
+    @('R18 a live backlog item whose boundary is REACHED fails as OVERDUE', 'Case-BacklogOverdue'),
+    @('R19 a backlog without the Live deferred items table fails', 'Case-BacklogMissing'))) {
     $c = & $t[1] $Subject; Check $t[0] $c.Ok $c.Detail
 }
 
@@ -169,7 +194,10 @@ $mutants = @(
     @{ Name = 'M9 unknown ids accepted';          Find = 'if (-not $universe.Contains($id) -and';  Replace = 'if ($false -and';                Case = 'Case-Unknown' },
     @{ Name = 'M10 unclassified not failed';      Find = "Where-Object State -in 'UNCLASSIFIED', 'OVERDUE'"; Replace = "Where-Object State -in 'OVERDUE'"; Case = 'Case-Gap' },
     @{ Name = 'M11 NEXT ignored';                 Find = "elseif (`$bState -eq 'NEXT') { 'DUE NOW' }"; Replace = "elseif (`$false) { 'DUE NOW' }"; Case = 'Case-Due' },
-    @{ Name = 'M12 empty cells accepted';         Find = 'if (-not "$($r.Decides)".Trim() -or'; Replace = 'if ($false -and';                Case = 'Case-Empty' }
+    @{ Name = 'M12 empty cells accepted';         Find = 'if (-not "$($r.Decides)".Trim() -or'; Replace = 'if ($false -and';                Case = 'Case-Empty' },
+    @{ Name = 'M13 unrecorded surfaces not members'; Find = "`$allSurfaces[`$_] -eq 'NOT-RECORDED' -and"; Replace = '$false -and';      Case = 'Case-Ec1' },
+    @{ Name = 'M14 backlog boundary not required'; Find = 'if (-not $boundary.ContainsKey($key)) {'; Replace = 'if ($false) {';         Case = 'Case-BacklogUnknown' },
+    @{ Name = 'M15 backlog OVERDUE not failed';   Find = "foreach (`$b in (`$backlogEntries | Where-Object State -eq 'OVERDUE'))"; Replace = 'foreach ($b in @())'; Case = 'Case-BacklogOverdue' }
 )
 foreach ($m in $mutants) {
     $mutated = $source.Replace($m.Find, $m.Replace)

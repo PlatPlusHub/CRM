@@ -854,6 +854,19 @@ if ((Test-Path $aiMapPath) -and (Test-Path $mfPath)) {
             $issues++
         }
     }
+    # REPRODUCTION (SPEC-270). The comparisons above cover the three live_state fields one by one;
+    # every other key, and repository-index.md as a whole, was compared by nothing. repository-index.md
+    # stated `31_schema_draft.md` at 0.5 from 2026-08-10 while the document read 0.6, and every guard
+    # was CLEAN. The generator is deterministic, so it is verified by reproducing it: the committed
+    # projections must equal a fresh generation, byte for byte after LF normalization.
+    $genScript = Join-Path $RepoRoot 'scripts/generate-ai-map.ps1'
+    if (Test-Path $genScript) {
+        $genOut = @(& pwsh -NoProfile -File $genScript -Check 2>&1 | ForEach-Object { "$_" })
+        if ($LASTEXITCODE -ne 0) {
+            foreach ($line in $genOut) { Write-Host "  $line" -ForegroundColor Yellow }
+            $issues += [Math]::Max(1, @($genOut | Where-Object { $_ -like 'GENERATED STALE:*' }).Count)
+        } else { Write-Host "  $($genOut | Select-Object -Last 1)" -ForegroundColor Green }
+    }
 }
 
 Write-Host "== Check 8: Supabase project-topology registry integrity ==" -ForegroundColor Cyan
@@ -1730,6 +1743,7 @@ if (-not (Test-Path $ciWorkflow)) {
         '.vscode/extensions.json'                     = 'Check 28 (WS-1) compares it against the manifest table'
         '.mcp.json'                                   = 'Check 28 (WS-1) compares it against the manifest table'
         'scripts/readiness_population.ps1'            = 'Check 29 (CTRL-9) executes it'
+        'scripts/generate-ai-map.ps1'                 = 'Check 7 (SPEC-270) executes it to reproduce ai-map.json and repository-index.md'
     }
     # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
     # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent

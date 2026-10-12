@@ -554,8 +554,11 @@ function Test-EvidenceAuthorityPath([string]$Path){
 # met Check L3; a frozen Write Scope cannot be widened, so the contract was cancelled
 # AFTER an irreversible action. SPEC-205 died to the same shape.
 $script:EvidenceWriteClosure=@(
-    @{When='^_ORVION_CANONICAL/manifest\.md$';Needs='ai-map.json'
-      Why='mandatory Check 7 compares ai-map live_state against the manifest by value'},
+    # SPEC-270: Check 7 reproduces both projections, and both read every canonical header.
+    @{When='^_ORVION_CANONICAL/[^/]+\.md$';Needs='ai-map.json'
+      Why='mandatory Check 7 regenerates ai-map.json from the canonical documents and byte-compares it'},
+    @{When='^_ORVION_CANONICAL/[^/]+\.md$';Needs='repository-index.md'
+      Why='mandatory Check 7 regenerates repository-index.md from the canonical documents and byte-compares it'},
     @{When='^supabase/migrations/';Needs='reports/master/MASTER_API_CONTRACT.md'
       Why='mandatory Check L3 regenerates the API contract from the live surface and byte-compares it'}
 )

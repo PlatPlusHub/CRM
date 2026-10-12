@@ -4,9 +4,10 @@ Status: **Authoritative governance operating system for the knowledge/decision/r
 
 **Precedence & scope boundary (no overlap):** `AGENTS.md` is authoritative for **execution conduct** (how work is done, when to continue/stop, standing authorities). This document is authoritative for **knowledge governance** (where information lives and how decisions/documents flow). Where the two touch, AGENTS.md governs conduct and GOVERNANCE.md governs knowledge placement. Neither restates the other. `CR_LIFECYCLE.md` remains authoritative for the Change Request state machine.
 
-Version 1.18 · 2026-10-12 · Governs every future human, Claude, Codex, and AI/MCP session.
+Version 1.19 · 2026-10-12 · Governs every future human, Claude, Codex, and AI/MCP session.
 
 **Governance changelog** (governance governs itself — §15):
+- v1.19 (2026-10-12) — SPEC-270. One deterministic generator, `scripts/generate-ai-map.ps1`, now writes both repository-only projections, `ai-map.json` and `repository-index.md`, and Check 7 verifies that both reproduce from their sources. The §2 rows and the authority graph name it. No authority moved.
 - v1.18 (2026-10-12) — owner objective of 2026-10-12, integrated by SPEC-269. The §2 execution-plan row now names the gate's **Action registry**, the one classification of every open obligation, whose trigger states `scripts/readiness_population.ps1` derives and Check 29 enforces. No authority moved: the register keeps every status, and the plan keeps the gate.
 - v1.17 (2026-10-08) — owner directive (GitHub issue 3), integrated by SPEC-248. The §2 execution-plan row now names the **Pre-Production Readiness Closure gate** it owns: the rule that derives the gate's population from the register, the surface dispositions and the manifest's open-decision line; the five release classes; and the closure queue's order. The launch-readiness verdict stays with `MASTER_CERTIFICATION_STATUS.md`, and every finding's status stays with the register, so nothing is reassigned and no second inventory exists. The four decision rules are conduct and method, so they live in `AGENTS.md §2` and `ENGINEERING_METHOD.md §2`, not here. PATCH: clarifies an existing row; no SSOT reassignment.
 - v1.16 (2026-09-11) — owner-authorized deterministic Agent Control Plane: unrestricted repository
@@ -178,8 +179,8 @@ Normal CR execution and routine checkpoints do not require a session report. CR 
 | `reports/evidence/primary-ledger-evidence.json` | recorded reading of Primary's migration ledger (RECOVER-1) | Living — **machine-read; never hand-edit a count or hash**, because Check 19 recomputes both from the ledger array and a hand edit is detected as self-inconsistent | that a Primary reading is on record for this migration set and this history | whoever changes the migration set, in the same commit, from a live `supabase-primary` MCP read |
 | `reports/future-backlog.md` | deferred + triggers | Living | deferred work | reviews |
 | `reports/history/*-2026-07*`, `phase-*`, process reports | historical analysis | **Immutable** | the record of that session | never |
-| `repository-index.md` | file index | Auto-gen | file listing | `scripts/repository-all.ps1` |
-| `ai-map.json` | machine-readable AI cold-start map (pointers + extracted live-state) | Auto-gen | nothing — points to SSOTs | `scripts/generate-ai-map.ps1` (called by `repository-all.ps1`) |
+| `repository-index.md` | file index | Auto-gen | file listing | `scripts/generate-ai-map.ps1`; Check 7 verifies it reproduces |
+| `ai-map.json` | machine-readable AI cold-start map (pointers + extracted live-state) | Auto-gen | nothing — points to SSOTs | `scripts/generate-ai-map.ps1`; Check 7 verifies it reproduces |
 
 **Redundancy resolved (was drift risk):** `MASTER_ARCHITECTURE_DECISIONS.md` overlapped the ADR log → it is now explicitly a **tracking overlay** (proposed + amendment status only), not a second decision record. `MASTER_EXECUTION_PLAN.md` overlapped canon-32 → it owns finding-**batches** and references roadmap **phases**, never restating them. `PROTOCOL.md`/`global-rules.md` overlapped AGENTS.md → both already declare deference; retained as subordinate, authoritative for nothing exclusive.
 
@@ -278,7 +279,7 @@ GOVERNANCE.md ──defines──▶ SSOT matrix ──governs──▶ every LI
 AGENTS.md ──authorizes──▶ conduct ──drives──▶ CR_LIFECYCLE ──drives──▶ changes/SPEC-* ──update──▶ manifest
 Decision lifecycle (§3) ──feeds──▶ MASTER_GAP_REGISTER (validated) ──feeds──▶ ADR log (ratified) ──feeds──▶ canon ──feeds──▶ implementation
 INDUSTRY_REFERENCES + PROOF_LOG ──evidence──▶ VALIDATED/PENDING/REJECTED ──status──▶ MASTER_GAP_REGISTER
-repository-index.md ◀──generates── scripts/repository-all.ps1
+repository-index.md + ai-map.json ◀──generates── scripts/generate-ai-map.ps1 ◀──reproduces── Check 7
 ```
 No cycle; one direction of authority (Policy→…→History). A change enters at the correct layer and flows down; it never flows up without owner ratification.
 

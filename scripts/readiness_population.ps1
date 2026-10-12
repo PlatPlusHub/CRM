@@ -22,7 +22,9 @@
 # that section states. Exit 1 means the registry is incomplete, contradictory or overdue: an open
 # member no row classifies, an id two rows classify, a row naming an unknown id, a class or boundary
 # outside the section's vocabularies, an empty Decides or Treatment cell, or an open id whose
-# boundary is REACHED. Check 29 of scripts/check_repository_consistency.ps1 runs this script, so
+# boundary is REACHED. Since SPEC-270 it also derives two members no row needs: every NOT-RECORDED
+# surface (EC-1, boundary -SurfaceBoundary) and every row of the backlog's '## Live deferred items'
+# table; a backlog row without a known boundary, or with a REACHED one, also exits 1. Check 29 of scripts/check_repository_consistency.ps1 runs this script, so
 # every guard run (Boot, Gate, -Finish, CI) enforces it; scripts/readiness_selftest.ps1 proves it.
 #
 # Usage:
@@ -42,7 +44,9 @@ param(
     [string]$PlanPath = 'reports/master/MASTER_EXECUTION_PLAN.md',
     [string]$BacklogPath = 'reports/future-backlog.md',
     [string]$AuthorityPath = 'scripts/check_repository_consistency.ps1',
-    [string]$SectionHeading = '## Pre-Production Readiness Closure gate'
+    [string]$SectionHeading = '## Pre-Production Readiness Closure gate',
+    # EC-1 (SPEC-270): the boundary before which every NOT-RECORDED surface must carry a disposition.
+    [string]$SurfaceBoundary = 'B6-EXIT'
 )
 $ErrorActionPreference = 'Stop'
 function Read-Input([string]$Rel) {
@@ -219,19 +223,46 @@ $entries = foreach ($id in $members.Keys) {
         Decides = "$($r.Decides)"; WaitsOn = "$($r.WaitsOn)"; Sev = "$($u.Sev)"; Title = ("$($u.Title)" -replace '\*', ''); Status = "$($members[$id].Status)"; Treatment = "$($r.Treatment)" }
 }
 $entries = @($entries)
+# A state from a boundary alone, for members that carry no class of their own (SPEC-270).
+function Get-BoundaryState([string]$Key) {
+    $s = $boundary[$Key]
+    if ("$s" -like 'REACHED*') { 'OVERDUE' } elseif ($s -eq 'NEXT') { 'DUE NOW' } else { 'NOT DUE' }
+}
+# EC-1 (SPEC-270): every surface still NOT-RECORDED is an implicit member whose boundary is the
+# programme's exit. It needs no row; a row that classifies it explicitly wins. Without this, Batch 6's
+# unaudited surfaces were in no list, and nothing failed if B6-EXIT were recorded REACHED before them.
+$unrecorded = @($allSurfaces.Keys | Where-Object { $allSurfaces[$_] -eq 'NOT-RECORDED' -and -not $byId.ContainsKey($_) } | Sort-Object)
+if ($unrecorded.Count -and -not $boundary.ContainsKey($SurfaceBoundary)) { $problems.Add("UNKNOWN BOUNDARY: '$SurfaceBoundary' (EC-1, for $($unrecorded.Count) NOT-RECORDED surfaces)") }
+foreach ($id in $unrecorded) {
+    $entries += [pscustomobject]@{ State = (Get-BoundaryState $SurfaceBoundary); Id = $id; Source = 'surface'; RegistryClass = 'SURFACE'; Boundary = $SurfaceBoundary; BoundaryState = "$($boundary[$SurfaceBoundary])"
+        Decides = 'engineering'; WaitsOn = ''; Sev = ''; Title = ''; Status = 'NOT-RECORDED'; Treatment = 'EC-1: no recorded disposition yet; scripts/batch6_select_target.ps1 ranks the next slice' }
+}
 $order = 'OVERDUE', 'UNCLASSIFIED', 'DUE NOW', 'BLOCKED', 'NOT DUE', 'ACCEPTED RESIDUAL', 'FUTURE-ONLY', 'COMPLETED'
 'registry: ' + (($order | ForEach-Object { $n = @($entries | Where-Object State -eq $_).Count; if ($n) { "$_ $n" } }) -join ', ')
 
-# The backlog owns its own triggers; a live row without one is shown, never failed (future-only ideas).
-$noTrigger = 0; $liveRows = 0; $tIdx = -1
-foreach ($line in ((Read-Input $BacklogPath) -split "`r?`n")) {
-    if ($line -notmatch '^\|') { $tIdx = -1; continue }
-    $c = Get-Cells $line
-    $h = @(0..($c.Count - 1) | Where-Object { $c[$_] -match '^Trigger' }); if ($h) { $tIdx = $h[0]; continue }
-    if ($tIdx -lt 0 -or $line -match '^\|\s*-' -or $c[0] -match '^~~') { continue }
-    $liveRows++; if ($tIdx -ge $c.Count -or $c[$tIdx] -in '', '—', '-') { $noTrigger++; if ($Registry) { "  backlog row without a trigger: $($c[0])" } }
+# The backlog's live items (SPEC-270). Its older sections are a dated record whose prose triggers
+# nothing evaluated, so five items stayed "open" after they were built and one security item after its
+# trigger fired. Every live item is now one row of the '## Live deferred items' table, whose Boundary
+# cell names a key of the boundaries table above; its state is derived like a registry row's.
+$backlogText = Read-Input $BacklogPath
+$liveAt = $backlogText.IndexOf('## Live deferred items')
+$backlogEntries = @()
+if ($liveAt -lt 0) { $problems.Add("BACKLOG: $BacklogPath has no '## Live deferred items' table") }
+else {
+    $liveText = $backlogText.Substring($liveAt + 3); $cut = [regex]::Match($liveText, '(?m)^## '); if ($cut.Success) { $liveText = $liveText.Substring(0, $cut.Index) }
+    $bIdx = -1; $dIdx = -1
+    foreach ($line in ($liveText -split "`r?`n")) {
+        if ($line -notmatch '^\|' -or $line -match '^\|\s*-') { continue }
+        $c = Get-Cells $line
+        if ($bIdx -lt 0) { $bIdx = [array]::IndexOf($c, 'Boundary'); $dIdx = [array]::IndexOf($c, 'Decides'); continue }
+        $key = if ($bIdx -lt $c.Count) { "$($c[$bIdx])".Trim().Trim('`') } else { '' }
+        $item = ($c[0] -replace '\*', '')
+        if (-not $boundary.ContainsKey($key)) { $problems.Add("BACKLOG BOUNDARY: '$key' on live item '$item' is not a registry boundary"); continue }
+        $backlogEntries += [pscustomobject]@{ State = (Get-BoundaryState $key); Item = $item; Boundary = $key; Decides = $(if ($dIdx -ge 0 -and $dIdx -lt $c.Count) { $c[$dIdx] } else { '' }) }
+    }
 }
-"backlog: $liveRows live rows in $BacklogPath, $noTrigger without a trigger (shown, not failed)"
+'backlog: {0} live items in {1}; {2}' -f $backlogEntries.Count, $BacklogPath, (($order | ForEach-Object { $n = @($backlogEntries | Where-Object State -eq $_).Count; if ($n) { "$_ $n" } }) -join ', ')
+foreach ($b in ($backlogEntries | Where-Object State -eq 'OVERDUE')) { $problems.Add("OVERDUE: backlog item '$($b.Item)' -- boundary $($b.Boundary) is $($boundary[$b.Boundary])") }
 'batch 6: {0} of {1} surfaces carry no recorded disposition; scripts/batch6_select_target.ps1 ranks the next slice' -f @($allSurfaces.Values | Where-Object { $_ -eq 'NOT-RECORDED' }).Count, $allSurfaces.Count
 
 if ($Tsv) { $regTsv = [IO.Path]::ChangeExtension($Tsv, '.registry.tsv'); $entries | ConvertTo-Csv -Delimiter "`t" -NoTypeInformation | Set-Content -LiteralPath $regTsv -Encoding utf8; "registry written to $regTsv" }
@@ -239,6 +270,9 @@ if ($Registry) {
     foreach ($e in ($entries | Sort-Object { [array]::IndexOf($order, $_.State) }, Id)) {
         $what = if ($e.Title) { $e.Title } else { $e.Treatment }
         '{0,-17} {1,-24} {2,-21} {3,-27} {4,-14} {5}' -f $e.State, $e.Id, $e.RegistryClass, ("$($e.Boundary) ($($e.BoundaryState))" -replace '^ \(\)$', ''), $e.Decides.Substring(0, [Math]::Min(14, $e.Decides.Length)), $what.Substring(0, [Math]::Min(90, $what.Length))
+    }
+    foreach ($b in ($backlogEntries | Sort-Object { [array]::IndexOf($order, $_.State) }, Item)) {
+        '{0,-17} {1,-24} {2,-21} {3,-27} {4,-14} {5}' -f $b.State, '(backlog)', 'LIVE DEFERRED ITEM', "$($b.Boundary) ($($boundary[$b.Boundary]))", $b.Decides.Substring(0, [Math]::Min(14, $b.Decides.Length)), $b.Item.Substring(0, [Math]::Min(90, $b.Item.Length))
     }
 }
 foreach ($e in ($entries | Where-Object State -in 'UNCLASSIFIED', 'OVERDUE')) { $problems.Add("$($e.State): $($e.Id)" + $(if ($e.State -eq 'OVERDUE') { " -- boundary $($e.Boundary) is $($e.BoundaryState)" } else { ' -- an open member no registry row classifies' })) }
