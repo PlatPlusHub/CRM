@@ -64,7 +64,7 @@ The local `db reset` run by `-Finish` destroys local data. The current local dat
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -202,12 +202,23 @@ Post-Implementation Proof Obligation: The certified `-Finish` passes the full DA
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-13 01:18 — Claude
+
+Outcome: Complete
+
+Step results:
+- Step 1: Already Applied. `package.json` declares `2.120.0`, the lock resolves `node_modules/supabase` to `2.120.0`, and `node_modules/.bin/supabase.cmd --version` reports `2.120.0`. Both package files are identical to `3c93c1c`.
+- Step 2: Applied. Neither target block was present, so each old block matched exactly once and was replaced. `git diff -- supabase/config.toml` shows exactly two hunks: the `[api]` comment plus `auto_expose_new_tables = false`, and the `[analytics]` comment plus `enabled = false`. `port = 54327`, `backend = "postgres"` and CRLF line endings are unchanged.
+- Step 3: Applied. `migration-ci.yml` now contains `run: npm ci` once and `supabase/setup-cli` zero times. All four CLI calls (`start`, `db reset`, `test db`, `stop || true`) use `node_modules/.bin/supabase`, and no bare `run: supabase` remains. The `on:` block is byte-identical to `3c93c1c`, as are the job and step names other than the replaced install step. CRLF is preserved. No YAML parser is installed locally, so the CI profile's remote run proves the syntax.
+- Step 4: Applied.
+  - Exclusivity. `pg_stat_activity` showed no non-idle client backend other than the check; the 23 idle ones are the stack's own service pools. No process was running a `supabase`, `verify_*`, `pg_prove` or Gate command. `ORVION` was the only running Supabase project. The Codex desktop app was open but drove nothing against the stack.
+  - Backup. `docker exec supabase_db_ORVION pg_dump -U postgres -d postgres -Fc -f /tmp/spec-272-pre-reset.dump` exited 0. `docker cp` to `C:\Users\My Lab\AppData\Local\ORVION\spec-272-pre-reset.dump` exited 0, giving 2586200 bytes with SHA-256 `5810f90e75e0e736b3384ee248a083c332b3f9c3ca8dc35c6375e93de8838c87`. The host copy was validated with `docker run --rm -v "C:\Users\My Lab\AppData\Local\ORVION:/backup:ro" --entrypoint pg_restore public.ecr.aws/supabase/postgres:17.11.0.004 -l /backup/spec-272-pre-reset.dump`: exit 0, a 2961-line table of contents, header `dbname: postgres`, and 133 `TABLE DATA` entries.
+  - Before stop, 12 containers: analytics `6c24beb92a4c`, auth `0a385fb2e499`, db `8da6178c5f2e`, edge_runtime `54d34da1d045`, inbucket `99be30387f98`, kong `5abc511ba46f`, pg_meta `f0419f29288b`, realtime `713ec4803e2e`, rest `6639057fc9aa`, storage `de4138d53268`, studio `35591b2765dc`, vector `7cf25140fb7b`.
+  - `node_modules/.bin/supabase.cmd stop --project-id ORVION` exited 0 with backup kept, leaving 0 containers. `node_modules/.bin/supabase.cmd start` exited 0.
+  - After start, 10 containers, each with a new ID and running: auth `421a6355c1dc` healthy, db `87bb106031ce` healthy, edge_runtime `3495df0bc21b` (no healthcheck), inbucket `162ecb4aba18` healthy, kong `f27cab589d47` healthy, pg_meta `f62d58a94cce` healthy, realtime `50e4a16b8a16` healthy, rest `5f20aa1d6af3` (no healthcheck), storage `68e900baadcd` healthy, studio `a93914ac0bac` healthy. No `supabase_vector_ORVION` or `supabase_analytics_ORVION` exists, and `supabase status` lists both as stopped services. Nothing listens on port 2375. No container was patched.
+- Step 5: Applied. The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` follows offline, after re-validating the backup and the CLI version.
+
+Commits: the implementation and checkpoint commit that carries this entry.
 
 ## Verification Notes
 

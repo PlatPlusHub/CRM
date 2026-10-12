@@ -23,28 +23,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Pin an explicit CLI version (not `latest`): `latest` resolves the newest release via an
-      # unauthenticated GitHub API call that is rate-limited on shared runner IPs, a non-deterministic
-      # build input that has failed CI transiently before migrations even run. A pinned version skips
-      # that call entirely -> deterministic, reproducible builds. setup-cli@v3 also moves off the
-      # deprecated Node 20 runtime. Bump this deliberately when adopting a newer CLI.
-      - name: Set up Supabase CLI
-        uses: supabase/setup-cli@v3
-        with:
-          version: 2.109.1
+      # The Supabase CLI is the lockfile's, installed by `npm ci` exactly as ORVION Acceptance does.
+      # A `uses:` pin here was a second version authority: it stayed at 2.109.1 after the lockfile
+      # moved to 2.120.0, so the two CI database lanes tested different CLIs (SPEC-272).
+      - name: Install pinned toolchain
+        run: npm ci
 
       - name: Start local Supabase stack
-        run: supabase start
+        run: node_modules/.bin/supabase start
 
       - name: Apply all migrations on a clean database
-        run: supabase db reset
+        run: node_modules/.bin/supabase db reset
 
       - name: Run pgTAP invariant tests
-        run: supabase test db
+        run: node_modules/.bin/supabase test db
 
       - name: Run database smoke-test (verify_database.sql)
         run: docker exec -i supabase_db_ORVION psql -v ON_ERROR_STOP=1 -U postgres -d postgres -f - < scripts/verify_database.sql
 
       - name: Stop local Supabase stack
         if: always()
-        run: supabase stop || true
+        run: node_modules/.bin/supabase stop || true
