@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -295,6 +295,15 @@ Every file is written LF. The "from" hashes are the committed bytes at `04f541e`
 - [ ] `git diff --check` is clean.
 
 ## Execution Log
+
+### 2026-10-12 — Gate 1 approval and execution started
+
+- **Authority:** the owner's execution authorization of 2026-10-12 approves Gate 1 for this living-registry contract, which it names by the number it was drafted under. The renumbering is recorded in Notes and is mechanical; the owner's authorization covers numbering reconciliation and re-pinning that preserve the approved substance. Draft `c5f3562`, contract SHA-256 `b28c9dc907f7521015605222736a08658a68c2e42be6e14d3f41eae57a81949e` (32678 bytes, LF). Approval was committed at `85e28d6`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Verified before acting:**
+  - HEAD was the Approve commit, on top of SPEC-268's Complete commit `04f541e`, which is `origin/main`;
+  - the committed Draft blob hashes to the approved value;
+  - every one of the fifteen files holds its pinned "from" bytes at `04f541e`, the delivery assessment is absent, and the guard does not yet contain `== Check 29: the action registry`.
+- **Not authorized here:** any database, Primary, Secondary, n8n or Google surface, and any answer to an OD row.
 
 ## Verification Notes
 
