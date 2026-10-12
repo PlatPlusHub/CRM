@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -277,6 +277,16 @@ Every file is written LF. The "from" hashes are the committed bytes at `6c8b500`
 - [ ] `git diff --check` is clean.
 
 ## Execution Log
+
+### 2026-10-12 — Gate 1 approval and execution started
+
+- **Authority:** the owner's written authorization of 2026-10-12 approves Gate 1 and Gate 2 for this contract, by number, Draft path and contract SHA-256 `1afd913f9dd03d49e3c3a243580af26e11cfb12e05ba3f3528b6b2ecfac8593a`. It authorizes the repository-only lifecycle through exact-SHA promotion and `-Certify`, and no database deployment. The Draft was committed at `022646f`, and its blob hashes to the approved value (26557 bytes, LF). Approval was committed at `21a5e52`; `-Gate -BaseRef 022646f` returned `APPROVAL_EVIDENCE: PASS`.
+- **Verified before acting:**
+  - HEAD was the Approve commit, on top of SPEC-269's Complete commit `6c8b500`, which is `origin/main`;
+  - every one of the fifteen files holds its pinned "from" bytes at `6c8b500`. The manifest is compared with `Active Change Request: None.` restored. `ai-map.json` equals its `6c8b500` bytes except `generated_at` and the Approve pointer;
+  - `scripts/generate-ai-map.ps1` does not contain `param([switch]$Check)`;
+  - `core.autocrlf` is `true`, from the system configuration only.
+- **Not authorized here:** any database, Primary, Secondary, n8n, Google or Docker surface; TEST-4 and PERF-2 work.
 
 ## Verification Notes
 
