@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-10-11T14:17:36Z",
-  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-264 migration was applied only to vrvtsxexkiiiivlkdxzp under the owner's separate advance one-time exact-byte Gate 2 authorization (reaffirmed 2026-10-11 with a one-time continuation past the six contract-predicted pre-deploy repository-consistency findings), effective after the recorded pre-deploy readiness gate. Prewrite recheck matched every Gate-2 condition exactly: HEAD 719c24d6d9190558a949ed2fefd291dbf8e672d6 on the approved chain cd5f7f4 -> 59bf144 -> 5e52dc2 -> 85e32e0 -> 719c24d; the approved contract unchanged since Draft cd5f7f4 (SHA-256 8cdfb5e1c65ce2c2dc19bd0c6ea81cc5c98f933b61a082a440ef294451c695ba) except its status, runtime checkpoint and execution log; migration SHA-256 ee389adb2aff9253ad1f283805419a488696e579336da2b0e81b968749cc559f, MD5 42e94bec60ab7a10b7de7f5bb76db807, 26690 bytes, LF; Primary ledger 250 24b8778b6d9e955a8472affb07712858 with the target absent; functions 3d7eb4e3550f7cec15815defb600272d/326; combined a23669c9c5c31f56bed4f7e8d265c534/3121; 0 tenants, invoices, payments, allocations and events. The transmitted text was proven server-side (MD5 42e94bec60ab7a10b7de7f5bb76db807, 26690 bytes, 493 LF, 0 CR). A first apply attempt returned 'Invalid or expired requestState' (the human confirmation expired) and was proven unapplied by a read-only re-read; the second, owner-attended attempt applied it once. The connector's temporary version 20261011141637 was renamed by one guarded UPDATE (251 rows, exactly one after 20261011090000, one stored statement with the file's MD5, no existing target) to 20261011120000. Post-write: ledger 251 f678a3ef5790582c39635136c8aa202d; Check L2/P2 functions 708dbe893149ea2b97e6893fea449925/329; scripts/parity_surface.sql combined 76c930988563bd06f86c65e429fdb8fc/3130 with only functions, triggers and constraints moved; the five allocation functions' prosrc and definitions equal local; catalog_values 623 (event_type 188); 0 tenants, invoices, payments, allocations and events. Secondary was not contacted.",
+  "read_at": "2026-10-12T11:04:38Z",
+  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-268 migration was applied only to vrvtsxexkiiiivlkdxzp under the owner's separate exact-byte Gate 2 authorization of 2026-10-12, effective after the recorded pre-deploy readiness gate. Prewrite recheck matched every Gate-2 condition exactly: HEAD 04d117ea8e268a98ac931919faa85f9fed46d743 on the approved chain fb81eb0 -> c4a822c -> dff42ea -> 04d117e; migration SHA-256 090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc, MD5 9a352fdd0d3caec23e1e1c36a43200ff, 9882 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 251 f678a3ef5790582c39635136c8aa202d with the target absent; Check L2/P2 functions 708dbe893149ea2b97e6893fea449925/329; combined 76c930988563bd06f86c65e429fdb8fc/3130; app.issue_receipt md5 fdb063de930b6fb43662df89d070ae8c; the four prior receipts triggers; 0 tenants, customers, bookings, invoices, payments, receipts and events. The transmitted text was proven server-side (MD5 9a352fdd0d3caec23e1e1c36a43200ff, 9882 bytes, 198 LF, 0 CR) and applied once. The connector's temporary version 20261012110339 was renamed by one guarded UPDATE (exactly one row after 20261011120000, one stored statement with the file's MD5, no existing target) to 20261012120000. Post-write: ledger 252 5f13c62d2f609e7794a0193a2f203c50, equal to the migration files; Check L2/P2 functions e6a65849bc390360dcb53b2be4f1a0b8/331; scripts/parity_surface.sql combined 02dcc5a1076506289a6f7ff81894fb4d/3134 with only functions (+2) and triggers (+2) moved, both equal to the local stack after a clean reset; receipts_guard_issue and receipts_emit_issued present; app.guard_receipt_issue md5 de1134b24a2d4662776d163ac2ff5853 and app.emit_receipt_issued md5 d4458754410b7e530bc39b2b2fb5cb9a, SECURITY DEFINER, ACL {postgres=X/postgres}; app.issue_receipt md5 b2e09f264b27a0f5643353c2fe78c5fb, SECURITY INVOKER, ACL unchanged; catalog_values 623; 0 tenants, customers, bookings, invoices, payments, receipts and events. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "719c24d6d9190558a949ed2fefd291dbf8e672d6",
-  "migration_count": 251,
-  "ledger_fingerprint": "f678a3ef5790582c39635136c8aa202d",
-  "function_surface_hash": "708dbe893149ea2b97e6893fea449925",
-  "function_count": 329,
-  "structural_surface_hash": "76c930988563bd06f86c65e429fdb8fc",
-  "structural_object_count": 3130,
+  "repository_head": "04d117ea8e268a98ac931919faa85f9fed46d743",
+  "migration_count": 252,
+  "ledger_fingerprint": "5f13c62d2f609e7794a0193a2f203c50",
+  "function_surface_hash": "e6a65849bc390360dcb53b2be4f1a0b8",
+  "function_count": 331,
+  "structural_surface_hash": "02dcc5a1076506289a6f7ff81894fb4d",
+  "structural_object_count": 3134,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -263,6 +263,7 @@
     "20261010160000_a_payment_proof_is_born_pending_and_unreviewed",
     "20261010210000_a_payment_proof_is_decided_once",
     "20261011090000_a_complaint_begins_new_under_its_creator",
-    "20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice"
+    "20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice",
+    "20261012120000_a_receipt_is_issued_once_and_stays_as_issued"
   ]
 }

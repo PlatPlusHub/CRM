@@ -86,7 +86,7 @@ None. It is independent of the Draft SPEC-265, which edits documents only. Which
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -355,6 +355,37 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 ### 2026-10-12 — Gate 2 recorded (Step 5)
 
 - The owner's execution authorization of 2026-10-12 grants, separately from Gate 1, an exact-byte deployment of `20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql`, SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, to Primary `vrvtsxexkiiiivlkdxzp` only, valid only if every pre-deployment condition passes. Step 4 shows they do. It authorizes no other migration and no business-data write. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+
+### 2026-10-12 — Primary deployment (Step 6) and post-deploy state (Step 7)
+
+- **Prewrite recheck**, in a later session from the preserved checkpoint, matched every Gate-2 condition exactly:
+  - HEAD `04d117e`, 4 ahead of and 0 behind `origin/main` `2049f2e`; the working tree held only Write Scope paths;
+  - the migration file `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`; test 156 `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2`;
+  - project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 251 `f678a3ef5790582c39635136c8aa202d`, latest `20261011120000`, target absent by version and by name;
+  - functions `708dbe893149ea2b97e6893fea449925`/329; all ten structural surfaces and `_combined` `76c930988563bd06f86c65e429fdb8fc`/3130;
+  - `app.issue_receipt` md5 `fdb063de930b6fb43662df89d070ae8c`, SECURITY INVOKER, ACL `{postgres=X/postgres,authenticated=X/postgres}`; the four prior `receipts` triggers; neither new function present;
+  - 0 tenants, customers, bookings, invoices, payments, receipts and events.
+- **Step 6.** The transmitted text was proven server-side before the write: md5 `9a352fdd0d3caec23e1e1c36a43200ff`, 9882 bytes, 198 LF, 0 CR. It was applied once through `supabase-primary` as `a_receipt_is_issued_once_and_stays_as_issued`. The connector assigned the temporary version `20261012110339`. One guarded UPDATE renamed that row to `20261012120000`; the guard required exactly one row after `20261011120000`, a single stored statement whose md5 is the file's, and no existing target.
+- **Fresh post-deploy reads:**
+  - ledger 252 `5f13c62d2f609e7794a0193a2f203c50`, equal to the migration files, with `20261012120000` exactly once;
+  - functions `e6a65849bc390360dcb53b2be4f1a0b8`/331, triggers `d0b98a16e51bb805a93e14737cd5e1b3`/318, `_combined` `02dcc5a1076506289a6f7ff81894fb4d`/3134. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. Every value equals the local stack after a clean reset (Step 4);
+  - `receipts` triggers now add `receipts_emit_issued` and `receipts_guard_issue`;
+  - `app.guard_receipt_issue` md5 `de1134b24a2d4662776d163ac2ff5853` and `app.emit_receipt_issued` md5 `d4458754410b7e530bc39b2b2fb5cb9a`, both SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres}`;
+  - `app.issue_receipt` md5 `b2e09f264b27a0f5643353c2fe78c5fb`, SECURITY INVOKER, ACL unchanged;
+  - catalog values 623; 0 tenants, customers, bookings, invoices, payments, receipts and events.
+
+  No business row was written. Secondary was not contacted.
+- **Step 7:**
+  - `primary-ledger-evidence.json` was rewritten from those readings only, read at `2026-10-12T11:04:38Z`;
+  - the manifest's Live state is 252 migrations with the same fingerprints, 71/623 catalog and 464 HTTP assertions unchanged;
+  - `supabase/tests` holds 156 files whose `plan(N)` values sum to 2969, so the suite is `156 files / 2969 assertions`;
+  - coverage is 42 of 78, all at `ADVERSARIAL`;
+  - RCPT-1 to RCPT-4 are `DEPLOYED` with Cert `✅`.
+- **Generators.** `MASTER_API_CONTRACT.md` regenerates byte-identical (80 RPC endpoints, 8 reporting views, 74 tables). `ai-map.json` changes only its timestamp.
+- **Guard self-tests, all green:** `test_cold_start_state_guard` 34/0, `test_future_date_guard` 18/0, `test_primary_ledger_guard` 13/0, `test_status_contradiction_guard` 33/0.
+- **Checks:** `check_primary_ledger` `RECOVER-1 LEDGER EVIDENCE: CLEAN` (252, `5f13c62d…`); `check_database_parity_evidence` `PRIMARY PARITY EVIDENCE: CLEAN`; `REPOSITORY CONSISTENCY: CLEAN`; `git diff --check` clean.
+- **Runtime Checkpoint:** DONE.
+
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
