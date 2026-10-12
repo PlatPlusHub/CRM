@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -54,8 +54,8 @@ None.
 ## Runtime Checkpoint
 
 Resume Step: 2
-Blocker: None
-Recovery Attempt: 0
+Blocker: VECTOR_SOCKET_MISSING
+Recovery Attempt: 2
 
 ## Required Capabilities
 
@@ -120,11 +120,57 @@ Irreversible Action Step: 3 (Finish runs the local reset only after Step 2 estab
 
 ## Execution Log
 
-None.
+### 2026-10-12 22:42 — Codex
+
+Outcome: Blocked
+
+Step results:
+- Step 1: Applied — `npm install --save-dev --save-exact supabase@2.120.0` exited 0; declaration, lock, installed package, and project-local executable each report 2.120.0. Only `package.json` and `package-lock.json` changed; `jose` 6.2.12 satisfies the new CLI's `^6.2.10` requirement. The lockfile root name was preserved as `ORVION`.
+- Step 2: Failed — project-specific `stop --project-id ORVION` exited 0 with backup enabled; project-local v2.120.0 `start` exited 0 and recreated all twelve ORVION containers, but new Vector `7cf25140fb7b` (created 2026-10-12 22:40:54 EEST) is restarting and unhealthy. Its effective `.Mounts` is `[]`, `DOCKER_HOST` is `http://host.docker.internal:2375`, and its logs report connection refused at `192.168.65.254:2375`. The socket probe inside Vector exited 1 because the container was restarting. The old Vector `d1af37046680` was healthy with a read-only `/var/run/docker.sock` bind. No manual Docker patch was made.
+- Step 3: Failed — not attempted because Step 2 did not satisfy the required runtime invariant; `-Finish` and post-upgrade database tests were not run.
+
+Commits: `5467328` (dependency and Step-2 checkpoint)
+
+Blocker: The supported v2.120.0 start created Vector without the required Docker socket bind and selected an unavailable TCP endpoint instead. Correcting Docker/container configuration is outside this Change Request's approved Write Scope and forbidden by its Implementation Steps; runtime compatibility remains unproven.
+
+### 2026-10-12 23:40 — Claude
+
+Outcome: Blocked (Recovery Attempt 2: history, live runtime and upstream source)
+
+Step results:
+- Step 1: Verified — `package.json` pins `2.120.0`; the lock changes only the `supabase` CLI package family; `@supabase/ssr` 0.12.0 and `@supabase/supabase-js` 2.110.0 are unchanged; `node_modules/.bin/supabase.cmd --version` reports 2.120.0.
+- Step 2: Blocked — re-inspected live: eleven ORVION containers are up and Vector `7cf25140fb7b` has `.Mounts` `[]`, `DOCKER_HOST=http://host.docker.internal:2375` and RestartCount 12. The Docker context is `desktop-linux` (`npipe`), `ExposeDockerAPIOnTCP2375` is false, and nothing listens on port 2375.
+- Step 3: Not attempted.
+
+Root cause: Criterion 3 cannot be satisfied by a Windows-native CLI start, in either version. For an `npipe` daemon host, v2.109.0 (`apps/cli-go/internal/start/start.go`, `case "npipe"`) and v2.120.0 (`apps/cli/src/commands/start/services/vector.service.ts`, `resolveVectorDockerSocketPlan`) both set `DOCKER_HOST=http://host.docker.internal:2375` and create no bind. v2.109.0 prints "Analytics on Windows requires Docker daemon exposed on tcp://localhost:2375". Upstream `main` is unchanged. The upgrade introduced no regression.
+
+The socket-bound Vector `d1af37046680` was not created by the CLI. A Codex session on 2026-10-12, 21:17–21:20 EEST, created `supabase_vector_ORVION_repair_probe` with a manual read-only `/var/run/docker.sock` bind and renamed it into place. Before that, `reports/history` records Vector restarting continuously from 2026-08-21 to 2026-09-09. The Pre-Approval baseline was therefore a manual patch.
+
+The Consumer Closure missed one consumer: `.github/workflows/migration-ci.yml` pins `supabase/setup-cli` to 2.109.1.
+
+Remote acceptance of `5467328` (run 38305453692, Ubuntu, a fresh `db reset` with v2.120.0): the Gate, mutation suite and guard attack pass, and every migration applies. pgTAP fails 1 of 2969 tests: `155_an_allocation_spends_its_own_payment_on_its_own_invoice_test.sql` #68 reports `service_role` DELETE on `public.payment_allocations` as `true`. Root cause is an upstream regression. With `[api].auto_expose_new_tables` unset, v2.109.0 (`ApplyApiPrivileges`) revokes the Data API default privileges for `postgres` in `public`. v2.120.0 (`apps/cli/src/command-internal/db-bootstrap/db-setup.ts`, `applyApiPrivileges`, `Option.getOrElse(..., () => true)`) skips that revoke. Upstream `main` is unchanged. The two bundled Postgres images, 17.6.1.140 and 17.11.0.004, ship identical default ACLs, so the image change is not the cause. Primary, read-only: `service_role` already holds DELETE on all 78 `public` tables, so test 68 matches the old local stack but not Primary.
+
+No repair exists inside this contract. Exposing port 2375 is forbidden. A manual container patch is excluded by Criterion 3. Setting `[analytics] enabled = false` in `supabase/config.toml` is Out of Scope, and it removes Vector, so Criterion 3 still could not be true. The stack was not touched, and Docker was not reconfigured.
+
+### 2026-10-13 — Cancelled by human command before Complete
+
+- **The owner's decision of 2026-10-13:** cancel this blocked contract through the canonical lifecycle and prepare one narrowly scoped successor Draft (Option A). That Draft keeps project-local CLI 2.120.0, sets `[analytics] enabled = false` once evidence shows nothing in ORVION depends on local Supabase Analytics or Vector, and sets `[api] auto_expose_new_tables = false`. It does not waive its own approval gate and does not modify Primary.
+- **The defect.** Criterion 3 is false as written. A Windows-native CLI start cannot create a socket-bound Vector, and the baseline it described was a manual patch. A fresh v2.120.0 database also fails pgTAP 155 #68. Both findings are in the Execution Log and Verification Notes above.
+- **Alternative evidence kept for the record.** A standalone Linux v2.120.0 binary running inside Ubuntu WSL2 (isolated project `supabase-vector-probe`) recreated a healthy Vector, `c7ba553b0c17`, with a read-only `/var/run/docker.sock` bind and no port 2375. That binary is not this contract's lockfile-pinned project-local executable, and it does not affect the pgTAP regression. It remains a possible future alternative, not an ORVION dependency.
+- **Preserved:** every commit of this contract (`1975890`, `303bb9c`, `7718f01`, `4ad937f`, `5467328`) and all of its evidence. Nothing is rewritten. The 2.120.0 pin is carried forward to the successor as Already Applied.
 
 ## Verification Notes
 
-None.
+### 2026-10-12 — Independent Review of the In Progress execution at `5467328`
+
+Verdict: Needs Corrective Change Request
+
+1. Criterion 1: true (see the Step 1 result above).
+2. Criterion 2: true. The executable reports 2.120.0, but its fresh `db reset` no longer revokes the Data API default privileges (see the Execution Log). Pinning `[api] auto_expose_new_tables = false` in `supabase/config.toml` restores the v2.109.0 behaviour, and that file is Out of Scope here.
+3. Criterion 3: false. It cannot be met on a Windows Docker Desktop host without exposing an unauthenticated daemon or patching a container manually.
+4. Criterion 4: true. `5a32f5b..5467328` changes only `package.json`, `package-lock.json`, `_ORVION_CANONICAL/manifest.md`, `ai-map.json` and this contract.
+
+Completing the upgrade needs a human decision: cancel this contract, then approve a replacement whose criterion matches what the supported CLI does on this platform.
 
 ## Review Gate
 
