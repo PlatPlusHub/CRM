@@ -53,7 +53,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: 2
 Blocker: None
 Recovery Attempt: 0
 

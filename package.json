@@ -1,6 +1,6 @@
 {
   "devDependencies": {
-    "supabase": "^2.109.0"
+    "supabase": "2.120.0"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
