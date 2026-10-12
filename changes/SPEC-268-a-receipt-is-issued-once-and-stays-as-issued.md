@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -305,12 +305,16 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-12 — Gate 1 approval and execution started
+
+- **Authority:** the owner's execution authorization of 2026-10-12 approves Gate 1 for this receipts contract, which it names SPEC-266, the number it was drafted under. The renumbering is recorded in Notes and is mechanical: the allocator refused SPEC-266 as `SPEC_ID_ALREADY_USED`, and the owner's authorization covers numbering reconciliation that preserves the approved substance. Draft `fb81eb0`, contract SHA-256 `22ae36c585b51a6a848a89cc430a12d175ba2e0bba9e393fb81926a40ea2afe9` (32384 bytes, LF). Approval was committed at `c4a822c`; its pre-commit Gate returned `APPROVAL_EVIDENCE: PASS`.
+- **Verified before acting:**
+  - HEAD was the Approve commit, on top of SPEC-265's Complete commit `2049f2e`. It is 8 ahead of and 0 behind `origin/main` `f6c30d0`, with 0 merges, and `2049f2e` is the published candidate awaiting its CI;
+  - the committed Draft blob hashes to the approved value;
+  - the frozen prototype migration in the owner's `ORVION-drafts-backup\2026-10-12` is `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, 9882 bytes, 0 CR, ASCII;
+  - test 156, re-derived by changing only its first-line contract number, is `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2`, md5 `50e7678414f7467cab2d678b2f3a88df`, 18773 bytes, LF, ASCII.
+- **Preconditions:** the migration and test 156 are absent from the tree.
+- **Gate 2 stands before Step 6.** The same authorization grants a separate, exact-byte Gate 2 for migration `20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql`, SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, to Primary `vrvtsxexkiiiivlkdxzp` only. It is valid only if every pre-deployment condition passes: exact content, HEAD and scope, project identity, the expected ledger with the migration absent, the function and structural fingerprints, the business counts and receipt objects, the mandatory local and adversarial tests, no unexpected drift, and the readiness gate. It is recorded at Step 5 only if Step 4 passes. It covers no other migration. Secondary is never contacted.
 
 ## Verification Notes
 
