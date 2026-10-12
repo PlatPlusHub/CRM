@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -189,12 +189,14 @@ Every file is written LF. Each SHA-256 below is of the LF form, as Git stores it
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-12 — Gate 1 approval and execution started
+
+- **Authority:** the owner's execution authorization of 2026-10-12 approves Gate 1 for SPEC-265, SPEC-266 and SPEC-267, in the order the allocation rule requires, with SPEC-265 first. For this contract it covers Draft `872babb5614703c3c52937d92afdceb684cfe3bd`, contract SHA-256 `796bf1d460cc4bb3960be52b463b9127c94e8d70ac48252e8de85b3e61d05380` (16435 bytes, LF). It authorizes no credential, Google Ads script, account change or n8n change. Approval was committed at `b73710b`, and its pre-commit Gate accepted it.
+- **Verified before acting:**
+  - HEAD was the Approve commit, 2 ahead of and 0 behind `origin/main` `f6c30d0`, with 0 merges, and the only worktree is the main one;
+  - the committed Draft blob hashes to the approved value;
+  - the prototype patch `spec265-prototype-v2.patch` (SHA-256 `1d17c97f26da6dbe215a1f25494c56d301b9f236c3eec3d69389f8d4099c2a6a`, durable copy in the owner's `ORVION-drafts-backup\2026-10-12`) applies cleanly to HEAD and touches only the eight Write Scope files Steps 1–4 name.
+- **The other two approved Drafts** are held outside the working tree until their turn. The Gate counts an untracked contract file in `changes/` as an out-of-scope write of the governing contract, which refused this approval commit until they were moved.
 
 ## Verification Notes
 
