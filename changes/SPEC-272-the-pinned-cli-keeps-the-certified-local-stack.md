@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -193,12 +193,12 @@ Post-Implementation Proof Obligation: The certified `-Finish` passes the full DA
 
 ## Acceptance Criteria
 
-- [ ] `package.json` and `package-lock.json` are byte-identical to `3c93c1c` and pin `supabase` to `2.120.0`, and `node_modules/.bin/supabase.cmd --version` reports `2.120.0`.
-- [ ] `supabase/config.toml` sets `auto_expose_new_tables = false` under `[api]` and `enabled = false` under `[analytics]`. Its diff from `3c93c1c` contains only those two settings and their comments, and no comment in it states a default the pinned CLI does not have.
-- [ ] `.github/workflows/migration-ci.yml` contains no `supabase/setup-cli`, contains `npm ci` exactly once, and invokes the CLI in all four places only as `node_modules/.bin/supabase`. Its `on:` block is byte-identical to `3c93c1c`.
-- [ ] A newly created ORVION stack started by the project-local executable after Step 2 has no `supabase_vector_ORVION` or `supabase_analytics_ORVION` container. Every other ORVION container was recreated and is running, healthy where it has a healthcheck, without a manual patch or port 2375.
-- [ ] After the local reset, `pg_default_acl` for role `postgres` on tables in `public` reads `postgres=arwdDxtm/postgres,service_role=Dxtm/postgres`.
-- [ ] The tracked implementation diff touches only Write Scope: no migration, test, application, package, workstation or other workflow file changes.
+- [x] `package.json` and `package-lock.json` are byte-identical to `3c93c1c` and pin `supabase` to `2.120.0`, and `node_modules/.bin/supabase.cmd --version` reports `2.120.0`.
+- [x] `supabase/config.toml` sets `auto_expose_new_tables = false` under `[api]` and `enabled = false` under `[analytics]`. Its diff from `3c93c1c` contains only those two settings and their comments, and no comment in it states a default the pinned CLI does not have.
+- [x] `.github/workflows/migration-ci.yml` contains no `supabase/setup-cli`, contains `npm ci` exactly once, and invokes the CLI in all four places only as `node_modules/.bin/supabase`. Its `on:` block is byte-identical to `3c93c1c`.
+- [x] A newly created ORVION stack started by the project-local executable after Step 2 has no `supabase_vector_ORVION` or `supabase_analytics_ORVION` container. Every other ORVION container was recreated and is running, healthy where it has a healthcheck, without a manual patch or port 2375.
+- [x] After the local reset, `pg_default_acl` for role `postgres` on tables in `public` reads `postgres=arwdDxtm/postgres,service_role=Dxtm/postgres`.
+- [x] The tracked implementation diff touches only Write Scope: no migration, test, application, package, workstation or other workflow file changes.
 
 ## Execution Log
 
@@ -222,17 +222,33 @@ Commits: the implementation and checkpoint commit that carries this entry.
 
 ## Verification Notes
 
-None.
+### 2026-10-13 01:31 — Claude (Independent Review of `4343b15`)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository and runtime after `-Finish`, not against the Execution Log.
+
+1. **Criterion 1.** `git diff --quiet 3c93c1c HEAD -- package.json package-lock.json` exits 0. `package.json`, the lock entry `node_modules/supabase` and `node_modules/.bin/supabase.cmd --version` each read `2.120.0`.
+2. **Criterion 2.** `git diff -U0 3c93c1c HEAD -- supabase/config.toml` has two hunks: the `[api]` comment rewrite with `auto_expose_new_tables = false`, and the `[analytics]` comment with `enabled = false`. The old "When unset, new entities are NOT auto-exposed" text is gone.
+3. **Criterion 3.** `migration-ci.yml` has `run: npm ci` once and `supabase/setup-cli` zero times. All four CLI calls use `node_modules/.bin/supabase` (`start`, `db reset`, `test db`, `stop || true`), and no bare `run: supabase` remains. Everything before `jobs:` is byte-identical to `3c93c1c`.
+4. **Criterion 4.** There is no `supabase_vector_ORVION` or `supabase_analytics_ORVION` container. Ten ORVION containers are running. Auth, db, inbucket, kong, pg_meta, realtime, storage and studio are healthy. Rest and edge_runtime have no configured healthcheck and show 0 restarts. Nothing listens on port 2375. Step 4 recorded recreation with new IDs, and `db reset` later recreated db again (`5c53e77dc02f`).
+5. **Criterion 5.** `pg_default_acl` for `postgres` on tables in `public` reads `postgres=arwdDxtm/postgres,service_role=Dxtm/postgres`, and `has_table_privilege('service_role','public.payment_allocations','DELETE')` is false.
+6. **Criterion 6.** `git diff --name-only 3c93c1c HEAD` lists exactly `.github/workflows/migration-ci.yml`, `_ORVION_CANONICAL/manifest.md`, `ai-map.json`, `supabase/config.toml` and this contract. The migrations, tests, packages, `.workstation/**`, the other workflows and the control scripts are untouched.
+7. **Local certification.** `-Finish` at `4343b15` ran with `npm_config_offline=true` after the backup was re-validated (`pg_restore -l` exit 0, SHA-256 `5810f90e…8c87`) and the CLI version was checked. Every mandatory and additional command passed: `npx supabase db reset`, pgTAP Pass A, the six HTTP suites, pgTAP Pass B after them, `verify_database.sql` (in the suite slot and again in its protocol position), `check_database_parity_evidence.ps1`, `check_repository_consistency.ps1`, `git diff --check` and `npm ls supabase --depth=0`. Result: `LOCAL_CERTIFY: READY`, 7.5 min, `concurrent=0`.
+8. **Supersedes.** `changes/SPEC-271-upgrade-project-local-supabase-cli-to-2-120-0.md` is `Cancelled` at `3c93c1c` and is unchanged here.
+9. **No new architectural decision.** Both settings restore the behaviour certified under v2.109.0, and `migration-ci.yml` reuses ORVION Acceptance's existing install mechanism. The owner authorized completion in advance (Gate 2, 2026-10-13).
+
+Recommendation to human: Set Status to Complete (performed by the executing agent under the owner's advance Gate 2 authorization and `CR_LIFECYCLE.md` §5).
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
