@@ -305,6 +305,18 @@ Every file is written LF. The "from" hashes are the committed bytes at `04f541e`
   - every one of the fifteen files holds its pinned "from" bytes at `04f541e`, the delivery assessment is absent, and the guard does not yet contain `== Check 29: the action registry`.
 - **Not authorized here:** any database, Primary, Secondary, n8n or Google surface, and any answer to an OD row.
 
+### 2026-10-12 — Step 1 applied; Step 2 verified
+
+- **Step 1.** `scripts/check_repository_consistency.ps1` did not contain `== Check 29: the action registry`. Each file was checked against its "from" hash, then written from the rebased prototype and checked against its "to" hash, all LF:
+  - The fourteen copied files match both their "from" and "to" hashes.
+  - The manifest is compared with `Active Change Request: None.` restored, the value it holds at `04f541e` and at Complete. The Approve commit's pointer stays until Step 4.
+  - The delivery assessment was absent and is created.
+  - `ai-map.json` was regenerated, not copied. Its output equals the prototype's regeneration (`5e6b0be4…`) except for two fields: `generated_at`, a time the generator stamps on every run, and `active_change_request`, the Approve commit's pointer. No hash that carries a generation time can reproduce, so this is the reproducible form of the check.
+- **Step 2:**
+  - `scripts/readiness_population.ps1 -Registry`: `registry: DUE NOW 22, BLOCKED 21, NOT DUE 36, ACCEPTED RESIDUAL 28, FUTURE-ONLY 58` and `REGISTRY: complete -- every open member is classified once, and nothing is overdue`, exit 0.
+  - `scripts/readiness_selftest.ps1`: `== 26 passed, 0 failed ==`, exit 0.
+  - `REPOSITORY CONSISTENCY: CLEAN`, Check 29 included. `git diff --check` is clean.
+
 ## Verification Notes
 
 ## Review Gate

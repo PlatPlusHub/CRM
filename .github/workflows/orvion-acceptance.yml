@@ -90,7 +90,7 @@ jobs:
       - name: Attack the guards themselves
         shell: pwsh
         run: |
-          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard') {
+          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard','readiness_selftest') {
             pwsh -File "scripts/$suite.ps1"
             if ($LASTEXITCODE -ne 0) { throw "$suite FAILED (exit $LASTEXITCODE)" }
           }

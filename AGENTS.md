@@ -89,6 +89,7 @@ This section is the **single authoritative boot sequence**; its executable entry
 | Coding/SQL/security conventions | `CODING_STANDARDS.md` |
 | Ratified decisions | `reports/architecture-decision-records.md` |
 | Findings / deferred triggers | `reports/master/MASTER_GAP_REGISTER.md` / `reports/future-backlog.md` |
+| What is open, due now, blocked or waiting, and why | `MASTER_EXECUTION_PLAN.md` Action registry; `scripts/readiness_population.ps1 -Registry` prints it |
 | Integration contracts/targets | `reports/master/MASTER_INTEGRATION_CATALOG.md` |
 | File discovery | `repository-index.md` / generated `ai-map.json` |
 

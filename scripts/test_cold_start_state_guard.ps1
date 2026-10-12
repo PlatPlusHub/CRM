@@ -100,8 +100,14 @@ try {
         "exit=$($base.Exit)"
     Check 'CONTROL: Check 10 reports exactly ONE live cold-start declaration' `
         ($base.Text -match 'exactly one live cold-start declaration')
-    Check 'CONTROL: the open-decision set is the current ENUMERATION (3)' `
-        ($base.Text -match 'checked against 3 open id\(s\)')
+    # SPEC-269: the expected count is read from the manifest's enumeration, not pinned. A pinned 3
+    # failed the moment the owner decisions OD-1...OD-9 were recorded, which made recording a decision
+    # cost a test edit. Counted independently of the guard: the bold ids before the line's first full stop.
+    $decLine = (Get-Content (Join-Path $Sandbox '_ORVION_CANONICAL/manifest.md') | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
+    $decEnum = [regex]::Split("$decLine", '\.(\s|$)')[0]
+    $decCount = @([regex]::Matches($decEnum, '\*\*([A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-[0-9]+[a-z]?)\*\*') | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique).Count
+    Check "CONTROL: the open-decision set is the current ENUMERATION ($decCount)" `
+        ($decCount -gt 0 -and $base.Text -match "checked against $decCount open id\(s\)")
     # The regression, stated as a property of the real file rather than of a fixture: the manifest's
     # decision line still MENTIONS a settled id in its prose, and the guard no longer counts it.
     $decLine = ((Read-S $MANIFEST) -split "`n" | Where-Object { $_ -match 'Open owner decisions' } | Select-Object -First 1)
@@ -304,6 +310,47 @@ try {
         ($code -ne 0 -and $out -match 'MISSING: scripts/check_primary_ledger\.ps1') "exit=$code"
 
     Write-S $LEDGER $ledgerReal
+
+    # =============================================================================================
+    Write-Host "`n== F. PRINCIPLES AND THE ACTION REGISTRY (Checks 27/29, SPEC-269) ==" -ForegroundColor Cyan
+    # =============================================================================================
+    # GOV-25 and CTRL-9 were each a guard that measured less than it claimed. These pin, permanently
+    # and in CI, that the four decision rules cannot leave ENGINEERING_METHOD.md and that an open
+    # obligation cannot leave the Action registry, in either direction, without the guard failing.
+    $METHOD = 'ENGINEERING_METHOD.md'; $PLAN = 'reports/master/MASTER_EXECUTION_PLAN.md'
+    $methodOriginal = Read-S $METHOD
+    $ruleStart = $methodOriginal.IndexOf('**Four decision rules (owner-ratified 2026-10-08)')
+    $ruleEnd   = $methodOriginal.IndexOf('**Fundamental Domain Structure')
+    Check 'F-precondition: the four decision rules paragraph is present' ($ruleStart -ge 0 -and $ruleEnd -gt $ruleStart)
+    Write-S $METHOD $methodOriginal.Remove($ruleStart, $ruleEnd - $ruleStart)
+    $r = Invoke-Guard
+    Check 'F1 MUTATION: deleting the four decision rules fails Check 27' `
+        ($r.Exit -ne 0 -and $r.Text -match "RELOCATED RULE LOST: ENGINEERING_METHOD\.md no longer contains '- \*\*WORTH IT\.\*\*'") $r.Exit
+    Restore-S $METHOD
+
+    $planOriginal = Read-S $PLAN
+    $payRow = [regex]::Match($planOriginal, '(?m)^\| PAY-9 \|[^\r\n]*\r?\n').Value
+    Check 'F-precondition: the registry classifies PAY-9 and B6-EXIT is NEXT' ($payRow -and $planOriginal.Contains('| Batch 6, this plan | NEXT |'))
+    Write-S $PLAN $planOriginal.Replace($payRow, '')
+    $r = Invoke-Guard
+    Check 'F2 MUTATION: an open finding no registry row classifies fails Check 29' `
+        ($r.Exit -ne 0 -and $r.Text -match 'UNCLASSIFIED: PAY-9') $r.Exit
+    Write-S $PLAN $planOriginal.Replace('| Batch 6, this plan | NEXT |', '| Batch 6, this plan | REACHED 2026-10-12 probe |')
+    $r = Invoke-Guard
+    Check 'F3 MUTATION: a REACHED boundary with its items open fails Check 29 as OVERDUE' `
+        ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: ENTRY-1 -- boundary B6-EXIT') $r.Exit
+    Restore-S $PLAN
+
+    $registerNow = Read-S $REGISTER
+    $payRegister = [regex]::Match($registerNow, '(?m)^\| PAY-9 \|[^\r\n]*\r?\n').Value
+    Check 'F-precondition: the register carries PAY-9' ([bool]$payRegister)
+    Write-S $REGISTER $registerNow.Replace($payRegister, '')
+    $r = Invoke-Guard
+    Check 'F4 MUTATION: a finding deleted from the register while its registry row remains fails Check 29' `
+        ($r.Exit -ne 0 -and $r.Text -match 'UNKNOWN ID: PAY-9') $r.Exit
+    Restore-S $REGISTER
+    $r = Invoke-Guard
+    Check 'F-restore: the method, the plan and the register are back and the guard is CLEAN again' ($r.Exit -eq 0) $r.Exit
 
     # =============================================================================================
     Write-Host "`n== CONTROL, LAST (second direction) ==" -ForegroundColor Cyan

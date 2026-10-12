@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative execution plan.** Never recreate; evolve. Batches are ordered by *foundation-reopen risk first*, not by roadmap phase. Implementation timing is the owner's; this plan states the safest order and dependencies so any batch can be executed directly from the Master documents. Cross-reference: `MASTER_GAP_REGISTER.md`, `MASTER_DEPENDENCY_GRAPH.md`.
 
-Last updated: 2026-10-11 (**Two members join the readiness gate's closure queue.** GADS-1 joins by the owner's decision D4, which makes read-only Google Ads reporting a Day-1 function in canon 01 while nothing implements it (ADR-0030). PAY-9 was recorded open by SPEC-264, and `scripts/readiness_population.ps1` named it as the one id this section did not classify. No class, order or criterion changed, and the owner's sequence is unchanged.)
+Last updated: 2026-10-12 (**The readiness gate gains its Action registry (SPEC-269).** Its prose classes become two tables: the boundaries, each with its state, and one row per open id with its class, decider, boundary, what it waits on and its treatment. `scripts/readiness_population.ps1` derives each id's trigger state, and Check 29 fails a guard run that leaves an open member unclassified or a boundary crossed with its items open. PAY-9 is classified, GADS-1 (placed by SPEC-265) is a `REQUIRED CAPABILITY`, and the owner decisions OD-1…OD-9 join. SUB-4's row is pruned, because SPEC-250 closed it. No class changed.)
+
+Previously: 2026-10-11 (**Two members join the readiness gate's closure queue.** GADS-1 joins by the owner's decision D4, which makes read-only Google Ads reporting a Day-1 function in canon 01 while nothing implements it (ADR-0030). PAY-9 was recorded open by SPEC-264, and `scripts/readiness_population.ps1` named it as the one id this section did not classify. No class, order or criterion changed, and the owner's sequence is unchanged.)
 
 Previously: 2026-10-09 (**The readiness gate's population is now derived by `scripts/readiness_population.ps1` (SPEC-249).** Its replay of the first derivation at `523888d` reads every id of a shared register row, as the register's own resolver does, and finds 446 ids with 124 not settled. BF-7, which the first reading left unplaced, is placed with CDD-5/BF-6. No class, order or criterion changed.)
 
@@ -1745,69 +1747,106 @@ Twenty-one surfaces are `AUDITED-OPEN` (18) or `PARTIAL` (3). The manifest's ope
 
 **Corrected 2026-10-09 (`SPEC-249`).** `scripts/readiness_population.ps1` replayed this derivation at `523888d`. It reads a shared row such as `CDD-5/BF-6/BF-7` as one finding per id, as the register's resolver does, and finds **446** ids: **322** settled and **124** not (106 open vocabulary, 8 other, 10 block only). The surfaces and the decision line are unchanged. Of the five additional members, B3, BF-3, CDD-4 and BF-6 were already placed below beside their row siblings. **BF-7** had been left unplaced and is now placed with CDD-5/BF-6.
 
-**Closure queue — verified defects inside a Day-1 boundary, in order:**
+### Action registry (SPEC-269, 2026-10-12)
 
-| # | Ids | Class and measured impact | Boundary | Owner and fix unit |
-|---|---|---|---|---|
-| 1 | SUB-4 | VERIFIED DEFECT. The Platform Owner's subscription transition judges canon 26 on a state read before the row lock, so a racing redemption yields an `active → suspended` move canon does not allow, recorded under a stale from-state | before the first production subscription | engineering: **the next correction, ahead of Batch 6 Slice 35** — the owner's justified selector exception, taken while the runtime functions and the scenario are current. Lock, revalidate and record a truthful from-state in `app.platform_transition_subscription`, judge `app.platform_activate_subscription` the same way, prove it with two live sessions and causal mutants, and pass a separate exact-byte Gate 2. Its severity is re-measured by that correction |
-| 2 | USR-3 | VERIFIED DEFECT, High. An `aal1` `ceo` self-granted a permission and self-assigned a branch at the table door | before the first production tenant | engineering: the Batch 6 slice of `user_permission_grants` or `user_branch_assignments`, whichever the selector reaches first. It is the strongest candidate for the next justified exception |
-| 3 | BOOK-11, BOOK-12 | VERIFIED DEFECT, Medium. Door cancellation leaves no reason, stamp or event; the customer can be rebound before issuance | before the first production booking | engineering. BOOK-12 also needs the rule for when a booking's customer freezes, derived from canon and escalated to the owner only if it is not derivable |
-| 4 | PAY-5, FIN-11 | VERIFIED DEFECT, Low. An allocation made at the door leaves the invoice's status unchanged and records no event | before enabling the invoice, allocation or collections workflow | engineering: one unit — a single authority derives invoice status and its event on both doors, as `app.record_payment` does |
-| 5 | RFD-3 | VERIFIED DEFECT, Medium. Legal direct refund writes move customer balance with no refund events | before enabling the refund workflow | engineering: refund event authority on both doors, without duplicating the RPC's emission |
-| 6 | PAY-4 | VERIFIED DEFECT, Low. The table accepts a zero-value payment coded as a customer refund | before the first production payment | engineering: a payment entry-shape rule derived from the sanctioned RPCs |
-| 7 | JE-2, DC-11 | VERIFIED DEFECT, Medium. An entry can balance across two currencies | before the first production journal entry | engineering with the finance model: decide DC-11, or contain the gap fail-closed by refusing a mixed-currency entry until the model is decided. Launch must never present a false balance |
-| 8 | ARCH-2, ENTRY-1, CAMP-2, STEPUP-1, PAX-4 | VERIFIED DEFECT, Medium, for ARCH-2 and ENTRY-1; CAMP-2 is ENTRY-1's question and is answered with it. STEPUP-1 and PAX-4 are UNPROVEN class candidates, held here until each listed table's slice proves or dismisses its member; they never count as proven | each table's Batch 6 slice, so no READY can precede them (EC-1) | engineering: the per-surface Batch 6 slices |
-| 9 | LI-3 | VERIFIED DEFECT, Medium. A contact made at the door leaves the lead reading as never contacted | before the CRM workflow is enabled | engineering: decide whether a bare table insert may advance a lead's lifecycle, with FIN-9 and FIN-11's single answer on where side effects belong |
-| 10 | CHAT-2, CAMP-4, BRANCH-1, BRANCH-2, PAX-8 | VERIFIED DEFECT, Low. Audit and timeline evidence is missing at a table door, and each finding's measured bound is that nothing reads it | before the surface's workflow is enabled | engineering: each finding's recorded trigger. At the gate the bound is re-measured: if it still holds, the evaluation records the item as an explicit accepted residual; otherwise it is repaired. It is never deferred silently |
-| 11 | PAY-9 | VERIFIED DEFECT, Medium (placed 2026-10-11). A booking paid in full through `app.record_payment` still owes its whole invoice in the booking-scoped balance, so issuing it would charge the negative-balance override | before the first production booking is issued | engineering: one balance-model correction that links a payment to its booking through its allocation, decided with BOOK-12's rule |
-| 12 | GADS-1 | VERIFIED DEFECT, High (placed 2026-10-11): a Day-1 function canon 01 requires and nothing provides — read-only Google Ads reporting, by the owner's decision D4 | before the first production tenant | engineering, then owner: after Batch 6's exit criteria hold, ADR-0030's contracts — the integration RPCs and tables, then the n8n receiving workflow and the repository-held script, which the owner installs and authorizes in Google Ads (`MASTER_INTEGRATION_CATALOG.md §5.2`), then the screens. Nothing is bought or applied for |
+This is ORVION's one list of open obligations. It answers, for every member of the derived population: what is open, what class it is, who decides, the latest safe boundary, what it waits on, and how it closes. It holds no status. A finding's status, severity, title and evidence stay in `MASTER_GAP_REGISTER.md`, and each surface's disposition stays in `MASTER_SURFACE_DISPOSITION.md`. A row here is a classification of an id, so where the two disagree the register wins and the row is stale.
 
-**Business policy:**
-- **OPS-1** — the owner sets RPO and RTO. Engineering then documents them and proves a restore. Both must happen before the first production tenant, because operational recovery is a READY criterion.
-- **DC-12** — canon 01 lists family or related travellers. Whether the first release must support them is the owner's release-scope decision; until then it is not claimed.
-- **DC-10, DC-28** — whether launch tenants bring legacy balances or records. No import path exists, so a tenant starts empty until the owner decides.
+**How to read it.** `pwsh -NoProfile -File scripts/readiness_population.ps1 -Registry` joins each id to its register row and prints one line per open member with its trigger state; `-Tsv <file>` writes the same join. Check 29 of `scripts/check_repository_consistency.ps1` runs that derivation, so every Boot, Gate, `-Finish` and CI run of the guard fails when the registry is incomplete, contradictory or overdue.
 
-**External or legal dependencies — each feature stays disabled and unclaimed until its dependency closes:**
-- **MAIL-1** — the provider, and the PDPC cross-border licence naming its destination.
-- **RET-1** — counsel's retention periods; no policy is seeded and nothing is destroyed until then.
-- **PH8-10** — Google's evidence that click-less phone conversions are attributed. **CONV-9** reopens with it.
-- **PH8-7, PH8-8** — corrections to Google's Data Manager contract, applied when the n8n workflow is built and checked before it is enabled.
-- **DC-4** — counsel's reading of PDPL erasure obligations, before the first production personal data.
-- **DC-22** — data residency, once the jurisdiction is confirmed.
-- **R3, BF-4/CDD-4** — tax and ETA e-invoicing obligations. Until then an ORVION invoice is an internal record and is never claimed as a tax document (VOID-1).
+**Trigger state is derived, never typed.** For each id, the first rule that applies decides it:
+1. **COMPLETED**: the register settles the id and the manifest's open-decision line does not name it. It is never new work. Its row is pruned at the next edit of this section.
+2. **OVERDUE**: its boundary below is `REACHED` and the id is still open. This fails the guard: a boundary was crossed with the obligation unmet.
+3. **BLOCKED**: class BUSINESS POLICY or EXTERNAL / LEGAL. It waits on the named decider, and its feature stays disabled until then.
+4. **ACCEPTED RESIDUAL** or **FUTURE-ONLY**: the class itself. Its own trigger, recorded in its register row or its boundary, reopens it.
+5. **DUE NOW**: its boundary is `NEXT`.
+6. **NOT DUE**: anything else.
 
-**Accepted residuals — reason and containment are in each row:**
-- **Product:**
-  - **FIN-9** — the residual writer is only the platform writer. The gate re-checks that the platform's operational write path uses the RPC.
-  - **JE-6** — reopened by the first reader of `source_entity_id`.
-  - **CONV-10** — no client exposes the manual door, and it must not be exposed before the item is repaired.
-  - **MONEY-3** and **CUST-6** (the latter proven intentional).
-  - **USR-4**, **ORIG-1**, **PLACE-2**, **CAP-1** — each latent or unproven, with its trigger.
-  - **DC-15** — `service_role` is never a client credential, and integrations use `orvion_integration`.
-  - **DEAD-3**, **DEAD-4**.
-- **Control plane and governance**, none a Day-1 business function — GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27; and CTRL-5, CI-2, TEST-4, PERF-2, OPS-3 and OPS-4, recorded on 2026-10-09 from the engineering review, and CTRL-6 (SPEC-255). The control-plane chapter is closed, and each reopens only on its own trigger.
+The guard also fails on any of these:
+- an open member that no row classifies;
+- an id that two rows classify;
+- a row naming an id the register, the disposition record and the decision line do not know;
+- a class or a boundary outside the vocabularies below;
+- a row with an empty Decides or Treatment cell.
 
-**Terminal in substance — not genuinely open, so no release class; register hygiene only:**
-- **OPS-2**, **RLS-1**, **API-2**, **TAX-1** and **FIN-DOC-1** each carry a terminal verdict outside the guard's settled vocabulary: implemented, merged, delivered, retracted, and closed respectively.
-- **N1**, **DC-5**, **RC-4**, **R8/B3** and **RC-1** still read `DESIGN-READY` although shipped migrations implement them, in whole or in part: `202607049100` (event registry), `202607054600` (document storage), `202607048900` (reporting read model), `202607048800` (business keys), and the subscription lifecycle behind `app.process_subscription_lifecycle` and `app.plan_allows`. They are re-verified and settled at the first evaluation, and are not release work.
+**Completion evidence is uniform.** An item closes when its register status opens with the settled vocabulary, citing the contract and the tests that prove it. A surface closes when its disposition leaves `AUDITED-OPEN` or `PARTIAL`. A decision closes when the owner's answer is recorded in its authority and the id leaves the manifest's decision line.
 
-**Future-only — none is a Day-1 function, and nothing exists to enable:**
-- **Design-accepted builds with their batch:** R1, R2, R4 (with DC-7), R6, INV-1, N5, CDD-1/BF-3, CDD-2, CDD-3, CDD-5/BF-6/BF-7, CDD-6, CDD-7, CDD-9, CDD-10, CDD-11, BF-1, BF-2, BF-5, BF-8, BF-9, BF-10, BF-11, BF-12, RC-2, FOE-4, FOE-5, FOE-6, FOE-8, DEAD-2, AUDIT-5, CONV-3.
-- **Hardening, optional or evidence-gated:** DC-6, DC-8, DC-9 (the SLA is elapsed-time and reads no business hours today), DC-13, DC-14, DC-17, DC-18, DC-19, DC-20, DC-21, DC-23, DC-24, DC-25, DC-26, DC-29, B1, B2, B6, B7, B8.
-- **Enablement-gated:**
-  - **DC-2** must exist before the first client application writes.
-  - **DC-3** before inventory ships.
-  - **RPC-1**'s remaining permissions are re-measured under EC-2.
+**Capture.** A new open finding, a new owner decision or a new surface obligation enters this table in the same change that registers it. The guard refuses the change otherwise. `ENGINEERING_METHOD.md` §3 "Measurement integrity" owns the capture rule.
 
-**Surfaces, from `MASTER_SURFACE_DISPOSITION.md`:**
-- The fourteen `AUDITED-OPEN` rows whose open findings are listed above carry no separate class.
-- `booking_item_passengers`, `booking_items` and `financial_accounts` still read `AUDITED-OPEN` for decisions the register has since settled (PAX-5, PAX-6, BOOK-8, BOOK-9, FA-2). They are re-dispositioned at the first evaluation (EC-8).
-- `trusted_devices` stays open by design, under its pinned bound.
-- **The three `PARTIAL` rows:**
-  - `documents` and `quotations` leave two axes unclassified: door-created event parity, which is queue item 10's family, and a caller-writable `created_at`, a cross-table candidate read only by `app.financial_documents`' listing. Both are re-swept at the first evaluation.
-  - `offline_conversions` waits on the Phase-8 workflow, which is evaluated before that enablement.
+**Boundaries.** A row's latest safe boundary is one of these keys. Only a Change Request moves a state. `REACHED` carries its date and the evidence that it was crossed.
 
-**The order stays the owner's.** Batch 6 → bounded Phase-8 revalidation → n8n and Data Manager → the Direct Call Quality Feedback Loop → PH8-10 → the Smart Bidding decision → Phase-8 closure (`_ORVION_CANONICAL/32_execution_roadmap.md`). Inside Batch 6, `scripts/batch6_select_target.ps1` keeps choosing the slice. This queue reorders nothing silently: an item it names first is an explicit, recorded exception with its reason, and SUB-4 is the only one taken.
+| Boundary | Crossed when | Roadmap link | State |
+|---|---|---|---|
+| `B6-EXIT` | Batch 6's EC-1…EC-11 hold; inside it `scripts/batch6_select_target.ps1` chooses each slice | Batch 6, this plan | NEXT |
+| `GATE-EVAL` | this gate is first evaluated, before the first production tenant | this section | NOT REACHED |
+| `FIRST-TENANT` | the first production tenant is provisioned on Primary | `32` go-live | NOT REACHED |
+| `FIRST-SUBSCRIPTION` | the first production subscription | `32` Phase 3 | NOT REACHED |
+| `FIRST-PERSONAL-DATA` | the first production personal data is stored | `32` Phase 4 | NOT REACHED |
+| `FIRST-BOOKING` | the first production booking | `32` Phase 5 | NOT REACHED |
+| `FIRST-PAYMENT` | the first production payment | `32` Phase 6 | NOT REACHED |
+| `FIRST-JOURNAL-ENTRY` | the first production journal entry | `32` Phase 6 | NOT REACHED |
+| `ENABLE-CRM` | the CRM workflow is enabled for staff | `32` Phase 4 | NOT REACHED |
+| `ENABLE-INVOICING` | the invoice, allocation or collections workflow is enabled | `32` Phase 6 | NOT REACHED |
+| `ENABLE-REFUNDS` | the refund workflow is enabled | `32` Phase 6 | NOT REACHED |
+| `ENABLE-SURFACE-WORKFLOW` | the workflow of the finding's own surface is enabled | per surface | NOT REACHED |
+| `ENABLE-CLIENT-WRITES` | a client application first writes | frontend, OD-9 | NOT REACHED |
+| `ENABLE-INVENTORY` | inventory ships | Batch 5 | NOT REACHED |
+| `ENABLE-EMAIL` | email dispatch is enabled | `32` Phase 10 | NOT REACHED |
+| `ENABLE-CONVERSION-DELIVERY` | the n8n Data Manager delivery workflow is enabled | `32` Phase 8 | NOT REACHED |
+| `ENABLE-RETENTION` | any retention destroys a record | `32` Phase 7 | NOT REACHED |
+| `ENABLE-TAX-DOCUMENTS` | an ORVION invoice is claimed as a tax document | `32` Phase 6, VOID-1 | NOT REACHED |
+| `OWN-TRIGGER` | the trigger recorded in the item's own register row | the row | PER ITEM |
+
+**Classification.** Class is one of the five release classes above, or one of three labels:
+- `REQUIRED CAPABILITY`: a Day-1 function that canon or a ratified ADR requires and nothing implements. It is a missing build, not a reproduced defect, so it is never claimed until built, and its boundary works like a defect's.
+- `TERMINAL IN SUBSTANCE`: register hygiene, not release work.
+- `SURFACE`: an open disposition that follows its findings. The rows keep the 2026-10-08 reading and its corrections. SUB-4, queue item 1 of that reading, was closed by SPEC-250, and its row is pruned.
+
+| Ids | Class | Decides | Boundary | Waits on | Treatment |
+|---|---|---|---|---|---|
+| USR-3 | VERIFIED DEFECT | engineering | `FIRST-TENANT` | — | High. An `aal1` `ceo` self-granted a permission and self-assigned a branch at the table door. Fixed by the Batch 6 slice of `user_permission_grants` or `user_branch_assignments`, whichever the selector reaches first; it is the strongest candidate for the next justified exception |
+| BOOK-11, BOOK-12 | VERIFIED DEFECT | engineering | `FIRST-BOOKING` | BOOK-12: the rule for when a booking's customer freezes, derived from canon and escalated to the owner only if not derivable | Medium. Door cancellation leaves no reason, stamp or event; the customer can be rebound before issuance |
+| PAY-9 | VERIFIED DEFECT | engineering | `FIRST-BOOKING` | BOOK-12's rule, a consumer of the same balance | Medium. A booking paid through `app.record_payment` still owes its invoice in the booking-scoped balance, so issuing it would charge the negative-balance override. One balance-model unit that counts a payment through its allocation |
+| PAY-5, FIN-11 | VERIFIED DEFECT | engineering | `ENABLE-INVOICING` | — | Low. A door allocation leaves the invoice's status unchanged and records no event. One unit: a single authority derives invoice status and its event on both doors, as `app.record_payment` does |
+| RFD-3 | VERIFIED DEFECT | engineering | `ENABLE-REFUNDS` | — | Medium. Legal direct refund writes move customer balance with no refund events. Refund event authority on both doors, without duplicating the RPC's emission |
+| PAY-4 | VERIFIED DEFECT | engineering | `FIRST-PAYMENT` | — | Low. The table accepts a zero-value payment coded as a customer refund. A payment entry-shape rule derived from the sanctioned RPCs |
+| JE-2, DC-11 | VERIFIED DEFECT | engineering | `FIRST-JOURNAL-ENTRY` | the finance model (OD-1) | Medium. An entry can balance across two currencies. Decide DC-11, or contain the gap fail-closed by refusing a mixed-currency entry until the model is decided; launch never presents a false balance |
+| ARCH-2, ENTRY-1, CAMP-2, STEPUP-1, PAX-4 | VERIFIED DEFECT | engineering | `B6-EXIT` | each listed table's slice | Medium for ARCH-2 and ENTRY-1; CAMP-2 is ENTRY-1's question and is answered with it. STEPUP-1 and PAX-4 are UNPROVEN class candidates held here until each table's slice proves or dismisses its member; they never count as proven (EC-1) |
+| LI-3 | VERIFIED DEFECT | engineering | `ENABLE-CRM` | FIN-9 and FIN-11's single answer on where side effects belong | Medium. A contact made at the door leaves the lead reading as never contacted. Decide whether a bare table insert may advance a lead's lifecycle |
+| CHAT-2, CAMP-4, BRANCH-1, BRANCH-2, PAX-8 | VERIFIED DEFECT | engineering | `ENABLE-SURFACE-WORKFLOW` | — | Low. Audit and timeline evidence is missing at a table door, and each finding's measured bound is that nothing reads it. At the gate the bound is re-measured: if it holds, the item becomes an explicit accepted residual; otherwise it is repaired. Never deferred silently |
+| APP-1 | REQUIRED CAPABILITY | engineering | `FIRST-TENANT` | OD-9 (whether it runs beside Batch 6), OD-5 (staff login) | No client application exists, while ADR-0014 chose a server-rendered web app as ORVION's client. Treatment: FE-0, the web foundation and the first read-only journey (`delivery-assessment-2026-10-11.md` §7) |
+| GADS-1 | REQUIRED CAPABILITY | engineering, then owner | `FIRST-TENANT` | Batch 6's exit criteria; the owner installs and authorizes the repository-held script in Google Ads (`MASTER_INTEGRATION_CATALOG.md §5.2`) | High. Read-only Google Ads reporting is a Day-1 function by the owner's decision D4 (canon 01, ADR-0030), and nothing provides it. Treatment: ADR-0030's contracts in order: the integration RPCs and tables, then the n8n receiving workflow and the script, then the screens. Nothing is bought or applied for |
+| CTRL-11 | ACCEPTED RESIDUAL | engineering | `GATE-EVAL` | — | A boundary's state is recorded by a contract, never observed: the guard cannot read Primary. Containment: provisioning a tenant needs `service_role`, and READY requires this gate's evaluation. At `GATE-EVAL`, and in every contract that enables a boundary, each boundary state is confirmed against Primary's business counts. A non-zero count under a `NOT REACHED` boundary is repaired before anything else |
+| OPS-1 | BUSINESS POLICY | owner | `FIRST-TENANT` | the owner's RPO and RTO | Engineering then documents them and proves a restore. Proposed default (2026-10-11, not decided): Supabase point-in-time recovery, an RTO of 4 hours, web hosting in Primary's EU region; a cost approval |
+| DC-12 | BUSINESS POLICY | owner | `FIRST-TENANT` | the owner's release scope | Canon 01 lists family or related travellers; until the owner decides, the first release does not claim them |
+| DC-10, DC-28 | BUSINESS POLICY | owner | `FIRST-TENANT` | the owner's legacy-data decision | No import path exists, so a tenant starts empty until the owner decides. Proposed default (2026-10-11, not decided): start clean, enter open customer and supplier balances as opening items, enter in-flight bookings by hand |
+| OD-1, OD-2, OD-3, OD-5, OD-8 | BUSINESS POLICY | owner | `FIRST-TENANT` | the owner | Launch scope, revenue policy, reporting currency, staff login without email, and salary visibility. Each register row carries the proposed default; `delivery-assessment-2026-10-11.md` carries the analysis. On answers: FIN-0 (the profitability model) and the canon 01/20 amendments |
+| OD-9 | BUSINESS POLICY | owner | `B6-EXIT` | the owner | Whether frontend, finance design, Google access and counsel work run in parallel with Batch 6, and the app's check profile. On approval: FE-0 (the web foundation) as a Draft |
+| MAIL-1 | EXTERNAL / LEGAL | owner + counsel | `ENABLE-EMAIL` | the provider, and the PDPC cross-border licence naming its destination | Email stays disabled and unclaimed until it closes |
+| RET-1 | EXTERNAL / LEGAL | counsel | `ENABLE-RETENTION` | counsel's retention periods | No policy is seeded and nothing is destroyed until then |
+| PH8-10, CONV-9 | EXTERNAL / LEGAL | Google evidence, verified by the owner | `ENABLE-CONVERSION-DELIVERY` | Google's evidence that click-less phone conversions are attributed | CONV-9 reopens with PH8-10 |
+| PH8-7, PH8-8 | EXTERNAL / LEGAL | Google | `ENABLE-CONVERSION-DELIVERY` | Google's Data Manager contract | Corrections applied when the n8n workflow is built, and checked before it is enabled |
+| DC-4 | EXTERNAL / LEGAL | counsel | `FIRST-PERSONAL-DATA` | counsel's reading of PDPL erasure obligations | — before the first production personal data |
+| DC-22 | EXTERNAL / LEGAL | counsel | `FIRST-PERSONAL-DATA` | the confirmed jurisdiction | Data residency |
+| R3, BF-4, CDD-4 | EXTERNAL / LEGAL | counsel + tax authority | `ENABLE-TAX-DOCUMENTS` | tax and ETA e-invoicing obligations | Until then an ORVION invoice is an internal record and is never claimed as a tax document (VOID-1) |
+| FIN-9 | ACCEPTED RESIDUAL | engineering | `GATE-EVAL` | — | The residual writer is only the platform writer; the gate re-checks that the platform's operational write path uses the RPC |
+| JE-6 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | Reopened by the first reader of `source_entity_id` |
+| CONV-10 | ACCEPTED RESIDUAL | engineering | `ENABLE-CLIENT-WRITES` | — | No client exposes the manual door, and it must not be exposed before the item is repaired |
+| MONEY-3, CUST-6, USR-4, ORIG-1, PLACE-2, CAP-1, DEAD-3, DEAD-4 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | CUST-6 is proven intentional; the others are latent or unproven, each with its trigger |
+| DC-15 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | `service_role` is never a client credential, and integrations use `orvion_integration` |
+| GOV-9, GOV-15, GOV-20, GUARD-1, SYNC-1, PAR-7, CTRL-3, DC-27, CTRL-5, CI-2, TEST-4, PERF-2, OPS-3, OPS-4, CTRL-6 | ACCEPTED RESIDUAL | engineering | `OWN-TRIGGER` | — | Control plane and governance, none a Day-1 business function. The control-plane chapter is closed, and each reopens only on its own trigger |
+| OPS-2, RLS-1, API-2, TAX-1, FIN-DOC-1 | TERMINAL IN SUBSTANCE | engineering | `GATE-EVAL` | — | Each carries a terminal verdict outside the settled vocabulary: implemented, merged, delivered, retracted, closed. Re-worded to settled at the first evaluation |
+| N1, DC-5, RC-4, R8, B3, RC-1 | TERMINAL IN SUBSTANCE | engineering | `GATE-EVAL` | — | Still `DESIGN-READY` although shipped migrations implement them in whole or part: `202607049100`, `202607054600`, `202607048900`, `202607048800`, and the subscription lifecycle. Re-verified and settled at the first evaluation |
+| R1, R2, R4, DC-7, R6, INV-1, N5, CDD-1, BF-3, CDD-2, CDD-3, CDD-5, BF-6, BF-7, CDD-6, CDD-7, CDD-9, CDD-10, CDD-11, BF-1, BF-2, BF-5, BF-8, BF-9, BF-10, BF-11, BF-12, RC-2, FOE-4, FOE-5, FOE-6, FOE-8, DEAD-2, AUDIT-5, CONV-3 | FUTURE-ONLY | engineering | `OWN-TRIGGER` | its batch | Design-accepted builds with their batch; none is a Day-1 function in canon 01 |
+| DC-6, DC-8, DC-9, DC-13, DC-14, DC-17, DC-18, DC-19, DC-20, DC-21, DC-23, DC-24, DC-25, DC-26, DC-29, B1, B2, B6, B7, B8 | FUTURE-ONLY | engineering | `OWN-TRIGGER` | evidence | Hardening, optional or evidence-gated. DC-9: the SLA is elapsed-time and reads no business hours today |
+| DC-2 | FUTURE-ONLY | engineering | `ENABLE-CLIENT-WRITES` | — | Write idempotency must exist before the first client application writes |
+| DC-3 | FUTURE-ONLY | engineering | `ENABLE-INVENTORY` | — | Concurrency control before inventory ships |
+| RPC-1 | FUTURE-ONLY | engineering | `B6-EXIT` | EC-2 | Its remaining permissions are re-measured under EC-2 |
+| `booking_item_passengers`, `booking_items`, `financial_accounts` | SURFACE | engineering | `GATE-EVAL` | — | Still `AUDITED-OPEN` for decisions the register has since settled (PAX-5, PAX-6, BOOK-8, BOOK-9, FA-2); re-dispositioned at the first evaluation (EC-8) |
+| `trusted_devices` | SURFACE | engineering | `OWN-TRIGGER` | — | Open by design, under its pinned bound |
+| `documents`, `quotations` | SURFACE | engineering | `GATE-EVAL` | — | `PARTIAL`: door-created event parity (the family of CHAT-2's row) and a caller-writable `created_at` read only by `app.financial_documents`' listing are re-swept at the first evaluation |
+| `offline_conversions` | SURFACE | engineering | `ENABLE-CONVERSION-DELIVERY` | the Phase-8 workflow | `PARTIAL`; evaluated before that enablement |
+| `bookings`, `branches`, `conversations`, `journal_entries`, `journal_entry_lines`, `lead_interactions`, `marketing_campaigns`, `otp_challenges`, `passengers`, `payment_allocations`, `payments`, `refunds`, `subscription_payment_proofs`, `suppliers`, `tasks`, `totp_enrollments`, `users` | SURFACE | engineering | `B6-EXIT` | their open findings above | `AUDITED-OPEN`; each closes when its open findings do, and carries no separate class |
+**The order stays the owner's.** Batch 6 → bounded Phase-8 revalidation → n8n and Data Manager → the Direct Call Quality Feedback Loop → PH8-10 → the Smart Bidding decision → Phase-8 closure (`_ORVION_CANONICAL/32_execution_roadmap.md`). Inside Batch 6, `scripts/batch6_select_target.ps1` keeps choosing the slice. This registry reorders nothing silently: a `DUE NOW` state never overrides the selector, and an item taken ahead of it is an explicit, recorded exception with its reason. SUB-4 (SPEC-250) and SPP-6 (SPEC-261) are the exceptions taken so far.
 
 ---
 

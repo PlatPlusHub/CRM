@@ -104,6 +104,20 @@ Applicability is derived from repository evidence — Write Scope, derived verif
 - **Quote only what a log printed (owner directive 2026-10-09).** A count, a verdict or a duration is copied from the output that produced it, never recalled, predicted or rounded into a claim. A progress report once carried a "289 passed" line that no run had printed, and it had to be retracted. While a run is still going, say that it is still going.
 - **A timing is evidence only with its conditions.** Record the command, its scope, the environment and what else was running; `scripts/run_timed.ps1` writes all of them into the run's START line. A run measured beside other work is labelled as such and is never a baseline: `SPEC-248`'s 50.3-minute `-Finish` ran beside a validation suite. An estimate or a remembered duration is never presented as a measurement.
 - **A long run is watched, and the watcher decides nothing.** `scripts/watch_run.ps1` follows a `run_timed.ps1` log and reports every result line, a heartbeat naming the stage that is running whenever output stops, and a runner that died without finishing. `scripts/watch_ci.ps1` judges the runs on one exact SHA and branch against that branch's own contract, derived by the deriver `-Certify` uses, and reports the failed job, step and error lines; a check that never ran is reported MISSING, never as passed. A familiar message is never a cause: one Migration CI log held a harmless `toomanyrequests` beside the fatal `Bus error`. So the cause is established from the evidence before anything is rerun, and a mandatory verification is never skipped because a watcher once saw it pass. `scripts/watch_selftest.ps1` proves both watchers whenever either changes, and with `-Live` replays six real runs.
+- **Nothing open is lost (owner-ratified 2026-10-12).** Chat memory, an agent's memory and a session report are conveniences, never the place an open obligation lives. Before a task is complete, and before a session stops, every new item goes to the one home `GOVERNANCE.md` §2 assigns it:
+  - a defect goes to the register with its evidence;
+  - an accepted engineering decision goes to its ADR or Canon;
+  - an owner-approved business requirement goes to Canon, through a Change Request;
+  - a decision the owner has not made goes to the register, with its decider, its proposed default and `PROPOSED` in its status, so Check 25 puts it on the manifest's boot line. Nothing two agents agreed on is ever recorded as the owner's decision;
+  - an idea not yet worth building goes to `reports/future-backlog.md`, with its trigger;
+  - a rejected or superseded proposal keeps its disposition where it was proposed (`GOVERNANCE.md` §3), so it is never mistaken for live work;
+  - work in progress goes to the active contract's Runtime Checkpoint.
+
+  Every open register finding, surface and decision then needs one row in the Action registry of `MASTER_EXECUTION_PLAN.md`, in the same change. That row gives its class, its decider, its latest safe boundary and its treatment. Check 29 refuses the change otherwise, and fails when a boundary is crossed with its items still open, so reconciliation is part of every guard run rather than a step to remember. The owner's lifecycle maps onto the existing one and adds no second state machine:
+  - LEARN and VERIFY are FRESHNESS and PRECHECK;
+  - DECIDE is §2;
+  - IMPLEMENT, TEST, REVIEW and COMPLETE are EXECUTE, VERIFY, the Review Gate and `-Finish`;
+  - RECONCILE and PRESERVE are this rule, the registry check, and the durable checkpoint test of `AGENTS.md` §2.
 - **A lesson is promoted, never only remembered.** At each phase boundary, a lesson an agent learned that a future session needs moves to the authority that owns its subject — a PowerShell trap to `CODING_STANDARDS.md §12`, a lifecycle rule to `CR_LIFECYCLE.md`, a measurement rule here — through the next Change Request that can carry it. Agent memory may point at the repository; it is never the only place a lesson lives.
 
 ---

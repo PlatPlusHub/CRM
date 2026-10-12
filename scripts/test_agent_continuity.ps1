@@ -1477,6 +1477,9 @@ exit 0
     function CertMutant([string]$Name,[scriptblock]$Build,[string]$Expect,[string]$Shows,[string]$Find,[string]$Replace){
         & $Build;$pristine=RunCertify
         $src=Get-Content -Raw -LiteralPath $control
+        # CTRL-10 (SPEC-269): a multi-line anchor is written with LF, and a Windows checkout holds the evaluator with CRLF.
+        # Speak the evaluator's own line ending, so the exact-once count below measures the anchor, not the checkout.
+        if($src.Contains("`r`n")){$Find=$Find-replace'(?<!\r)\n',"`r`n";$Replace=$Replace-replace'(?<!\r)\n',"`r`n"}
         $count=[regex]::Matches($src,[regex]::Escape($Find)).Count
         $p=Join-Path $sandbox 'cert-mutant.ps1'
         if($count-eq1){[IO.File]::WriteAllText($p,$src.Replace($Find,$Replace),[Text.UTF8Encoding]::new($false))}
@@ -3113,6 +3116,9 @@ exit 0
     }
     function SegMutantFile([string]$Find,[string]$Replace){
         $src=Get-Content -Raw -LiteralPath $control
+        # CTRL-10 (SPEC-269): a multi-line anchor is written with LF, and a Windows checkout holds the evaluator with CRLF.
+        # Speak the evaluator's own line ending, so the exact-once count below measures the anchor, not the checkout.
+        if($src.Contains("`r`n")){$Find=$Find-replace'(?<!\r)\n',"`r`n";$Replace=$Replace-replace'(?<!\r)\n',"`r`n"}
         $count=[regex]::Matches($src,[regex]::Escape($Find)).Count
         $p=Join-Path $sandbox 'seg-mutant.ps1'
         if($count-eq1){[IO.File]::WriteAllText($p,$src.Replace($Find,$Replace),[Text.UTF8Encoding]::new($false))}

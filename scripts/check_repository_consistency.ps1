@@ -54,7 +54,9 @@
     Check 24 `ADVERSARIAL` is earned by a declaring test file with negative assertions, not typed (ADV-1) ·
     Check 25 every registered decision reaches the manifest's boot line (GOV-16) ·
     Check 28 workstation desired state has ONE owner -- `.workstation/manifest.md` may restate
-    `.vscode/extensions.json` and `.mcp.json` for rationale, never disagree with them (WS-1).
+    `.vscode/extensions.json` and `.mcp.json` for rationale, never disagree with them (WS-1) ·
+    Check 29 the action registry in `MASTER_EXECUTION_PLAN.md` classifies every open obligation the
+      readiness rule derives, once, and none is past a REACHED boundary (CTRL-9; SPEC-269).
 
   COLD-START STATE IS ONE FACT WITH ONE PARSE (2026-09-09). Three synchronization defects were
   repaired together because they were one shape -- a check reading LESS than its name claims:
@@ -1727,6 +1729,7 @@ if (-not (Test-Path $ciWorkflow)) {
         'ai-map.json'                                 = 'Check 7 (ai-map freshness vs manifest)'
         '.vscode/extensions.json'                     = 'Check 28 (WS-1) compares it against the manifest table'
         '.mcp.json'                                   = 'Check 28 (WS-1) compares it against the manifest table'
+        'scripts/readiness_population.ps1'            = 'Check 29 (CTRL-9) executes it'
     }
     # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
     # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent
@@ -2383,7 +2386,17 @@ if (-not (Test-Path $methodPath)) {
         'Every discovered finding ends in exactly one declared state',
         'External credentials never pass through the agent',
         'npx supabase db reset',
-        'scripts/impact.ps1 -Target'
+        'scripts/impact.ps1 -Target',
+        # GOV-25 (2026-10-12, SPEC-269). `AGENTS.md` §3 says this check fails if the four decision
+        # rules leave this file, and it carried no anchor for them: deleting the paragraph left this
+        # check CLEAN. The anchors below make the statement true.
+        'Four decision rules (owner-ratified 2026-10-08)',
+        '- **LEARN BEFORE GUESSING.**',
+        '- **EARN IT.**',
+        '- **WORTH IT.**',
+        '- **SIMPLIFY IT WITHOUT WEAKENING.**',
+        'A lesson is promoted, never only remembered',
+        'Nothing open is lost (owner-ratified 2026-10-12)'
     )
     foreach ($a in $anchors) {
         if (-not $methodRaw.Contains($a)) {
@@ -2480,6 +2493,35 @@ if ($wsIssues -gt 0) {
     Write-Host "  .workstation/manifest.md agrees with .vscode/extensions.json and .mcp.json" -ForegroundColor Green
 }
 
+Write-Host ""
+Write-Host "== Check 29: the action registry classifies every open obligation once, and none is overdue (CTRL-9) ==" -ForegroundColor Cyan
+# CTRL-9 (2026-10-12, SPEC-269). The readiness gate's population rule existed, and so did the script
+# that derives it, but nothing ran the script: SPEC-264 registered PAY-9 OPEN on 2026-10-11, the gate
+# section never classified it, and every guard run stayed CLEAN while the script, run by hand, exited 1.
+# An open obligation was invisible to the one list meant to hold them all. This check runs the
+# derivation itself, so the rule is enforced wherever this guard runs: Boot, Gate, -Finish and CI.
+# It decides no class and no trigger; the section's two tables do, and the script only derives each
+# id's state from them. `scripts/readiness_selftest.ps1` proves the derivation, and CI runs it.
+$registryScript = Join-Path $RepoRoot 'scripts/readiness_population.ps1'
+if (-not (Test-Path $registryScript)) {
+    Write-Host "  MISSING: scripts/readiness_population.ps1 -- nothing derives the action registry" -ForegroundColor Red
+    $issues++
+} else {
+    $registryOut = @(& pwsh -NoProfile -File $registryScript -Root $RepoRoot 2>&1 | ForEach-Object { "$_" })
+    $registryCode = $LASTEXITCODE
+    $registrySummary = $registryOut | Where-Object { $_ -like 'registry:*' } | Select-Object -First 1
+    if ($registryCode -eq 0) {
+        Write-Host "  $registrySummary" -ForegroundColor Green
+    } else {
+        $registryProblems = @($registryOut | Where-Object { $_ -match '^  \S' })
+        foreach ($line in $registryProblems) { Write-Host "  REGISTRY$line" -ForegroundColor Red }
+        if (-not $registryProblems.Count) { Write-Host "  REGISTRY DERIVATION FAILED (exit $registryCode): $(($registryOut | Select-Object -Last 3) -join ' / ')" -ForegroundColor Red }
+        Write-Host "  Remedy: classify the open member in MASTER_EXECUTION_PLAN.md's Action registry, in the same change" -ForegroundColor DarkGray
+        Write-Host "  that registered it. An OVERDUE item is repaired or its boundary is not crossed; never resolve it" -ForegroundColor DarkGray
+        Write-Host "  in the register to silence this check." -ForegroundColor DarkGray
+        $issues += [Math]::Max(1, $registryProblems.Count)
+    }
+}
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green

@@ -42,6 +42,8 @@ on:
       - "scripts/test_status_contradiction_guard.ps1"
       - "scripts/test_primary_ledger_guard.ps1"
       - "scripts/test_cold_start_state_guard.ps1"
+      - "scripts/readiness_population.ps1"
+      - "scripts/readiness_selftest.ps1"
   pull_request:
     # CI-1b (2026-09-09): THIS LIST MUST MATCH `push.paths` ABOVE, ENTRY FOR ENTRY. It did not: the
     # workflow file itself and all three guard-of-the-guard suites were added to `push` and never to
@@ -66,6 +68,8 @@ on:
       - "scripts/test_status_contradiction_guard.ps1"
       - "scripts/test_primary_ledger_guard.ps1"
       - "scripts/test_cold_start_state_guard.ps1"
+      - "scripts/readiness_population.ps1"
+      - "scripts/readiness_selftest.ps1"
 
 jobs:
   consistency:
@@ -131,7 +135,7 @@ jobs:
         # failing first suite pass silently -- a CI step that cannot fail, which is the same vacuous
         # -guard class this whole entry exists to close.
         run: |
-          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard') {
+          foreach ($suite in 'test_future_date_guard','test_status_contradiction_guard','test_primary_ledger_guard','test_cold_start_state_guard','readiness_selftest') {
             pwsh -File "scripts/$suite.ps1"
             if ($LASTEXITCODE -ne 0) { throw "$suite FAILED (exit $LASTEXITCODE)" }
           }
