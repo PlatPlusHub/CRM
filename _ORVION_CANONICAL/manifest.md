@@ -37,7 +37,7 @@ Active Change Request: `changes/SPEC-265-google-ads-reporting-is-read-only-and-d
 
 Open owner decisions — **MAIL-1**, **RET-1**, **PH8-10**. These are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration; PH8-10 awaits Google evidence that click-less phone conversions are credited. No email is sent and no retention policy is seeded while those prerequisites remain. The other eight decisions in the 2026-09-09 closure are resolved and removed from this OPEN line; evidence lives in `MASTER_GAP_REGISTER.md`.
 
-Last Completed: **SPEC-264 / Batch 6 Slice 40: an allocation spends its own payment on its own invoice and keeps its history (PAY-6, PAY-7, PAY-8, FIN-12, PAY-10, PAY-11; deployed 2026-10-11).**
+Last Completed: **SPEC-265: owner decision D4 — read-only Google Ads reporting is a Day-1 function and ORVION never modifies Google Ads (canon 01/18/32, ADR-0030, catalog §5, GADS-1; PAY-9 placed in the readiness gate).**
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`). `SPEC-160` deliberately wrote none: its contract, tests and Git own the evidence.
 

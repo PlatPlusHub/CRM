@@ -44,8 +44,11 @@ Google Ads integration must support:
 - Offline conversion feedback
 - Lead quality feedback
 - Sales outcome feedback
+- Read-only reporting and configuration visibility (owner decision D4, 2026-10-11; ADR-0030)
 
-The purpose is to feed offline sales and lead quality data back into Google Ads optimization.
+The purpose is to feed offline sales and lead quality data back into Google Ads optimization, and to let ORVION compare what advertising cost with the outcomes ORVION verifies.
+
+ORVION never modifies the Google Ads account: every change is made in the official Google Ads interface. Reporting reads Google's data with GAQL — a read-only Google Ads script held in this repository, with the Google Ads API as the upgrade path (ADR-0030); offline conversions travel through the separate Data Manager API (ADR-0023). The two share no state.
 
 Call tracking must not depend on Google Forwarding Numbers as the primary model.
 

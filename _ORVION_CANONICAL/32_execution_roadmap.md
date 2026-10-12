@@ -320,6 +320,20 @@ The primary execution reference for future sessions. Phase numbers are stable id
 - **Expected canon:** communications-domain doc(s) when that Design Challenge runs; Integration Catalog growth.
 - **Risks:** Meta platform review/verification lead times; channel-ownership migration of live customer conversations.
 
+## Day-1 capability — Google Ads reporting, read-only (owner decision D4, 2026-10-11)
+
+- **Objective:** advertising cost, performance and configuration read with GAQL, inside ORVION and beside the outcomes ORVION verifies. ORVION never modifies Google Ads (canon 01; ADR-0030; contract `MASTER_INTEGRATION_CATALOG.md §5`; register GADS-1).
+- **Order:**
+  1. After Batch 6's EC-1…EC-11 hold, the integration RPCs and tables arrive as their own migration contract, never concurrently with another migration contract.
+  2. The n8n receiving workflow and the repository-held Google Ads script, which the owner installs and authorizes in the account (`§5.2`). Nothing is bought or applied for.
+  3. The reporting screens, once a client application exists.
+
+  This capability takes no place ahead of Phase 8's steps (C)–(H) unless the owner says so. It must be READY before the first production tenant, because the readiness gate holds that tenant until it is.
+- **Expected ADRs:** none beyond ADR-0030. The DDL and RPC signatures belong to the implementing contract.
+- **Risks:**
+  - a script acts with its authorizing user's own access, so read-only rests on the script's code and on change-history detection until the API upgrade path makes it a Google-enforced permission (ADR-0030);
+  - Google's documentation does not list which GAQL resources a script can read, so each query is proven from inside a script before it is relied on.
+
 ## Post-phase capability queue (each enters as its trigger fires; all structures already exist)
 
 | Capability | Trigger | Expected decisions |

@@ -49,6 +49,7 @@ Recorded here, not a new document: this is ORVION's own deployment-target regist
 | Integration | Direction | Transport | ORVION surface | Status | Decision |
 |---|---|---|---|---|---|
 | **Google Ads offline conversions** | Outbound | Google **Data Manager API** + Enhanced Conversions for Leads, orchestrated by **n8n** over the database outbox | `app.capture_attribution_click` → `app.map_outcomes_to_conversions` → `app.claim_conversion_deliveries` → `app.record_conversion_ingestion` → `app.conversion_status_checks_due` → `app.record_conversion_provider_status` (migrations 049200/049300/049400, `20261007120000`); role `orvion_integration` | **NOT OPERATIONAL — Phase-8 Activation Closure in progress (§2b).** The outbox exists and four of five conversion actions are producible from their sanctioned RPCs (Test 137), and every legal door now produces its source event (§2b item 1, closed by SPEC-237, SPEC-238 and SPEC-239), and `qualified_phone_call` is produced from the one qualification fact and delivered only on recorded consent (PH8-4, SPEC-240), with Google's attribution of a click-less call an owner-verified prerequisite (PH8-10), a delivery is `sent` only on Google's terminal SUCCESS (PH8-9, SPEC-243), and the n8n workflow does not exist | ADR-0023; analysis: `google-offline-conversion-transport-decision-2026-07-17.md` |
+| **Google Ads reporting (read-only)** | Inbound | **GAQL** read daily by a repository-held **Google Ads script** inside the account and POSTed to an **n8n** webhook; upgrade path: the Google Ads API with a **Read only** service account | `campaign_daily_metrics` (the one advertising-cost fact) plus configuration, report and click-resolution data written by integration-only RPCs, none built yet | **NOT BUILT — Day-1 by owner decision D4 (canon 01).** No script, no workflow, no RPC, no screen (GADS-1). Never modifies Google Ads | ADR-0023 is separate; this row's decision is ADR-0030, contract §5 |
 | Landing-page / GTM click webhook | Inbound | GTM/site webhook → n8n → `app.capture_attribution_click` | same capture RPC (explicit-tenant, integration-role-only) | ORVION-side complete; site/GTM wiring at first live campaign | ADR-0023 (capture side); SPEC-119 |
 | Meta Conversions API | Outbound | Meta CAPI via n8n, **reusing the same outbox** (`platform_code = 'meta_ads'`) | identical claim/ack pair — no new ORVION surface expected | Planned (Phase 10) | ADR-0023 §channel-generic |
 | WhatsApp Cloud API (company-owned conversations) | Bidirectional | Meta WhatsApp Cloud API via n8n | `conversations`/`conversation_messages` (built; `external_conversation_id` ready); ingestion/send RPCs to be designed | Planned (Phase 10; shape needs Meta-ecosystem Learn-Before-Designing) | future-backlog §Group-3 determinations |
@@ -296,3 +297,67 @@ Ran against a freshly `supabase db reset` local stack (`supabase_db_ORVION`, all
 **Sources (fetched 2026-08-15):** [Send events | Data Manager API](https://developers.google.com/data-manager/api/devguides/events/send-events) · [Method: events.ingest | Data Manager API](https://developers.google.com/data-manager/api/reference/rest/v1/events/ingest) · [Destination | Data Manager API](https://developers.google.com/data-manager/api/reference/rest/v1/Destination) · [Using Google Ads Data Manager with enhanced conversions for leads](https://support.google.com/google-ads/answer/15707550?hl=en) · [Diagnostics | Data Manager API](https://developers.google.com/data-manager/api/devguides/diagnostics)
 
 **Known implementation gap found during this session's cross-check (not a topology/account conflict — a canon-vs-implementation gap, recorded here as it directly touches the delivery pipeline this section tracks; not fixed, per this task's read-only scope):** `_ORVION_CANONICAL/26_state_machines.md`'s offline-conversion delivery state machine requires 5 events — `offline_conversion_created`, `offline_conversion_send_attempted`, `offline_conversion_sent`, `offline_conversion_failed`, `offline_conversion_retried` — and all 5 are registered in the `event_type` catalog (migration `202607049100`). The implementation (migration `202607049200`) emits only 3: `created`, `sent`, `failed`. `offline_conversion_send_attempted` is never emitted, and the failed→retried transition inside `app.claim_conversion_deliveries` updates `delivery_status_code` directly without calling `app.record_event`, so `offline_conversion_retried` is also never emitted. Not blocking Phase-A validation; flagged for a future CR under the existing discovery-to-guard duty (`AGENTS.md §2`), not actioned here.
+
+## 5. Google Ads reporting (read-only) — contract (ADR-0030)
+
+Owner decision D4 (2026-10-11) makes read-only Google Ads reporting and configuration visibility a Day-1 function, and excludes every change to Google Ads from ORVION. ADR-0030 owns the decision; this section owns the contract surface: what Google's API provides, what access it needs, how ORVION synchronizes it, and how it meets ORVION's own records. Everything here was read from official Google documentation on 2026-10-11 and 2026-10-12, against Google Ads API v25 (latest v25.2, released 2026-09-23), whose GAQL Google Ads scripts also use. Google's scripts documentation does not list which resources a script can read, so the implementing contract proves each query from inside a script before relying on it, and a resource a script cannot read waits for the API upgrade path. Google states that API data is not guaranteed to match its web interface exactly. **Re-verify versions, fields and limits when the workflow is built** (`AGENTS.md §3` FRESHNESS).
+
+### 5.1 What the API provides
+
+**Supported in GAQL:**
+
+| Area | Resources |
+|---|---|
+| Account | `customer` (currency, time zone, auto-tagging, optimization score) |
+| Campaign configuration | `campaign` (status, channel type including Performance Max, bidding strategy, targets, network settings, dates); `campaign_budget`; `bidding_strategy`, `accessible_bidding_strategy`; `campaign_criterion` (locations, languages, ad schedule, device modifiers, negative keywords); `shared_set` / `shared_criterion` (negative keyword lists); conversion goals |
+| Ad groups, ads, keywords | `ad_group`; `ad_group_ad` (content, status, `policy_summary` approval status); `ad_group_criterion` (keywords, match type, quality score); `keyword_view` |
+| Assets | `asset` and its campaign, ad group and customer links; asset performance views; Performance Max `asset_group` and `asset_group_asset` |
+| Performance | cost, impressions, clicks, conversions and their values, segmented by date, hour, device and network; Performance Max channel breakdown (`segments.ad_network_type`, v23+) |
+| Audience and place | `geographic_view`, `user_location_view`, age and gender views, `ad_schedule_view`, `landing_page_view`, `expanded_landing_page_view` |
+| Search terms | `search_term_view` (Search, ad-group level); `campaign_search_term_view` (Search and Performance Max, campaign level) |
+| Conversions | `conversion_action` (configuration, status); conversion metrics segmented by conversion action; `offline_conversion_upload_*_summary` |
+| Clicks | `click_view`: one day per query, at most 90 days back; GCLID with its campaign, ad group and keyword |
+| Calls | `call_view`: start and end, duration, status, caller country code; caller area code only for calls of 15 seconds or more |
+| Change history | `change_event` (last 30 days, at most 10,000 rows per query, old and new values, user email where Google shows it); `change_status` (includes Google Ads Editor changes) |
+| Recommendations, experiments | `recommendation` (read only: ORVION never applies one); `experiment`, `experiment_arm` |
+
+**Partially supported — available with a limit ORVION must show, not hide:**
+
+| Item | Limit |
+|---|---|
+| Search terms | low-volume terms are withheld for privacy; adding a keyword segment to `campaign_search_term_view` drops Performance Max data |
+| Change history | Google keeps 30 days, so ORVION's history begins at its first synchronization and grows from there |
+| Click resolution | `click_view` must be read within 90 days, a day at a time; keyword fields can be empty (Performance Max, AI Max, dynamic ads) |
+| Call attribution | `call_view` has no caller number; matching a call to a lead is inference by time (tier `CALL-INFERRED`) |
+| Google-reported conversions | Google's figures, including modelled conversions, change after the fact and cannot be reconciled row by row with ORVION's records |
+| Data-Manager diagnostics | the `offline_conversion_upload_*_summary` resources' coverage of Data Manager uploads is unproven; ADR-0023's own status checks remain the authority |
+| Keyword planning, forecasting, reach planning, audience insights | separate services, not GAQL reports; through the API they need Basic, which needs brand verification. Not in the first release |
+| Billing and invoices | the invoice and payments services are refused at the API's Explorer level, and invoices exist only for monthly-invoiced accounts. Not in the first release |
+
+**Unavailable through the API — Google Ads interface only:** Auction Insights (no resource in the v25 list), custom columns (Google: not supported), most of the Insights page beyond the supported insight types, saved Report Editor reports and dashboards, and notes. Every change to the account is also interface-only for ORVION, by D4.
+
+### 5.2 Access — owner-performed; nothing is bought or applied for, and no credential passes through an agent, Git, SQL or a log
+
+Nothing needs provisioning before the build. When the receiving workflow exists:
+
+1. The owner creates the webhook's header-auth secret in n8n's credential store.
+2. The owner adds the repository-held script on Google Ads account `591-238-3888`'s Scripts page, sets the secret in it, authorizes it, runs it once in preview, and schedules it daily. Anyone who can edit scripts in that account can read the secret. It authorizes only posting report rows to that one webhook, which checks the account id and the payload shape.
+3. The first run's rows arriving in ORVION, with no `GOOGLE_ADS_SCRIPTS` change reported, confirms the path.
+
+**Upgrade path (the Google Ads API), when the owner chooses it:** in Cloud project `orvion-data-manager`, with billing in good standing, enable the Google Ads API and apply for **Explorer** on its Google Ads API Overview page. Developer tokens were retired on 2026-09-09, and a project with only Test access gets `CLOUD_PROJECT_NOT_APPROVED_FOR_PRODUCTION`. Then create a dedicated service account, with its key only in n8n, and add its email in the Google Ads account as a **Read only** user (at most 20 accounts per service account). A user OAuth credential is the weaker alternative, because its refresh token expires after 7 days until the OAuth app is verified.
+
+### 5.3 Synchronization contract (implemented after Batch 6; exact RPCs and DDL belong to the implementing contracts)
+
+- **One script run a day** reads the account with `AdsApp.search` and POSTs the rows to **one n8n webhook, separate from §2's workflow**, which writes only through RPCs granted to `orvion_integration`. Every run also reports the account's `change_event` rows whose `client_type` is `GOOGLE_ADS_SCRIPTS`; ORVION raises any such row as an alarm.
+- **Idempotent upserts,** keyed by account, report, date and dimensions, so any run can be repeated.
+- **A trailing re-read window** for performance and conversions, because Google attributes conversions back to the click date. Each day not yet resolved is read with `click_view` while it is inside Google's 90 days. Configuration is refreshed as latest-state snapshots, and change history is appended.
+- **Quota:** a few POSTs a day against a consumer account's 20,000 URL fetches; on the API upgrade path, about thirty operations against Explorer's 2,880.
+- **Visible health:** each run records its outcome and the time of its last success, so every ORVION screen can say how current its data is. A failed or missed run is repaired by the next one inside the window, and the dashboards keep showing the last good data with its date.
+
+### 5.4 How it meets ORVION's records
+
+- **Cost, recognized once.** Advertising cost for management profitability comes only from `campaign_daily_metrics`, in the account currency, converted at ORVION's rate for the metric date. A Google invoice or charge settles that cost and is never a second expense. The difference between API cost and the amount invoiced is shown as a reconciliation line.
+- **Two kinds of conversion, never added together.** Google-reported conversions sit beside ORVION-verified outcomes (qualified leads, bookings, payments, revenue and gross profit) and are never summed.
+- **Attribution tiers on every figure:** `CLICK-MATCHED`, `CALL-INFERRED`, `DECLARED` and `UNATTRIBUTED`.
+- **Drill-down:** every campaign figure opens to its underlying Google rows and to the ORVION leads, bookings and payments behind it, within the viewer's permissions.
+- **Profitability:** a management view of contribution after advertising cost awaits the owner's decision on the finance scope. Until then ORVION shows cost against revenue and gross profit, and claims no net figure.

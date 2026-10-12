@@ -310,6 +310,76 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
 - **Evidence basis:** SPEC-118; `03_money_currency_precision_test.sql`; canon 30 § Money Standard; canon 31 § Reference Tables (`currencies`).
 - **Revisit trigger:** a supported currency with more than four minor digits, or a stored amount above 10^15.
 
+## ADR-0030 — Google Ads reporting is read-only: GAQL read inside Google Ads by a repository-held script and delivered to ORVION through n8n; ORVION never modifies Google Ads
+
+- Date: 2026-10-11 · Status: Accepted. The **scope** is the owner's decision D4 of 2026-10-11: read-only Google Ads reporting and configuration visibility are required for the first production release, and every campaign change stays in the official Google Ads interface. The **technical shape** below is derived from that scope, ADR-0023 and current official Google documentation, and is ratified by the owner's approval of the contract that records it. Class: INTEGRATION. Scope: every read of Google Ads data, and the money and attribution rules for using it. Register row: **GADS-1**.
+- **Context.** Before this ADR, ORVION's only Google Ads integration was outbound: offline conversions through the Data Manager API (ADR-0023). `marketing_campaigns` and `campaign_daily_metrics` exist (`202607043000`), but nothing writes the second, so ORVION knows no advertising cost and cannot compare spend with the outcomes it verifies. Google retired developer tokens on 2026-09-09: Google Ads API access levels now belong to the Google Cloud project that owns the OAuth client or service account. Production access needs at least Explorer, which is applied for, and Google rejects Explorer and Basic applications from projects whose billing is not in good standing (free trial, suspended or disabled). Google Ads scripts run inside the account itself, cost nothing and need neither.
+- **Decision:**
+  1. **Read-only, by code and by detection.** No ORVION component calls a mutating Google Ads method, and ORVION builds no approval flow for advertising changes and no campaign editor. The reader is one Google Ads script held in this repository, which the owner installs and authorizes in account `5912383888`. It calls only `AdsApp.search` (GAQL) and `UrlFetchApp`, never a selector, builder or mutate. A script acts with its authorizing user's own access, so here read-only is a property of the script's code, not a Google permission, and it is checked twice:
+     - the implementing contract adds a repository check that refuses the script if it calls anything else;
+     - every run reads `change_event` and reports each change whose `client_type` is `GOOGLE_ADS_SCRIPTS`, which ORVION raises as an alarm, because ORVION's script must never produce one.
+
+     ORVION itself holds no Google credential.
+  2. **Free and available first; the Google Ads API is the upgrade path.** A script needs no Cloud billing, no access application and no developer token. Its limits are far above one account's daily reads: 30 minutes per run, and on a consumer account 20,000 URL fetches a day at up to 50 MB each. The upgrade is a dedicated service account in Cloud project `orvion-data-manager`, added in Google Ads as a **Read only** user, so that Google itself refuses any change. It is taken when the owner's project has billing in good standing and Explorer access, which serves production accounts at 2,880 operations a day against about thirty needed. Only the reader changes: the n8n write side and the RPCs stay. Keyword planning, forecasting, reach planning, audience insights, billing and invoices are outside this decision on either path.
+  3. **Transport: GAQL on a schedule, delivered through n8n, never per page view.** The script runs daily and POSTs its results to one n8n webhook, separate from ADR-0023's workflow and authenticated by a header secret that the owner sets in n8n and in the script. n8n validates the account and the payload shape, and writes only through integration RPCs granted to `orvion_integration`, never to `authenticated`. ORVION's screens read ORVION's tables, so a Google outage leaves the dashboards showing stale data with its "as of" time, not blank ones. Every write is an idempotent upsert keyed by account, report, date and dimensions. Each run re-reads a trailing window, because Google attributes conversions back to the click date and its data is not final when first reported. A run that dies is repaired by the next run.
+  4. **Storage shape (exact DDL belongs to the implementing contract):**
+     - `campaign_daily_metrics` is the **one** advertising-cost fact: campaign × day, in the Google Ads account's currency, with `cost_micros / 1,000,000` converted exactly to `numeric(19,4)` (ADR-0029);
+     - Google-reported conversion metrics are stored under Google's names, never in ORVION's outcome columns. The table's existing `leads_count`, `bookings_count` and `revenue_amount` are not written from Google. ORVION's outcomes are derived from ORVION's own records, and the implementing contract decides whether those three columns are retired;
+     - configuration (campaigns, budgets, bidding strategies, targeting, ad groups, ads, keywords, negatives, assets, conversion actions, policy status) is held as latest-state snapshots refreshed by each run;
+     - analytical reports (keywords, search terms, geography, device, schedule, landing pages, assets) and change history are held for drill-down and are never a money source;
+     - GCLID resolution (`click_view`) links a click to its campaign, ad group and keyword.
+
+     The implementing contract creates the fewest tables these need, and each is born with its adversarial disposition (EC-1).
+  5. **Advertising cost is recognized once.** Management profitability reads advertising cost only from `campaign_daily_metrics`, converted at ORVION's exchange rate for the metric date. A Google invoice or card charge settles that cost and is never entered as a second expense. The difference between the API cost and the amount invoiced (taxes, invalid-activity credits, adjustments) is shown as a reconciliation line, never absorbed silently. How tax on Google's invoices is treated is the accountant's rule.
+  6. **Attribution uncertainty is shown, never resolved by guessing.** ORVION-verified outcomes and Google-reported conversions are separate figures and are never summed. A lead's link to a campaign carries one of four confidence tiers:
+     - `CLICK-MATCHED` — its captured GCLID was resolved by `click_view`;
+     - `CALL-INFERRED` — a `google_ads_call` lead matched to `call_view` by time. `call_view` carries no caller number, and canon 18 makes Google forwarding numbers a secondary model;
+     - `DECLARED` — UTM parameters only;
+     - `UNATTRIBUTED`.
+
+     Every aggregate shows the mix of tiers behind it.
+  7. **Separate from ADR-0023.** Data Manager conversion delivery and Google Ads reporting share n8n, and nothing else: no credential, no table, no workflow.
+- **Why.** The value the owner asked for is the join between what advertising cost and what ORVION verifies — leads, bookings, payments and profit — not a second campaign editor. Reading Google's data into ORVION on a schedule keeps ORVION the system of record (`PROJECT_CONTEXT.md §11`), keeps the quota bounded, and keeps provider credentials out of ORVION entirely. A script with no write code, checked in the repository and watched through Google's change history, makes "ORVION never changes Google Ads" verifiable without a paid or approval-gated dependency; the API upgrade later makes it a permission Google enforces.
+- **Alternatives rejected:**
+  - Campaign management from ORVION — excluded by the owner's decision D4.
+  - A third-party connector (Windsor.ai, which already reads this account) as the production path — a third party would process the account's data, at recurring cost, raising the PDPC cross-border question MAIL-1 already faces, and would become a second source of truth. It is acceptable only as a manual cross-check while the integration is built.
+  - BigQuery Data Transfer Service — adds a warehouse ORVION does not run, and canon 01 excludes data warehousing from the MVP.
+  - Calling the API per page view — exhausts Explorer's quota, puts a provider credential on the request path, and blanks the dashboards during a Google outage.
+  - A Supabase Edge Function scheduler — n8n is the ratified orchestration layer (ADR-0023). The capability needs no Edge Function.
+  - The Google Ads API as the first path — it gives the stronger guarantee, a Read only service account that Google enforces, but it depends on an access application Google may refuse and on Cloud billing in good standing, which the owner's free-first rule does not presume. It is the recorded upgrade path.
+  - A user OAuth credential — the same dependency, a refresh token that expires every 7 days until the OAuth app is verified, and whatever Google Ads access that user holds.
+  - Scheduled reports emailed or saved to Google Sheets — no reliable machine path into ORVION without a second parser and a second credential.
+- **Consequences:**
+  - Nothing is bought or applied for. The owner installs and authorizes the repository-held script and sets the webhook secret (`MASTER_INTEGRATION_CATALOG.md §5.2`). No credential passes through an agent, Git, SQL or a log.
+  - The implementing contracts add the integration RPCs and tables, after Batch 6's exit criteria hold and one migration contract at a time, then the n8n workflow and the script, then the screens.
+  - The capability is a Day-1 function in canon 01, so the readiness gate holds the first production tenant until it is READY.
+- **Constraints on future work:**
+  - Never add a mutating call to the script, or any Google Ads mutate call or write-capable credential elsewhere, without a new owner decision that supersedes D4.
+  - Never send the script's data anywhere but ORVION's webhook.
+  - Never sum Google-reported conversions with ORVION outcomes.
+  - Never read advertising cost for profitability from anywhere but `campaign_daily_metrics`.
+  - Re-verify the API version, fields and limits against current official documentation when the workflow is built.
+- **Evidence basis (official Google documentation, read 2026-10-11):**
+  - developer token sunset and Cloud-project access levels — `developers.google.com/google-ads/api/docs/get-started/dev-token`, updated 2026-10-07;
+  - access levels and Explorer's limits — `.../docs/api-policy/access-levels`, updated 2026-09-30; billing in good standing as a condition of Explorer and Basic — `.../docs/get-started/dev-token` (read 2026-10-12);
+  - Google Ads scripts' limits — `developers.google.com/google-ads/scripts/docs/limits`; URL-fetch quotas — `developers.google.com/apps-script/guides/services/quotas`; `ChangeClientType.GOOGLE_ADS_SCRIPTS` — `.../reference/rpc/v25/ChangeClientTypeEnum.ChangeClientType` (all read 2026-10-12);
+  - operation counting — `.../docs/best-practices/quotas`;
+  - service-account access through a Google Ads user invitation, and the 20-account limit — `.../docs/oauth/service-accounts`, updated 2026-10-06;
+  - the v25 resource list — `.../fields/latest/overview`;
+  - `change_event` limits — `.../docs/change-event`;
+  - Performance Max search terms and channel reporting — `.../docs/performance-max/campaign-reporting` and `.../performance-max/campaign-criterion-reporting`;
+  - unsupported custom columns — `.../docs/conversions/reporting`;
+  - latest version v25.2 of 2026-09-23 — `.../docs/release-notes`.
+- **Basis:** owner decision (scope); system-derived (shape).
+- **Related:** ADR-0023, ADR-0029, GADS-1, MAIL-1, CDD-7 · canon 01, canon 18 · `MASTER_INTEGRATION_CATALOG.md §5`.
+- **Revisit trigger:** any of
+  - a request to change Google Ads from ORVION, which needs a new owner decision;
+  - the owner's Cloud project gaining billing in good standing and Explorer access, which moves the reader to the API service account;
+  - a query a script cannot run, or a script limit reached;
+  - any `GOOGLE_ADS_SCRIPTS` change alarm;
+  - a need for keyword planning, forecasting or invoices, which needs the API at Basic and brand verification;
+  - a second tenant or more Google Ads accounts, which brings in CDD-7's per-tenant configuration and a manager account.
+
 ## Programme lesson numbering (resolved 2026-08-31)
 
 Migrations `202607058200`, `202607058400` and `202607058600` cite **"LESSON 4"** and **"LESSON 6"** by ordinal, and no file in the repository defined the numbering — a citation a fresh reader could not resolve. The ordinals are retired in favour of the stable homes those rules already had:

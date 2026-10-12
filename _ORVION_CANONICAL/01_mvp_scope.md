@@ -109,6 +109,7 @@ The goal is to build a controlled foundation that supports the most important bu
 - WhatsApp API integration planning
 - Google Ads and GTM attribution planning
 - Meta Ads attribution planning
+- Google Ads reporting and configuration visibility, read-only (owner decision D4, 2026-10-11): advertising cost, performance and campaign configuration read with Google's own query language (GAQL) wherever Google supports them, and compared inside ORVION with the leads, customers, bookings, payments and profitability ORVION itself verifies. Google-reported conversions stay distinct from ORVION-verified outcomes, attribution uncertainty is shown rather than hidden, and advertising cost is recognized once. Contract: ADR-0030 and `MASTER_INTEGRATION_CATALOG.md §5`.
 
 ---
 
@@ -125,6 +126,7 @@ These may be planned later, but should not delay the first usable version:
 - Data warehouse and OLAP analytics
 - Complex inventory management
 - Self-healing infrastructure
+- Modifying Google Ads from ORVION — campaigns, budgets, keywords, bidding, targeting, assets and account settings change only in the official Google Ads interface, so ORVION builds no mutation workflow, no approval flow for advertising changes and no campaign editor (owner decision D4, 2026-10-11)
 
 ---
 
