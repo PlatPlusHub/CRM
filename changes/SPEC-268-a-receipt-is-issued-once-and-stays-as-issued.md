@@ -1,0 +1,334 @@
+# Change Request — SPEC-268
+
+## Status
+
+[x] Draft
+[ ] Approved
+[ ] In Progress
+[ ] Complete
+[ ] Cancelled
+
+## Objective
+
+Batch 6 Slice 41 makes a receipt issuable only for a customer payment, numbered and timed by the server on every door, born unsubmitted with exactly one `receipt_issued` event, and fixed once issued except for its tax-submission record, which needs CREATE_RECEIPT (RCPT-1, RCPT-2, RCPT-3, RCPT-4).
+
+## Business Reason
+
+- **Selection.** `scripts/batch6_select_target.ps1` at `f6c30d0` ranks `receipts` first: Exposure 7, coverage 20, NOT-RECORDED (runner-up `chart_of_accounts` 7/38). It is the target the manifest names.
+- **The rule.** A receipt is proof that money was received (canon 24: it links a customer payment). It carries the number the tenant's receipt sequence gave it and the moment it was issued; canon 25 tracks its external tax submission; canon 27 records `receipt_issued`; canon 30 forbids overwriting a financial action silently. `app.issue_receipt` wrote all of that correctly by construction. `authenticated` holds INSERT and UPDATE on the table, and the table door guaranteed none of it.
+- **Measured at `f6c30d0`** on a clean local reset (251 migrations), in rolled-back transactions:
+  - **RCPT-1 (High).** An `employee` holding neither CREATE_RECEIPT nor VIEW_FINANCIAL_DOCUMENTS sees a receipt because its payment is on a booking they own (`scope_isolation`). That employee renumbered an issued receipt to `FAKE-0001`, backdated it two years, wrote `external_submission_id = 'forged'`, and moved it from its 600 payment onto a 900 payment of the same booking. Every UPDATE landed, and none left an event. The `receipt_issued` event still named the 600 payment. `app.guard_financial_capability` compares only `external_submission_status_code` on a receipt UPDATE (FIN-6b), and nothing else guards the row.
+  - **RCPT-2 (Medium).** `app.issue_receipt` issued a receipt for an outbound `supplier_payment`. Nothing reads the payment's direction.
+  - **RCPT-3 (Medium).** An owner holding CREATE_RECEIPT inserted a receipt at the table door numbered `RCP-2026-X1`, issued 400 days ago, with an external submission id. No `receipt_issued` event was written: the number, the date and the evidence were all the caller's.
+  - **RCPT-4 (Medium).** After that one row, `app.issue_receipt` failed for the whole tenant for the rest of the year with `invalid input syntax for type integer: "X1"`. It parses every `RCP-<year>-%` number it finds with `split_part(...)::integer`, so one malformed door number stops every receipt.
+- **Swept and found sound, pinned rather than changed:**
+  - one receipt per payment (`receipts_tenant_payment_key`) and one number per tenant (`receipts_tenant_number_key`);
+  - tenant-qualified foreign keys to the payment, the tenant and the creator;
+  - no DELETE grant to `authenticated`;
+  - CREATE_RECEIPT on INSERT (FIN-3) and on `external_submission_status_code` (FIN-6b);
+  - `created_by` derived on every signed-in door.
+- **Not changed, recorded:** canon 29 says a payment "may have one or more Receipts depending on split documentation". The schema's one-receipt-per-payment key is narrower. Widening it is a product decision with its own numbering consequences, and no consumer needs it before a client application exists. It is recorded in the disposition row, not built.
+- **Latent:** Primary holds 0 tenants and 0 receipts, so no existing row is affected and no data repair is needed.
+
+## Risks
+
+- **A door insert's supplied number and time are discarded, not refused.** This follows PAY-6's precedent for a derived converted amount. A caller who names a number gets the sequence's number, not an error. Test 156 assertion 3 pins it.
+- **A receipt is born with null tax-submission fields.** No function, script or test writes them at INSERT (searched). Submission is an UPDATE by CREATE_RECEIPT, or by the platform path.
+- **`app.issue_receipt` is replaced.** Its signature, SECURITY INVOKER mode, empty `search_path`, ACL, checks and refusal messages stay. It no longer allocates the number or writes the event, because the row's own triggers do both for every door; that is what makes the RPC and the door unable to disagree. The three HTTP suites, including `verify_api_end_to_end.ps1`'s `issue_receipt` call, pass on the prototype.
+- **A CLI-version trap, measured in this Draft's prototype.** A run from a directory without `node_modules` let `npx` fetch Supabase CLI 2.120. That reset grants `service_role` DELETE on public tables, and test 155 assertion 68 then fails. The same suite with the repository's pinned CLI 2.109 passes. Every command here runs from the main checkout, as `-Finish` does.
+- **Primary deployment is a separate exact-byte authorization.** Approval of this contract does not authorize it.
+
+## Supersedes / Depends On
+
+None. It is independent of the Draft SPEC-265, which edits documents only. Whichever contract executes second applies its register, disposition and manifest edits to the text the first one left; the migration and the test do not depend on the order.
+
+## Write Scope
+
+- `changes/SPEC-268-a-receipt-is-issued-once-and-stays-as-issued.md`
+- `supabase/migrations/20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql`
+- `supabase/tests/156_a_receipt_is_issued_once_and_stays_as_issued_test.sql`
+- `reports/master/MASTER_GAP_REGISTER.md`
+- `reports/master/MASTER_SURFACE_DISPOSITION.md`
+- `reports/master/MASTER_API_CONTRACT.md`
+- `reports/evidence/primary-ledger-evidence.json`
+- `_ORVION_CANONICAL/manifest.md`
+- `ai-map.json`
+
+## Out of Scope — Files Forbidden to Modify
+
+- `supabase/migrations/202607042500_create_finance_transaction_tables.sql`
+- `supabase/migrations/202607047200_issue_receipt.sql`
+- `supabase/migrations/20260925120000_payment_write_capability_parity.sql`
+- `supabase/migrations/20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice.sql`
+- `supabase/tests/10_grant_model_test.sql`
+- `supabase/tests/53_api_surface_test.sql`
+- `supabase/tests/68_financial_status_capability_test.sql`
+- `supabase/tests/155_an_allocation_spends_its_own_payment_on_its_own_invoice_test.sql`
+- `scripts/verify_database.sql`
+- `scripts/verify_api_end_to_end.ps1`
+- `scripts/batch6_select_target.ps1`
+- `scripts/check_agent_continuity.ps1`
+- `scripts/check_repository_consistency.ps1`
+- `scripts/generate-ai-map.ps1`
+- `scripts/generate-api-contract.ps1`
+- `_ORVION_CANONICAL/24_entity_registry.md`
+- `_ORVION_CANONICAL/27_event_catalog.md`
+- `_ORVION_CANONICAL/29_relationship_map.md`
+- `reports/master/MASTER_EXECUTION_PLAN.md`
+
+## Required Reading
+
+- `AGENTS.md`; `CR_LIFECYCLE.md`; `ENGINEERING_METHOD.md` §§1–5
+- `_ORVION_CANONICAL/24_entity_registry.md` (Receipt); `_ORVION_CANONICAL/27_event_catalog.md` (`receipt_issued`); `_ORVION_CANONICAL/29_relationship_map.md` (Receipt To Payment); `_ORVION_CANONICAL/30_database_conventions.md` (Financial Record Standard)
+- `reports/master/MASTER_GAP_REGISTER.md` (FIN-3, FIN-6b, PAY-6, PAY-10); `reports/master/MASTER_SURFACE_DISPOSITION.md`; `reports/master/MASTER_EXECUTION_PLAN.md`, Batch 6 method and EC-1…EC-11
+- `supabase/migrations/202607047200_issue_receipt.sql`; `supabase/migrations/20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice.sql` (the precedent for a fixed-once-written guard and a single event producer)
+- Current local `app.issue_receipt`, `app.guard_financial_capability`, `app.derive_created_by`, `app.record_event`
+
+## Runtime Checkpoint
+
+Resume Step: 1
+Blocker: None
+Recovery Attempt: 0
+
+## Required Capabilities
+
+- docker
+- supabase-local
+- supabase-primary
+- github
+
+## Additional Verification
+
+- `pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1`
+- `pwsh -NoProfile -File scripts/verify_journey_branches.ps1`
+- `pwsh -NoProfile -File scripts/verify_lifecycle_branches.ps1`
+
+## Pre-Approval Evidence
+
+Change Class: Significant
+
+### Consumer Closure
+
+Applicability: APPLICABLE
+
+| Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
+| --- | --- | --- | --- |
+| A receipt is issued only for a customer payment, its number and issue time are derived on every door, and it is born unsubmitted | `app.issue_receipt`; `receipts_guard_financial_capability`; `receipts_derive_created_by`; the two unique keys | WRITE | The prototype migration was applied to a clean reset of the `f6c30d0` local stack (251 migrations), from files held outside the repository. SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, 9882 bytes, LF, ASCII. A door insert naming `RCP-<year>-X1`, a date 400 days back and a submission id stored the sequence's number, the server's time and null submission fields. A supplier payment was refused 23514 on the RPC, the door and the platform path. No function, script or test reads a door-supplied number or time (searched). |
+| An issued receipt's payment, number, issue time and origin are fixed; its tax-submission id and times need CREATE_RECEIPT | `scope_isolation` RLS; `app.guard_financial_capability` (FIN-6b, unchanged); the platform path | WRITE | Before: the employee's renumber, backdate, forged submission id and move to another payment all landed. Prototype: renumber, move, backdate and creation-time rewrite are refused 23514 for the employee, the owner and a session-less caller; the employee's submission id and response time are refused 42501 `permission denied: CREATE_RECEIPT`; the owner records a submission; the platform records a response time without a session (canon 35 principle 6). |
+| One producer of `receipt_issued`, on every door | `public.events` (`events_append_only`); `app.record_event`; `audit_read` | WRITE | Before: a door receipt wrote no event; the RPC's event kept naming a payment the receipt had been moved off. Prototype: each receipt, from the RPC or the door, is born with exactly one event carrying its number, payment, customer, currency and amount; a refused write leaves none. `receipt_issued` is already registered (catalog unchanged, 71/623). |
+| The sequence reads only numbers of its own shape, under the key `app.issue_receipt` has always taken | `app.issue_receipt`; the unique key on (tenant, number) | WRITE | Before (RCPT-4): one `RCP-<year>-X1` row stopped the RPC for the year. Prototype: with a malformed row written past the guard, as legacy data could be, the RPC issues `RCP-<year>-0003` after `-0002`. A door insert holds the advisory lock, read from `pg_locks` before any RPC runs. |
+| `app.issue_receipt` replaced | `verify_api_end_to_end.ps1`; test 53; the API contract | WRITE | Signature, security mode, `search_path` and ACL unchanged; its tenant, payment, duplicate and CREATE_RECEIPT refusals unchanged. On the prototype the three HTTP suites pass: 35/0, 85/0, 122/0. `MASTER_API_CONTRACT.md` is regenerated in Step 7 and, with an unchanged signature, is predicted unchanged. |
+| Test 156 | `supabase/tests` | WRITE | SHA-256 `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2`, md5 `50e7678414f7467cab2d678b2f3a88df`, `plan(33)`, 18773 bytes, LF, ASCII: 33/33 on the prototype. |
+| Other tests reading this table or its functions | tests 10, 53, 68 and the full suite | VERIFY | Unchanged. Full pgTAP on the prototype with the pinned CLI 2.109: 156 files, 2969 assertions (2936 + 33), 0 failed. |
+| Smoke | `scripts/verify_database.sql` | VERIFY | On the prototype: `ALL CHECKS PASSED (78 tables, … 71/623 catalog, …)`. No table, catalog value, policy, append-only or transition trigger is added, so no pin moves. |
+| Structural surface on Primary | `scripts/parity_surface.sql`; `primary-ledger-evidence.json` | WRITE | Predicted: functions +2 (`app.guard_receipt_issue`, `app.emit_receipt_issued`; `app.issue_receipt` replaced in place), triggers +2 (`receipts_guard_issue`, `receipts_emit_issued`), constraints, policies, grants, columns, views, indexes, status transitions and RLS unchanged. Step 4 measures the exact fingerprints locally, and Step 7 writes Primary values only from fresh post-deploy readings. |
+| Measured state that moves | manifest (`Live state`, suite figure, coverage, Last Completed, Current Module, Next capability); `primary-ledger-evidence.json`; `ai-map.json` | WRITE | 251 → 252 migrations, latest `20261012120000`; 155 → 156 files and 2936 → 2969 assertions; coverage 41 → 42 of 78. Catalog (71/623), HTTP (464), tables (78), views (8) and client RPCs (80) do not move. |
+| RCPT-1, RCPT-2, RCPT-3 and RCPT-4 fixed; the surface recorded | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; Checks 21, 22, 24, 25 | WRITE | The `RCPT-` prefix is unused at `f6c30d0`. Test 156's `-- ATTACK-CLASSES:` line declares all ten classes, each earned by named assertions, and carries negative assertions, so Check 24 admits `ADVERSARIAL`. Every new row's Owner field is `—`, so Check 25 reads no owner decision. With every finding fixed and nothing left open, the row is `AUDITED`: coverage 42 recorded, 18 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 36 `NOT-RECORDED`. |
+| CI-only guard self-tests and repository consistency | `scripts/test_*_guard.ps1` (four); `scripts/check_repository_consistency.ps1` | VERIFY | Predicted from SPEC-264's identical shape: before deployment, consistency reports exactly the measured-state drift (251 vs 252 migrations, latest, ledger fingerprint, 155 vs 156 files, 2936 vs 2969 assertions), and the primary-ledger and cold-start self-tests fail only their CONTROL and restore cases because of it. These are not waived: Step 7 makes them true and Step 8 requires them green. |
+
+Unresolved Material Consumers: None
+
+### Execution-Boundary Satisfiability
+
+Applicability: APPLICABLE
+
+Irreversible Action Step: Step 6 (Primary deployment)
+
+| Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
+| --- | --- | --- | --- | --- |
+| Clean reset, focused test, pgTAP A/B, the declared HTTP suites, smoke and the mutation proof | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 4 |
+| RCPT-1 to RCPT-4 and the disposition describe the local evidence | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 4 |
+| Manifest, recorded Primary evidence and Primary ledger agree | AFTER_IRREVERSIBLE_ACTION | Step 1 | Step 7 | Step 8 |
+| Manifest suite and coverage figures equal the files and the disposition record | BEFORE_COMPLETION | Step 2 | Step 7 | Step 8 |
+| API contract and map match their generators | BEFORE_COMPLETION | Step 1 | Step 7 | Step 8 |
+| The four CI-only guard self-tests pass | BEFORE_COMPLETION | Step 1 | Step 7 | Step 8 |
+
+### Permanent-Control Admission
+
+Applicability: APPLICABLE
+
+Existing Mechanism Reusable: NO
+
+Existing Mechanism: `app.guard_financial_capability` charges CREATE_RECEIPT on INSERT and on a change of `external_submission_status_code`, and nothing else. `app.derive_created_by` fixes `created_by` for signed-in callers only. The unique keys bound one receipt per payment and one number per tenant. Nothing reads the payment's direction, derives the number or time on the door, fixes an issued receipt, or records a door receipt. Only `app.issue_receipt` wrote a coherent receipt, by construction. This contract reuses the RPC's own sequence key and number shape, PAY-6's fixed-once-written idiom and 23514, PAY-10's single-producer event idiom through `app.record_event`, the existing capability, foreign keys, RLS and unique keys. No shared document-numbering framework is earned.
+
+Added Property: A receipt is issued only for a customer payment. Its number (the tenant's per-year sequence, under its lock, reading only numbers of its own shape) and its issue time are derived on every door, and it is born unsubmitted. Once issued, its payment, number, issue time and origin never change for any caller. Its tax-submission id and times change only with CREATE_RECEIPT, or on the platform path. Every receipt is born with exactly one `receipt_issued` event with its facts.
+
+Causal Negative: These are the pre-repair measurements in Business Reason, at `f6c30d0`:
+- the employee's renumber, two-year backdate, forged submission id and move to a 900 payment, with the event left naming the 600 payment;
+- a receipt issued for a supplier payment;
+- a door receipt with a caller's number and date and no event;
+- the RPC stopped for the year by one malformed number.
+
+On the unrepaired schema, test 156 fails assertions 3, 4, 5, 6 and 7, then aborts at its reference to `receipts_guard_issue`, which is absent. Assertion 6 fails because the door row of assertion 2 has already stopped the RPC: RCPT-4 itself.
+
+Positive Test Design: One tenant has an owner and an employee who owns booking B1 of customer C1, with customer payments f1 (600), f2 (900) and f5 (300) on B1, f4 (100) and f6 (50) on no booking, a supplier payment f3 (500), and a rival tenant with its own customer payment. Positive controls:
+- the owner's door receipt is stored with the sequence's number, the server's time and no submission;
+- the RPC issues for f1 after the door receipt, and for f2 after a malformed legacy row;
+- the owner records a tax submission, and the platform records a response time;
+- the employee sees exactly the two receipts on their booking, and f1's receipt is exactly as issued after every refused attempt.
+
+Negative Test Design:
+- **Fixed once issued:** renumber (owner, employee, platform), move to another payment, backdate and creation-time rewrite are refused 23514.
+- **Submission record:** the employee's submission id and response time are refused 42501.
+- **Capability (held):** the employee's door insert is refused 42501.
+- **Customer payment only:** a supplier payment is refused 23514 on the RPC, the door and the platform path.
+- **Replay:** a second receipt for f1 is refused by the RPC (P0001) and by the unique key at the door (23505).
+- **Tenant:** a receipt in the rival tenant is refused 42501.
+- **Privilege:** neither SECURITY DEFINER function is executable by `authenticated` or `anon`.
+- **Evidence:** a refused write records nothing; four receipts written, four events.
+
+Non-Empty Population Obligation: The tenant has two users with their roles, one customer, one booking and six payments; the rival tenant has its own payment. Every receipt, refusal, lock and event is counted by id, payment or exact message; no zero-row operation satisfies an assertion. Assertion 19 proves the employee sees exactly two receipts before any UPDATE, and assertion 33 proves exactly four events.
+
+Mutation Obligation: Each mutant replaces one function (or drops or grants one trigger or function) on the prototype stack. The run then executes test 156, records the failing assertions, and restores the original definition, proving 33/33 again before the next mutant. A mutant that is not proven installed is a harness error, never a kill.
+
+| Mutant | Change | Failed on the prototype |
+| --- | --- | --- |
+| M1 | `receipt_number` left out of the fixed set | 15, 20, 27, 28 |
+| M2 | `payment_id` left out | 21–25, 27 |
+| M3 | `issued_at` left out | 22 |
+| M4 | `created_at` left out | 23 |
+| M5 | the direction check removed | 11, 12, 29, 33 |
+| M6 | a supplied number kept | 3, 5–10, 13, 14, 19, 27, 33 |
+| M7 | a supplied issue time kept | 3, 4, 5, 7, 9, 27 |
+| M8 | a supplied submission id kept | 3 |
+| M9 | the sequence lock removed | 4 |
+| M10 | the sequence parses every number (`split_part(...)::integer`) | 8, 9, 14, 19, 33 |
+| M11 | the submission record uncharged | 24, 25, 27 |
+| M12 | the platform charged for the submission record | 30 |
+| M13 | the RPC also writes `receipt_issued` | 10, 33 |
+| M14 | the event trigger dropped | 5, 10, 33 |
+| M15 | the guard granted to `authenticated` | 32 |
+
+Prototype result: all fifteen were killed, as listed, and the restored stack passed 33/33 after the last one. One test defect was found and fixed before this result: assertion 33 first expected three events, but the legacy row of assertion 8 is written with only the guard disabled, so it is born with its event too. Four is correct.
+
+Post-Implementation Proof Obligation: All of the following, on the final bytes and through canonical `-Finish`, from the main checkout with the pinned CLI:
+- the focused test, a clean reset, pgTAP Pass A, the declared HTTP suites, pgTAP Pass B and smoke;
+- mutants M1–M15 and the pre-repair causal negative;
+- the generated artifacts, the four CI-only guard self-tests, repository consistency and `git diff --check`;
+- fresh Primary evidence, parity evidence and the Primary ledger check.
+
+## Implementation Steps
+
+1. **Check** that `supabase/migrations/20261012120000_a_receipt_is_issued_once_and_stays_as_issued.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `090936946f72bbe1a22b60c362685ee61bb8304ac9680c309da259cc52b27bfc`, md5 `9a352fdd0d3caec23e1e1c36a43200ff`, 9882 bytes.
+   - Its statements, after a comment block stating the rule and the measurements:
+     - create `app.guard_receipt_issue()` (SECURITY DEFINER, empty `search_path`, PUBLIC revoked) with its BEFORE INSERT OR UPDATE trigger `receipts_guard_issue`;
+     - create `app.emit_receipt_issued()` (SECURITY DEFINER, empty `search_path`, PUBLIC revoked) with its AFTER INSERT trigger `receipts_emit_issued`;
+     - replace `app.issue_receipt(uuid)` with the same signature, security mode and checks, inserting only the tenant and the payment.
+   - If the target exists with different bytes, stop.
+2. **Check** that `supabase/tests/156_a_receipt_is_issued_once_and_stays_as_issued_test.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `26aeb66438f6c52c9e572cc190c3096da883c27ab1d08db8648faae06885e9c2`, `select plan(33);`.
+   - Its `-- ATTACK-CLASSES:` line reads `AUTH TENANT DOOR STATE INPUT BUSINESS PRIVILEGE CONCURRENCY REPLAY OBSERVABILITY`.
+   - If the target exists with different bytes, stop.
+3. **Check** whether `reports/master/MASTER_GAP_REGISTER.md` already contains an `RCPT-1` row. If not, make these edits and nothing else:
+   - **Register:**
+     - a 2026-10-12 Slice-41 freshness entry, with the previous one demoted to `Previously:`;
+     - new rows RCPT-1 (High), RCPT-2 (Medium), RCPT-3 (Medium) and RCPT-4 (Medium), each FIXED by SPEC-268 locally, with Primary pending and Cert `🛡`, and with the measurements above;
+     - every new row with Owner `—` and this contract as session.
+   - **Disposition:**
+     - a freshness entry, with the previous one demoted;
+     - coverage 42 of 78 (18 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 36 `NOT-RECORDED`) and the "All 42" line;
+     - the `receipts` row `AUDITED` / `ADVERSARIAL` / SPEC-268 / RCPT-1, RCPT-2, RCPT-3, RCPT-4, with its evidence, its swept non-defects and canon 29's split-receipt note.
+
+   If a target carries content other than its `f6c30d0` bytes, or `f6c30d0` plus SPEC-265's completed edits, stop.
+4. **Check** for a `Pre-deploy readiness gate` Execution Log entry. If absent, run and record, with actual counts, exits and exact SHA-256 values, all from the main checkout with the repository's pinned CLI:
+   - a clean local reset; test 156 and the focused tests 10, 53, 68 and 155;
+   - pgTAP Pass A, the three declared HTTP suites, then pgTAP Pass B without reset; smoke and the plan sum;
+   - mutants M1–M15 and the causal negative, with each restoration proven;
+   - the local structural fingerprints of `scripts/parity_surface.sql`, before and after the migration;
+   - the API-contract and map generators;
+   - the four CI-only guard self-tests;
+   - the scope check, `git diff --check` and repository consistency.
+
+   Treat as expected at this boundary only:
+   - an undeployed Primary;
+   - the pre-deploy repository-consistency drift listed in Consumer Closure;
+   - the guard self-test CONTROL failures that drift causes.
+
+   Read a fresh Primary baseline, read-only:
+   - the project URL, the full ordered ledger and the absence of the target migration;
+   - the function and structural surfaces;
+   - the triggers of `receipts`;
+   - `app.issue_receipt`'s text md5, security mode and ACL;
+   - the tenant, payment, receipt and event counts.
+
+   Record the predicted delta.
+5. **Check** that exact owner authorization for the migration SHA-256 is recorded in the Execution Log. If absent, stop after Step 4 and present the Gate-2 package. Approval of this contract does not authorize deployment.
+6. **Check** that Primary `vrvtsxexkiiiivlkdxzp` lacks `20261012120000_a_receipt_is_issued_once_and_stays_as_issued`. If it is absent and deployment is separately authorized:
+   - Immediately re-read HEAD, the hashes, the project URL, the full ordered ledger, target absence, the business counts, the triggers of `receipts` and `app.issue_receipt`'s md5.
+   - On an exact match, prove the transmitted text's md5 server-side, then apply only the authorized migration through the Primary connector.
+   - If the connector assigns a temporary version, rename only that one newly inserted ledger row. The rename requires exactly one new row, its stored statement md5 equal to the file's, and no existing target version.
+   - Read fresh: the ledger, the function surface and all ten structural surfaces; the triggers of `receipts`; the three functions' definitions, security modes and ACLs; the business counts.
+
+   Never contact Secondary `brplkqmbzffpxqgkkdzo`.
+7. **Check** that fresh Primary evidence contains the new migration exactly once. If so:
+   - Update `reports/evidence/primary-ledger-evidence.json` from those readings only.
+   - In `_ORVION_CANONICAL/manifest.md`, set `Live state` from the same readings, with the catalog figure `71/623` and 464 HTTP assertions unchanged.
+   - Confirm that `supabase/tests` holds 156 files whose literal `plan(N)` values sum to 2969, then set `Suite **156 files / 2969 assertions**`. If either differs, stop.
+   - Set Batch 6 coverage to 42 of 78, all forty-two at `ADVERSARIAL`.
+   - Mark RCPT-1 to RCPT-4 `DEPLOYED` with Cert `✅`, worded without a date beneath the register's freshness line.
+   - Regenerate `MASTER_API_CONTRACT.md` and `ai-map.json` (stored LF) with the canonical generators.
+   - Run the four `scripts/test_*_guard.ps1` and require each to pass.
+   - Set the Runtime Checkpoint to DONE.
+   - Run `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, repository consistency and `git diff --check`.
+
+   If Primary is unproven, stop.
+8. **Check** for a `Post-deploy local certification` Execution Log entry. If absent:
+   - Run canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` and require `LOCAL_CERTIFY: READY`.
+   - Independently Review the committed implementation against every Acceptance Criterion. After `Verdict: Confirmed Complete`, do all of the following in the Complete commit:
+     - transition to Complete, tick the Acceptance Criteria and the Review Gate, and clear `Active Change Request`;
+     - run `scripts/batch6_select_target.ps1` and record its Top-12;
+     - set `Last Completed` to SPEC-268 / Slice 41;
+     - set `Current Module` to Foundation Completion Programme Batch 6 resuming at Slice 42;
+     - set `Next capability` to **Foundation Completion Programme — Batch 6 Slice 42**, naming the measured first target, followed by the existing Phase-8 order, closed-chapter and standing-fact sentences unchanged;
+     - keep the manifest within 7000 characters;
+     - regenerate `ai-map.json` LF.
+   - Prove the committed range with `-Gate -BaseRef origin/main`, publish the exact committed candidate with `scripts/publish_candidate.ps1` and require exact-SHA candidate CI.
+   - Promote the same accepted SHA, require main CI, and run `-Certify` for `REMOTE_CERTIFY: READY`.
+   - Verify synchronized clean refs.
+
+## Acceptance Criteria
+
+- [ ] A receipt for a payment that is not a customer payment is refused (23514) on the RPC, the table door and the platform path.
+- [ ] A receipt's number is the tenant's per-year sequence and its issue time is the server's, on every door; a supplied number, time or tax-submission field is discarded at INSERT; one malformed stored number neither stops nor bends the sequence; a door insert holds the sequence's advisory lock.
+- [ ] Once issued, a receipt's payment, number, issue time, creator and creation time cannot be changed by any caller (23514); its tax-submission id and times change only with CREATE_RECEIPT (42501 otherwise) or on the platform path; CREATE_RECEIPT on INSERT and on the submission status is unchanged.
+- [ ] Every receipt is born with exactly one `receipt_issued` event carrying its number, payment, customer, currency and amount, on the RPC and the door alike; a refused write records nothing.
+- [ ] `app.issue_receipt` keeps its signature, SECURITY INVOKER mode, empty `search_path`, ACL and refusals, and inserts only the tenant and the payment.
+- [ ] Mutants M1–M15 are each killed against test 156, with installation and restoration proven, and the causal negative is recorded.
+- [ ] RCPT-1, RCPT-2, RCPT-3 and RCPT-4 are fixed and deployed in the register; no other row changed.
+- [ ] `receipts` is `AUDITED` / `ADVERSARIAL` in the disposition record, and coverage is 42 of 78. No other surface's row changed.
+- [ ] The migration and test 156 matched their frozen SHA-256 values when applied.
+- [ ] Primary, the recorded evidence, the manifest (252 migrations; 71/623 catalog; 156 files / 2969 assertions; 464 HTTP assertions), the API contract and `ai-map.json` agree. The four CI-only guard self-tests and repository consistency pass.
+- [ ] The manifest names Batch 6 Slice 42 and its measured target as the next capability, with no Active Change Request.
+- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [ ] No file outside Write Scope was created, modified or deleted.
+
+## Execution Log
+
+[Appended by the executing agent after each run against this Change Request, before
+IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
+— this file is always implicitly in scope for this section.
+Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
+Leave this section's bracketed instructions in place in an unused template; remove them
+only in a CR that has at least one real entry.]
+
+## Verification Notes
+
+[Appended by the reviewing agent after independently re-checking the Execution Log
+against the live repository state. Append-only — never edit or delete a prior entry.]
+
+## Review Gate
+
+- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [ ] No file outside Write Scope was modified, created, or deleted.
+- [ ] No section was added, removed, or restructured outside the approved steps.
+- [ ] Every Acceptance Criteria item is confirmed true.
+- [ ] Any step that could not be resolved deterministically was reported, not guessed.
+- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [ ] The repository is in a clean, releasable state.
+
+## Notes
+
+- **Prototype files.** The migration, test 156, the mutation harness and the probe are held outside the repository, in the authoring session's `prototypes` folder. A fresh agent that lacks them re-derives the files from this contract's description, and the frozen SHA-256 decides whether they match.
+- **Not decided here:** canon 29's split receipts (several receipts for one payment). It needs a product decision before the one-receipt-per-payment key changes.
+- **Renumbered before approval.** This contract was drafted as SPEC-266. SPEC-265's Execution Log quoted the owner's 2026-10-12 authorization, which names SPEC-266 and SPEC-267, and any tracked mention reserves an identity (`CR_LIFECYCLE.md` §4), so the allocator's first unreserved identity after SPEC-265 is SPEC-268. The substance the owner approved is unchanged. The migration's bytes carry no contract number and keep the SHA-256 the owner's Gate 2 names. Test 156's first line names the contract, so its pinned SHA-256 and md5 were re-derived after that one comment changed; its 33 assertions are unchanged.
