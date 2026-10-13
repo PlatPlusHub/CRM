@@ -82,7 +82,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -175,7 +175,33 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs CONTROL (the 
 
 ## Execution Log
 
-None.
+### 2026-10-13 — Claude
+
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Applied.** Each file read its `from` hash and was replaced with the reviewed pre-approval prototype, whose blob had been checked equal to the `to` hash before copying. `git hash-object --path` then read exactly the `to` hash for:
+  - `README.md`
+  - `AGENTS.md`
+  - `GOVERNANCE.md`
+  - `WORKSTATION.md`
+  - `scripts/check_agent_continuity.ps1`
+  - `scripts/test_agent_continuity.ps1`
+- **Step 2: Applied.** `git diff --name-only` listed exactly those six files plus this contract.
+- **Step 3: Applied.** The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` runs next, normally. It changes no container, Docker or workstation state.
+
+**Pre-approval rehearsal (the Notes' measurement).** The lifecycle of this exact Draft (blob `05a76dfa`) was rehearsed in a disposable clone at `0184947` with its push URL disabled:
+- Draft, Approve (`APPROVAL_EVIDENCE: PASS`) and Begin;
+- Implement;
+- `-Finish`: `LOCAL_CERTIFY: READY` in 30.8 min, with the full control suite, the four guard suites, repository consistency and `git diff --check` all passing;
+- Complete;
+- the range Gate over `origin/main..HEAD`: READY. Its net diff was exactly the six files plus this contract.
+
+**Candidate-text cold start (promised in Notes).** A fresh read-only agent got the same neutral new-laptop prompt as the baseline agent. It read the repository at `0184947`, with the candidate README text given in place of `README.md`.
+- **Route.** It opened `WORKSTATION.md` first, because README routes setup there, then `bootstrap.ps1`. It used 4 tool calls in 26 s.
+- **Answer.** It returned to README's Boot command for engineering work, and named no second start route. It also again predicted the execution-policy failure of the bootstrap hand-off, which is repaired by the workstation contract.
+- **More evidence for this contract.** Reading the not-yet-corrected `WORKSTATION.md`, it followed the Secrets paragraph that this contract corrects ("set the Supabase MCP connection string" before setup).
+- **Harness note.** Three earlier candidate runs read a copy in the session scratchpad. They stalled in the agent harness and were stopped without a result. Both baseline runs, which read the repository's own path, finished in under a minute. So the stall belongs to the harness, not to the README.
 
 ## Verification Notes
 

@@ -71,7 +71,7 @@ Read top-down to answer "what am I allowed to do?"; read a specific layer to ans
 | Execution conduct / operating model | `AGENTS.md` | PROTOCOL.md, global-rules.md, CLAUDE/GEMINI/.cursor/.github (thin pointers) |
 | Change Request state machine | `CR_LIFECYCLE.md` | AGENTS.md (points to it) |
 | Agent runtime / boot routing | `AGENTS.md §3–§4` (conduct) + `scripts/check_agent_continuity.ps1 -Boot` (deterministic extractor; owns no truth) | `README.md`, tool pointers and `ai-map.json` route to the command; manifest + active CR remain the underlying authorities |
-| Workstation rebuild (tools/extensions/MCPs/plugins) | `.workstation/manifest.md` (what + why) + `.workstation/prepare.ps1` (how) | `WORKSTATION.md` (thin entry, points here) — README does **not** reference the environment (repository/environment separation, 2026-07-17) |
+| Workstation rebuild (tools/extensions/MCPs/plugins) | `.workstation/manifest.md` (what + why) + `.workstation/prepare.ps1` (how) | `WORKSTATION.md` (thin entry, points here) — README routes to `WORKSTATION.md` in one row and restates nothing about the environment (repository/environment separation, 2026-07-17) |
 | Coding / SQL / API / security standards | `CODING_STANDARDS.md` | ADRs, canon |
 | Business & domain rules | `_ORVION_CANONICAL/00–23` | reports (rationale only) |
 | Schema **intent** (planned) | `_ORVION_CANONICAL/24–33` | MASTER_DOMAIN_CATALOG (indexes it) |

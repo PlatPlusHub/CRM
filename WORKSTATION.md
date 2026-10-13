@@ -15,8 +15,7 @@ See `GOVERNANCE.md §2` (Workstation rebuild row).
 **Design assumption (permanent):** the local machine is **disposable**; **GitHub is the permanent
 source of truth**. Every workstation decision optimizes for rebuilding a completely new machine from
 GitHub with the fewest user actions. When "convenient on this machine" conflicts with "reproducible
-from GitHub," choose GitHub. (`doctor.ps1` enforces the spirit of this by warning when local commits
-are not yet pushed.)
+from GitHub," choose GitHub. (The maintenance menu's header shows commits that are not yet pushed.)
 
 ---
 
@@ -46,7 +45,8 @@ prepare/repair flow and final verification. `prepare.ps1` refreshes PATH in-sess
 installed tool is available to later steps without restarting the shell. It returns non-zero when a
 required component remains unavailable.
 
-- **Terminal / no double-click:** run `./workstation.cmd`, `./.workstation/prepare.ps1` (recover/repair), or `doctor.ps1` (verify).
+- **Terminal / no double-click:** run `./workstation.cmd`, `./.workstation/prepare.ps1` (recover/repair), or `./.workstation/doctor.ps1` (verify).
+- **Maintenance menu (human):** `pwsh -File .workstation/menu.ps1` offers prepare, verify, update, cleanup and decommission.
 - **AI agent controlling Windows:** call the `.workstation/*.ps1` scripts directly — **not** the menu.
 
 `bootstrap.ps1` (remote entry) and `workstation.cmd → .workstation/prepare.ps1` (local entry) are both thin
@@ -77,9 +77,9 @@ is permanent).
 | Historical install snapshot (2026-09-10, evidence only) | `.workstation/reports/INSTALLATION_STATUS.md` |
 
 ## Secrets (not in the repo)
-Some MCP servers need secrets (e.g. the Supabase MCP connection string). Provide them as environment
-variables before running `prepare.ps1`; they are never committed. `prepare.ps1` registers an MCP only
-when its required env var is present.
+No MCP secret is committed or needed by `prepare.ps1`. The remote servers authenticate by OAuth inside
+each client, and Codex's `github` server reads its token from the `GITHUB_PAT_TOKEN` environment
+variable, whose value stays outside the repository (`.workstation/manifest.md §3`).
 
 ## Known blocker
 - **Claude Mem** worker does not stay healthy on Windows (port 37777). Parked; see
