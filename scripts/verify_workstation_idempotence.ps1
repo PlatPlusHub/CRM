@@ -24,11 +24,13 @@
 # Executing a read-only probe is not mutation, and demanding zero operating-system
 # noise would measure the wrong thing. Only meaningful mutation is measured.
 #
-# FAIL-CLOSED. Every failure path exits non-zero. A workstation that is NOT converged
-# makes the single run install or configure something, which fails this check by
-# design and says so: converge first with `workstation.cmd`, then certify. This script
-# never converges the machine on the caller's behalf, never uninstalls anything, and
-# never manufactures damage to test recovery.
+# FAIL-CLOSED. Every failure path exits non-zero. On a workstation that is NOT converged
+# the prepare run would install or configure: measured during SPEC-275, it set the user
+# variable MCP_TIMEOUT (OPS-6). So the read-only doctor runs FIRST, and when it fails
+# prepare.ps1 is never started: converge with `workstation.cmd`, then certify. The doctor
+# checks everything prepare.ps1 converges, so on a machine it passes, the one prepare run
+# has nothing to change. This script never converges the machine on the caller's behalf,
+# never uninstalls anything, and never manufactures damage to test recovery.
 [CmdletBinding()]
 param([string]$Root = (Split-Path $PSScriptRoot -Parent))
 
@@ -57,6 +59,16 @@ if (-not (Test-Path -LiteralPath $prepare)) {
 
 Write-Output "== ORVION workstation idempotence =="
 Write-Output "Measuring one prepare run against an already-converged workstation."
+
+$doctor = @(& pwsh -NoProfile -File (Join-Path $Root '.workstation/doctor.ps1') 2>&1 | ForEach-Object { "$_" })
+if ($LASTEXITCODE -ne 0) {
+    foreach ($l in @($doctor | Where-Object { $_ -match '^\[FAIL\]' })) { Write-Output "  $l" }
+    Write-Output ""
+    Write-Output "WORKSTATION IDEMPOTENCE: NOT MEASURED - the doctor says this workstation is not converged, so prepare.ps1 was not run (it would provision it)"
+    Write-Output "Converge with workstation.cmd, then certify."
+    exit 1
+}
+Write-Output "  doctor passed: converged"
 
 $before = Get-TrackedFingerprint
 $output = & pwsh -NoProfile -File $prepare 2>&1 | Out-String

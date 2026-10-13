@@ -59,6 +59,9 @@ if (Get-Command codex -ErrorAction SilentlyContinue) {
     foreach ($name in @($projectMcpNames + "github")) { if ($codexMcp -match "(?m)^$([regex]::Escape($name))\s") { Pass "Codex MCP $name enumerated" } else { Fail "Codex MCP $name not enumerated" } }
     if ($codexMcp -match "supabase-primary.*Not logged in") { Warn "Codex supabase-primary configured; OAuth authentication required" }
 }
+# prepare.ps1 sets this when it is absent (manifest.md section 3). Checked here so that a passing doctor
+# means a prepare run has nothing left to change, which the idempotence verifier relies on (OPS-6).
+if ([Environment]::GetEnvironmentVariable("MCP_TIMEOUT", "User")) { Pass "MCP_TIMEOUT is set for this user" } else { Fail "MCP_TIMEOUT is not set for this user; run workstation.cmd" }
 if (-not $env:GITHUB_PAT_TOKEN) { Warn "Codex GitHub MCP configured; GITHUB_PAT_TOKEN is not present in this process" } else { Pass "Codex GitHub MCP credential variable is present (value not inspected)" }
 
 Write-Host ""; Write-Host "[Authentication boundaries]"

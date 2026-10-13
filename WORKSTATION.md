@@ -46,6 +46,7 @@ installed tool is available to later steps without restarting the shell. It retu
 required component remains unavailable.
 
 - **Terminal / no double-click:** run `./workstation.cmd`, `./.workstation/prepare.ps1` (recover/repair), or `./.workstation/doctor.ps1` (verify).
+- **Double-click (human):** `.workstation\doctor.cmd` verifies and changes nothing; `.workstation\update.cmd` previews the available upgrades and asks before applying any. Both keep the window open and return the script's exit code.
 - **Maintenance menu (human):** `pwsh -File .workstation/menu.ps1` offers prepare, verify, update, cleanup and decommission.
 - **AI agent controlling Windows:** call the `.workstation/*.ps1` scripts directly — **not** the menu.
 

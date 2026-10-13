@@ -46,6 +46,10 @@ else {
 }
 
 Set-Location $Target
-Write-Host "Handing off to the in-repo provisioner (.workstation\prepare.ps1)..."
-& (Join-Path $Target ".workstation\prepare.ps1")
+Write-Host "Handing off to the in-repo provisioner (workstation.cmd -> .workstation\prepare.ps1)..."
+# Through workstation.cmd, never `& prepare.ps1`: `irm | iex` runs this text under the Restricted
+# execution policy a fresh Windows client has, but Restricted refuses a script FILE, so recovery
+# stopped here with "running scripts is disabled". workstation.cmd starts prepare.ps1 with a
+# process-scoped -ExecutionPolicy Bypass and changes no persistent policy.
+& (Join-Path $Target "workstation.cmd")
 exit $LASTEXITCODE

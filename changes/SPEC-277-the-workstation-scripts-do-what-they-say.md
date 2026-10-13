@@ -91,7 +91,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -210,7 +210,26 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs WORKSTATION (
 
 ## Execution Log
 
-None.
+### 2026-10-13 — Claude
+
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Applied.** Each file read its `from` hash (`absent` for the three new files) and was replaced with the reviewed pre-approval prototype. The prototype's blob had been checked equal to the `to` hash before copying. `git hash-object --path` then read exactly the `to` hash for all thirteen files.
+- **Step 2: Applied.** The tracked and untracked changes listed exactly those thirteen files plus this contract.
+- **Step 3: Applied.** The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` runs next, normally. The local Supabase stack stays stopped: the WORKSTATION profile needs only the Docker engine, which is running.
+
+**Approval prerequisites, re-verified before the first commit.**
+- HEAD, `origin/main` and `origin/orvion-preflight` were all `386bf87`, on branch `main`, with a clean tree.
+- The Draft's blob was `500220f756ccd0a5b8260ddf1c7d6220d5f7739f` and its SHA-256 `b9c2c091ee7696d141d4de566941176e3c9053c6c6a51a460f9baf1e7a3c2df9`.
+- 13 of 13 pins held: each file was at its `from` hash in the repository, at its `to` hash in the prototype, and pinned that way in the Draft.
+
+**Pre-approval rehearsal.** A disposable clone at `386bf87`, with push disabled, rehearsed the lifecycle of the same Draft blob:
+- Draft, then Approve with `APPROVAL_EVIDENCE: PASS`, then Begin and Implement.
+- `-Finish`: `LOCAL_CERTIFY: READY` in 1.5 min. Repository consistency, `git diff --check`, the doctor, the idempotence verifier and `scripts/test_workstation.ps1` under pwsh and Windows PowerShell 5.1 all passed.
+- Complete.
+- The range Gate over `origin/main..HEAD`: READY, with a net diff of exactly the thirteen files.
+- `MCP_TIMEOUT` and the hash of `~/.codex/config.toml` were identical before and after.
 
 ## Verification Notes
 

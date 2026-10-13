@@ -26,7 +26,7 @@ function Ensure-NpmGlobal {
     if (Get-Command $Cmd -ErrorAction SilentlyContinue) { Note $Label "installed" } else { Write-Host "[FAIL] $Label"; Note $Label "FAILED" }
 }
 function Ensure-CodexMcp {
-    param($Name, $Url, $CommandArgs, $BearerEnv)
+    param($Name, $Url, $CommandArgs, $BearerEnv, $AlsoUrl)
     if (-not (Get-Command codex -ErrorAction SilentlyContinue)) { Note "codex-mcp:$Name" "FAILED (no codex)"; return }
     $existing = (codex mcp get $Name 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0) {
@@ -38,6 +38,7 @@ function Ensure-CodexMcp {
             $expectedArgs = @($CommandArgs | Select-Object -Skip 1) -join " "
             $matches = ($normalized -like "*command: $expectedCommand*") -and ($normalized -like "*args: $expectedArgs*")
         }
+        if (-not $matches -and $AlsoUrl) { $matches = $normalized -like "*url: $AlsoUrl *" }
         if ($matches) { Write-Host "[ OK ] Codex MCP $Name"; Note "codex-mcp:$Name" "present"; return }
         Write-Host "[FAIL] Codex MCP $Name exists but does not match the repository definition"
         Note "codex-mcp:$Name" "FAILED (configuration drift)"; return
@@ -112,13 +113,17 @@ $mcp = Get-Content -Raw (Join-Path $Root ".mcp.json") | ConvertFrom-Json
 # above and then ignored in favour of retyped names and argument vectors, so a server
 # added to the authority would never have been registered into Codex. Iterate it.
 $projectMcp = @($mcp.mcpServers.PSObject.Properties)
+# Context7 serves the same tools over stdio (the .mcp.json definition, which needs no account) and over
+# a remote endpoint with OAuth sign-in (context7.com/docs/resources/all-clients). A Codex already signed
+# in there keeps that server: neither transport is wrong, and replacing an OAuth sign-in is the owner's call.
+$equivalentUrl = @{ "context7" = "https://mcp.context7.com/mcp/oauth" }
 if ($projectMcp.Count -eq 0) {
     Write-Host "[FAIL] .mcp.json declares no project MCP servers"
     Note "project MCP configuration" "FAILED (authority declares none)"
 } else {
     foreach ($server in $projectMcp) {
         if ($server.Value.url) { Ensure-CodexMcp $server.Name $server.Value.url $null $null }
-        else { Ensure-CodexMcp $server.Name $null (@($server.Value.command) + @($server.Value.args)) $null }
+        else { Ensure-CodexMcp $server.Name $null (@($server.Value.command) + @($server.Value.args)) $null $equivalentUrl[$server.Name] }
     }
 }
 # NOT a project MCP: absent from .mcp.json by design, so it stays workstation-specific.

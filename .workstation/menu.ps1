@@ -7,7 +7,7 @@ $Here = $PSScriptRoot
 $Root = Split-Path $Here -Parent
 
 if ([Console]::IsInputRedirected) {
-    Write-Host "This launcher is interactive - run it in a real terminal (or double-click workstation.cmd)."
+    Write-Host "This launcher is interactive - run it in a real terminal: pwsh -File .workstation/menu.ps1"
     Write-Host "For automation/AI: call .workstation/prepare.ps1, doctor.ps1, update.ps1, cleanup.ps1, decommission.ps1 directly."
     exit 0
 }
@@ -45,7 +45,7 @@ while ($true) {
     Write-Host "-----------------------------------------"
     Write-Host "   1  Prepare / Repair   (install missing tools + verify)"
     Write-Host "   2  Verify             (doctor - health, versions, GitHub sync)"
-    Write-Host "   3  Update             (upgrade tools + verify)"
+    Write-Host "   3  Update             (preview upgrades, confirm, verify)"
     Write-Host "   4  Cleanup            (remove transient artifacts - safe)"
     Write-Host "   5  Decommission       (remove ORVION from this machine - for retire/sell)"
     Write-Host "   0  Exit"
@@ -56,7 +56,8 @@ while ($true) {
         "3" { Run "update.ps1" }
         "4" { Run "cleanup.ps1" }
         "5" { Run "decommission.ps1" }
-        { $_ -in "X", "x", "0" } { break }
+        # `return`, not `break`: inside a switch, `break` leaves only the switch, so Exit redrew the menu.
+        { $_ -in "X", "x", "0" } { return }
         default { Write-Host "Invalid choice." }
     }
 }

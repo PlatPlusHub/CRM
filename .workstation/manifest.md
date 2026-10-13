@@ -62,13 +62,13 @@ row that is deliberately not a project server: it is absent from `.mcp.json` and
 
 | Server | Clients | Connection/runtime | Authentication | Bootstrap status |
 |---|---|---|---|---|
-| `context7` | Claude, Codex | stdio `npx -y @upstash/context7-mcp` | None | Defined, registered, enumerated |
+| `context7` | Claude, Codex | stdio `npx -y @upstash/context7-mcp`; a Codex already signed in to Context7's remote `https://mcp.context7.com/mcp/oauth` keeps it as the same server | None (stdio); OAuth (remote) | Defined, registered, enumerated |
 | `postgres-local` | Claude, Codex | stdio Node MCP to local port 54322 | Local-dev credentials only | Defined, registered, usable with stack |
 | `supabase-primary` | Claude, Codex | official remote MCP scoped to Primary ref | Browser OAuth; no PAT in repo | Defined and registered; auth separate |
 | `n8n` | Claude, Codex | `https://plat.app.n8n.cloud/mcp-server/http` | OAuth/account authorization | Defined and registered; auth separate |
 | `github` | Codex; shell uses `gh` | GitHub Copilot MCP endpoint | `GITHUB_PAT_TOKEN` env name; value external | Registered; variable presence checked |
 
-**Startup timeout (2026-10-09).** Claude Code waits 30 s by default for a stdio server to start, and `MCP_TIMEOUT` (milliseconds) changes that wait. A cold `npx -y` start of `context7` and `postgres-local` measured 51.6 s, so both failed to connect at session start; warm starts measured 14–22 s. In a fresh `claude mcp list`, `MCP_TIMEOUT=5000` made both fail while `90000` and the default let both connect, so the variable is honoured. `prepare.ps1` therefore sets the user variable `MCP_TIMEOUT=90000` when it is absent, and reports a different value without overwriting it. A client reads the variable only when it starts, so VS Code and the CLI are restarted after the first setting.
+**Startup timeout (2026-10-09).** Claude Code waits 30 s by default for a stdio server to start, and `MCP_TIMEOUT` (milliseconds) changes that wait. A cold `npx -y` start of `context7` and `postgres-local` measured 51.6 s, so both failed to connect at session start; warm starts measured 14–22 s. In a fresh `claude mcp list`, `MCP_TIMEOUT=5000` made both fail while `90000` and the default let both connect, so the variable is honoured. `prepare.ps1` therefore sets the user variable `MCP_TIMEOUT=90000` when it is absent, and reports a different value without overwriting it; `doctor.ps1` fails while it is absent. A client reads the variable only when it starts, so VS Code and the CLI are restarted after the first setting.
 
 Claude.ai account connectors, Codex bundled MCPs (`node_repl`, computer use), and bundled/account
 plugins are client-managed or account-managed. They are not repository dependencies and private
@@ -85,7 +85,7 @@ profiles are never copied. Supported client login/sync flows restore that state.
 
 ## 5. One-click flow and safety
 
-`workstation.cmd` invokes `.workstation/prepare.ps1` directly. The provisioner:
+`workstation.cmd` invokes `.workstation/prepare.ps1` directly, and `bootstrap.ps1` hands off through it. The provisioner:
 
 1. detects or installs base tools through official winget package IDs;
 2. refreshes current-process PATH after installations;
@@ -107,7 +107,9 @@ Docker Desktop's first-run agreement are the legitimate manual boundaries.
 |---|---|
 | `prepare.ps1` | One-click provisioning and final verification |
 | `doctor.ps1` | Read-only verification with authoritative exit code |
-| `update.ps1` | Upgrade the required tools and agents, then verify |
+| `doctor.cmd` | Double-click entry to `doctor.ps1`; keeps the window open and returns its exit code |
+| `update.ps1` | Preview the upgrades winget and npm can apply to the tools they installed (others are reported, the pinned Supabase CLI is never touched); apply exactly those versions after confirmation or with `-Apply`, then verify |
+| `update.cmd` | Double-click entry to `update.ps1` (preview, then ask); never passes `-Apply` |
 | `menu.ps1` | Optional maintenance menu; not the setup entry point |
 | `cleanup.ps1` | Remove only known transient workstation artifacts |
 | `decommission.ps1` | Confirmation-gated ORVION-specific removal |
