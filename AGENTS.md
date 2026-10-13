@@ -6,7 +6,7 @@ This is the universal, client-neutral operating kernel for every ORVION engineer
 
 ## 1. Execution boundary and stop conditions
 
-Repository READ/search access is unrestricted. CREATE/MODIFY/DELETE authority exists only in an Approved or In-Progress CR's exact `Write Scope`; Required Reading never grants write authority. In PLAN, read, search, research, diagnose, and draft a proposed CR, but do not mutate implementation. Official CR statuses remain exactly Draft, Approved, In Progress, Complete, Cancelled. PLAN, EXECUTE, VERIFY, BLOCKED and CERTIFY are runtime activities/verdicts, never statuses. Only an Approved or In-Progress CR may be the manifest's active pointer, and a Draft named as active is a rejected contradiction, not a mode.
+Repository READ/search access is unrestricted. CREATE/MODIFY/DELETE authority exists only in an Approved or In-Progress CR's exact `Write Scope`; Required Reading never grants write authority. In PLAN, read, search, research, diagnose, test assumptions in a disposable sandbox or prototype outside the authoritative repository (`ENGINEERING_METHOD.md §2`, "Reduce uncertainty before freezing"), and draft a proposed CR, but do not mutate implementation. Official CR statuses remain exactly Draft, Approved, In Progress, Complete, Cancelled. PLAN, EXECUTE, VERIFY, BLOCKED and CERTIFY are runtime activities/verdicts, never statuses. Only an Approved or In-Progress CR may be the manifest's active pointer, and a Draft named as active is a rejected contradiction, not a mode.
 
 Execution is the default inside approved scope. Do not pause for routine Git, tests, commits, synchronization, or objectively derivable implementation choices. Stop only for:
 

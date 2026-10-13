@@ -68,7 +68,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -131,12 +131,23 @@ Irreversible Action Step: NONE
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-13 — Claude
+
+Outcome: Complete
+
+Authority: the owner's 2026-10-13 authorization of Gate 1 and Gate 2 in advance, conditional on the exact Draft identity and passing Pre-Approval Evidence.
+- Before approval, the Draft read blob `2a4b68470dd90580e3600aba2060fc008092868f` and SHA-256 `8f980beb408a3ed149547ef115f4fabe7093e7a35e1a0beb5b8fc76636f56b7b` on base `98fa06c`, and SPEC-274 was unreserved.
+- The approval Gate returned `APPROVAL_EVIDENCE: PASS`.
+- A targeted read-only cold-start check on the final text, held for the two late wording fixes, read both as intended: a `git worktree` is refused in favour of a fresh clone with push disabled, and §3 is unchanged.
+
+Step results:
+- Step 1: Applied. Each file was at its `from` hash, and the edit in Notes ("Exact text") was made. `git hash-object --path` then read exactly the `to` hashes:
+  - `AGENTS.md`: `3582ae17` to `b1d693e1`
+  - `ENGINEERING_METHOD.md`: `191eb68f` to `b726938d`
+- Step 2: Applied. `git diff --name-only HEAD` listed exactly `AGENTS.md` and `ENGINEERING_METHOD.md`; no other path changed.
+- Step 3: Applied. The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` runs next, normally.
+
+Commits: the implementation and checkpoint commit that carries this entry.
 
 ## Verification Notes
 
