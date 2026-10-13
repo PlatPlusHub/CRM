@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -197,16 +197,16 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs WORKSTATION (
 
 ## Acceptance Criteria
 
-- [ ] Each of the thirteen Step 1 files has exactly its `to` blob.
-- [ ] `bootstrap.ps1` hands off through `workstation.cmd` and no longer runs `.workstation\prepare.ps1` directly.
-- [ ] `.workstation/update.ps1` defines `Get-UpdatePlan`, applies only on confirmation or `-Apply` and only at each row's previewed version and source, and contains no `npx`, `supabase@latest` or `@latest` invocation.
-- [ ] `scripts/verify_workstation_idempotence.ps1` runs the doctor before `prepare.ps1` and prints `NOT MEASURED` when it fails.
-- [ ] `.workstation/doctor.ps1` fails when `MCP_TIMEOUT` is unset for the user.
-- [ ] `.workstation/prepare.ps1` accepts `https://mcp.context7.com/mcp/oauth` for `context7` only, and still reports any other drift as `FAILED (configuration drift)`.
-- [ ] `.workstation/menu.ps1`'s Exit choice uses `return`.
-- [ ] `.workstation/doctor.cmd` and `.workstation/update.cmd` each only run the script beside them with no arguments, pause, and return its exit code, and `WORKSTATION.md` names both.
-- [ ] The register reads OPS-5, OPS-6 and OPS-7 fixed, and the Action registry no longer lists OPS-5 or OPS-6.
-- [ ] The tracked implementation diff touches only this contract's Write Scope.
+- [x] Each of the thirteen Step 1 files has exactly its `to` blob.
+- [x] `bootstrap.ps1` hands off through `workstation.cmd` and no longer runs `.workstation\prepare.ps1` directly.
+- [x] `.workstation/update.ps1` defines `Get-UpdatePlan`, applies only on confirmation or `-Apply` and only at each row's previewed version and source, and contains no `npx`, `supabase@latest` or `@latest` invocation.
+- [x] `scripts/verify_workstation_idempotence.ps1` runs the doctor before `prepare.ps1` and prints `NOT MEASURED` when it fails.
+- [x] `.workstation/doctor.ps1` fails when `MCP_TIMEOUT` is unset for the user.
+- [x] `.workstation/prepare.ps1` accepts `https://mcp.context7.com/mcp/oauth` for `context7` only, and still reports any other drift as `FAILED (configuration drift)`.
+- [x] `.workstation/menu.ps1`'s Exit choice uses `return`.
+- [x] `.workstation/doctor.cmd` and `.workstation/update.cmd` each only run the script beside them with no arguments, pause, and return its exit code, and `WORKSTATION.md` names both.
+- [x] The register reads OPS-5, OPS-6 and OPS-7 fixed, and the Action registry no longer lists OPS-5 or OPS-6.
+- [x] The tracked implementation diff touches only this contract's Write Scope.
 
 ## Execution Log
 
@@ -233,19 +233,40 @@ Step results:
 
 ## Verification Notes
 
-None.
+### 2026-10-13 — Claude (independent review)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository at HEAD.
+- **R1.** All thirteen Step 1 files have exactly their `to` blobs.
+- **R2.** `bootstrap.ps1` hands off through `workstation.cmd` and no longer calls `prepare.ps1` directly.
+- **R3.** `update.ps1` defines `Get-UpdatePlan`, applies only on confirmation or `-Apply`, passes `--version`/`--source` (winget) and `@<version>` (npm) from the previewed row, and contains no `npx` or `@latest`.
+- **R4.** The verifier runs the doctor before `prepare.ps1` and prints `NOT MEASURED` when the doctor fails.
+- **R5.** The doctor fails while `MCP_TIMEOUT` is unset.
+- **R6.** `prepare.ps1` accepts the one OAuth URL for `context7` only, and still reports other drift as `FAILED (configuration drift)`.
+- **R7.** The menu's Exit uses `return`.
+- **R8.** Each launcher dispatches only to the script beside it, passes no arguments, pauses and returns `%ORVION_EXIT%`.
+- **R9.** `WORKSTATION.md` names both launchers.
+- **R10.** OPS-5, OPS-6 and OPS-7 read FIXED, and no Action-registry row lists OPS-5 or OPS-6.
+- **R11.** `changes/SPEC-276-…` is unchanged since `386bf87`.
+- **R12.** The net diff from `386bf87` is the thirteen files, this contract, and the lifecycle-owned manifest and `ai-map.json`.
+- **Certification.** `-Finish` at `e967360`: `LOCAL_CERTIFY: READY` in 1.6 min. Repository consistency, `git diff --check`, the doctor, the idempotence verifier (doctor first, then a `prepare.ps1` run that installed and reconfigured nothing) and `scripts/test_workstation.ps1` under pwsh and Windows PowerShell 5.1 all passed. `MCP_TIMEOUT`, the hash of `~/.codex/config.toml`, the hash of `.claude/settings.json` and `core.hooksPath` were identical before and after.
+- **Discrepancy, no effect.** The Risks section calls each launcher "six lines"; each has seven (`@echo off`, `setlocal`, a `REM` line, the dispatch, `set`, `pause`, `exit /b`). Their behaviour is exactly as specified. The frozen text is left as approved and corrected here.
+- **Execution note.** The first Implement run copied six files, then the agent's own progress print failed on a new file's `absent` label. That bug was in the agent's helper, not in a contract file. The re-run recorded those six as Already Applied by their `to` hash and applied the remaining seven. The resulting blobs are exactly the pinned ones.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
