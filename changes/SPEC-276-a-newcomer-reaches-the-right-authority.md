@@ -84,7 +84,7 @@ None
 
 Resume Step: DONE
 Blocker: None
-Recovery Attempt: 0
+Recovery Attempt: 1
 
 ## Required Capabilities
 
@@ -202,6 +202,19 @@ Step results:
 - **Answer.** It returned to README's Boot command for engineering work, and named no second start route. It also again predicted the execution-policy failure of the bootstrap hand-off, which is repaired by the workstation contract.
 - **More evidence for this contract.** Reading the not-yet-corrected `WORKSTATION.md`, it followed the Secrets paragraph that this contract corrects ("set the Supabase MCP connection string" before setup).
 - **Harness note.** Three earlier candidate runs read a copy in the session scratchpad. They stalled in the agent harness and were stopped without a result. Both baseline runs, which read the repository's own path, finished in under a minute. So the stall belongs to the harness, not to the README.
+
+### 2026-10-13 19:40 — Claude
+
+Outcome: Blocked; recovery attempt 1 of 3 re-runs `-Finish`.
+
+**The failure.** `-Finish` on `5b7cf9e` ended `MANDATORY_VERIFICATION_FAILED` on `scripts/test_agent_continuity.ps1`: 445 passed and 1 failed. The failure was assertion 160, "CONTROL: executing on main still records main". Inside that fixture's own `-Finish`, `git diff --check` exited 1 with `git: 'C:\Users\My Lab\scoop\apps\git\current\cmd\git.exe' is not a git command`, so git received its own path as its first argument.
+
+**Diagnosis (attempt 1, immediate evidence).**
+- The fixture and the command are untouched by this contract. Assertion 159, the same Finish path, passed just before it. The rehearsal of these exact six files passed all 446 assertions.
+- `git` resolves to two applications on this machine: scoop's `apps\git\current\cmd\git.exe` and its shim `scoop\shims\git.exe`. Neither changed during the run: git is 2.54.0 from 2026-09-11, and the shim is from 2026-06-25.
+- The identical child command, `pwsh -NoProfile -Command "git diff --check; exit $LASTEXITCODE"`, failed 0 times in 40 runs.
+
+Classified as a one-off environmental failure with no code defect. No assertion is changed. `-Finish` is re-run once. If it recurs, attempt 2 investigates how the shim resolves in the child process.
 
 ## Verification Notes
 
