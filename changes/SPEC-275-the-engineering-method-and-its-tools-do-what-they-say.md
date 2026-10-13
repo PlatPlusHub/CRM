@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -229,13 +229,13 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs CONTROL (the 
 
 ## Acceptance Criteria
 
-- [ ] Each of the nine Step 1 files has exactly its `to` blob.
-- [ ] `scripts/test_agent_continuity.ps1` contains SC-13, SC-14, SC-15 and the new `SC-MUTATION` kill, and `scripts/check_agent_continuity.ps1` no longer contains `cancelledGovernor`.
-- [ ] `scripts/watch_selftest.ps1` contains mutant M16, and W3 and W8 assert the watcher's exit code.
-- [ ] `AGENTS.md` §1 carries the isolation principle (a fresh clone with push disabled for commits, its own Supabase project id and ports for database work) and the measurement rule with its shared-state qualifier, and `changes/TEMPLATE.md` names §2's closing paragraph; the `"Reduce uncertainty before freezing"` pointer is unchanged.
-- [ ] The register reads GOV-26, CTRL-16 and OPS-3 fixed and OPS-5 and OPS-6 OPEN with their trigger, and the Action registry has no CTRL-16 or OPS-3 entry and lists OPS-5 and OPS-6.
-- [ ] `changes/SPEC-271-…` to `changes/SPEC-274-…` are byte-identical to `13fb8fc`.
-- [ ] The tracked implementation diff touches only this contract's Write Scope.
+- [x] Each of the nine Step 1 files has exactly its `to` blob.
+- [x] `scripts/test_agent_continuity.ps1` contains SC-13, SC-14, SC-15 and the new `SC-MUTATION` kill, and `scripts/check_agent_continuity.ps1` no longer contains `cancelledGovernor`.
+- [x] `scripts/watch_selftest.ps1` contains mutant M16, and W3 and W8 assert the watcher's exit code.
+- [x] `AGENTS.md` §1 carries the isolation principle (a fresh clone with push disabled for commits, its own Supabase project id and ports for database work) and the measurement rule with its shared-state qualifier, and `changes/TEMPLATE.md` names §2's closing paragraph; the `"Reduce uncertainty before freezing"` pointer is unchanged.
+- [x] The register reads GOV-26, CTRL-16 and OPS-3 fixed and OPS-5 and OPS-6 OPEN with their trigger, and the Action registry has no CTRL-16 or OPS-3 entry and lists OPS-5 and OPS-6.
+- [x] `changes/SPEC-271-…` to `changes/SPEC-274-…` are byte-identical to `13fb8fc`.
+- [x] The tracked implementation diff touches only this contract's Write Scope.
 
 ## Execution Log
 
@@ -264,17 +264,42 @@ Correction to Notes, recorded here so the approved Draft stays byte-identical:
 Commits: the implementation and checkpoint commit that carries this entry.
 ## Verification Notes
 
-None.
+### 2026-10-13 — Claude (Independent Review of `1497f24`)
 
+Verdict: Confirmed Complete
+
+Findings: each was re-checked against the committed repository after `-Finish`, not against the Execution Log.
+
+1. **Criterion 1.** At HEAD, all nine files read exactly their pinned blobs (9 of 9).
+2. **Criterion 2.** `scripts/test_agent_continuity.ps1` asserts SC-13, SC-14 and SC-15 (3 of 3) and contains the new `SC-MUTATION` kill. `scripts/check_agent_continuity.ps1` contains `cancelledGovernor` 0 times.
+3. **Criterion 3.** `scripts/watch_selftest.ps1` contains mutant M16. W3 asserts exit 1 and the attach time. W8 asserts exit 1 for a re-armed watcher on a finished failed run, and exit 0 for a later successful one.
+4. **Criterion 4.** `AGENTS.md` §1 carries the fresh clone with push disabled, the worktree's shared refs and config as the reason, the database's own Supabase project id and ports, and "asking before running one that cannot be isolated". The `"Reduce uncertainty before freezing"` pointer is unchanged. `changes/TEMPLATE.md` names §2's closing paragraph.
+5. **Criterion 5.** The register reads GOV-26, CTRL-16 and OPS-3 fixed and OPS-5 and OPS-6 OPEN, each in one row. The Action registry has no CTRL-16 row and no OPS-3 entry, and lists OPS-5 and OPS-6 in the `OWN-TRIGGER` ACCEPTED RESIDUAL row.
+6. **Criterion 6.** `git diff --name-only 13fb8fc HEAD` lists none of `changes/SPEC-271-…` to `changes/SPEC-274-…`.
+7. **Criterion 7.** The net diff from `13fb8fc` is exactly the nine files, this contract, the manifest and `ai-map.json`, all in Write Scope, and the tree is clean. The manifest and `ai-map.json` return to baseline at Complete.
+8. **Local certification.** `-Finish` at `1497f24` ran alone (`concurrent=0` at start and end), with no container, Docker or workstation state changed; Docker Desktop was down throughout, after Windows Update's WSL install. Every command passed:
+   - `test_agent_continuity.ps1`, the full suite with SC-1 to SC-15, both Draft-write mutation kills, 191g, 191h and the SEG cases (21.3 min);
+   - `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1` and `test_future_date_guard.ps1`;
+   - `check_repository_consistency.ps1` and `git diff --check`;
+   - the Additional Verification `watch_selftest.ps1`.
+
+   `LOCAL_CERTIFY: READY`, 36.9 min. The receipt names SPEC-275, READY, CONTROL and REPOSITORY, and expects Agent Control and Repository Consistency on `main`. The repaired watcher followed the run, attached 5 s after its start, and exited 0.
+9. **Original defects against corrected behaviour.**
+   - **CTRL-16.** Before approval, the unchanged Gate admitted SC-13, SC-14 and SC-15 (`ORVION: READY`). The repaired Gate refuses all three with `PRE_APPROVAL_WRITE`.
+   - **OPS-3.** M16 restores the old `exit 0`, and W3 kills it.
+   - **GOV-26.** Fresh agents on the final wording chose a fresh clone and an isolated stack, and inspected the verifier before running it (Notes).
+10. **Authority.** The owner conditionally authorised Gate 1 and Gate 2 for this exact Draft (blob `ae754b95…`, SHA-256 `459637bc…`, base `13fb8fc`), and all eight conditions were verified before the Approve commit. No architectural decision beyond the contract is introduced. OPS-5 and OPS-6 stay deferred to their trigger. Docker, WSL, Context7 OAuth, `MCP_TIMEOUT` and the local stack were not touched.
+
+Recommendation to human: Set Status to Complete (performed by the executing agent under the owner's 2026-10-13 Gate 2 authorization).
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
