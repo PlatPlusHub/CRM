@@ -882,6 +882,8 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
     $commits=@(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")
     if(!$commits.Count){return}
     $governing=$Rel-replace'\\','/'
+    $endText=Read-GitFile $HeadRef $governing
+    $cancelledGovernor=$false;if($null-ne$endText){try{$cancelledGovernor=(Status-FromText $endText)-eq'Cancelled'}catch{}}
 
     # The effective frozen baseline is the governing contract AS APPROVED: its
     # text at the range base when it exists there, otherwise at its first
@@ -949,6 +951,11 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
             $text=Read-GitFile $commit $governing
             if($null-ne$text){
                 $statusAt=try{Status-FromText $text}catch{$null}
+                # SPEC-273. A cancelled contract's commits publish only through a carrying successor, so its
+                # write authority is judged at the commit that wrote. While it was still a Draft it carried
+                # none (CR_LIFECYCLE.md, SPEC-163), and no successor may legalise such a write. The same rule
+                # for completed contracts is CTRL-16 (open): existing fixtures commit during Draft.
+                if($cancelledGovernor-and$statusAt-eq'Draft'){foreach($w in $paths){if($w-ne$governing-and-not$aliases.ContainsKey($w)){throw "PRE_APPROVAL_WRITE:${w}@$short"}}}
                 # The commit that leaves Draft is the one that freezes authority, so
                 # it supplies the baseline every later commit is judged against.
                 if(-not$frozenBound-and$statusAt-and$statusAt-ne'Draft'){$FrozenBaseline=$text;$frozenBound=$true}
@@ -987,6 +994,15 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
             $t=Read-GitFile $commit $p
             if($null-ne$t){try{if((Status-FromText $t)-in@('Complete','Cancelled')){$terminal[$p]=$true}}catch{}}
         }
+    }
+
+    # SPEC-273. The range is also judged by its NET diff against the same frozen scope. The walk
+    # above has no baseline until the governor first appears, so a commit made before that was
+    # judged by nothing once a publication had a second segment. A single-segment range already
+    # had this from the endpoint check; for a publication segment this is the only judge.
+    if($null-ne$FrozenBaseline){
+        $netScope=@(Bullets (Section $FrozenBaseline 'Write Scope') 'WRITE_SCOPE'|%{$_-replace'\\','/'})
+        foreach($r in @(Diff-Records)){foreach($q in @($r.Path,$r.Old)|?{$_}){if($q-ne$governing-and-not$aliases.ContainsKey($q)-and$netScope-notcontains$q){throw "OUT_OF_SCOPE_WRITE:$q"}}}
     }
 
     # Every contract the range touched is judged by the same transition matrix as
@@ -1272,7 +1288,7 @@ function Validate-CompletionPrerequisites($Contract){
 function Get-PublicationSegments {
     $segments=@();$start=$BaseRef
     foreach($commit in @(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")){
-        $closed=@()
+        $closed=@();$cancelled=@()
         foreach($r in @(Records-For $commit)){
             $p=$r.Path
             if($p-notmatch '^changes/SPEC-[0-9]+-.*\.md$'){continue}
@@ -1282,13 +1298,21 @@ function Get-PublicationSegments {
             $nowStatus=try{Status-FromText $now}catch{''}
             $oldStatus=if($null-ne$old){try{Status-FromText $old}catch{''}}else{''}
             if($nowStatus-eq'Complete'-and$oldStatus-ne'Complete'){$closed+=$p}
+            elseif($nowStatus-eq'Cancelled'-and$oldStatus-ne'Cancelled'){$cancelled+=$p}
         }
         # A simultaneous completion has no unique governor. The ordinary
         # resolver refuses it when no CR remains active, but an active tail
         # would take its fast path and hide both completions. Refuse here.
         if($closed.Count-gt1){throw 'AMBIGUOUS_GOVERNING_CR'}
         if($closed.Count-eq1){
-            $segments+=,[pscustomobject]@{Start=$start;End=$commit;Rel=$closed[0]}
+            $segments+=,[pscustomobject]@{Start=$start;End=$commit;Rel=$closed[0];Cancelled=$false}
+            $start=$commit
+        }elseif($closed.Count-eq0-and$cancelled.Count-eq1){
+            # SPEC-273. A cancellation committed on its own closes its own segment, governed by the
+            # cancelled contract's frozen scope. Validate-PublicationSegments admits that segment only
+            # when a later completed governor declares it in Supersedes / Depends On. A cancellation in
+            # the same commit as a completion is still judged by the completion alone (SPEC-171).
+            $segments+=,[pscustomobject]@{Start=$start;End=$commit;Rel=$cancelled[0];Cancelled=$true}
             $start=$commit
         }
     }
@@ -1314,8 +1338,16 @@ function Validate-PublicationSegments {
                 $seen=@(Status-Path $later.Rel $seg.Start $null)
                 if(@($seen|?{$_-ne'Draft'}).Count){throw "OVERLAPPING_GOVERNORS:$($later.Rel)"}
             }
-            $seq=@(Status-Path $seg.Rel $seg.Start 'Complete')
-            if($seq.Count-lt2-or$seq[-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($seg.Rel)"}
+            if($seg.Cancelled){
+                $carried=$false
+                foreach($later in @($script:PublicationSegments|Select-Object -Skip ($i+1)|Where-Object{-not$_.Cancelled})){
+                    if("$(Section (Read-GitFile $later.End $later.Rel) 'Supersedes / Depends On' -Optional)".Contains($seg.Rel)){$carried=$true;break}
+                }
+                if(-not$carried){throw "CANCELLED_SEGMENT_NOT_CARRIED:$($seg.Rel)"}
+            }else{
+                $seq=@(Status-Path $seg.Rel $seg.Start 'Complete')
+                if($seq.Count-lt2-or$seq[-2]-ne'In Progress'){throw "INVALID_COMPLETION_TRANSITION:$($seg.Rel)"}
+            }
             # This one existing walk owns the per-commit scope, frozen authority,
             # allocation, Approval replay and status checks. Shared terminal state
             # carries immutability across segment boundaries.

@@ -2999,6 +2999,77 @@ exit 0
     MutationKillRangeAt 'ORIGINATION STATE MUTATION: the range endpoint is excluded' `
         {OsBuildLifecycle} 'MODE: VERIFY' '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)' '$script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef);if($script:RangeAllocationActive){Validate-SpecAllocation $records $base -SkipMarkerCheck -CheckOrigination}' 'ORIGIN'
 
+    # ---- SEGMENT CARRY AND PER-SEGMENT SCOPE (SPEC-273) ----
+    # A multi-contract publication admits exactly what each of its contracts authorised.
+    # Before SPEC-273 a write committed before a segment's governor first appeared was
+    # judged by nothing once a second completed segment existed (SC-2 exited 0), and a
+    # cancellation committed on its own was folded into the next governor's segment, so
+    # the cancelled contract's own authorised writes read as that successor's
+    # (SPEC-271 -> SPEC-272). The builders never push and never reset: each returns its
+    # base SHA, so MutationKillRangeAt's mutant commit stays below the judged range. The block
+    # sits BEFORE the segmented-publication cases on purpose: SEG-18 pushes a SPEC-902 contract
+    # into the sandbox origin, after which these born identities would already be reserved.
+    function ScSup([string]$Text,[string]$Rel){if(-not$Rel){return $Text};$Text-replace"(?m)^## Supersedes / Depends On\r?\nNone","## Supersedes / Depends On`n- ``$Rel``"}
+    function ScBase{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit sc-base;(git -C $root rev-parse HEAD).Trim()}
+    function ScLife([string]$Id,[string]$Scope,[switch]$Cancel,[string]$SupRel='',[scriptblock]$Work=$null){
+        $rel="changes/$Id-born.md"
+        Put $rel (ScSup (ContractText -Id $Id -Status Draft -Scope $Scope -Evidence (EvidenceText)) $SupRel);Commit "$Id-draft"
+        Put $rel (ScSup (ContractText -Id $Id -Status Approved -Scope $Scope -Evidence (EvidenceText)) $SupRel);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $rel);Commit "$Id-approved"
+        Put $rel (ScSup (ContractText -Id $Id -Status 'In Progress' -Resume DONE -Scope $Scope -Evidence (EvidenceText)) $SupRel);Commit "$Id-inprogress"
+        if($Work){& $Work;Commit "$Id-work"}
+        if($Cancel){Put $rel (ScSup (ContractText -Id $Id -Status Cancelled -Resume DONE -Scope $Scope -Evidence (EvidenceText)) $SupRel)}
+        else{Put $rel (ScSup (ContractText -Id $Id -Status Complete -Resume DONE -Scope $Scope -Evidence (EvidenceText) -Closeable) $SupRel)}
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit "$Id-close"
+        $rel
+    }
+    $scMc='context.txt;_ORVION_CANONICAL/manifest.md';$scOwn='outside.txt;_ORVION_CANONICAL/manifest.md'
+    function ScPreGovernor([switch]$Second){$b=ScBase;Put 'outside.txt' 'pre-governor unauthorized write';Commit sc-pre-governor;$null=ScLife (FxId 1) $scMc;if($Second){$null=ScLife (FxId 2) $scMc};$b}
+    function ScCancelled([switch]$NoCarry){$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised by the cancelled contract'};$null=ScLife (FxId 2) $scMc -SupRel $(if($NoCarry){''}else{$c});$b}
+
+    Reset-Fixture;$b=ScPreGovernor;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-1 a write made before a born governor appears is refused in one segment' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+    Reset-Fixture;$b=ScPreGovernor -Second;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-2 one more completed segment cannot launder a write made before its governor appeared' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+    Reset-Fixture;$b=ScCancelled;$r=RunRange $b;Pop 'SEG-CARRY' 'accept'
+    Assert 'SC-3 MUST-ACCEPT: a cancellation committed on its own is judged by its own frozen scope when a completed successor declares it in Supersedes' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match('CR: '+(FxId 2))) $r.Text
+    Reset-Fixture;$b=ScCancelled -NoCarry;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-4 a cancellation no completed successor declares is refused' ($r.Code-ne0-and$r.Text-match'CANCELLED_SEGMENT_NOT_CARRIED') $r.Text
+    Reset-Fixture;$b=ScBase;$c=ScLife (FxId 1) $scMc -Cancel -Work {Put 'secret.txt' 'outside the cancelled contract scope'};$null=ScLife (FxId 2) $scMc -SupRel $c;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-5 a carried cancelled contract still cannot write outside its own scope' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:secret\.txt') $r.Text
+    Reset-Fixture;$b=ScBase;Put 'rogue.txt' 'pre-governor unauthorized write';Commit sc-rogue;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised'};$null=ScLife (FxId 2) $scMc -SupRel $c;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-6 a write made before a cancelled contract appears is refused even when it is carried' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:rogue\.txt') $r.Text
+    Reset-Fixture;$b=ScBase;$null=ScLife (FxId 1) $scMc;$null=ScLife (FxId 2) $scOwn -Cancel -Work {Put 'outside.txt' 'trailing'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-7 a trailing cancellation has no successor to carry it' ($r.Code-ne0-and$r.Text-match'CANCELLED_SEGMENT_NOT_CARRIED') $r.Text
+    Reset-Fixture;$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised'};$null=ScLife (FxId 2) "$scMc;$c" -SupRel $c -Work {Add-Content -LiteralPath (Join-Path $root $c) -Value 'tamper'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-8 a carrier cannot edit the cancelled contract it carries' ($r.Code-ne0-and$r.Text-match'HISTORICAL_CR_MUTATION') $r.Text
+    Reset-Fixture;$b=ScBase;$null=ScLife (FxId 1) $scMc;$null=ScLife (FxId 2) $scMc;$r=RunRange $b;Pop 'SEG-CARRY' 'accept'
+    Assert 'SC-9 MUST-ACCEPT: two clean born-and-completed segments remain admissible' ($r.Code-eq0-and$r.Text-match'MODE: VERIFY'-and$r.Text-match('CR: '+(FxId 2))) $r.Text
+    MutationKillRangeAt 'SC-MUTATION: every segment obeys the endpoint scope rule' `
+        {ScPreGovernor -Second} 'OUT_OF_SCOPE_WRITE:outside\.txt' 'foreach($r in @(Diff-Records)){foreach($q in @($r.Path,$r.Old)|?{$_}){if($q-ne$governing-and-not$aliases.ContainsKey($q)-and$netScope-notcontains$q){' 'foreach($r in @()){foreach($q in @($r.Path,$r.Old)|?{$_}){if($q-ne$governing-and-not$aliases.ContainsKey($q)-and$netScope-notcontains$q){' 'SEG-CARRY'
+    MutationKillRangeAt 'SC-MUTATION: an undeclared cancellation is not carried' `
+        {ScCancelled -NoCarry} 'CANCELLED_SEGMENT_NOT_CARRIED' 'if(-not$carried){throw' 'if($false){throw' 'SEG-CARRY'
+    MutationKillRangeAt 'SC-MUTATION: a cancellation committed on its own closes its own segment' `
+        {ScCancelled} 'MODE: VERIFY' '}elseif($closed.Count-eq0-and$cancelled.Count-eq1){' '}elseif($false){' 'SEG-CARRY'
+    # A cancelled contract publishes only through a carrying successor, so its write authority is
+    # judged at the commit that wrote: while it was a Draft it carried none (CR_LIFECYCLE.md,
+    # SPEC-163). A carrying successor never legalises a Draft-phase or post-cancellation write.
+    # The same Draft rule for COMPLETED contracts is CTRL-16 (open), so it is not asserted here.
+    function ScCancelledDraftWrite{
+        $b=ScBase;$id=FxId 1;$rel="changes/$id-born.md"
+        Put $rel (ContractText -Id $id -Status Draft -Scope $scOwn -Evidence (EvidenceText));Put 'outside.txt' 'written while the contract was only a Draft';Commit sc-draft-with-write
+        Put $rel (ContractText -Id $id -Status Approved -Scope $scOwn -Evidence (EvidenceText));Put '_ORVION_CANONICAL/manifest.md' (ManifestText $rel);Commit sc-dw-approved
+        Put $rel (ContractText -Id $id -Status 'In Progress' -Resume DONE -Scope $scOwn -Evidence (EvidenceText));Commit sc-dw-inprogress
+        Put $rel (ContractText -Id $id -Status Cancelled -Resume DONE -Scope $scOwn -Evidence (EvidenceText));Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit sc-dw-cancel
+        $null=ScLife (FxId 2) $scMc -SupRel $rel;$b
+    }
+    Reset-Fixture;$b=ScCancelledDraftWrite;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-10 a carrying successor cannot legalise a cancelled contract''s Draft-phase write' ($r.Code-ne0-and$r.Text-match'PRE_APPROVAL_WRITE:outside\.txt@') $r.Text
+    Reset-Fixture;$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised'};Put 'outside.txt' 'written after cancellation';Commit sc-post-cancel;$null=ScLife (FxId 2) $scMc -SupRel $c;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-11 a write after cancellation and before the successor appears is refused' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+    Reset-Fixture;$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised'};$null=ScLife (FxId 2) $scMc -SupRel $c -Work {Put 'outside.txt' 'successor relies on the cancelled scope'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-12 a successor cannot borrow the cancelled contract''s scope for its own writes' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
+    MutationKillRangeAt 'SC-MUTATION: a carried cancelled contract''s Draft-phase write is refused at the commit that made it' `
+        {ScCancelledDraftWrite} 'PRE_APPROVAL_WRITE' "if(`$cancelledGovernor-and`$statusAt-eq'Draft'){foreach(`$w in `$paths){" 'if($false){foreach($w in $paths){' 'SEG-CARRY'
     # ---- SEGMENTED PUBLICATION: committed range, receipt, and tail ----
     function Build-SegmentedFixture([string]$SecondScope='context.txt;_ORVION_CANONICAL/manifest.md',[string]$FirstExtra='',[switch]$StopAtApproved,[switch]$KeepFirstPointer){
         $first='supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md'
@@ -3251,7 +3322,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

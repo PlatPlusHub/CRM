@@ -63,7 +63,7 @@ Depends on `changes/SPEC-272-the-pinned-cli-keeps-the-certified-local-stack.md` 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -153,12 +153,21 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs the full CONT
 
 ## Execution Log
 
-[Appended by the executing agent after each run against this Change Request, before
-IMPLEMENT is considered complete, per synchronization as defined in `CR_LIFECYCLE.md` §8
-— this file is always implicitly in scope for this section.
-Append-only — never edit or delete a prior entry, including a Blocked or Failed one.
-Leave this section's bracketed instructions in place in an unused template; remove them
-only in a CR that has at least one real entry.]
+### 2026-10-13 — Claude
+
+Outcome: Complete
+
+Step results:
+- Step 1: Applied. Each file was at its `from` hash and was replaced with the reviewed content; `git hash-object --path` then read exactly its `to` hash:
+  - `scripts/check_agent_continuity.ps1`: `09935cd6` to `65fa3765`
+  - `scripts/test_agent_continuity.ps1`: `b8763fb3` to `65b6ff93`
+  - `CR_LIFECYCLE.md`: `433e05ba` to `b119aafe`
+  - `reports/master/MASTER_GAP_REGISTER.md`: `fea4fac0` to `50372113`
+  - `reports/master/MASTER_EXECUTION_PLAN.md`: `84c498db` to `52424c50`
+- Step 2: Applied. `git diff --name-only HEAD` listed exactly those five files; no other path changed.
+- Step 3: Applied. The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` runs next, normally, with the ORVION containers running and no Docker state changed.
+
+Commits: the implementation and checkpoint commit that carries this entry.
 
 ## Verification Notes
 
