@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -146,10 +146,10 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs the full CONT
 
 ## Acceptance Criteria
 
-- [ ] `scripts/check_agent_continuity.ps1`, `scripts/test_agent_continuity.ps1`, `CR_LIFECYCLE.md`, `reports/master/MASTER_GAP_REGISTER.md` and `reports/master/MASTER_EXECUTION_PLAN.md` each have exactly their Step 1 `to` blob.
-- [ ] `scripts/test_agent_continuity.ps1` contains cases SC-1 to SC-12 and the four `SC-MUTATION` kills, and lists `SEG-CARRY` in the non-empty population families.
-- [ ] `changes/SPEC-271-upgrade-project-local-supabase-cli-to-2-120-0.md` and `changes/SPEC-272-the-pinned-cli-keeps-the-certified-local-stack.md` are byte-identical to `3ddd5db`.
-- [ ] The tracked implementation diff touches only this contract's Write Scope.
+- [x] `scripts/check_agent_continuity.ps1`, `scripts/test_agent_continuity.ps1`, `CR_LIFECYCLE.md`, `reports/master/MASTER_GAP_REGISTER.md` and `reports/master/MASTER_EXECUTION_PLAN.md` each have exactly their Step 1 `to` blob.
+- [x] `scripts/test_agent_continuity.ps1` contains cases SC-1 to SC-12 and the four `SC-MUTATION` kills, and lists `SEG-CARRY` in the non-empty population families.
+- [x] `changes/SPEC-271-upgrade-project-local-supabase-cli-to-2-120-0.md` and `changes/SPEC-272-the-pinned-cli-keeps-the-certified-local-stack.md` are byte-identical to `3ddd5db`.
+- [x] The tracked implementation diff touches only this contract's Write Scope.
 
 ## Execution Log
 
@@ -171,17 +171,31 @@ Commits: the implementation and checkpoint commit that carries this entry.
 
 ## Verification Notes
 
-None.
+### 2026-10-13 — Claude (Independent Review of `9cd97af`)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the committed repository after `-Finish`, not against the Execution Log.
+
+1. **Criterion 1.** At HEAD the five files read exactly their pinned blobs: `65fa3765`, `65b6ff93`, `b119aafe`, `50372113` and `52424c50`.
+2. **Criterion 2.** `scripts/test_agent_continuity.ps1` contains SC-1 to SC-12 (12 of 12), four `SC-MUTATION` kills (4 of 4), and `SEG-CARRY` in the non-empty population list.
+3. **Criterion 3.** `git diff --quiet 3ddd5db HEAD` is clean for both `changes/SPEC-271-…` and `changes/SPEC-272-…`.
+4. **Criterion 4.** `git diff --name-only 3ddd5db HEAD` lists exactly the five implementation files, the manifest, `ai-map.json` and this contract, all inside Write Scope. `repository-index.md` is in scope and reproduces unchanged.
+5. **Local certification.** `-Finish` at `9cd97af` ran normally, with the ORVION containers up and no Docker change. Every command passed: `test_agent_continuity.ps1` (the full suite, including SC-1 to SC-12, the four kills, SEG-M1 to SEG-M3, 126–133 and 191h), `test_cold_start_state_guard.ps1`, `test_status_contradiction_guard.ps1`, `test_primary_ledger_guard.ps1`, `test_future_date_guard.ps1`, `check_repository_consistency.ps1`, `git diff --check`, and the Additional Verification `-Gate -BaseRef 5a32f5b -HeadRef 3ddd5db` over the real SPEC-271/272 history. `LOCAL_CERTIFY: READY`, 31.3 min, `concurrent_end=0`. The receipt names SPEC-273, READY, profiles CONTROL and REPOSITORY.
+6. **Original defect against corrected behaviour.** The unchanged Gate refused the legitimately authorised `5a32f5b..3ddd5db` and admitted a pre-governor write laundered by a second completed segment (SC-2 exited 0). The repaired Gate admits the real range and refuses SC-2, plus every pre-approval, post-cancellation, out-of-scope, uncarried and terminal-edit write (SC-1, SC-4 to SC-8, SC-10 to SC-12).
+7. **Authority.** The owner approved the bounded SPEC-171 amendment on 2026-10-13. No other architectural decision is introduced, and CTRL-16 is registered OPEN and classified rather than decided here.
+
+Recommendation to human: Set Status to Complete (performed by the executing agent under the owner's 2026-10-13 Gate 2 authorization).
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
