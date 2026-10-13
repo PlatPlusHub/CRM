@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -164,14 +164,14 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs CONTROL (the 
 
 ## Acceptance Criteria
 
-- [ ] Each of the six Step 1 files has exactly its `to` blob.
-- [ ] README's authority table has a row routing workstation setup, verification and recovery to `WORKSTATION.md`, and README still has exactly one start instruction.
-- [ ] `GOVERNANCE.md` §2's workstation row says README routes to `WORKSTATION.md` in one row and restates nothing about the environment.
-- [ ] Boot's refusal on a branch without upstream reads `CODE: GIT_UPSTREAM_MISSING` with a `SUBJECT:` naming `AGENTS.md section 4`, and assertion 36 requires both.
-- [ ] `AGENTS.md` §4 names `reports/master/MASTER_EXECUTION_PLAN.md`.
-- [ ] `WORKSTATION.md` no longer says the doctor warns about unpushed commits or that `prepare.ps1` needs an MCP secret, gives `./.workstation/doctor.ps1` its directory, and says how to open the maintenance menu.
-- [ ] `changes/SPEC-275-…` is byte-identical to `0184947`.
-- [ ] The tracked implementation diff touches only this contract's Write Scope.
+- [x] Each of the six Step 1 files has exactly its `to` blob.
+- [x] README's authority table has a row routing workstation setup, verification and recovery to `WORKSTATION.md`, and README still has exactly one start instruction.
+- [x] `GOVERNANCE.md` §2's workstation row says README routes to `WORKSTATION.md` in one row and restates nothing about the environment.
+- [x] Boot's refusal on a branch without upstream reads `CODE: GIT_UPSTREAM_MISSING` with a `SUBJECT:` naming `AGENTS.md section 4`, and assertion 36 requires both.
+- [x] `AGENTS.md` §4 names `reports/master/MASTER_EXECUTION_PLAN.md`.
+- [x] `WORKSTATION.md` no longer says the doctor warns about unpushed commits or that `prepare.ps1` needs an MCP secret, gives `./.workstation/doctor.ps1` its directory, and says how to open the maintenance menu.
+- [x] `changes/SPEC-275-…` is byte-identical to `0184947`.
+- [x] The tracked implementation diff touches only this contract's Write Scope.
 
 ## Execution Log
 
@@ -218,19 +218,35 @@ Classified as a one-off environmental failure with no code defect. No assertion 
 
 ## Verification Notes
 
-None.
+### 2026-10-13 — Claude (independent review)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository at the implementation commits, not against the Execution Log's claims.
+- **C1.** All six Step 1 files have exactly their `to` blobs at HEAD.
+- **C2.** README has the workstation row, no `Start at` instruction, and its single-start-instruction sentence unchanged.
+- **C3.** `GOVERNANCE.md` §2 carries the new README clause, and the old "does **not** reference" wording is gone.
+- **C4.** `Git-State` throws `GIT_UPSTREAM_MISSING` with the reading-route subject, the `Certification-Paths` refusal is unchanged, and assertion 36 requires both code and subject.
+- **C5.** `AGENTS.md` §4 names `reports/master/MASTER_EXECUTION_PLAN.md`.
+- **C6.** `WORKSTATION.md` no longer claims the doctor warns about unpushed commits, or that `prepare.ps1` needs an MCP secret. It names `./.workstation/doctor.ps1` and says how to open the menu.
+- **C7.** `changes/SPEC-275-…` is unchanged since `0184947`.
+- **C8.** The net diff from `0184947` is the six files, this contract, and the lifecycle-owned manifest and `ai-map.json`.
+- **C9.** Live Boot in a disposable clone on a branch without upstream printed `ORVION: BLOCKED`, `CODE: GIT_UPSTREAM_MISSING` and the new `SUBJECT:`, and exited 1. It still fails closed.
+- **Certification.** `-Finish` at `4ed04f4`: `LOCAL_CERTIFY: READY` in 32.3 min (CONTROL, REPOSITORY). The first run's one failure is recorded in the Execution Log as recovery attempt 1. The re-run passed every assertion, assertion 160 included, with no assertion changed. The failure class did not recur, so no guard is added.
+
+Recommendation to human: Set Status to Complete
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
