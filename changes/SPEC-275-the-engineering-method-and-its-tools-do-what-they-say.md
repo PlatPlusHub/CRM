@@ -114,7 +114,7 @@ None
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -239,8 +239,29 @@ Post-Implementation Proof Obligation: The certified `-Finish` runs CONTROL (the 
 
 ## Execution Log
 
-None.
+### 2026-10-13 — Claude
 
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Applied.** Each file read its `from` hash. It was replaced with the reviewed content from the pre-approval prototype, whose blob had been checked equal to the `to` hash before copying. `git hash-object --path` then read exactly the `to` hash:
+  - `AGENTS.md`: `b1d693e1` to `328aac3f`
+  - `changes/TEMPLATE.md`: `cdfded3f` to `b386a61a`
+  - `scripts/check_agent_continuity.ps1`: `65fa3765` to `64d5d538`
+  - `scripts/test_agent_continuity.ps1`: `65b6ff93` to `013c3f9a`
+  - `CR_LIFECYCLE.md`: `b119aafe` to `d65a85ff`
+  - `scripts/watch_run.ps1`: `8a3e57e9` to `06e10019`
+  - `scripts/watch_selftest.ps1`: `122d672b` to `6b2b7f71`
+  - `reports/master/MASTER_GAP_REGISTER.md`: `50372113` to `3b2bf7bc`
+  - `reports/master/MASTER_EXECUTION_PLAN.md`: `52424c50` to `55eb1c6c`
+- **Step 2: Applied.** `git diff --name-only` listed exactly those nine files plus this contract. No other path changed.
+- **Step 3: Applied.** The Runtime Checkpoint is synchronized to `DONE` and committed with the implementation. `-Finish` runs next, normally, with no container, Docker or workstation state changed. Docker Desktop is down after Windows Update's WSL 3.0.3 install (Notes) and is not needed by CONTROL or REPOSITORY.
+
+Correction to Notes, recorded here so the approved Draft stays byte-identical:
+- The bullet "Recorded here, not registered separately" overstates a defect. In `.workstation/manifest.md`, the version column is headed "Live evidence 2026-09-10". The file itself says these values "are evidence, not pins; package identities and `package-lock.json` are the reproducible contracts". So `^2.109.0`, GitHub CLI 2.100 and Node 24.19 are a dated observation, not a current claim or a configuration defect.
+- `package.json` and `package-lock.json` remain the version authority. Nothing is owed to it beyond refreshing the observation when the next justified workstation change runs the doctor.
+
+Commits: the implementation and checkpoint commit that carries this entry.
 ## Verification Notes
 
 None.

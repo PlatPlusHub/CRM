@@ -132,10 +132,10 @@ function Case-Steps([string]$RunnerPath, [string]$WatcherPath) {
     $end = $o | Where-Object { $_ -match '^\[\s*([\d.]+) min \| \+[\d.]+\] END exit=1 ' } | Select-Object -First 1
     $total = if ($end) { [double]$Matches[1] } else { -1 }
     $rows = @(Import-Csv -LiteralPath $csv)
-    $ok = $done -and @($o -match '\] PASS: ').Count -eq 1 -and $fail -and $end -and $delta -ge 0.25 -and [Math]::Abs($wallMin - $total) -le 0.15 -and
+    $ok = $done -and $w.ExitCode -eq 1 -and @($o -match '^watching steps \(started \d{4}-\d\d-\d\d \d\d:\d\d:\d\d, attached \d{4}-\d\d-\d\d \d\d:\d\d:\d\d, ').Count -eq 1 -and @($o -match '\] PASS: ').Count -eq 1 -and $fail -and $end -and $delta -ge 0.25 -and [Math]::Abs($wallMin - $total) -le 0.15 -and
           $rows.Count -eq 3 -and $rows[0].env -match 'concurrent=[^ ]*other_work\.ps1' -and $label -notmatch 'shellIntegration' -and
           @($o -match '^compare: first recorded run').Count -eq 1
-    [pscustomobject]@{ Ok = $ok; Log = $log; Csv = $csv; Detail = "done=$done delta=$delta total=$total wall=$('{0:N2}' -f $wallMin) rows=$($rows.Count) start=[$label] || $($o -join ' || ')" }
+    [pscustomobject]@{ Ok = $ok; Log = $log; Csv = $csv; Detail = "done=$done exit=$(if ($done) { $w.ExitCode }) delta=$delta total=$total wall=$('{0:N2}' -f $wallMin) rows=$($rows.Count) start=[$label] || $($o -join ' || ')" }
 }
 # Steady-state cost at the PRODUCTION cadence (10 s polls, 5-minute heartbeat): CPU sampled 20 s
 # after start, once pwsh has loaded, and again a minute later.
@@ -185,7 +185,7 @@ function Case-Rearm([string]$RunnerPath, [string]$WatcherPath, $First) {
     $r = Start-Runner $RunnerPath $log2 "Write-Output 'PASS: pwsh -NoProfile -File scripts/fake_a.ps1'; exit 0"
     $w2 = Start-Watcher $WatcherPath $log2 'steps' 5 $First.Csv $out2; $done2 = Wait-Exit $w2 60; [void](Wait-Exit $r 10)
     $cmp = @(Get-Content -LiteralPath $out2 | Where-Object { $_ -match '^compare: this run [\d.]+ min \[.*concurrent=.*\] vs previous [\d.]+ min on \d{4}-\d\d-\d\d' })
-    [pscustomobject]@{ Ok = ($done -and $done2 -and $rowsAfterRearm -eq 3 -and $cmp.Count -eq 1); Detail = "rows after re-arm=$rowsAfterRearm compare=$($cmp.Count) || $((Get-Content -LiteralPath $out2) -join ' || ')" }
+    [pscustomobject]@{ Ok = ($done -and $w.ExitCode -eq 1 -and $done2 -and $w2.ExitCode -eq 0 -and $rowsAfterRearm -eq 3 -and $cmp.Count -eq 1); Detail = "re-arm exit=$(if ($done) { $w.ExitCode }) later exit=$(if ($done2) { $w2.ExitCode }) rows after re-arm=$rowsAfterRearm compare=$($cmp.Count) || $((Get-Content -LiteralPath $out2) -join ' || ')" }
 }
 
 try {
@@ -193,13 +193,13 @@ try {
     $c = Case-Vocabulary $Watcher;   Check 'W1 result vocabulary: every step, verdict, total and failure line; no prose or per-assertion noise' $c.Ok $c.Detail
     $c = Case-StartLine $Watcher;    Check 'W2 the START line carries date, runner pid and conditions; an old-format line is refused' $c.Ok $c.Detail
     $steps = Case-Steps $Runner $Watcher
-    Check 'W3 a real run: PASS and FAILED step lines, END exit=1, timing within 0.15 min of the wall clock, labelled CSV rows' $steps.Ok $steps.Detail
+    Check 'W3 a real run: PASS and FAILED step lines, END exit=1, a watcher exit of 1 and its attach time, timing within 0.15 min of the wall clock, labelled CSV rows' $steps.Ok $steps.Detail
     $c = Case-Stage $Runner $Watcher; Check 'W4 a silent stage produces a heartbeat naming the running repository script, then its result' $c.Ok $c.Detail
     $c = Case-Overhead $Runner $Watcher; Check 'W5 overhead at the production cadence: under 2 s of CPU per minute watched' $c.Ok $c.Detail
     "    measured: $($c.Detail)"
     $c = Case-Gone $Runner $Watcher;  Check 'W6 a runner killed mid-run is reported as RUNNER GONE and the watcher exits 1' $c.Ok $c.Detail
     $c = Case-NeverStarted $Watcher;  Check 'W7 a runner that never starts is reported, not waited on silently' $c.Ok $c.Detail
-    $c = Case-Rearm $Runner $Watcher $steps; Check 'W8 a re-armed watcher adds no duplicate rows; a later run compares with the previous one and both conditions' $c.Ok $c.Detail
+    $c = Case-Rearm $Runner $Watcher $steps; Check 'W8 a watcher re-armed on a finished failed run exits 1 and adds no duplicate rows; a later successful run exits 0 and compares with the previous one and both conditions' $c.Ok $c.Detail
     $c = Case-CiBranch $Ci;          Check 'C1 the candidate and main runs on one SHA are judged separately, each against its own contract' $c.Ok $c.Detail
     $c = Case-CiMissing $Ci;         Check 'C2 an expected check that never ran is missing (another event never stands in for it); an unexpected run is reported, not required' $c.Ok $c.Detail
     $c = Case-CiContract $Ci;        Check 'C3 the contract at real SHAs: ORVION Acceptance on the candidate only; Migration CI only where a migration path changed' $c.Ok $c.Detail
@@ -227,6 +227,7 @@ try {
         @{ Name = 'M3 heartbeat disabled';                   File = $Watcher; Find = '} elseif ($quiet.Elapsed.TotalMinutes -ge $QuietMinutes) {'; Replace = '} elseif ($false) {'; Case = { param($p) Case-Stage $Runner $p } },
         @{ Name = 'M4 newest descendant named instead of the script'; File = $Watcher; Find = '$scripted = @($desc | Where-Object'; Replace = '$scripted = @(@() | Where-Object'; Case = { param($p) Case-Stage $Runner $p } },
         @{ Name = 'M5 runner-gone check removed';            File = $Watcher; Find = '} elseif (-not (Get-Process -Id $start.Pid -ErrorAction SilentlyContinue)) {'; Replace = '} elseif ($false) {'; Case = { param($p) Case-Gone $Runner $p } },
+        @{ Name = 'M16 a failed run read as a clean watch';   File = $Watcher; Find = 'exit [int]($body -notmatch ''^END exit=0\b'')'; Replace = 'exit 0'; Case = { param($p) Case-Steps $Runner $p } },
         @{ Name = 'M9 exit code collapsed by pwsh -Command';  File = $Runner;  Find = '"$Command`nexit `$LASTEXITCODE"'; Replace = '$Command'; Case = { param($p) Case-ExitCode $p } },
         @{ Name = 'M10 a derived verdict word dropped';       File = $Watcher; Find = 'READY|PASSED|';                   Replace = 'READY|'; Case = { param($p) Case-Vocabulary $p } },
         @{ Name = 'M8 concurrent work not detected';         File = $Runner;  Find = "'(?i)\s-File\s+";               Replace = "'(?i)\s-NoSuchFlag\s+"; Case = { param($p) Case-Steps $p $Watcher } },

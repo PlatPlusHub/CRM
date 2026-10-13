@@ -2504,8 +2504,9 @@ exit 0
         $b=KrPlan;$rel="changes/$(FxId $Off)-window.md"
         Put 'CR_LIFECYCLE.md' $krOff;Commit 'marker-off'
         KrDraft $rel (FxId $Off);Commit 'allocate-while-off'
-        Put 'CR_LIFECYCLE.md' $krOn;Commit 'marker-on'
-        KrApprove $rel (FxId $Off);$b
+        # The marker returns after approval: a Draft carries no write authority (CTRL-16).
+        KrApprove $rel (FxId $Off)
+        Put 'CR_LIFECYCLE.md' $krOn;Commit 'marker-on';$b
     }
     function KrActivate([int]$Off){
         KrPlan|Out-Null;Put 'CR_LIFECYCLE.md' $krOff;Commit 'pre-marker-base';$b=(git -C $root rev-parse HEAD).Trim();$rel="changes/$(FxId $Off)-activated.md"
@@ -3011,8 +3012,9 @@ exit 0
     # into the sandbox origin, after which these born identities would already be reserved.
     function ScSup([string]$Text,[string]$Rel){if(-not$Rel){return $Text};$Text-replace"(?m)^## Supersedes / Depends On\r?\nNone","## Supersedes / Depends On`n- ``$Rel``"}
     function ScBase{Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit sc-base;(git -C $root rev-parse HEAD).Trim()}
-    function ScLife([string]$Id,[string]$Scope,[switch]$Cancel,[string]$SupRel='',[scriptblock]$Work=$null){
+    function ScLife([string]$Id,[string]$Scope,[switch]$Cancel,[string]$SupRel='',[scriptblock]$Work=$null,[scriptblock]$DraftWork=$null){
         $rel="changes/$Id-born.md"
+        if($DraftWork){& $DraftWork}
         Put $rel (ScSup (ContractText -Id $Id -Status Draft -Scope $Scope -Evidence (EvidenceText)) $SupRel);Commit "$Id-draft"
         Put $rel (ScSup (ContractText -Id $Id -Status Approved -Scope $Scope -Evidence (EvidenceText)) $SupRel);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $rel);Commit "$Id-approved"
         Put $rel (ScSup (ContractText -Id $Id -Status 'In Progress' -Resume DONE -Scope $Scope -Evidence (EvidenceText)) $SupRel);Commit "$Id-inprogress"
@@ -3022,7 +3024,7 @@ exit 0
         Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit "$Id-close"
         $rel
     }
-    $scMc='context.txt;_ORVION_CANONICAL/manifest.md';$scOwn='outside.txt;_ORVION_CANONICAL/manifest.md'
+    $scMc='context.txt;_ORVION_CANONICAL/manifest.md';$scOwn='outside.txt;_ORVION_CANONICAL/manifest.md';$scOwnBase='allowed.txt;_ORVION_CANONICAL/manifest.md'
     function ScPreGovernor([switch]$Second){$b=ScBase;Put 'outside.txt' 'pre-governor unauthorized write';Commit sc-pre-governor;$null=ScLife (FxId 1) $scMc;if($Second){$null=ScLife (FxId 2) $scMc};$b}
     function ScCancelled([switch]$NoCarry){$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised by the cancelled contract'};$null=ScLife (FxId 2) $scMc -SupRel $(if($NoCarry){''}else{$c});$b}
 
@@ -3050,10 +3052,10 @@ exit 0
         {ScCancelled -NoCarry} 'CANCELLED_SEGMENT_NOT_CARRIED' 'if(-not$carried){throw' 'if($false){throw' 'SEG-CARRY'
     MutationKillRangeAt 'SC-MUTATION: a cancellation committed on its own closes its own segment' `
         {ScCancelled} 'MODE: VERIFY' '}elseif($closed.Count-eq0-and$cancelled.Count-eq1){' '}elseif($false){' 'SEG-CARRY'
-    # A cancelled contract publishes only through a carrying successor, so its write authority is
-    # judged at the commit that wrote: while it was a Draft it carried none (CR_LIFECYCLE.md,
-    # SPEC-163). A carrying successor never legalises a Draft-phase or post-cancellation write.
-    # The same Draft rule for COMPLETED contracts is CTRL-16 (open), so it is not asserted here.
+    # Write authority is judged at the commit that wrote: while a contract was a Draft it carried
+    # none (CR_LIFECYCLE.md, SPEC-163). A carrying successor never legalises a cancelled contract's
+    # Draft-phase or post-cancellation write (SPEC-273), and since CTRL-16 a later approval never
+    # legalises a completed or still-open contract's own Draft-phase write either (SC-13 to SC-15).
     function ScCancelledDraftWrite{
         $b=ScBase;$id=FxId 1;$rel="changes/$id-born.md"
         Put $rel (ContractText -Id $id -Status Draft -Scope $scOwn -Evidence (EvidenceText));Put 'outside.txt' 'written while the contract was only a Draft';Commit sc-draft-with-write
@@ -3069,7 +3071,18 @@ exit 0
     Reset-Fixture;$b=ScBase;$c=ScLife (FxId 1) $scOwn -Cancel -Work {Put 'outside.txt' 'authorised'};$null=ScLife (FxId 2) $scMc -SupRel $c -Work {Put 'outside.txt' 'successor relies on the cancelled scope'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
     Assert 'SC-12 a successor cannot borrow the cancelled contract''s scope for its own writes' ($r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE:outside\.txt') $r.Text
     MutationKillRangeAt 'SC-MUTATION: a carried cancelled contract''s Draft-phase write is refused at the commit that made it' `
-        {ScCancelledDraftWrite} 'PRE_APPROVAL_WRITE' "if(`$cancelledGovernor-and`$statusAt-eq'Draft'){foreach(`$w in `$paths){" 'if($false){foreach($w in $paths){' 'SEG-CARRY'
+        {ScCancelledDraftWrite} 'PRE_APPROVAL_WRITE' "if(`$statusAt-eq'Draft'){foreach(`$w in `$paths){" 'if($false){foreach($w in $paths){' 'SEG-CARRY'
+    # CTRL-16. The unchanged Gate admitted SC-13 (exit 0): approval and completion made a Draft-phase write legal.
+    Reset-Fixture;$b=ScBase;$null=ScLife (FxId 1) $scOwn -DraftWork {Put 'outside.txt' 'written while the contract was only a Draft'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-13 a completed contract''s own Draft-phase write is refused at the commit that made it' ($r.Code-ne0-and$r.Text-match'PRE_APPROVAL_WRITE:outside\.txt@') $r.Text
+    Reset-Fixture;$b=ScBase;$null=ScLife (FxId 1) $scMc;$null=ScLife (FxId 2) $scOwn -DraftWork {Put 'outside.txt' 'second segment, still a Draft'};$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-14 the same write in a later completed segment is refused' ($r.Code-ne0-and$r.Text-match'PRE_APPROVAL_WRITE:outside\.txt@') $r.Text
+    Reset-Fixture;$b=ScBase;Put 'allowed.txt' 'written while the base Draft was still a Draft';Commit sc-base-draft-write
+    # The approval names the manifest it writes, so the Draft-phase write is this history's only defect (the unchanged Gate admits it).
+    Put 'changes/SPEC-900-fixture.md' (ContractText -Status Approved -Scope $scOwnBase);Put '_ORVION_CANONICAL/manifest.md' (ManifestText);Commit sc-base-draft-approved;$r=RunRange $b;Pop 'SEG-CARRY' 'reject'
+    Assert 'SC-15 a contract that was a Draft at the range base cannot write before its approval' ($r.Code-ne0-and$r.Text-match'PRE_APPROVAL_WRITE:allowed\.txt@') $r.Text
+    MutationKillRangeAt 'SC-MUTATION: a completed contract''s Draft-phase write is refused at the commit that made it' `
+        {$b=ScBase;$null=ScLife (FxId 1) $scOwn -DraftWork {Put 'outside.txt' 'draft write'};$b} 'PRE_APPROVAL_WRITE' "if(`$statusAt-eq'Draft'){foreach(`$w in `$paths){" 'if($false){foreach($w in $paths){' 'SEG-CARRY'
     # ---- SEGMENTED PUBLICATION: committed range, receipt, and tail ----
     function Build-SegmentedFixture([string]$SecondScope='context.txt;_ORVION_CANONICAL/manifest.md',[string]$FirstExtra='',[switch]$StopAtApproved,[switch]$KeepFirstPointer){
         $first='supabase/migrations/20260101_fixture.sql;_ORVION_CANONICAL/manifest.md'

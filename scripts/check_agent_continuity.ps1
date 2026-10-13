@@ -882,8 +882,6 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
     $commits=@(git -C $Root rev-list --reverse "$BaseRef..$HeadRef")
     if(!$commits.Count){return}
     $governing=$Rel-replace'\\','/'
-    $endText=Read-GitFile $HeadRef $governing
-    $cancelledGovernor=$false;if($null-ne$endText){try{$cancelledGovernor=(Status-FromText $endText)-eq'Cancelled'}catch{}}
 
     # The effective frozen baseline is the governing contract AS APPROVED: its
     # text at the range base when it exists there, otherwise at its first
@@ -951,11 +949,10 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
             $text=Read-GitFile $commit $governing
             if($null-ne$text){
                 $statusAt=try{Status-FromText $text}catch{$null}
-                # SPEC-273. A cancelled contract's commits publish only through a carrying successor, so its
-                # write authority is judged at the commit that wrote. While it was still a Draft it carried
-                # none (CR_LIFECYCLE.md, SPEC-163), and no successor may legalise such a write. The same rule
-                # for completed contracts is CTRL-16 (open): existing fixtures commit during Draft.
-                if($cancelledGovernor-and$statusAt-eq'Draft'){foreach($w in $paths){if($w-ne$governing-and-not$aliases.ContainsKey($w)){throw "PRE_APPROVAL_WRITE:${w}@$short"}}}
+                # Write authority is judged at the commit that wrote. While the governor was still a Draft it
+                # carried none (CR_LIFECYCLE.md, SPEC-163), so neither a carrying successor (SPEC-273) nor its
+                # own later approval (CTRL-16, completed or still open) may legalise such a write.
+                if($statusAt-eq'Draft'){foreach($w in $paths){if($w-ne$governing-and-not$aliases.ContainsKey($w)){throw "PRE_APPROVAL_WRITE:${w}@$short"}}}
                 # The commit that leaves Draft is the one that freezes authority, so
                 # it supplies the baseline every later commit is judged against.
                 if(-not$frozenBound-and$statusAt-and$statusAt-ne'Draft'){$FrozenBaseline=$text;$frozenBound=$true}

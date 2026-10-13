@@ -1,6 +1,7 @@
 # ORVION run watcher -- ON-DEMAND REPORTING ADAPTER (AGENTS.md section 7). It owns no truth.
 #
 # Follows a log written by `scripts/run_timed.ps1` and prints:
+#   * the run's start and the watcher's own attach time, so a late watch is visible;
 #   * every RESULT line, with the minutes since the run started and since the previous result;
 #   * a heartbeat when the log has been silent for -QuietMinutes, naming the repository script the
 #     runner is executing at that moment and its CPU time, so a long stage is distinguishable from
@@ -10,6 +11,8 @@
 #   * at END, a comparison with the previous recorded run of the same -Run name, with both runs'
 #     conditions, so a timing is never compared without knowing what else was running.
 # Each reported result is appended to a LOCAL timings file outside the repository.
+# It exits 0 only when the run ended `END exit=0`; a run that ended non-zero, or a runner that died,
+# exits 1, so a background notification never reports a failed run as a clean watch.
 #
 # It never retries, reruns, dismisses, classifies or approves anything. `-Finish` and `-Certify`
 # remain the only verdicts, and a reported line is evidence for the reader to judge.
@@ -75,7 +78,7 @@ while (-not $start) {
     Start-Sleep -Seconds ([Math]::Min(2, $PollSeconds))
 }
 $identity = $start.At.ToString('yyyy-MM-dd HH:mm:ss')   # identifies THIS run; a re-armed watcher computes the same value
-'watching {0} (started {1}, runner pid {2}; {3})' -f $Run, $identity, $start.Pid, $start.Env
+'watching {0} (started {1}, attached {2}, runner pid {3}; {4})' -f $Run, $identity, (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $start.Pid, $start.Env
 $have = @{}; Import-Csv -LiteralPath $Csv | ForEach-Object { $have[($_.run, $_.date, $_.step, $_.elapsed_min) -join '|'] = 1 }
 $seen = 0; $last = 0.0; $quiet = [Diagnostics.Stopwatch]::StartNew()
 while ($true) {
@@ -98,7 +101,7 @@ while ($true) {
                 $prev = Import-Csv -LiteralPath $Csv | Where-Object { $_.run -eq $Run -and $_.step -like 'END exit=*' -and $_.date -ne $identity } | Select-Object -Last 1
                 if ($prev) { 'compare: this run {0:N1} min [{1}] vs previous {2} min on {3} [{4}]' -f $t, $start.Env, $prev.elapsed_min, $prev.date, $prev.env }
                 else { "compare: first recorded run of '$Run' ($('{0:N1}' -f $t) min) [$($start.Env)]" }
-                exit 0
+                exit [int]($body -notmatch '^END exit=0\b')
             }
         }
         $seen = $lines.Count; $quiet.Restart()

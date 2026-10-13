@@ -123,7 +123,9 @@ None
 ## Pre-Approval Evidence
 
 [Bounded evidence that must be sufficient BEFORE Approval freezes authority. Semantics are owned by
-the `### Pre-Approval evidence sufficiency` rule in `ENGINEERING_METHOD.md`; admissibility is owned by
+the `### Pre-Approval evidence sufficiency` rule in `ENGINEERING_METHOD.md`, whose closing paragraph,
+"Reduce uncertainty before freezing", says how to isolate an experiment and how to measure a mandatory
+command that can change shared state; admissibility is owned by
 `CR_LIFECYCLE.md §5`. Every predicate resolves to PASS, FAIL, or INDETERMINATE — there is no score.
 Only PASS permits the human Draft-to-Approved decision. `Change Class` is descriptive input and can
 never exempt work that repository evidence makes applicable.
