@@ -67,7 +67,7 @@ Close and publish Batch 6 Slice 42 (`chart_of_accounts`; COA-1, COA-2), which th
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -152,7 +152,20 @@ Irreversible Action Step: NONE
 
 ## Execution Log
 
-None.
+### 2026-10-14 — Claude
+
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Verified.** `changes/SPEC-278-a-used-ledger-account-keeps-its-meaning.md` reads `[x] Cancelled`. `git hash-object --path=<path> <path>` read exactly the pinned blob for all eight files, in the working tree and at `HEAD`. Nothing was changed. `supabase/migrations` holds 253 files, the latest `20261013120000_a_used_ledger_account_keeps_its_meaning.sql`.
+- **Step 2: Applied.** The `Last Completed:` line read exactly the old SPEC-270 text, compared ordinally, and was replaced by the new line; no other manifest line changed. `scripts/generate-ai-map.ps1` rewrote `ai-map.json`'s `last_completed`; `repository-index.md` reproduced unchanged.
+- **Step 3: Applied.** `git diff --name-only 1449260` (the Approve commit) listed only `_ORVION_CANONICAL/manifest.md`, `ai-map.json` and this contract. The Runtime Checkpoint is synchronized to `DONE` and committed; `-Finish` runs next, normally.
+
+**Approval prerequisites, re-verified before the first commit.**
+- HEAD was `620b46a` on `main`, 7 ahead of `origin/main` `4347817` and 0 behind; the only change in the tree was the untracked Draft; no other worktree or stash existed.
+- The Draft's blob was `bc466342276fa4e15c0f3b1a4519d92cae915a64`, its SHA-256 `9f94f60ef2bf19db5b2b25c299602dbb97f1923fda981d58fb966dba9633b95d`, 12102 bytes, recomputed from its bytes and equal to the rehearsed identity in full, not by prefix.
+- `SPEC-279` appeared in no tracked path, text or reachable history before the Draft commit.
+- No Primary read or write was made.
 
 ## Verification Notes
 

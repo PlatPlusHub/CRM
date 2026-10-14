@@ -37,7 +37,7 @@ Active Change Request: changes/SPEC-279-the-ledger-account-slice-is-closed-and-p
 
 Open owner decisions — **MAIL-1**, **RET-1**, **PH8-10**, **OD-1**, **OD-2**, **OD-3**, **OD-5**, **OD-8**, **OD-9**. The OD rows are proposed product decisions awaiting the owner, each with its default in the register. MAIL-1, RET-1 and PH8-10 are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration; PH8-10 awaits Google evidence that click-less phone conversions are credited. No email is sent and no retention policy is seeded while those prerequisites remain.
 
-Last Completed: **SPEC-270: the repository reconciles what it can derive — one generator for `ai-map.json` and `repository-index.md`, reproduced by Check 7; the backlog's live items and unaudited surfaces are registry members (CTRL-12, CTRL-13, CTRL-14 and OPS-4 fixed).**
+Last Completed: **SPEC-279: Batch 6 Slice 42 is closed — a used ledger account keeps its meaning (`chart_of_accounts`; COA-1 and COA-2 fixed by migration `20261013120000`, deployed to Primary under the cancelled SPEC-278 and carried forward here).**
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`).
 
