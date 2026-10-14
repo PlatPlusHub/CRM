@@ -337,7 +337,56 @@ Post-Implementation Proof Obligation: All of the following, on the final bytes a
 
 ## Execution Log
 
-None.
+### 2026-10-14 — Gate 1 approval and Steps 1–5 applied
+
+- **Authority:** the owner's 2026-10-14 authorization approves Gate 1 for the exact Draft blob `57cab679be3b35c8f4f2fe2666c73fd94627ba97`, SHA-256 `2288676b53a57b412e8be7e11add7ac4b82d7792d56f0098d7f29038ba4373aa`, 37416 bytes, LF, base `4347817ff74c8de720836e2d4915a9d6cebcf27b`, Write Scope the 12 files above. Earlier Draft identities are superseded and not approved. **Gate 2 is not authorized.**
+- **Verified before acting:**
+  - HEAD and `origin/main` were both `4347817`, and the untracked Draft hashed to the approved blob, SHA-256 and size;
+  - the word diff from the previously reviewed Draft `f78f65177f6b84f06593cb083de729ddf28a9da5` touches only the documented corrections: the blank-code measurement, its consequence and reopening trigger, and the ADR-0006 wording in Business Reason; the Step 5 disposition text; and the Notes revision paragraph. No Write Scope path, Step pin or hash changed.
+- **Lifecycle:** Draft `b5e0568` (blob `57cab67`), Approve `5f3b559` (`ai-map.json` regenerated, blob `1397cd2`, as rehearsed), range Gate from `4347817` READY with no blocker, Begin `f923c0d` (contract blob `43dcea4`, as rehearsed).
+- **Steps 1–2.** The migration and test 157 were absent and were created LF and ASCII from their pinned blobs: migration `94b594c1…`, SHA-256 `8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc`, md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes; test 157 `bf0246be…`, SHA-256 `e501187f4514f7ebb6843799ccb4229e477c1298640af0bac8b3e81a57982608`, md5 `6d4e5eb1f154a921c349e5831e5f567a`, 13638 bytes, `plan(25)`, with the stated `ATTACK-CLASSES` line.
+- **Steps 3–4.** `10_grant_model_test.sql` was `814f1e4…` and became `36dfceb92dbc0c707a0418e5ec2a269f9025f487`; `ENGINEERING_METHOD.md` was `b726938…` and became `62580e36a61b84b9a5282377e0a9fa3571b03669`.
+- **Step 5.** The register and the disposition record were at their `4347817` blobs (`7249a51…`, `c5ad093…`).
+  - Register: a Slice-42 freshness entry, with SPEC-277's entry demoted to `Previously:`; rows COA-1 (High) and COA-2 (Medium) after RCPT-4, each leading `FIXED … locally; Primary deployment pending`, with Cert `🛡` and Owner `—`; and STEPUP-1's `chart_of_accounts` sentence.
+  - Disposition: the freshness entry; coverage 43 of 78 (19 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 35 `NOT-RECORDED`); the "All 43" line; the `chart_of_accounts` row `AUDITED` / `ADVERSARIAL` with its evidence, consumers, swept non-defects and the four recorded positions with their reopening triggers.
+  - **The blank-code trigger is recorded, not linked.** The row names `ENABLE-CLIENT-WRITES`, a boundary of the Action registry. `scripts/readiness_population.ps1` (Check 29) derives its members only from open register findings, `AUDITED-OPEN` or `PARTIAL` surfaces, open decisions, `NOT-RECORDED` surfaces and the backlog's "Live deferred items" rows. An `AUDITED` row's position is none of these, so crossing the boundary will not surface it automatically. The governed linkage is a backlog row, and `reports/future-backlog.md` is outside this Write Scope, so it is left to a separate contract.
+- **Checks:** `git diff --check` is clean, and only Write Scope paths changed. Repository consistency reports exactly the six predicted pre-deploy items (252 vs 253 migrations, the latest migration, the ledger fingerprint, 156 vs 157 files, 2969 vs 2994 assertions, RECOVER-1). Check 29 passes.
+- **Not committed until deployment.** A commit of Steps 1–5 was refused by the pre-commit repository guard on those six items, which clear only at Step 9. As SPEC-268 did (`04d117e`), the implementation stays in the working tree and only this contract's Execution Log is committed at the readiness gate.
+
+### 2026-10-14 — Pre-deploy readiness gate (Step 6)
+
+From the main checkout at HEAD `f923c0d`, with the pinned CLI 2.120.0 (SPEC-271) and `auto_expose_new_tables = false`, under one logged script, no other repository script running:
+- **Causal negative.** A clean reset with the migration held aside gave 252 migrations, latest `20261012120000`, no guard, triggers `chart_of_accounts_enforce_subscription_write_gate` and `chart_of_accounts_set_updated_at`, 4 constraints. Test 157 failed assertions 4, 5, 6, 11, 14, 15 and 19, as predicted. At the injection block, `drop trigger chart_of_accounts_guard` failed because the trigger does not exist, the transaction aborted, and the plan never reached 24–25. Assertion 22 printed the damage itself: the posted entry read `1999/expense` and `4999/expense` instead of `1000/asset` and `4000/revenue`. The migration was put back at its pinned blob `94b594c1…`.
+- **Fingerprints.**
+  - Before the migration, local equals Primary: functions `e6a65849bc390360dcb53b2be4f1a0b8`/331, triggers `d0b98a16e51bb805a93e14737cd5e1b3`/318, constraints `e669286c961025cb49688862286338ed`/527, `_combined` `02dcc5a1076506289a6f7ff81894fb4d`/3134.
+  - After a clean reset with it: 253 migrations, ledger `b144bdf0f5a31ac66a0f0a723fb009bc` (equal to the files), latest `20261013120000`; functions `2cd20c3fea8247598eb9b2bbb559f2ca`/332 (+1), triggers `9b53576506088625f67f8156f122bd44`/319 (+1), `_combined` `56625ae4118e1ddc85bab99114b17899`/3136. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. The Check L2/P2 function surface is `2cd20c3fea8247598eb9b2bbb559f2ca`/332.
+  - `app.guard_chart_account`: `md5(prosrc)` `6cafcfacc4ef4648df5af67e5952dbdb`, SECURITY DEFINER, `search_path=""`, executable by neither `authenticated` nor `anon`; trigger `chart_of_accounts_guard` added; 4 constraints, none added.
+- **Focused tests:** 157, 10, 29, 89, 145 and 146: `Files=6, Tests=106`, PASS.
+- **Full suite:** pgTAP Pass A `Files=157, Tests=2994`, PASS. HTTP: `verify_api_end_to_end` 35/0, `verify_journey_branches` 85/0, `verify_lifecycle_branches` 122/0. pgTAP Pass B without reset: 2994, PASS. Smoke: `ALL CHECKS PASSED (78 tables, … 71/623 catalog, …)`. 157 files whose literal `plan(N)` values sum to 2994.
+- **Mutants M1–M9**, each proven installed by a changed function or privilege fingerprint, then restored with `md5(prosrc)` `6cafcfac…`, 4 constraints, no client EXECUTE, and 25/25. Baseline 25/25. Each failing set equals the Mutation Obligation table: M1 4,5,6,11,19,22,23; M2 5,19,22,23; M3 4,19,22,23; M4 none in pgTAP; M5 14,15; M6 14,15; M7 19,20; M8 19,23; M9 25.
+- **Two-session race**, fresh tenant and entry per run, every session's own output read:
+  - with the row lock: session A `BEGIN INSERT 0 1 INSERT 0 1 INSERT 0 1 COMMIT`; session B waited 3 s and was refused `chart account X: its code and type are fixed once a journal line is posted to it`; X stayed `revenue` with its 1 line;
+  - with only the row lock removed (proven absent): A committed the same way; B did not wait, `UPDATE 1`; X became `expense` with the posted line under it. M4 is killed;
+  - restored: the guard fingerprint above, and test 157 25/25.
+- **Generators.**
+  - `ai-map.json` and `repository-index.md` regenerate unchanged.
+  - **One result differs from this contract's prediction.** Consumer Closure predicted `MASTER_API_CONTRACT.md` byte-identical. The generator changes one line: the table-door row for `chart_of_accounts` goes from insert guard `no`, update guard `no` to `yes`, `conditional`, because that section derives its guard columns from the table's triggers. The change is correct and derived; the file is in Write Scope, and Step 9 regenerates it. The regenerated file was set back until Step 9. **Lesson:** run every generator against the prototype before predicting a derived file byte-identical; a new trigger on a table moves this file.
+- **Guard self-tests:**
+  - `test_future_date_guard` 18/0 and `test_status_contradiction_guard` 33/0;
+  - `test_cold_start_state_guard` 32/10, read in full from a second run. All ten failures are CONTROL or restore cases that require a CLEAN guard: CONTROL first, A2 CONTROL, A-restore, B-restore, C2 CONTROL, C-restore, D-restore, E-CONTROL, F-restore and CONTROL second direction. Every MUTATION case passes;
+  - `test_primary_ledger_guard` 11/2: its two CONTROL cases; every MUTATION case passes.
+
+  This is the drift Consumer Closure predicts, and Step 9 requires them green.
+- **Scope and consistency.** `git status` shows only Write Scope paths, and `git diff --check` is clean. Repository consistency reports exactly the six predicted items, and Check 29 passes.
+- **Fresh Primary baseline**, read-only through `supabase-primary`:
+  - project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`;
+  - ledger 252 rows, `5f13c62d2f609e7794a0193a2f203c50`, latest `20261012120000`, with the target absent;
+  - functions (Check L2/P2) `e6a65849bc390360dcb53b2be4f1a0b8`/331; `scripts/parity_surface.sql` (its query, comment lines omitted) `_combined` `02dcc5a1076506289a6f7ff81894fb4d`/3134, every surface equal to the recorded evidence and to the unrepaired local stack;
+  - `chart_of_accounts`: triggers `chart_of_accounts_enforce_subscription_write_gate` and `chart_of_accounts_set_updated_at`, 4 constraints, no `app.guard_chart_account`;
+  - 0 tenants, chart accounts, journal entries, journal lines and events; `catalog_values` 623.
+
+  No drift from the approved baseline. **Predicted delta on Primary:** ledger 253, `b144bdf0f5a31ac66a0f0a723fb009bc`, with `20261013120000` once; functions `2cd20c3fea8247598eb9b2bbb559f2ca`/332; triggers 319; `_combined` `56625ae4118e1ddc85bab99114b17899`/3136; the guard and its trigger as above; no business row written.
+- **Readiness verdict: PASS.** Step 7 finds no Gate 2 recorded, so execution stops here and the Gate-2 package goes to the owner.
 
 ## Verification Notes
 
