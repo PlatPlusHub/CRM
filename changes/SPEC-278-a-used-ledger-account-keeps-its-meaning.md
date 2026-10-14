@@ -423,9 +423,63 @@ From the main checkout at HEAD `f923c0d`, with the pinned CLI 2.120.0 (SPEC-271)
 - **Checks:** `check_primary_ledger` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence` `PRIMARY PARITY EVIDENCE: CLEAN`; `REPOSITORY CONSISTENCY: CLEAN`; `git diff --check` clean. `git status` shows only Write Scope paths.
 - **Runtime Checkpoint:** DONE.
 
+### 2026-10-14 — Post-deploy local certification (Step 10), and a conflict that stops the Complete transition
+
+- **Implement** committed as `2796097`; its pre-commit Gate reported `REPOSITORY: clean`, `BLOCKER: none`.
+- **Local certification.** Canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` ran on the clean committed HEAD `2796097` under `scripts/run_timed.ps1`, with nothing else running (`concurrent=0`). It ran in VERIFY mode (`STEP: DONE`) and reported `LOCAL_CERTIFY: READY` in 2.9 min, exit 0. Every mandatory verification passed in that run: reset; pgTAP Pass A; the three HTTP suites; pgTAP Pass B; smoke; `check_database_parity_evidence.ps1`; repository consistency; `git diff --check`; `check_primary_ledger.ps1`.
+- **Selector after SPEC-278** (`scripts/batch6_select_target.ps1` on the local stack after that reset; 35 surfaces still `NOT-RECORDED`), as Exposure/coverage:
+  1. `notification_deliveries` 7/42
+  2. `approval_requests` 7/52
+  3. `user_branch_assignments` 7/590
+  4. `departments` 7/654
+  5. `user_role_assignments` 7/660
+  6. `customer_consents` 6/18
+  7. `document_retention_policies` 6/36
+  8. `document_links` 6/54
+  9. `exchange_rates` 6/66
+  10. `user_permission_grants` 6/88
+  11. `catalog_values` 6/102
+  12. `events` 6/346
+
+  Slice 43's measured target is `notification_deliveries` (Exposure 7, coverage 42).
+- **The conflict.** Step 10 says the Complete commit sets `Next capability` to "Batch 6 Slice 43, naming the measured first target" and `Current Module` to "resuming at Slice 43", and the Acceptance Criterion reads "The manifest names Batch 6 Slice 43 and its measured target as the next capability, with no Active Change Request." Both copy SPEC-268's Complete commit. After SPEC-268, SPEC-270 fixed CTRL-12 by deleting exactly that copy: a hand-copied target is compared by nothing, and in its measurement a wrong one passed every guard. Since then the manifest names the selector, "never a copy of it here", and SPEC-273 to SPEC-277 kept that form. This contract's own range has not touched `Next capability` or `Current Module`.
+- **Owner decision, 2026-10-14 (verbatim, in part):** "I choose to preserve the behavior established by SPEC-270. **Do not reintroduce CTRL-12 by copying the selected Batch 6 target or its ranking metrics into the manifest.** The manifest must continue pointing to the authoritative selector, `scripts/batch6_select_target.ps1`." The same decision states that it "is not blanket permission to bypass frozen contractual requirements", and that if no compliant path exists the executor must "stop before the Complete transition, report the precise blocker and the smallest governance-compliant recovery path. Do not mark an unsatisfied criterion as passed."
+- **Determination (CR_LIFECYCLE §8):** the Acceptance Criterion's wording is frozen (`ACCEPTANCE_TEXT_MUTATED`), Step 10 is frozen (`FROZEN_AUTHORITY_MUTATED`), and `Complete` requires every Acceptance Criterion and Review Gate item ticked and a `Verdict: Confirmed Complete` (`COMPLETION_PREREQUISITE`). Under the owner's decision that criterion cannot be made true, and the Review Gate's "every change matches the Implementation Steps exactly" cannot be ticked for Step 10. **The Complete transition is therefore not made.** Nothing in the manifest was changed for it. The independent review and its verdict are in Verification Notes.
+
 ## Verification Notes
 
-None.
+### 2026-10-14 — Review (independent): Step 10 cannot be completed as frozen
+
+**Independence.** The executor checked the implementation against the live state. A separate read-only reviewer, given no executor conclusions, then independently judged the Step 10 conflict and SPEC-270's preservation against the files and the Gate code.
+
+**Acceptance Criteria, against the live state:**
+- **Met:**
+  - the COA-1 and COA-2 behaviour, by test 157 inside `-Finish`'s pgTAP run on the committed bytes;
+  - the guard's mode, `search_path` and ACL, locally and on Primary, and no constraint or catalog enforcement added;
+  - mutants M1–M9 and the causal negative (Step 6);
+  - test 10 at eleven with `chart_of_accounts`;
+  - the `ENGINEERING_METHOD.md` bullet;
+  - COA-1 and COA-2 `DEPLOYED`, with STEPUP-1 the only other row changed;
+  - `chart_of_accounts` `AUDITED` / `ADVERSARIAL` at 43 of 78, with no other disposition row changed;
+  - the four files at their frozen values;
+  - Primary, evidence, manifest Live state, API contract, `ai-map.json` and `repository-index.md` in agreement, with the guard self-tests and consistency CLEAN;
+  - Primary received only the authorized migration and one guarded rename; Secondary was never contacted;
+  - `git diff --name-only 4347817..HEAD` lies wholly inside Write Scope.
+- **Not met, and not ticked:** "The manifest names Batch 6 Slice 43 and its measured target as the next capability, with no Active Change Request." The plain reading requires the target's name in the manifest; Business Reason confirms it ("It is the target the manifest names."). Reading it as naming the selector command is strained and is rejected.
+
+**Review Gate.** "Every change matches the Implementation Steps exactly" cannot be ticked for Step 10.
+
+**SPEC-270 preserved.** `git diff 4347817..HEAD -- _ORVION_CANONICAL/manifest.md` changes only `Live state` and `Active Change Request`. `Current Module` and `Next capability` still read "the first row of `scripts/batch6_select_target.ps1` (local stack), never a copy of it here"; no target or metric is copied.
+
+**Legitimacy of each route to `Complete`, judged against CR_LIFECYCLE and the Gate:**
+- **Already Applied** (`changes/TEMPLATE.md`): not legal. It applies only when a step's check finds the edit present, and the target copy was never applied.
+- **Engineering Observation** (§11): can be recorded, but it needs a new judgment, so it becomes a future CR and never ticks a criterion.
+- **Human completion** (§5): blocked the same way. `COMPLETION_PREREQUISITE` binds whoever completes.
+- **A corrective CR while this one is In Progress:** not legal. At most one contract may be Approved or In Progress (§8, `ORPHANED_APPROVED_CR`).
+- **Completing with the target copied and removing it later:** Gate-legal, but contrary to the owner's decision.
+- **Cancel this contract (human only) and complete a successor that names it in `Supersedes / Depends On`:** legal (§8, SPEC-273; the SPEC-271 → SPEC-272 precedent). This is the only route that satisfies every constraint.
+
+**Verdict: Needs Corrective Change Request.** Status stays `In Progress`. `Complete` is not attempted, because the Gate would correctly refuse it.
 
 ## Review Gate
 
