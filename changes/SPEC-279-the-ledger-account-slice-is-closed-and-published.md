@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -143,12 +143,12 @@ Irreversible Action Step: NONE
 
 ## Acceptance Criteria
 
-- [ ] `changes/SPEC-278-a-used-ledger-account-keeps-its-meaning.md` has Status `Cancelled`, and this contract's `Supersedes / Depends On` names it.
-- [ ] Each of the eight files listed in Step 1 has exactly its Step 1 blob.
-- [ ] `supabase/migrations` holds 253 files, the latest `20261013120000_a_used_ledger_account_keeps_its_meaning.sql`.
-- [ ] The manifest's `Last Completed:` line reads exactly the Step 2 text.
-- [ ] The manifest's `Current Module:` and `Next capability:` lines are byte-identical to their text at `4347817`, so the next slice is named only as the first row of `scripts/batch6_select_target.ps1`, with no surface name or ranking metric copied (CTRL-12).
-- [ ] The tracked implementation diff touches only this contract's Write Scope.
+- [x] `changes/SPEC-278-a-used-ledger-account-keeps-its-meaning.md` has Status `Cancelled`, and this contract's `Supersedes / Depends On` names it.
+- [x] Each of the eight files listed in Step 1 has exactly its Step 1 blob.
+- [x] `supabase/migrations` holds 253 files, the latest `20261013120000_a_used_ledger_account_keeps_its_meaning.sql`.
+- [x] The manifest's `Last Completed:` line reads exactly the Step 2 text.
+- [x] The manifest's `Current Module:` and `Next capability:` lines are byte-identical to their text at `4347817`, so the next slice is named only as the first row of `scripts/batch6_select_target.ps1`, with no surface name or ranking metric copied (CTRL-12).
+- [x] The tracked implementation diff touches only this contract's Write Scope.
 
 ## Execution Log
 
@@ -169,19 +169,35 @@ Step results:
 
 ## Verification Notes
 
-None.
+### 2026-10-14 — Claude (independent review)
 
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository at `c70a3e2`, not against the Execution Log.
+- **R1.** `changes/SPEC-278-a-used-ledger-account-keeps-its-meaning.md` reads `[x] Cancelled`, and this contract's `Supersedes / Depends On` names it.
+- **R2.** All eight Step 1 files have exactly their pinned blobs, both at `HEAD` and by `git hash-object --path` on the working tree.
+- **R3.** `git ls-files supabase/migrations` lists 253 files; the last is `20261013120000_a_used_ledger_account_keeps_its_meaning.sql`.
+- **R4.** The manifest has one `Last Completed:` line, ordinally equal to the Step 2 text.
+- **R5.** The `Current Module:` and `Next capability:` lines are each ordinally equal to their `4347817` text. `notification_deliveries`, the Slice-43 surface, appears in neither the manifest nor `ai-map.json` (CTRL-12).
+- **R6.** `git diff --name-only 620b46a HEAD` lists only `_ORVION_CANONICAL/manifest.md`, `ai-map.json` and this contract. `repository-index.md` reproduces unchanged. No Out of Scope path, no file of `SPEC-270`, and nothing under `scripts/`, `supabase/` or `reports/` changed since `620b46a`.
+- **R7.** Since the Draft commit `21302a2`, this contract changed only in Status, the Runtime Checkpoint and the Execution Log. The pre-commit Gate accepted each commit.
+- **R8.** `-Finish` at `c70a3e2`: repository consistency and `git diff --check` PASS, `LOCAL_CERTIFY: READY` in 0.5 min.
+- **R9.** No Primary read or write was made, and none was needed: no migration is added or changed.
+
+Review Gate: every step matched its text, with Step 1 recorded as Verified. Nothing was written outside Write Scope, and no section was restructured. Every Acceptance Criterion is true. No step needed a guess. The superseded SPEC-278 is already `Cancelled`, its terminal state, and is unchanged. The tree is clean.
+
+Complete introduces no new architectural decision: the owner's 2026-10-14 decision preserved SPEC-270 and cancelled SPEC-278 with this successor.
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
