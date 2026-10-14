@@ -216,6 +216,12 @@ is correct.]
 No subjective criteria. Prefer one criterion per Implementation Step over a small number of
 broad criteria — this makes partial completion and partial failure both individually visible.
 
+Where an item states a repository fact, end it with a check the Gate evaluates:
+`check: same <path>[#<line key>] @<commit>`, `check: has <path>[#<line key>] "<text>"`,
+`check: lacks <path>[#<line key>] "<text>"` or `check: blob <path> <sha1>`. A check that can never
+hold refuses Approval, and every check must hold at Complete, in the hook and in CI. An item without
+a check is judged by Review alone, and the Gate reports it as such.
+
 Assert LOCAL evidence ONLY (`CR_LIFECYCLE.md §8`). A criterion naming remote workflow results on
 the completion commit's own SHA cannot be true when it is ticked, because that commit does not
 exist yet. POST_PUSH evidence belongs to `check_agent_continuity.ps1 -Certify` after the push, and

@@ -3,6 +3,7 @@ $ErrorActionPreference='Stop'
 $sourceRoot=Split-Path $PSScriptRoot -Parent
 $control=Join-Path $sourceRoot 'scripts/check_agent_continuity.ps1'
 $publisher=Join-Path $sourceRoot 'scripts/publish_candidate.ps1'
+$promoter=Join-Path $sourceRoot 'scripts/promote_main.ps1'
 $sandbox=Join-Path ([IO.Path]::GetTempPath())("orvion-agent-control-test-$([guid]::NewGuid().ToString('N'))")
 $remote=Join-Path $sandbox 'remote.git';$root=Join-Path $sandbox 'work';$writer=Join-Path $sandbox 'writer'
 $script:pass=0;$script:fail=0
@@ -15,9 +16,10 @@ function ContractText(
     [string]$Acceptance='Fixture.',[string]$Review='Fixture.',
     [string]$Log='None.',[string]$Notes='None.',
     [string]$Evidence='',
+    [string]$Steps='',
     [switch]$Closeable
 ){
-    $steps=if($Multiline){"1. first line`n   continuation line`n2. Exact second action."}else{"1. Exact fixture action.`n2. Exact second action."}
+    $steps=if($Steps){$Steps}elseif($Multiline){"1. first line`n   continuation line`n2. Exact second action."}else{"1. Exact fixture action.`n2. Exact second action."}
     $box=if($Closeable){'x'}else{' '}
     if($Closeable-and$Notes-eq'None.'){$Notes="### 2026-09-11 00:00 — fixture`nVerdict: Confirmed Complete`nFindings: fixture."}
 @"
@@ -2954,10 +2956,12 @@ exit 0
     # place the repaired predicates live.
     MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the Draft baseline is not frozen authority' `
         {RaBuildBaseline} 'MODE: EXECUTE' "        if(`$baselineStatus-ne'Draft'){" '        if($true){'
+    # SPEC-281. Recorded-text checks now live in one function the endpoint and the walk share,
+    # so its own Draft gate is the one an inversion must reach.
     MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the baseline gate is not inverted' `
-        {RaBuildPostApproval} 'ACCEPTANCE_TEXT_MUTATED' "        if(`$baselineStatus-ne'Draft'){" "        if(`$baselineStatus-eq'Draft'){"
+        {RaBuildPostApproval} 'ACCEPTANCE_TEXT_MUTATED' "if((Status-FromText `$WasText)-eq'Draft'){return}" "if((Status-FromText `$WasText)-ne'Draft'){return}"
     MutationKillRangeAt 'RANGE-AUTHORITY MUTATION: the intermediate Approval replay runs' `
-        {RaBuildReplay} 'CODE: APPROVAL_EVIDENCE' "                if(`$parentStatus-eq'Draft'-and`$statusAt-eq'Approved'){" '                if($false){'
+        {RaBuildReplay} 'CODE: APPROVAL_EVIDENCE' "Validate-TransitionEvidence `$parentText `$atCommit `$commit `"`$commit^`"|Out-Null" '$null'
 
     # ---- ORIGINATION STATE MUTATION POPULATION (SPEC-202) ----
     # Three predicates, three scenarios no other guard can rescue: the marker gate that
@@ -3332,10 +3336,310 @@ exit 0
     Close-Second $cancelScope;$r=RunRange 'origin/main'
     Assert 'SEG-18 a Complete with a scoped Cancelled contract remains legal in the later segment' ($r.Code-eq0-and$r.Text-match'CR: SPEC-901') $r.Text
 
+    # ---- CONSTITUTIONAL ASSURANCE (SPEC-281) ----
+    # The pinned line is deliberately NOT a Batch 6 or manifest line, so no case passes by
+    # recognising historical wording: `docs/channel.md`'s `Release channel` names its owner, the
+    # fixture GOVERNANCE.md pins it, and `notes.md` is a live file that names it. Every contract is
+    # born inside its range, as every real one is: a Draft is committed only at Approval.
+    # This block runs after the SEG cases, which push SPEC-901 and SPEC-902 to the sandbox's `main`.
+    # Its contracts must be born inside their ranges, so it starts from the suite's own baseline
+    # commit, where neither identity exists or was ever reserved.
+    $pristine=@(git -C $root log --format=%H --grep '^baseline$' origin/main)|Select-Object -Last 1
+    git -C $root push origin "+${pristine}:refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null
+    Reset-Fixture
+    Assert '281-PRE the block starts from a base holding no SPEC-901, so its contracts are born in their ranges' ($pristine-and-not(Test-Path -LiteralPath (Join-Path $root 'changes/SPEC-901-born.md'))) "baseline=$pristine"
+    $chDoc='docs/channel.md'
+    $chLine='Release channel: the first row of `scripts/channel.ps1`, never a copy of it here.'
+    $chMoved='Release channel: the first row of `scripts/release.ps1`, never a copy of it here.'
+    $chRel='changes/SPEC-901-born.md'
+    $chPlain='allowed.txt;_ORVION_CANONICAL/manifest.md'
+    function ChSha([string]$Line){$h=[Security.Cryptography.SHA256]::Create();try{-join($h.ComputeHash([Text.UTF8Encoding]::new($false).GetBytes($Line))|%{$_.ToString('x2')})}finally{$h.Dispose()}}
+    function ChGovernance([string]$Line=$chLine){"# fixture governance`n`n| File | Line | Value owned by | SHA-256 of the line |`n|---|---|---|---|`n| ``$chDoc`` | ``Release channel`` | ``scripts/channel.ps1`` | ``$(ChSha $Line)`` |`n"}
+    function ChDoc([string]$Line=$chLine,[string]$Notes='free text'){"# Channel`n`n$Line`nNotes: $Notes.`n"}
+    function ChEvidence([string]$Rows){(EvidenceText)-replace'\| Fixture changed fact \| `allowed\.txt` \| WRITE \| Fixture preserved behaviour\. \|',$Rows}
+    function ChBase([switch]$NoReset){
+        if(-not$NoReset){Reset-Fixture}
+        Put $chDoc (ChDoc);Put 'GOVERNANCE.md' (ChGovernance);Put 'notes.md' "Agents read the Release channel line before a release.`n"
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None')
+        Commit 'ch-base'
+        (git -C $root rev-parse HEAD).Trim()
+    }
+    # The Draft is committed and the Approved text is left in the working tree: the hook's view.
+    function ChApprove([hashtable]$C,[switch]$NoReset){
+        $b=ChBase -NoReset:$NoReset
+        Put $chRel (ContractText -Id SPEC-901 -Status Draft @C);Commit 'ch-draft'
+        Put $chRel (ContractText -Id SPEC-901 -Status Approved @C);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $chRel)
+        $b
+    }
+    # A whole committed lifecycle: CI's view. $Mid runs In Progress; $Done shapes the Complete commit.
+    function ChLife([hashtable]$C,[scriptblock]$Mid={},[hashtable]$Done=@{},[switch]$NoReset,[switch]$Open){
+        $b=ChBase -NoReset:$NoReset
+        Put $chRel (ContractText -Id SPEC-901 -Status Draft @C);Commit 'ch-draft'
+        Put $chRel (ContractText -Id SPEC-901 -Status Approved @C);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $chRel);Commit 'ch-approve'
+        Put $chRel (ContractText -Id SPEC-901 -Status 'In Progress' @C);Commit 'ch-begin'
+        & $Mid
+        $fin=@{Status='Complete';Resume='DONE';Closeable=$true}
+        foreach($k in $C.Keys){$fin[$k]=$C[$k]};foreach($k in $Done.Keys){$fin[$k]=$Done[$k]}
+        Put $chRel (ContractText -Id SPEC-901 @fin)
+        if($Open){return $b}
+        Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'ch-complete'
+        $b
+    }
+
+    # CAG / PARITY. What the hook refuses at a commit, CI refuses at the same commit. Before SPEC-281
+    # each of these four ranges was READY: the walk never compared the contract against its parent.
+    foreach($p in @(
+        @{No='281-P1';N='a criterion reworded after Approval';Done=@{Acceptance='Reworded after Approval.'};Code='ACCEPTANCE_TEXT_MUTATED'},
+        @{No='281-P2';N='a Review Gate item reworded after Approval';Done=@{Review='Reworded after Approval.'};Code='REVIEW_GATE_TEXT_MUTATED'},
+        @{No='281-P3';N='a completion with unticked criteria and no verdict';Done=@{Closeable=$false};Code='COMPLETION_PREREQUISITE'})){
+        $b=ChLife @{Scope=$chPlain} -Done $p.Done;$r=RunRange $b
+        Assert "$($p.No) PARITY: $($p.N) is refused by the range at the commit that made it" ($r.Code-ne0-and$r.Text-match"$($p.Code).*@[0-9a-f]{7}") $r.Text
+        Pop 'PARITY' 'reject'
+    }
+    $b=ChLife @{Scope=$chPlain} -Mid {Put $chRel (ContractText -Id SPEC-901 -Status 'In Progress' -Scope $chPlain -Log "### 2026-10-14 00:00 - fixture`nOutcome: Implemented.");Commit 'ch-log'} -Done @{Log="### 2026-10-14 00:00 - fixture`nOutcome: Implemented and certified on Primary."}
+    $r=RunRange $b
+    Assert '281-P4 PARITY: a rewritten Execution Log is refused by the range at the commit that made it' ($r.Code-ne0-and$r.Text-match'EVIDENCE_NOT_APPEND_ONLY.*@[0-9a-f]{7}') $r.Text
+    Pop 'PARITY' 'reject'
+    $b=ChLife @{Scope=$chPlain};$r=RunRange $b
+    Assert '281-P5 PARITY: a lawful lifecycle born inside the range is READY' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'PARITY' 'accept'
+    MutationKillRangeAt '281-PM PARITY MUTATION: the walk judges each commit''s recorded text' `
+        {ChLife @{Scope=$chPlain} -Done @{Acceptance='Reworded after Approval.'} -NoReset} 'ACCEPTANCE_TEXT_MUTATED' 'Validate-RecordedText $parentText $atCommit' '$null' 'PARITY'
+
+    # PICF / CHECK. A criterion's check that can never hold refuses Approval; at Complete every
+    # check must hold, in the hook and in the range alike.
+    $never='notes.md names the train. `check: has notes.md "Release train"`'
+    $clash='allowed.txt is ready. `check: has allowed.txt "ready"`'+"`n- [ ] "+'allowed.txt is not. `check: lacks allowed.txt "ready"`'
+    foreach($c in @(
+        @{No='281-C1';N='a check on a file outside Write Scope that already disagrees';A=$never;E='can never hold'},
+        @{No='281-C2';N='a check against a commit outside this history';A='Unchanged. `check: same notes.md @0123456789abcdef0123456789abcdef01234567`';E='not in the history'},
+        @{No='281-C3';N='a malformed check';A='Unchanged. `check: same notes.md`';E='CRITERION_CHECK_MALFORMED'},
+        @{No='281-C4';N='two checks no final state can satisfy';A=$clash;E='cannot both hold'})){
+        ChApprove @{Scope=$chPlain;Acceptance=$c.A}|Out-Null;$r=Run 'Gate'
+        Assert "$($c.No) CHECK: $($c.N) refuses Approval" ($r.Code-ne0-and$r.Text-match'CODE: APPROVAL_EVIDENCE'-and$r.Text-match$c.E) $r.Text
+        Pop 'CHECK' 'reject'
+    }
+    ChApprove @{Scope=$chPlain;Acceptance='notes.md keeps naming the line. `check: has notes.md "Release channel"`'}|Out-Null;$r=Run 'Gate'
+    Assert '281-C5 CHECK: a satisfiable check is admitted and reported as Gate-verified' ($r.Code-eq0-and$r.Text-match'CRITERIA: 1 of 1') $r.Text
+    Pop 'CHECK' 'accept'
+    $ship='allowed.txt says shipped. `check: has allowed.txt "shipped"`'
+    $b=ChLife @{Scope=$chPlain;Acceptance=$ship};$r=RunRange $b
+    Assert '281-C6 CHECK: a ticked criterion whose check fails is refused by the range' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_FAILED.*@[0-9a-f]{7}') $r.Text
+    Pop 'CHECK' 'reject'
+    ChLife @{Scope=$chPlain;Acceptance=$ship} -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert '281-C7 CHECK: the same completion is refused by the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED') $r.Text
+    Pop 'CHECK' 'reject'
+    $b=ChLife @{Scope=$chPlain;Acceptance=$ship} -Mid {Put 'allowed.txt' 'shipped';Commit 'ch-work'};$r=RunRange $b
+    Assert '281-C8 CHECK: a completion whose checks hold is READY' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'CHECK' 'accept'
+    MutationKill '281-CM1 CHECK MUTATION: Approval refuses a check that can never hold' {ChApprove @{Scope=$chPlain;Acceptance=$never}|Out-Null} 'can never hold' `
+        'if($why){throw "APPROVAL_EVIDENCE:FAIL:criterion $($c.Item) can never hold' 'if($false){throw "APPROVAL_EVIDENCE:FAIL:criterion $($c.Item) can never hold' 'CHECK'
+    MutationKill '281-CM2 CHECK MUTATION: Approval refuses contradictory checks' {ChApprove @{Scope=$chPlain;Acceptance=$clash}|Out-Null} 'cannot both hold' 'if($clash){' 'if($false){' 'CHECK'
+    MutationKillRangeAt '281-CM3 CHECK MUTATION: Complete refuses a failing check' {ChLife @{Scope=$chPlain;Acceptance=$ship} -NoReset} 'CRITERION_CHECK_FAILED' `
+        'if($why){throw "CRITERION_CHECK_FAILED' 'if($false){throw "CRITERION_CHECK_FAILED' 'CHECK'
+
+    # SACI / PIN. A pinned line holds its ratified text whatever Write Scope allows, and a contract
+    # that names one says what it does to it; only a contract that moves the pin may write it.
+    $chScope="$chDoc;_ORVION_CANONICAL/manifest.md"
+    ChBase|Out-Null;Put $chDoc (ChDoc 'Release channel: train 7 (copied from the selector).');$r=Run 'Gate'
+    Assert '281-S1 PIN: a copied value in a pinned line is refused at the hook' ($r.Code-ne0-and$r.Text-match'CODE: PINNED_AUTHORITY_CHANGED') $r.Text
+    Pop 'PIN' 'reject'
+    $b=ChLife @{Scope=$chScope} -Mid {Put $chDoc (ChDoc 'Release channel: train 7 (copied from the selector).');Commit 'ch-copy'};$r=RunRange $b
+    Assert '281-S2 PIN: a pinned line changed inside Write Scope is still refused by the range' ($r.Code-ne0-and$r.Text-match'CODE: PINNED_AUTHORITY_CHANGED') $r.Text
+    Pop 'PIN' 'reject'
+    $b=ChLife @{Scope=$chScope} -Mid {Put $chDoc (ChDoc $chLine 'edited around the pinned line');Commit 'ch-notes'};$r=RunRange $b
+    Assert '281-S3 PIN: editing the same file around a pinned line is READY' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'PIN' 'accept'
+    $copied='| Measured state that moves | channel (`Release channel`, notes) | WRITE | Copied from the previous release. |'
+    ChApprove @{Scope=$chScope;Evidence=(ChEvidence $copied)}|Out-Null;$r=Run 'Gate'
+    Assert '281-S4 PIN: Consumer Closure declaring WRITE on a pinned line without moving its pin is refused' ($r.Code-ne0-and$r.Text-match'declares WRITE on pinned line') $r.Text
+    Pop 'PIN' 'reject'
+    $names="1. Set ``Release channel`` in docs/channel.md to name the new train.`n2. Exact second action."
+    ChApprove @{Scope=$chScope;Steps=$names;Evidence=(EvidenceText)}|Out-Null;$r=Run 'Gate'
+    Assert '281-S5 PIN: a step that names a pinned line with no disposition is INDETERMINATE' ($r.Code-ne0-and$r.Text-match'INDETERMINATE:step 1 names pinned line') $r.Text
+    Pop 'PIN' 'reject'
+    $keep="1. Leave ``Release channel`` byte-identical; change only the Notes line.`n2. Exact second action."
+    ChApprove @{Scope=$chScope;Steps=$keep;Evidence=(ChEvidence '| The `Release channel` line | Release readers | UNAFFECTED | Byte-identical to the base. |')}|Out-Null;$r=Run 'Gate'
+    Assert '281-S6 PIN: a step that reads a pinned line and says UNAFFECTED is admitted' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'PIN' 'accept'
+    ChApprove @{Scope=$chScope;Acceptance='The channel names train 7. `check: has docs/channel.md#Release channel "train 7"`'}|Out-Null;$r=Run 'Gate'
+    Assert '281-S7 PIN: a criterion that needs a pinned line to change can never hold' ($r.Code-ne0-and$r.Text-match'pinned by GOVERNANCE') $r.Text
+    Pop 'PIN' 'reject'
+    MutationKill '281-SM1 PIN MUTATION: the pinned line is compared with its pin' {ChBase|Out-Null;Put $chDoc (ChDoc 'Release channel: train 7.')} 'PINNED_AUTHORITY_CHANGED' `
+        'if((Get-TextSha256 $line)-ne$pin.Sha){' 'if($false){' 'PIN'
+    MutationKill '281-SM2 PIN MUTATION: WRITE on a pinned line needs a moved pin' {ChApprove @{Scope=$chScope;Evidence=(ChEvidence $copied)}|Out-Null} 'declares WRITE on pinned line' `
+        'if(-not$mayRepin){throw "APPROVAL_EVIDENCE:FAIL:Consumer Closure declares WRITE' 'if($false){throw "APPROVAL_EVIDENCE:FAIL:Consumer Closure declares WRITE' 'PIN'
+    MutationKill '281-SM3 PIN MUTATION: a step naming a pinned line needs a disposition' {ChApprove @{Scope=$chScope;Steps=$names;Evidence=(EvidenceText)}|Out-Null} 'names pinned line' `
+        '-and-not$declared.Count){' '-and$false){' 'PIN'
+
+    # ACI. Moving a pin is lawful and closes its consumers - every live file that names the line,
+    # found by the Gate, not listed from memory. The evasion case declares nothing at Approval and
+    # moves the pin in a later commit; the walk still finds it.
+    $authority="$chDoc;GOVERNANCE.md;_ORVION_CANONICAL/manifest.md"
+    $move="1. Rewrite the ``Release channel`` line and its GOVERNANCE.md pin together.`n2. Exact second action."
+    $own='| The `Release channel` line | `docs/channel.md` | WRITE | A new owner. |'+"`n"+'| Its pin | `GOVERNANCE.md` | WRITE | The new hash. |'
+    $all=$own+"`n"+'| Readers of the line | `notes.md` | VERIFY | Still reads the line. |'
+    ChApprove @{Scope=$authority;Steps=$move;Evidence=(ChEvidence $own)}|Out-Null;$r=Run 'Gate'
+    Assert '281-A1 ACI: an authority change that omits a live consumer is INDETERMINATE at Approval' ($r.Code-ne0-and$r.Text-match'leaves notes\.md') $r.Text
+    Pop 'ACI' 'reject'
+    ChApprove @{Scope=$authority;Steps=$move;Evidence=(ChEvidence $all)}|Out-Null;$r=Run 'Gate'
+    Assert '281-A2 ACI: an authority change that closes every live consumer is admitted' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'ACI' 'accept'
+    $moveBoth={Put $chDoc (ChDoc $chMoved);Put 'GOVERNANCE.md' (ChGovernance $chMoved);Commit 'ch-authority'}
+    $b=ChLife @{Scope=$authority;Evidence=(EvidenceText)} -Mid $moveBoth;$r=RunRange $b
+    Assert '281-A3 ACI: moving a pin with no declaration is refused by the range at that commit' ($r.Code-ne0-and$r.Text-match'AUTHORITY_CONSUMER_UNCOVERED.*@[0-9a-f]{7}') $r.Text
+    Pop 'ACI' 'reject'
+    $b=ChLife @{Scope=$authority;Steps=$move;Evidence=(ChEvidence $all)} -Mid $moveBoth;$r=RunRange $b
+    Assert '281-A4 ACI: a lawful authority change - line, pin and consumers together - is READY' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'ACI' 'accept'
+    MutationKill '281-AM1 ACI MUTATION: Approval requires every derived consumer' {ChApprove @{Scope=$authority;Steps=$move;Evidence=(ChEvidence $own)}|Out-Null} 'leaves notes\.md' `
+        'if(-not @($Rows|Where-Object{($_-join'' | '').Contains($consumer)}).Count){' 'if($false){' 'ACI'
+    MutationKillRangeAt '281-AM2 ACI MUTATION: the walk judges a moved pin' {ChLife @{Scope=$authority;Evidence=(EvidenceText)} -Mid $moveBoth -NoReset} 'AUTHORITY_CONSUMER_UNCOVERED' `
+        'try{Assert-AuthorityConsumersCovered $ccRows $pin "$commit^" ''AUTHORITY_CONSUMER_UNCOVERED''}catch{throw "$($_.Exception.Message)@$short"}' '$null' 'ACI'
+
+    # TRUST. A candidate's CI runs the candidate's own evaluator, so a candidate that neuters it
+    # certifies itself - T1 shows exactly that first. -Trusted judges the same candidate with an
+    # evaluator from outside it, on data that is exactly the candidate SHA, and runs no candidate file.
+    function RunTrusted([string]$Evaluator,[string]$Base,[string]$Head='HEAD'){
+        $o=& pwsh -NoProfile -File $Evaluator -Gate -Trusted -Root $root -BaseRef $Base -HeadRef $Head 2>&1
+        [pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}
+    }
+    function TrustMutant([string]$Find,[string]$Replace){
+        $src=Get-Content -Raw $control;$p=Join-Path $sandbox 'trusted-mutant.ps1'
+        [IO.File]::WriteAllText($p,$src.Replace($Find,$Replace),(New-Object Text.UTF8Encoding($false)))
+        [pscustomobject]@{Path=$p;Applied=$src.Contains($Find)}
+    }
+    $neuter={Put 'scripts/check_agent_continuity.ps1' "Write-Output 'ORVION: READY';exit 0";Put 'outside.txt' 'a write no contract authorised';Commit 'ch-self-certify'}
+    $b=ChLife @{Scope=$chPlain} -Mid $neuter;$own=RunMutantRange $b;$r=RunTrusted $control $b
+    Assert '281-T1 TRUST: a candidate that neuters its own evaluator certifies itself, and -Trusted refuses it' ($own.Code-eq0-and$own.Text-match'ORVION: READY'-and$r.Code-ne0-and$r.Text-match'OUT_OF_SCOPE_WRITE') "own=$($own.Text) trusted=$($r.Text)"
+    Pop 'TRUST' 'reject'
+    $b=ChLife @{Scope=$chPlain}
+    $r=RunTrusted (Join-Path $root 'scripts/check_agent_continuity.ps1') $b
+    Assert '281-T2 TRUST: -Trusted refuses an evaluator read from inside the candidate' ($r.Code-ne0-and$r.Text-match'TRUSTED_EVALUATOR_IN_CANDIDATE') $r.Text
+    Pop 'TRUST' 'reject'
+    $r=RunTrusted $control $b 'HEAD~1'
+    Assert '281-T3 TRUST: -Trusted refuses data that is not the candidate SHA it names' ($r.Code-ne0-and$r.Text-match'TRUSTED_DATA_NOT_CANDIDATE') $r.Text
+    Pop 'TRUST' 'reject'
+    $marker=Join-Path $sandbox 'trusted.marker'
+    Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue;$env:ORVION_GUARD_MARKER=$marker
+    $plain=RunRange $b;$ranCandidate=Test-Path -LiteralPath $marker;Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue
+    $r=RunTrusted $control $b;$ranTrusted=Test-Path -LiteralPath $marker
+    Remove-Item Env:ORVION_GUARD_MARKER
+    Assert '281-T4 TRUST: a lawful candidate is READY under -Trusted and none of its files ran' ($plain.Code-eq0-and$ranCandidate-and$r.Code-eq0-and$r.Text-match'ORVION: READY'-and-not$ranTrusted) "candidate-guard-ran=$ranCandidate trusted-guard-ran=$ranTrusted $($r.Text)"
+    Pop 'TRUST' 'accept'
+    # Mutations, each on the scenario only it can refuse. The in-candidate one needs the mutant
+    # committed inside the candidate, which is the very shape it exists to refuse.
+    Reset-Fixture
+    $src=Get-Content -Raw $control;$find='if($self.StartsWith($data,[StringComparison]::OrdinalIgnoreCase)){'
+    Put 'scripts/check_agent_continuity.ps1' ($src.Replace($find,'if($false){'));CommitOnly 'scripts/check_agent_continuity.ps1' 'mutant'
+    $b2=ChLife @{Scope=$chPlain} -NoReset;$r=RunTrusted (Join-Path $root 'scripts/check_agent_continuity.ps1') $b2;Pop 'TRUST' 'mutation'
+    Assert '281-TM1 TRUST MUTATION: the evaluator-location check is load-bearing' ($src.Contains($find)-and$r.Text-notmatch'TRUSTED_EVALUATOR_IN_CANDIDATE') $r.Text
+    $b=ChLife @{Scope=$chPlain};$m=TrustMutant 'if($at-ne$want-or@(git -C $Root status --porcelain).Count){' 'if($false){';$r=RunTrusted $m.Path $b 'HEAD~1';Pop 'TRUST' 'mutation'
+    Assert '281-TM2 TRUST MUTATION: the candidate-SHA check is load-bearing' ($m.Applied-and$r.Text-notmatch'TRUSTED_DATA_NOT_CANDIDATE') $r.Text
+    $m=TrustMutant "`$repo=if(`$Trusted){'not run (-Trusted executes no candidate file)'}else{Repo-Guard}" '$repo=Repo-Guard'
+    Remove-Item -LiteralPath $marker -Force -ErrorAction SilentlyContinue;$env:ORVION_GUARD_MARKER=$marker
+    $r=RunTrusted $m.Path $b;$ran=Test-Path -LiteralPath $marker;Remove-Item Env:ORVION_GUARD_MARKER;Pop 'TRUST' 'mutation'
+    Assert '281-TM3 TRUST MUTATION: leaving out Repo-Guard is what keeps candidate files from running' ($m.Applied-and$ran) "ran=$ran $($r.Text)"
+    Remove-Item -LiteralPath (Join-Path $sandbox 'trusted-mutant.ps1'),$marker -Force -ErrorAction SilentlyContinue
+
+
+    # PROMOTE. The owner's promotion binds the trusted judgment to the one SHA it pushes. The promoter
+    # sits on `main`, as the owner's checkout holds it, and each candidate reaches the sandbox's
+    # `orvion-preflight` the way publish_candidate.ps1 leaves it.
+    function RemoteMain{"$(git -C $remote rev-parse refs/heads/main)".Trim()}
+    function PromoteRun([string]$Sha,[string]$Via='origin'){
+        $o=& pwsh -NoProfile -File (Join-Path $root 'scripts/promote_main.ps1') -Candidate $Sha -Remote $Via 2>&1
+        [pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}
+    }
+    function PromoteBase([string]$Promoter=(Get-Content -Raw $promoter)){
+        Reset-Fixture;ChBase -NoReset|Out-Null
+        Put 'scripts/promote_main.ps1' $Promoter;Commit 'promoter-on-main'|Out-Null
+        git -C $root push origin main --quiet 2>$null;git -C $root fetch origin --quiet 2>$null
+        RemoteMain
+    }
+    function PromoteCandidate([hashtable]$C=@{Scope=$chPlain},[scriptblock]$Mid={}){
+        git -C $root checkout --quiet main;git -C $root reset --hard --quiet origin/main
+        Put $chRel (ContractText -Id SPEC-901 -Status Draft @C);Commit 'pr-draft'|Out-Null
+        Put $chRel (ContractText -Id SPEC-901 -Status Approved @C);Put '_ORVION_CANONICAL/manifest.md' (ManifestText $chRel);Commit 'pr-approve'|Out-Null
+        Put $chRel (ContractText -Id SPEC-901 -Status 'In Progress' @C);Commit 'pr-begin'|Out-Null
+        & $Mid|Out-Null
+        Put $chRel (ContractText -Id SPEC-901 -Status Complete -Resume DONE -Closeable @C);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');Commit 'pr-complete'|Out-Null
+        $sha="$(git -C $root rev-parse HEAD)".Trim()
+        git -C $root push origin "+${sha}:refs/heads/orvion-preflight" --quiet 2>$null
+        git -C $root checkout --quiet --detach origin/main
+        $sha
+    }
+    function PromoteRestore([string]$Sha){git -C $root push origin "+${Sha}:refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
+    # The candidate rewrites its own evaluator to always pass, then writes outside its scope: the
+    # promoter must judge it with `main`'s evaluator, never the candidate's.
+    $selfCertify={Put 'scripts/check_agent_continuity.ps1' "Write-Output 'ORVION: READY';exit 0";Put 'outside.txt' 'a write no contract authorised';Commit 'pr-self-certify'}
+
+    $m0=PromoteBase;$c=PromoteCandidate;$r=PromoteRun $c
+    Assert '281-R1 PROMOTE: a candidate the trusted Gate admits becomes main, at exactly its SHA' ($r.Code-eq0-and$r.Text-match'PROMOTE: DONE'-and(RemoteMain)-eq$c) "main=$(RemoteMain) candidate=$c $($r.Text)"
+    Pop 'PROMOTE' 'accept';PromoteRestore $m0
+
+    $m0=PromoteBase;$c=PromoteCandidate -Mid $selfCertify;$r=PromoteRun $c
+    Assert '281-R2 PROMOTE: a candidate that certifies itself is judged by main''s evaluator and never reaches main' ($r.Code-ne0-and$r.Text-match'TRUSTED_GATE_REFUSED'-and$r.Text-match'OUT_OF_SCOPE_WRITE'-and(RemoteMain)-eq$m0) "main=$(RemoteMain) base=$m0 $($r.Text)"
+    Pop 'PROMOTE' 'reject'
+
+    $m0=PromoteBase;$c=PromoteCandidate;git -C $root checkout --quiet --detach $c;$r=PromoteRun $c
+    Assert '281-R3 PROMOTE: run from anything but a clean checkout of main, it refuses' ($r.Code-ne0-and$r.Text-match'NOT_FROM_MAIN'-and(RemoteMain)-eq$m0) $r.Text
+    Pop 'PROMOTE' 'reject'
+
+    $m0=PromoteBase;git -C $root checkout --quiet --detach "$m0~1";Put 'allowed.txt' 'a side history';Commit 'pr-side'|Out-Null
+    $side="$(git -C $root rev-parse HEAD)".Trim();git -C $root push origin "+${side}:refs/heads/orvion-preflight" --quiet 2>$null
+    git -C $root checkout --quiet --detach origin/main;$r=PromoteRun $side
+    Assert '281-R4 PROMOTE: a candidate that does not descend from main is refused before any judgment' ($r.Code-ne0-and$r.Text-match'NOT_A_FAST_FORWARD'-and$r.Text-notmatch'ORVION:'-and(RemoteMain)-eq$m0) $r.Text
+    Pop 'PROMOTE' 'reject'
+
+    # No hook runs while the candidate is checked out. With this repository's relative hooksPath a
+    # candidate's own hook never resolves (Git resolves it in the judge's checkout); this proves the
+    # promoter also silences a hook the judge's configuration WOULD run - live in the control below.
+    $hookMark=Join-Path $sandbox 'judge-hook.marker';$hookDir=Join-Path $sandbox 'judge-hooks'
+    [IO.Directory]::CreateDirectory($hookDir)|Out-Null
+    [IO.File]::WriteAllText((Join-Path $hookDir 'post-checkout'),"#!/bin/sh`necho ran > '$($hookMark-replace'\\','/')'`n",(New-Object Text.UTF8Encoding($false)))
+    if($IsLinux-or$IsMacOS){& chmod +x (Join-Path $hookDir 'post-checkout')}
+    $m0=PromoteBase;$c=PromoteCandidate
+    git -C $root config core.hooksPath ($hookDir-replace'\\','/')
+    Remove-Item -LiteralPath $hookMark -Force -ErrorAction SilentlyContinue
+    $probe=Join-Path $sandbox 'hook-probe';git -C $root worktree add --quiet --detach $probe $c 2>$null;$live=Test-Path -LiteralPath $hookMark
+    git -C $root worktree remove --force $probe 2>$null|Out-Null;Remove-Item -LiteralPath $hookMark -Force -ErrorAction SilentlyContinue
+    $r=PromoteRun $c;$ran=Test-Path -LiteralPath $hookMark
+    git -C $root config --unset core.hooksPath
+    Assert '281-R5 PROMOTE: no hook runs while the promoter checks the candidate out' ($live-and-not$ran-and$r.Code-eq0) "live=$live ran=$ran $($r.Text)"
+    Pop 'PROMOTE' 'accept';PromoteRestore $m0
+
+    # A moved target: the promoter judged against one `main`, and `main` moved before its push. A
+    # stale remote stands in for the race - fetched at the old `main`, pushing to the real one - and
+    # the real `main` moves to a commit inside the candidate's own history, so only the lease refuses.
+    function PromoteStale([string]$Promoter=(Get-Content -Raw $promoter)){
+        $m0=PromoteBase $Promoter;$c=PromoteCandidate
+        $snap=Join-Path $sandbox ('stale-'+[guid]::NewGuid().ToString('N'));git clone --bare --quiet $remote $snap 2>$null
+        git -C $root push origin "+${c}~1:refs/heads/main" --quiet 2>$null
+        $moved=RemoteMain
+        git -C $root remote add stale $snap;git -C $root remote set-url --push stale $remote
+        git -C $root fetch stale --quiet 2>$null;git -C $root checkout --quiet --detach stale/main
+        $r=PromoteRun $c 'stale'
+        git -C $root checkout --quiet --detach origin/main;git -C $root remote remove stale;Remove-Item -LiteralPath $snap -Recurse -Force -ErrorAction SilentlyContinue
+        [pscustomobject]@{R=$r;Base=$m0;Moved=$moved;Candidate=$c;Now=(RemoteMain)}
+    }
+    $s=PromoteStale
+    Assert '281-R6 PROMOTE: if main moved after the judgment, the push is refused and main stays where it moved' ($s.R.Code-ne0-and$s.R.Text-match'PUSH_REFUSED'-and$s.Now-eq$s.Moved-and$s.Moved-ne$s.Base) "now=$($s.Now) moved=$($s.Moved) base=$($s.Base) $($s.R.Text)"
+    Pop 'PROMOTE' 'reject';PromoteRestore $s.Base
+
+    # Mutations, each killed by the one scenario only it refuses.
+    $mutant=(Get-Content -Raw $promoter).Replace("if(`$code-ne0-or-not@(`$judgment|Where-Object{`"`$_`"-eq'ORVION: READY'}).Count){Refuse 'TRUSTED_GATE_REFUSED'}",'')
+    $m0=PromoteBase $mutant;$c=PromoteCandidate -Mid $selfCertify;$r=PromoteRun $c;Pop 'PROMOTE' 'mutation'
+    Assert '281-RM1 PROMOTE MUTATION: the trusted READY is what keeps a refused candidate off main' ($mutant-ne(Get-Content -Raw $promoter)-and(RemoteMain)-eq$c) "main=$(RemoteMain) candidate=$c $($r.Text)"
+    PromoteRestore $m0
+    $mutant=(Get-Content -Raw $promoter).Replace(' "--force-with-lease=refs/heads/main:$main"','')
+    $s=PromoteStale $mutant;Pop 'PROMOTE' 'mutation'
+    Assert '281-RM2 PROMOTE MUTATION: the lease is what refuses a moved main' ($mutant-ne(Get-Content -Raw $promoter)-and$s.Now-eq$s.Candidate) "now=$($s.Now) candidate=$($s.Candidate) $($s.R.Text)"
+    PromoteRestore $s.Base
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','PIN','ACI','TRUST','PROMOTE')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

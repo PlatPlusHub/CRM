@@ -2,6 +2,7 @@
 param(
     [Parameter(ParameterSetName='Boot',Mandatory=$true)][switch]$Boot,
     [Parameter(ParameterSetName='Gate',Mandatory=$true)][switch]$Gate,
+    [Parameter(ParameterSetName='Gate')][switch]$Trusted,
     [Parameter(ParameterSetName='Finish',Mandatory=$true)][switch]$Finish,
     [Parameter(ParameterSetName='Certify',Mandatory=$true)][switch]$Certify,
     [string]$Root=(Split-Path $PSScriptRoot -Parent),
@@ -511,6 +512,233 @@ function StepNumber([string]$Value,[int]$Max){
     if($n-lt1-or$n-gt$Max){return $null}
     $n
 }
+
+# ---------------------------------------------------------------------------
+# CONSTITUTIONAL ASSURANCE (SPEC-281). CAG admits a contract on what this evaluator CHECKS and
+# says what is left to judgment; ACI, SACI and PICF are predicates inside it, never four gates.
+# Each reads Git, the contract and the repository - never an account of them.
+# ---------------------------------------------------------------------------
+
+# A tracked file at a commit, or in the working tree when $Ref is empty.
+function Read-RepoFile([string]$Ref,[string]$Path){
+    if($Ref){return Read-GitFile $Ref $Path}
+    $p=Join-Path $Root $Path
+    if(Test-Path -LiteralPath $p){[IO.File]::ReadAllText($p)}else{$null}
+}
+# The one line `<Key>: ...` of a document; $null unless there is exactly one.
+function Get-KeyedLine([string]$Text,[string]$Key){
+    if($null-eq$Text){return $null}
+    $m=[regex]::Matches(($Text-replace"`r`n","`n"),"(?m)^$([regex]::Escape($Key)):[^\n]*")
+    if($m.Count-ne1){return $null}
+    $m[0].Value
+}
+function Get-TextSha256([string]$Text){
+    $h=[Security.Cryptography.SHA256]::Create()
+    try{-join($h.ComputeHash([Text.UTF8Encoding]::new($false).GetBytes($Text))|ForEach-Object{$_.ToString('x2')})}finally{$h.Dispose()}
+}
+
+# SACI. A line that points to its owner holds exactly its ratified text. CTRL-12 recurred because
+# "never a copy of it here" was prose: SPEC-270 deleted the copied Batch 6 targets and SPEC-278
+# copied them back from a precedent written before that deletion. The pins live in GOVERNANCE.md
+# §6, the authority for where a fact lives, one row per line:
+# | `path` | `key` | `owner` | `SHA-256 of the line` |. Changing a pinned line stays lawful - it is
+# an authority change, whose contract writes the new pin beside the new line and closes its
+# consumers (ACI below).
+function Get-PinRows([string]$Text){
+    if($null-eq$Text){return}
+    foreach($m in [regex]::Matches($Text,'(?m)^[ \t]*\|\s*`(?<path>[^`]+)`\s*\|\s*`(?<key>[^`]+)`\s*\|\s*`(?<owner>[^`]+)`\s*\|\s*`(?<sha>[0-9a-f]{64})`\s*\|\s*$')){
+        [pscustomobject]@{Path=$m.Groups['path'].Value;Key=$m.Groups['key'].Value;Owner=$m.Groups['owner'].Value;Sha=$m.Groups['sha'].Value}
+    }
+}
+function Get-PinnedAuthority([string]$Ref){Get-PinRows (Read-RepoFile $Ref 'GOVERNANCE.md')}
+function Validate-PinnedAuthority([string]$Ref){
+    foreach($pin in @(Get-PinnedAuthority $Ref)){
+        $line=Get-KeyedLine (Read-RepoFile $Ref $pin.Path) $pin.Key
+        if($null-eq$line){throw "PINNED_AUTHORITY_MISSING:$($pin.Path)#$($pin.Key) - GOVERNANCE.md §6 pins exactly one line there beginning '$($pin.Key):'"}
+        if((Get-TextSha256 $line)-ne$pin.Sha){
+            throw "PINNED_AUTHORITY_CHANGED:$($pin.Path)#$($pin.Key) - its value is owned by $($pin.Owner) and is never copied here; restore the ratified line, or change it only under a contract that also changes its GOVERNANCE.md §6 pin and closes its consumers"
+        }
+    }
+}
+
+# ACI. An authority change closes its consumers, found by `git grep` for the line's key at the
+# base rather than listed from memory: SPEC-270 changed `Next capability`, and its Consumer
+# Closure named two of the seven live files that name it by path - not `CR_LIFECYCLE.md`, whose
+# `Complete` command still told agents to rewrite the line. Terminal contracts and dated reports
+# are history (GOVERNANCE.md §4), never edited to follow current authority, so they are not
+# candidates; the pin is what protects against them. A candidate is a file the contract must
+# disposition (WRITE, VERIFY or UNAFFECTED), not a proven impact.
+function Get-AuthorityConsumers([string]$Ref,$Pin){
+    $hits=@(git -C $Root grep -l -F -e $Pin.Key $Ref -- . ':(exclude)changes/' ':(exclude)reports/history/' 2>$null);$global:LASTEXITCODE=0
+    @($hits|ForEach-Object{$_.Substring($Ref.Length+1)}|Where-Object{$_-ne$Pin.Path})
+}
+function Assert-AuthorityConsumersCovered([object[]]$Rows,$Pin,[string]$Ref,[string]$Code){
+    foreach($consumer in @(Get-AuthorityConsumers $Ref $Pin)){
+        if(-not @($Rows|Where-Object{($_-join' | ').Contains($consumer)}).Count){
+            throw "${Code}:changing pinned line '$($Pin.Key)' leaves $consumer, which names it, without a Consumer Closure row"
+        }
+    }
+}
+# What a commit actually did to the pins: one added, moved or removed, or a pinned line changed.
+# Omitting a declaration cannot avoid it, because a changed line needs a changed pin.
+function Get-PinChanges([string]$WasRef,[string]$NowRef){
+    $was=@(Get-PinnedAuthority $WasRef);$now=@(Get-PinnedAuthority $NowRef)
+    foreach($id in @(@($was)+@($now)|ForEach-Object{"$($_.Path)#$($_.Key)"}|Sort-Object -Unique)){
+        $a=@($was|Where-Object{"$($_.Path)#$($_.Key)"-eq$id})[0]
+        $b=@($now|Where-Object{"$($_.Path)#$($_.Key)"-eq$id})[0]
+        $pin=if($b){$b}else{$a}
+        $lineWas="$(Get-KeyedLine (Read-RepoFile $WasRef $pin.Path) $pin.Key)"
+        $lineNow="$(Get-KeyedLine (Read-RepoFile $NowRef $pin.Path) $pin.Key)"
+        if(-not$a-or-not$b-or$a.Sha-ne$b.Sha-or-not(Same-Text $lineWas $lineNow)){$pin}
+    }
+}
+
+# PICF. A criterion may carry checks the Gate evaluates, so "met" is observed, not asserted:
+#   `check: same <path>[#<key>] @<commit>`   unchanged since that commit
+#   `check: has <path>[#<key>] "<text>"`     `check: lacks <path>[#<key>] "<text>"`
+#   `check: blob <path> <sha1>`
+# At Approval a check that can never hold is FAIL: it names a file outside Write Scope that
+# already disagrees, a pinned line this contract may not change, or a commit outside the history
+# it is approved on. A file the contract may write is judged at Complete, never as absent at
+# the base. At Complete every check must hold in the completing tree. SPEC-278's Review listed
+# as met a criterion whose figures the manifest no longer held, and SPEC-252 represented a false
+# criterion as satisfied. A criterion without a check is still judged by Review, and CRITERIA
+# says so rather than counting it as verified.
+$script:CheckPattern='`check:\s*(?<kind>[a-z]+)\s+(?<args>[^`]*)`'
+function Get-CriterionChecks($Contract){
+    $i=0
+    foreach($item in @($Contract.Acceptance)){
+        $i++
+        foreach($m in [regex]::Matches($item.Text,$script:CheckPattern)){
+            $kind=$m.Groups['kind'].Value;$a=$m.Groups['args'].Value.Trim()
+            $p=switch($kind){
+                'same'{[regex]::Match($a,'^(?<path>[^\s#@"]+)(?:#(?<key>[^@"]+?))?\s+@(?<ref>[0-9a-f]{7,40})$')}
+                {$_-in'has','lacks'}{[regex]::Match($a,'^(?<path>[^\s#@"]+)(?:#(?<key>[^@"]+?))?\s+"(?<text>[^"]+)"$')}
+                'blob'{[regex]::Match($a,'^(?<path>[^\s#@"]+)\s+(?<sha>[0-9a-f]{40})$')}
+                default{[regex]::Match('','x')}
+            }
+            if(-not$p.Success){throw "CRITERION_CHECK_MALFORMED:criterion $i - $($m.Value)"}
+            [pscustomobject]@{Item=$i;Kind=$kind;Path=$p.Groups['path'].Value;Key=$p.Groups['key'].Value.Trim()
+                Ref=$p.Groups['ref'].Value;Text=$p.Groups['text'].Value;Sha=$p.Groups['sha'].Value;Raw=$m.Value}
+        }
+    }
+}
+function Get-CheckTarget($Check,[string]$Ref){
+    $text=Read-RepoFile $Ref $Check.Path
+    if($Check.Key){return Get-KeyedLine $text $Check.Key}
+    if($null-eq$text){return $null}
+    $text-replace"`r`n","`n"
+}
+function Get-RepoBlob([string]$Ref,[string]$Path){
+    $b=if($Ref){git -C $Root rev-parse "${Ref}:$Path" 2>$null}else{$f=Join-Path $Root $Path;if(Test-Path -LiteralPath $f){git -C $Root hash-object -- $f 2>$null}}
+    $global:LASTEXITCODE=0
+    "$b".Trim()
+}
+# $null when the check holds at $Ref ('' = working tree); otherwise why it does not.
+function Test-CriterionCheck($Check,[string]$Ref){
+    $where=if($Check.Key){"$($Check.Path)#$($Check.Key)"}else{$Check.Path}
+    if($Check.Kind-eq'blob'){
+        $b=Get-RepoBlob $Ref $Check.Path
+        if($b-ne$Check.Sha){return "$where is blob $(if($b){$b}else{'(absent)'})"}
+        return $null
+    }
+    $now=Get-CheckTarget $Check $Ref
+    if($null-eq$now){return "$where does not exist"}
+    if($Check.Kind-eq'has'-and-not$now.Contains($Check.Text)){return "$where does not contain `"$($Check.Text)`""}
+    if($Check.Kind-eq'lacks'-and$now.Contains($Check.Text)){return "$where contains `"$($Check.Text)`""}
+    if($Check.Kind-eq'same'){
+        $was=Get-CheckTarget $Check $Check.Ref
+        if($null-eq$was){return "$where does not exist at $($Check.Ref)"}
+        if(-not(Same-Text $was $now)){return "$where differs from $($Check.Ref)"}
+    }
+    $null
+}
+function Get-CriteriaReport($Contract,[string]$Verb){
+    $total=@($Contract.Acceptance).Count
+    $checked=@(@(Get-CriterionChecks $Contract)|ForEach-Object{$_.Item}|Sort-Object -Unique).Count
+    "$checked of $total $Verb by the Gate; $($total-$checked) judged by Review alone"
+}
+
+# CAG at Approval: the predicates every contract is held to, whether or not its evidence section
+# is otherwise applicable.
+function Assert-AssuranceAdmission($Contract,[string]$BaseRef){
+    $pins=@(Get-PinnedAuthority $BaseRef)
+    $mayRepin=$Contract.Scope-contains'GOVERNANCE.md'
+    $checks=try{@(Get-CriterionChecks $Contract)}catch{throw "APPROVAL_EVIDENCE:FAIL:$($_.Exception.Message)"}
+    foreach($c in $checks){
+        if($c.Kind-eq'same'){
+            git -C $Root merge-base --is-ancestor $c.Ref $BaseRef 2>$null|Out-Null;$anc=$LASTEXITCODE;$global:LASTEXITCODE=0
+            if($anc-ne0){throw "APPROVAL_EVIDENCE:FAIL:criterion $($c.Item) checks against $($c.Ref), which is not in the history this contract is approved on"}
+            if($null-eq(Get-CheckTarget $c $c.Ref)){throw "APPROVAL_EVIDENCE:FAIL:criterion $($c.Item) - $($c.Raw) names what does not exist at $($c.Ref)"}
+            continue
+        }
+        $pinned=(-not$mayRepin)-and@($pins|Where-Object{$_.Path-eq$c.Path-and$_.Key-eq$c.Key}).Count-gt0
+        if($pinned-or$Contract.Scope-notcontains$c.Path){
+            $why=Test-CriterionCheck $c $BaseRef
+            if($why){throw "APPROVAL_EVIDENCE:FAIL:criterion $($c.Item) can never hold - $($c.Raw): $why, and $(if($pinned){'that line is pinned by GOVERNANCE.md §6'}else{"$($c.Path) is outside Write Scope"})"}
+        }
+    }
+    # Two checks on one target that no final state can satisfy together: `has` beside a `lacks`
+    # it implies, two different blobs, or `same` beside a value the pinned commit does not hold.
+    foreach($a in $checks){foreach($b in $checks){
+        if($a.Path-ne$b.Path-or$a.Key-ne$b.Key-or[object]::ReferenceEquals($a,$b)){continue}
+        $clash=switch("$($a.Kind)/$($b.Kind)"){
+            'has/lacks'{$a.Text.Contains($b.Text)}
+            'blob/blob'{$a.Sha-ne$b.Sha}
+            'same/same'{-not(Same-Text "$(Get-CheckTarget $a $a.Ref)" "$(Get-CheckTarget $b $b.Ref)")}
+            {$_-in'same/has','same/lacks','same/blob'}{$null-ne(Test-CriterionCheck $b $a.Ref)}
+            default{$false}
+        }
+        if($clash){throw "APPROVAL_EVIDENCE:FAIL:criteria $($a.Item) and $($b.Item) cannot both hold - $($a.Raw) and $($b.Raw)"}
+    }}
+    # A step that names a pinned line says what it does to it: reading or verifying is
+    # UNAFFECTED or VERIFY, and WRITE is lawful only beside a change to its pin. SPEC-278's
+    # Consumer Closure, copied from SPEC-268, declared WRITE on `Current Module` and
+    # `Next capability` while its Step 10 rewrote them after the Primary deployment.
+    $rows=EvidenceRows (SubSection (Section $Contract.Text 'Pre-Approval Evidence' -Optional) 'Consumer Closure')
+    foreach($pin in $pins){
+        $declared=@($rows|Where-Object{"$($_[0]) | $($_[1])".Contains($pin.Key)-and@('WRITE','VERIFY','UNAFFECTED')-contains$_[2]})
+        for($i=0;$i-lt@($Contract.Steps).Count;$i++){
+            if($Contract.Steps[$i].Contains($pin.Key)-and-not$declared.Count){
+                throw "APPROVAL_EVIDENCE:INDETERMINATE:step $($i+1) names pinned line '$($pin.Key)' ($($pin.Path)) and Consumer Closure gives it no disposition - WRITE, VERIFY or UNAFFECTED"
+            }
+        }
+        if(@($declared|Where-Object{$_[2]-eq'WRITE'}).Count){
+            if(-not$mayRepin){throw "APPROVAL_EVIDENCE:FAIL:Consumer Closure declares WRITE on pinned line '$($pin.Key)' ($($pin.Path)), whose value is owned by $($pin.Owner); only a contract that also changes its GOVERNANCE.md §6 pin may write it"}
+            Assert-AuthorityConsumersCovered $rows $pin $BaseRef 'APPROVAL_EVIDENCE:INDETERMINATE'
+        }
+    }
+    # Introducing or moving a pin is an authority change for that line as well.
+    foreach($pin in @(Get-PinRows ($Contract.Steps-join"`n"))){Assert-AuthorityConsumersCovered $rows $pin $BaseRef 'APPROVAL_EVIDENCE:INDETERMINATE'}
+}
+
+# CAG. What a governing contract's own text may become, judged by ONE definition at the endpoint
+# (the pre-commit hook: the working tree against HEAD) and at every commit of a range (CI: each
+# commit against its parent). The walk replayed scope, frozen sections and Approval, not these:
+# a contract born inside the published range - every contract, since a Draft is committed only
+# at Approval - reached a READY range with a reworded criterion or Review Gate item, unticked
+# criteria and no verdict, or a rewritten Execution Log, once its commits skipped the hook with
+# `git commit --no-verify`. Each was measured refused by the hook and admitted by CI: SPEC-167
+# judged them at HEAD alone, against a base where such a contract does not exist.
+function Validate-RecordedText([string]$WasText,$Now){
+    if((Status-FromText $WasText)-eq'Draft'){return}
+    Validate-EvidenceAppendOnly $WasText $Now
+    Validate-Checklist (ChecklistItems (Section $WasText 'Acceptance Criteria' -Optional)) $Now.Acceptance 'ACCEPTANCE_TEXT_MUTATED'
+    Validate-Checklist (ChecklistItems (Section $WasText 'Review Gate' -Optional)) $Now.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
+}
+# Returns the Approval verdict when this transition is the Approval. $TreeRef is the tree the
+# transition produces ('' = working tree); $BaseRef the one it is approved on.
+function Validate-TransitionEvidence([string]$WasText,$Now,[string]$TreeRef,[string]$BaseRef){
+    $was=Status-FromText $WasText
+    if($was-ne'Complete'-and$Now.Status-eq'Complete'){
+        Validate-CompletionPrerequisites $Now
+        foreach($c in @(Get-CriterionChecks $Now)){
+            $why=Test-CriterionCheck $c $TreeRef
+            if($why){throw "CRITERION_CHECK_FAILED:criterion $($c.Item) - $($c.Raw): $why"}
+        }
+    }
+    if($was-eq'Draft'-and$Now.Status-eq'Approved'){return Evaluate-PreApprovalEvidence $Now (Profiles $Now.Scope) $BaseRef}
+}
 # PER-PREDICATE APPLICABILITY (SPEC-210).
 #
 # SPEC-198 derived applicability ONCE - "did this change reach a special surface" -
@@ -545,7 +773,7 @@ function Test-EvidenceAuthorityPath([string]$Path){
     # the whole control suite onto a SQL or prose change and leave two authorities
     # disagreeing about what a DATABASE change is.
     (Test-ControlPath $Path)-or(Test-PermanentControlPath $Path)-or
-    $Path-match'^(ENGINEERING_METHOD\.md|CODING_STANDARDS\.md|PROTOCOL\.md|scripts/publish_candidate\.ps1|scripts/generate-[^/]+\.ps1|supabase/functions/)'
+    $Path-match'^(ENGINEERING_METHOD\.md|CODING_STANDARDS\.md|PROTOCOL\.md|scripts/(publish_candidate|promote_main)\.ps1|scripts/generate-[^/]+\.ps1|supabase/functions/)'
 }
 # DERIVED VERIFICATION WRITE CLOSURE. A mandatory verification that REGENERATES a
 # tracked artifact and byte-compares it makes that artifact part of the contract's
@@ -562,7 +790,7 @@ $script:EvidenceWriteClosure=@(
     @{When='^supabase/migrations/';Needs='reports/master/MASTER_API_CONTRACT.md'
       Why='mandatory Check L3 regenerates the API contract from the live surface and byte-compares it'}
 )
-function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
+function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles,[string]$BaseRef='HEAD'){
     # DERIVED applicability, from the inputs ENGINEERING_METHOD actually names: Write
     # Scope, derived verification profiles, known control/governance surfaces,
     # cross-path triggers and a declared irreversible action. SPEC-196 implemented only
@@ -586,6 +814,9 @@ function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles){
             throw "APPROVAL_EVIDENCE:FAIL:write closure - $($rule.Needs) is regenerated by a mandatory verification ($($rule.Why)) but is not in Write Scope"
         }
     }
+    # SPEC-281, judged before applicability for the same reason: a pinned line, a criterion
+    # check and an authority change bind whatever the rest of the section derives.
+    Assert-AssuranceAdmission $Contract $BaseRef
     $applicable=@($Profiles|Where-Object{$_-ne'REPOSITORY'}).Count-gt0
     if(-not $applicable){
         foreach($p in $Contract.Scope){
@@ -910,6 +1141,7 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
     # repository's own SPEC-1002 -> SPEC-196 correction became unpublishable.
     # Renaming an identity is a first-class event here, so its lineage is followed.
     $aliases=@{}
+    $script:PinnedPaths=@(@(Get-PinnedAuthority $BaseRef)+@(Get-PinnedAuthority $HeadRef)|ForEach-Object{$_.Path}|Sort-Object -Unique)
 
     foreach($commit in $commits){
         $short=$commit.Substring(0,7)
@@ -964,15 +1196,17 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
                 # replayed here, on the commit that actually performs it, reading that
                 # commit's own contract text and deriving applicability from that
                 # contract's own Write Scope. A later commit therefore cannot launder an
-                # invalid Approval. The evaluator itself is reused unchanged.
+                # invalid Approval. SPEC-281: the same holds for every transition the hook
+                # judges, so each commit that changes the contract is judged by the two
+                # functions the endpoint uses, against its own parent.
                 $parentText=Read-GitFile "$commit^" $governing
                 # CTRL-4: judged per commit, so a character added and later removed inside one range is still refused.
                 if(Character-Guard-IsActive "$commit^"){try{Validate-NoNewProhibitedCharacter $parentText $text}catch{throw "$($_.Exception.Message)@$short"}}
-                $parentStatus=if($null-ne$parentText){try{Status-FromText $parentText}catch{$null}}else{$null}
-                if($parentStatus-eq'Draft'-and$statusAt-eq'Approved'){
+                if($null-ne$parentText-and-not(Same-Text $parentText $text)){
                     try{
                         $atCommit=Contract-FromText $text ([IO.Path]::GetFileName($governing)) $governing
-                        Evaluate-PreApprovalEvidence $atCommit (Profiles $atCommit.Scope)|Out-Null
+                        Validate-RecordedText $parentText $atCommit
+                        Validate-TransitionEvidence $parentText $atCommit $commit "$commit^"|Out-Null
                     }catch{throw "$($_.Exception.Message)@$short"}
                 }
             }
@@ -981,6 +1215,14 @@ function Validate-CommittedRange([string]$Rel,[hashtable]$SharedTerminal=$null){
             $scopeAt=@(Bullets (Section $FrozenBaseline 'Write Scope') 'WRITE_SCOPE'|%{$_-replace'\\','/'})
             foreach($p in $paths){
                 if($p-ne$governing-and-not$aliases.ContainsKey($p)-and$scopeAt-notcontains$p){throw "OUT_OF_SCOPE_WRITE:${p}@$short"}
+            }
+            # SPEC-281 (ACI). A commit that adds, moves or removes a pin, or changes a pinned line,
+            # made an authority change; the approved Consumer Closure must cover its consumers.
+            if($frozenBound-and@($paths|Where-Object{$_-eq'GOVERNANCE.md'-or$script:PinnedPaths-contains$_}).Count){
+                $ccRows=EvidenceRows (SubSection (Section $FrozenBaseline 'Pre-Approval Evidence' -Optional) 'Consumer Closure')
+                foreach($pin in @(Get-PinChanges "$commit^" $commit)){
+                    try{Assert-AuthorityConsumersCovered $ccRows $pin "$commit^" 'AUTHORITY_CONSUMER_UNCOVERED'}catch{throw "$($_.Exception.Message)@$short"}
+                }
             }
         }
 
@@ -1943,6 +2185,19 @@ try{
     if(!(Test-Path(Join-Path $Root 'AGENTS.md'))){throw 'AGENTS_MISSING'}
     if($Certify){Certify-Remote}
     if($BaseRef){Assert-Ref $BaseRef;Assert-Ref $HeadRef}
+    # SPEC-281. A candidate's own CI runs the candidate's own evaluator, so a candidate that edits
+    # it, or its workflow, certifies itself; GitHub also counts a skipped required check as passing.
+    # -Trusted judges a candidate WITHOUT executing it: this evaluator must come from outside -Root
+    # (a checkout of `main`, which the candidate cannot change), -Root must be a clean checkout of
+    # exactly the SHA being admitted, read as data, and Repo-Guard - the one step that runs a file
+    # from -Root - is left out; the candidate's own required check still runs it.
+    if($Trusted){
+        if(!$BaseRef){throw 'TRUSTED_RANGE_REQUIRED:-Trusted judges a candidate range, so -BaseRef and -HeadRef are required'}
+        $self=[IO.Path]::GetFullPath($PSCommandPath);$data=[IO.Path]::GetFullPath($Root).TrimEnd('\','/')+[IO.Path]::DirectorySeparatorChar
+        if($self.StartsWith($data,[StringComparison]::OrdinalIgnoreCase)){throw "TRUSTED_EVALUATOR_IN_CANDIDATE:$self is inside the candidate it would judge"}
+        $at="$(git -C $Root rev-parse HEAD)".Trim();$want="$(git -C $Root rev-parse "$HeadRef^{commit}")".Trim()
+        if($at-ne$want-or@(git -C $Root status --porcelain).Count){throw "TRUSTED_DATA_NOT_CANDIDATE:$Root is not a clean checkout of $want"}
+    }
 
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'}
     Validate-HistoryAndIds $records $base
@@ -1964,8 +2219,10 @@ try{
     $script:PublicationSegments=@()
     if($BaseRef){$script:PublicationSegments=@(Get-PublicationSegments)}
     $m=Manifest
-    $rel=Resolve-Contract $m $records;$repo=Repo-Guard;$git=Git-State
+    $rel=Resolve-Contract $m $records;$repo=if($Trusted){'not run (-Trusted executes no candidate file)'}else{Repo-Guard};$git=Git-State
     if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
+    # SPEC-281. A state invariant like the consistency guard's, so it binds in every mode.
+    Validate-PinnedAuthority $(if($BaseRef){$HeadRef}else{''})
 
     if(!$rel){
         Validate-ManifestCrState $m
@@ -2004,20 +2261,16 @@ try{
         # (CTRL-2A, SPEC-200). Validate-StatusPath and the completion prerequisites stay
         # OUTSIDE this gate: a transition is always judged, and a Draft base must never
         # exempt a completion.
-        if($baselineStatus-ne'Draft'){
-            Validate-FrozenAuthority $baselineText $c.Text
-            Validate-EvidenceAppendOnly $baselineText $c
-            Validate-Checklist (ChecklistItems (Section $baselineText 'Acceptance Criteria' -Optional)) $c.Acceptance 'ACCEPTANCE_TEXT_MUTATED'
-            Validate-Checklist (ChecklistItems (Section $baselineText 'Review Gate' -Optional)) $c.ReviewGate 'REVIEW_GATE_TEXT_MUTATED'
-        }
+        if($baselineStatus-ne'Draft'){Validate-FrozenAuthority $baselineText $c.Text}
+        # SPEC-281: the same two functions the range walk applies to every commit.
+        Validate-RecordedText $baselineText $c
         Validate-StatusPath @(Status-Path ($rel-replace'\\','/') $base $c.Status)
-        if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){Validate-CompletionPrerequisites $c}
-        # Judged on the Draft -> Approved transition ALONE. That is what freezes
+        # Approval is judged on the Draft -> Approved transition ALONE. That is what freezes
         # authority, and it is also why terminal history is never retrofitted: a
         # contract that is already past this boundary is never re-examined.
-        if($baselineStatus-eq'Draft'-and$c.Status-eq'Approved'){
-            $script:ApprovalEvidence=Evaluate-PreApprovalEvidence $c $profiles
-        }
+        $script:ApprovalEvidence=Validate-TransitionEvidence $baselineText $c '' $base
+        if($baselineStatus-eq'Draft'-and$c.Status-eq'Approved'){$script:Criteria=Get-CriteriaReport $c 'carry a check verified at Complete'}
+        if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){$script:Criteria=Get-CriteriaReport $c 'verified'}
     }
 
     # The endpoint view above proves what the range LANDED ON. This proves what it
@@ -2025,6 +2278,14 @@ try{
     # invariant because a forbidden committed state is the deeper defect, and the
     # pointer is a final-state property that would otherwise report the symptom.
     if($BaseRef){if($script:PublicationSegments.Count-gt1){Validate-PublicationSegments}else{Validate-CommittedRange $rel}}
+    # SPEC-281 (ACI). The hook's view of the authority-change closure the walk applies per commit.
+    if(!$BaseRef){
+        $pinPaths=@(@(Get-PinnedAuthority 'HEAD')+@(Get-PinnedAuthority '')|ForEach-Object{$_.Path})
+        if(@($records|Where-Object{$_.Path-eq'GOVERNANCE.md'-or$pinPaths-contains$_.Path}).Count){
+            $ccRows=EvidenceRows (SubSection (Section $c.Text 'Pre-Approval Evidence' -Optional) 'Consumer Closure')
+            foreach($pin in @(Get-PinChanges 'HEAD' '')){Assert-AuthorityConsumersCovered $ccRows $pin 'HEAD' 'AUTHORITY_CONSUMER_UNCOVERED'}
+        }
+    }
 
     # Deliberately AFTER the contract's own legality. An agent that jumps a status
     # illegally usually also forgets to move the pointer, and the illegal
@@ -2078,6 +2339,7 @@ try{
 
     Write-Output 'ORVION: READY';Write-Output "MODE: $mode";Write-Output "CR: $($c.Id)";Write-Output "STATUS: $($c.Status)"
     if($script:ApprovalEvidence){Write-Output "APPROVAL_EVIDENCE: $($script:ApprovalEvidence)"}
+    if($script:Criteria){Write-Output "CRITERIA: $($script:Criteria)"}
     Write-Output "STEP: $(if($c.Resume-eq'DONE'){'DONE'}else{"$($c.Resume)/$($c.Steps.Count)"})"
     if($mode-eq'EXECUTE'){Write-Output 'ACTION:';Write-Output $c.Steps[[int]$c.Resume-1]}
     Write-Output "WRITE: $($c.Scope-join', ')"

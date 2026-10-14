@@ -93,7 +93,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -243,7 +243,25 @@ Post-Implementation Proof Obligation: `-Finish` passes the five CONTROL suites w
 
 ## Execution Log
 
-None.
+### 2026-10-14 — Claude
+
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Applied.** Each of the nine files held its `from` blob (`scripts/promote_main.ps1` was absent) and now holds its `to` blob, written from the reviewed content and re-hashed with `git hash-object --path`. Each manifest old text occurred exactly once and was replaced by its new text. The three pinned lines hash to their `GOVERNANCE.md` §6 pins.
+- **Step 2: Applied.** `scripts/generate-ai-map.ps1` rewrote `ai-map.json`; `repository-index.md` was unchanged. `git diff --name-only 53ac0d8` (the Approve commit) listed only Write Scope paths, and `git diff --check` was clean. The Runtime Checkpoint is DONE.
+
+**Approval prerequisites, re-verified before the first commit.**
+- HEAD, `origin/main`, and GitHub's `main` and `orvion-preflight` were `e110626`; the only change in the tree was the untracked Draft; no other worktree or stash existed.
+- The Draft's blob was `a7ea441eb8f185bed850adde535c047a99c2fa94`, its SHA-256 `3fbe9914d5080debd9a1c3913e59a08ad13d5a6daa9156fd4315cafded5593dc`, 30851 bytes, 0 CR, recomputed from its bytes and equal to the approved identity in full.
+- `SPEC-281` appeared in no tracked text before the Draft commit. The Approve commit's hook returned `APPROVAL_EVIDENCE: PASS`.
+
+**The owner's three questions at Gate 1, answered from the code.**
+- **A. A `check:` clause is data.** The four forms are matched by fixed patterns: a `same` commit and a `blob` id are hex only, `has` and `lacks` text is compared literally (`String.Contains`), and a `#key` is regex-escaped. No command, expression, script or regex is built from a clause, and every Git argument it reaches is anchored by a hex revision or follows `--`. A check can only refuse, never admit. One ceiling: the endpoint reads a check's path in the working tree without confining it, so a `..` path reads a local file outside the checkout. That read executes and writes nothing, and the range walk, which `-Trusted` always runs, reads the same check from Git objects, where such a path does not exist, so the candidate is refused. No change.
+- **B. The promoter runs `main`'s evaluator, never the candidate's.** `scripts/promote_main.ps1` (line 38) runs `scripts/check_agent_continuity.ps1` from its own checkout, which it refuses unless that checkout is a clean `origin/main` (line 26), with `-Root` set to the candidate's data checkout. `-Trusted` independently refuses an evaluator inside `-Root` (281-T2), and 281-R2 shows a candidate that certifies itself judged by `main`'s evaluator and refused. Notes' "runs that checkout's evaluator" means the judge checkout's, as owner action 3 and the script's header say. Wording only; Notes is frozen, so the clarification is recorded here.
+- **C. The measured cost is missing from Notes,** although Risks places it there: the "Measured cost" bullet was left without its figures. They are, for the same work on the same machine, `e110626`'s Gate against the new one: `SPEC-280`'s range 19.3 s and 19.3 s; `SPEC-279`'s two-contract range 27.1 s and 27.6 s (median of 3); the hook on an Approval 12.9 s and 13.3 s (median of 5); the control suite 446 and 501 cases, the 55 new ones about 3.6 minutes alone; the rehearsal's `-Finish` 35.1 minutes. Model tokens were not measured. In the same Notes, the "First publication" and "Considered and not adopted" bullets run on from the line before them; their text is complete.
+
+Commits: Draft `5a02370`, Approve `53ac0d8`, Begin `cda133b`, and this Implement commit.
 
 ## Verification Notes
 
