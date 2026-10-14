@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -229,17 +229,17 @@ Post-Implementation Proof Obligation: `-Finish` passes the five CONTROL suites w
 
 ## Acceptance Criteria
 
-- [ ] The evaluator is the reviewed one. `check: blob scripts/check_agent_continuity.ps1 d9d485b9a3bfa099af092648228e8bb005320471`
-- [ ] The control suite is the reviewed one. `check: blob scripts/test_agent_continuity.ps1 7f0843fd3ff31433e8c643b01298ab8d589dfe83`
-- [ ] The owner's promotion script is the reviewed one. `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79`
-- [ ] `GOVERNANCE.md` carries rule 10 and the three pins. `check: blob GOVERNANCE.md 98f672d322aa0c1fdc6f3a65d6e2f5fe9648af97`
-- [ ] `CR_LIFECYCLE.md` states range parity, criterion checks and §9's treatment of pinned lines. `check: blob CR_LIFECYCLE.md 44e167cdefb16561cd5dfb9db78cc4b6355fb6cb`
-- [ ] `ENGINEERING_METHOD.md` corrects the history clause and states what the Gate enforces and what stays judgment. `check: blob ENGINEERING_METHOD.md e844e85adb4d21b83b01bf8a0c7328e8a379bebf`
-- [ ] The template shows a criterion how to carry a check. `check: blob changes/TEMPLATE.md ce6536b8d9169d1793f7c35379c5b59da1079eba`
-- [ ] The register holds CTRL-17, CTRL-18 and CTRL-19. `check: blob reports/master/MASTER_GAP_REGISTER.md 7f957064cf1c3622229e220a85ae123c63648f1c`
-- [ ] The Action registry classifies CTRL-19. `check: blob reports/master/MASTER_EXECUTION_PLAN.md e957b949bc330cb637a634644664bf93bd2eb5ce`
-- [ ] The manifest names CTRL-19 among the open decisions and this contract as last completed. `check: has _ORVION_CANONICAL/manifest.md "**OD-9**, **CTRL-19**."` `check: has _ORVION_CANONICAL/manifest.md#Last Completed "SPEC-281"`
-- [ ] The three pinned lines are byte-identical to `e110626`. `check: same _ORVION_CANONICAL/manifest.md#Current Module @e110626` `check: same _ORVION_CANONICAL/manifest.md#Batch 6 surface coverage @e110626` `check: same _ORVION_CANONICAL/manifest.md#Next capability @e110626`
+- [x] The evaluator is the reviewed one. `check: blob scripts/check_agent_continuity.ps1 d9d485b9a3bfa099af092648228e8bb005320471`
+- [x] The control suite is the reviewed one. `check: blob scripts/test_agent_continuity.ps1 7f0843fd3ff31433e8c643b01298ab8d589dfe83`
+- [x] The owner's promotion script is the reviewed one. `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79`
+- [x] `GOVERNANCE.md` carries rule 10 and the three pins. `check: blob GOVERNANCE.md 98f672d322aa0c1fdc6f3a65d6e2f5fe9648af97`
+- [x] `CR_LIFECYCLE.md` states range parity, criterion checks and §9's treatment of pinned lines. `check: blob CR_LIFECYCLE.md 44e167cdefb16561cd5dfb9db78cc4b6355fb6cb`
+- [x] `ENGINEERING_METHOD.md` corrects the history clause and states what the Gate enforces and what stays judgment. `check: blob ENGINEERING_METHOD.md e844e85adb4d21b83b01bf8a0c7328e8a379bebf`
+- [x] The template shows a criterion how to carry a check. `check: blob changes/TEMPLATE.md ce6536b8d9169d1793f7c35379c5b59da1079eba`
+- [x] The register holds CTRL-17, CTRL-18 and CTRL-19. `check: blob reports/master/MASTER_GAP_REGISTER.md 7f957064cf1c3622229e220a85ae123c63648f1c`
+- [x] The Action registry classifies CTRL-19. `check: blob reports/master/MASTER_EXECUTION_PLAN.md e957b949bc330cb637a634644664bf93bd2eb5ce`
+- [x] The manifest names CTRL-19 among the open decisions and this contract as last completed. `check: has _ORVION_CANONICAL/manifest.md "**OD-9**, **CTRL-19**."` `check: has _ORVION_CANONICAL/manifest.md#Last Completed "SPEC-281"`
+- [x] The three pinned lines are byte-identical to `e110626`. `check: same _ORVION_CANONICAL/manifest.md#Current Module @e110626` `check: same _ORVION_CANONICAL/manifest.md#Batch 6 surface coverage @e110626` `check: same _ORVION_CANONICAL/manifest.md#Next capability @e110626`
 
 ## Execution Log
 
@@ -265,19 +265,36 @@ Commits: Draft `5a02370`, Approve `53ac0d8`, Begin `cda133b`, and this Implement
 
 ## Verification Notes
 
-None.
+### 2026-10-14 — Claude (independent review)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository at `f925736`, not against the Execution Log.
+- **R1.** At `HEAD` each of the nine Step 1 files is its `to` blob: `scripts/check_agent_continuity.ps1` `d9d485b9a3bfa099af092648228e8bb005320471`, `scripts/test_agent_continuity.ps1` `7f0843fd3ff31433e8c643b01298ab8d589dfe83`, `scripts/promote_main.ps1` `bf64aa893faf9d6be7477254bebf80dca04b4d79`, `GOVERNANCE.md` `98f672d322aa0c1fdc6f3a65d6e2f5fe9648af97`, `CR_LIFECYCLE.md` `44e167cdefb16561cd5dfb9db78cc4b6355fb6cb`, `ENGINEERING_METHOD.md` `e844e85adb4d21b83b01bf8a0c7328e8a379bebf`, `changes/TEMPLATE.md` `ce6536b8d9169d1793f7c35379c5b59da1079eba`, `reports/master/MASTER_GAP_REGISTER.md` `7f957064cf1c3622229e220a85ae123c63648f1c`, `reports/master/MASTER_EXECUTION_PLAN.md` `e957b949bc330cb637a634644664bf93bd2eb5ce`.
+- **R2.** The manifest's word diff from `e110626` is the Active Change Request and Step 1's three texts, nothing else. Its `Current Module:`, `Batch 6 surface coverage:` and `Next capability:` lines are each ordinally equal to their `e110626` text and hash to their `GOVERNANCE.md` §6 pins. `**OD-9**, **CTRL-19**.` is present, and `Last Completed:` names `SPEC-281`.
+- **R3.** `e110626..HEAD` changes exactly twelve paths, all in Write Scope; `repository-index.md` regenerated unchanged. No Out of Scope path differs from `e110626`.
+- **R4.** Since the Draft commit `5a02370`, which holds the approved blob `a7ea441eb8f185bed850adde535c047a99c2fa94`, this contract changed only in Status, the Runtime Checkpoint and the Execution Log; its headings are identical and in order. The pre-commit Gate accepted every commit, the Approve commit with `APPROVAL_EVIDENCE: PASS`.
+- **R5.** `CR_LIFECYCLE.md` §9's `Complete` now rewrites `Current Module` and `Next capability` only while they name a package, and a pinned line never; `scripts/batch6_select_target.ps1` stays the owner of the next slice (`SPEC-270`), and no slice is named in the manifest.
+- **R6.** The owner's three Gate 1 questions, re-read in the code at `HEAD`: a `check:` clause reaches only four fixed operations, with hex-only commits and blobs, literal text and escaped keys, so nothing it says is executed (`check_agent_continuity.ps1`, `Get-CriterionChecks` and `Test-CriterionCheck`); `promote_main.ps1` runs its own checkout's evaluator on the candidate's data checkout (lines 26 and 38). Both stand as the Execution Log records them, with its one ceiling. The cost figures Notes omitted are recorded there from the Gate 1 measurements.
+- **R7.** `-Finish` at `f925736`: the five CONTROL suites, `scripts/test_agent_continuity.ps1` with this contract's cases among them, repository consistency and `git diff --check` PASS; `LOCAL_CERTIFY: READY` in 34.97 min.
+- **R8.** Not this contract's to fix, for the next programme: Notes' run-on bullets and promoter wording (recorded in the Execution Log); `MASTER_GAP_REGISTER.md`'s CTRL-19 row cites the promotion tests as 281-R1…R5, while R6, the lease refusal, also exists; the endpoint's unconfined working-tree read of a check's path (the Execution Log's ceiling). None makes an Acceptance Criterion or a Review Gate item false.
+- **R9.** No Primary or Secondary contact, no migration, and no GitHub setting, ruleset, permission or credential was changed.
+
+Review Gate: every step matched its text and was Applied. Nothing was written outside Write Scope, and no section was restructured. Every Acceptance Criterion is true, and the Gate verifies all eleven at this commit (``CRITERIA: 11 of 11 verified by the Gate; 0 judged by Review alone``). No step needed a guess. `Supersedes / Depends On` is None. The tree is clean.
+
+Complete introduces no new architectural decision: the owner approved this contract at Gate 1 on 2026-10-14. CTRL-19 stays open until the owner's GitHub configuration is observed; the first promotion is the owner's.
 
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
