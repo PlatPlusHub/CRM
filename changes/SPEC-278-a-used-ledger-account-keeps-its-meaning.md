@@ -1,0 +1,383 @@
+# Change Request — SPEC-278
+
+## Status
+
+[x] Draft
+[ ] Approved
+[ ] In Progress
+[ ] Complete
+[ ] Cancelled
+
+## Objective
+
+Batch 6 Slice 42 makes a chart account's code and type fixed once a journal line is posted to it, and makes the table door charge the step-up the seed RPC charges (COA-1, COA-2).
+
+## Business Reason
+
+- **Selection.** `scripts/batch6_select_target.ps1` at `4347817`, on the live local catalog, ranks `chart_of_accounts` first: Exposure 7, coverage 38, NOT-RECORDED (runner-up `notification_deliveries` 7/42). It is the target the manifest names.
+- **Execution strategy (owner-authorized 2026-10-13).** Batch 6 runs one slice per contract in the selector's order, with one evidence-backed exception. `user_branch_assignments` and `user_permission_grants` share one finding (USR-3), one defining migration (`202607059800`) and one repair, so they are planned as one contract when the selector first reaches either. `chart_of_accounts` shares its root cause with no remaining surface, so this contract covers it alone.
+- **The rule.** A chart account is what a journal line means.
+  - `app.create_journal_entry` resolves each line by the account's code.
+  - The account's type classifies the money posted to it.
+  - Canon 07 and 30 correct a posted entry by a reversal, never by mutation (JE-3, JE-5).
+  - Canon 14 lets a company customize its chart "according to permissions".
+  - The sanctioned writer, `app.seed_default_chart_of_accounts`, charges `app.authorize('CREATE_JOURNAL_ENTRY')`, which includes step-up.
+  - `authenticated` holds INSERT and UPDATE on the table, and its policies ask only `app.has_permission`.
+- **Measured at `4347817`** on the local stack, in rolled-back transactions, as a `finance_manager` at `aal1`, where both RPCs refuse with `multi-factor authentication required for this role`:
+  - **COA-1 (High).** After a 1000 sale was posted to cash 1000 and revenue 4000, the account 4000 was retyped to `expense` and recoded to `4999`. The posted credit then read as an expense. Account 5000 (Cost of Sales) then took the code `4000`, so the RPC's next "4000" posting would land on an expense account. No event recorded any of it.
+  - **COA-2 (Medium).** Every write above was made at `aal1`. This is STEPUP-1's member on this table, reproduced and consequence-classified by COA-1.
+- **Consumers of the attributes that stay editable**, read from the catalog (every function, view, materialized view, policy and trigger) and the repository (Edge Functions, scripts, canon), 2026-10-13:
+  - `name`: no database object reads it. It is exposed only through `scope_read` and written by the seed. Renaming a used account changes a label, which is canon 14 customization.
+  - `parent_account_id`: no database object reads it except its own foreign key. No ledger rollup exists: canon 14 lists the balance sheet and income statement, `MASTER_DOMAIN_CATALOG.md` marks the statement machinery `[D]` (designed, not built), and no `reporting` view touches the ledger. Re-parenting reinterprets nothing today.
+  - `is_active`: read only by `app.create_journal_entry` and `app.guard_parent_state_allows_write`, at write time, to refuse a NEW posting to a retired account (JE-1). Posted lines are untouched. `89_...` and `145_...` pin retiring as legitimate.
+- **Measured and not repaired, recorded as positions.** These observations carry no measured consequence, and one is governed by a ratified decision:
+  - `account_type` accepted `banana`. ADR-0006 stores type codes as plain text and makes hard database enforcement optional per column. Canon 30 allows it where a column genuinely warrants it, justified in that column's own migration, by a catalog validation trigger or a constant type column with a composite FK. This column has no catalog family, `202607051300` excluded it by name, and `reports/future-backlog.md` closed it as NOT A GAP. Nothing reads `account_type` today, so enforcement is not warranted now. **Reopening trigger:** the first consumer of the account type (financial statements).
+  - An account that is its own parent and a parent cycle were stored. Nothing reads the hierarchy. **Reopening trigger:** the first consumer of the hierarchy (financial statements).
+  - A blank name was stored, and nothing reads `name`.
+  - **A blank code is consumed by `app.create_journal_entry`, measured 2026-10-13 in one rolled-back transaction at `aal2`:**
+    - before any `''` account exists, a line with `"account_code": ""` is refused `unknown or inactive chart account code`, as are a missing key and `" "`;
+    - the same finance manager then created a `''` account at the door; a second was refused by the (tenant, code) key;
+    - a posting with `"account_code": ""` then succeeded: one balanced entry, one line on that account, one `journal_entry_created` event;
+    - a missing key and `" "` were still refused, and recoding the used `''` account was refused by COA-1.
+  - The consequence of a blank code is bounded:
+    - only the tenant's own CREATE_JOURNAL_ENTRY holder with step-up, the authority that posts, can create the selector;
+    - it is unique per tenant, and the posted money sits on a real account with a real type;
+    - the entry is balanced and recorded, and the code is fixed once used;
+    - what changes is that an empty input selects that account instead of being refused, which needs a client that submits a blank field.
+  - **Reopening trigger** for the blank code: the first client application that submits journal lines (`ENABLE-CLIENT-WRITES`).
+- **Swept and found sound, pinned rather than changed:**
+  - an `employee` without CREATE_JOURNAL_ENTRY is refused at the door;
+  - a rival tenant's finance manager reads none of the chart and cannot write into it;
+  - moving an account to another tenant is refused by RLS;
+  - `authenticated` holds no DELETE;
+  - one code per tenant (`chart_of_accounts_tenant_code_key`) and a tenant-qualified parent key.
+- **Also recorded:**
+  - Canon 27 registers no chart-account event. The facts a posted line depends on are enforced rather than logged, and the remaining edits are configuration.
+  - `is_system_default` and `created_at` are caller-supplied, and nothing reads either except the seed (searched).
+- **Latent:** Primary `vrvtsxexkiiiivlkdxzp` holds 0 tenants, 0 chart accounts and 0 journal lines (read 2026-10-13), so no existing row is affected and no data repair is needed.
+
+## Risks
+
+- **The door now charges step-up.** An `aal1` session holding CREATE_JOURNAL_ENTRY can no longer customize the chart. That is the seed RPC's rule. The two existing tests that retire an account (`89_...` assertion 12, `145_...`) run at `aal2` and pass on the prototype.
+- **`10_grant_model_test` assertion 9's list grows from ten to eleven.** That ceiling "may fall further and must never rise" unless the author justifies it.
+  - `guard_write_capability` was available and was not used. It has no mapping for this table, so using it means replacing a 230-line SECURITY DEFINER function that serves 28 tables, and also moving `58_...`'s 28-table count, to add one line.
+  - The justification is written into the test: the charge is unconditional for every signed-in caller. Its one exemption, the session-less platform write, is pinned by test 157 assertion 20 and by the injection in assertions 21 and 22.
+- **Mechanism substitution (`MASTER_EXECUTION_PLAN.md`, Batch 6 method).** `29_...`'s employee insert into `chart_of_accounts` expects 42501 with no message. It is now refused by the guard's `app.authorize` before RLS, for the same missing permission, so the assertion still measures the rule it names. No other existing assertion's refusal moves (full suite measured).
+- **Concurrency is proven outside pgTAP.** A posting in flight against a retype needs two live sessions. The two-session harness's results are in Notes, and the row lock is recorded honestly as mutant M4.
+- **Primary deployment is a separate exact-byte authorization.** Approval of this contract does not authorize it.
+
+## Supersedes / Depends On
+
+None.
+
+## Write Scope
+
+- `changes/SPEC-278-a-used-ledger-account-keeps-its-meaning.md`
+- `supabase/migrations/20261013120000_a_used_ledger_account_keeps_its_meaning.sql`
+- `supabase/tests/157_a_used_ledger_account_keeps_its_meaning_test.sql`
+- `supabase/tests/10_grant_model_test.sql`
+- `ENGINEERING_METHOD.md`
+- `reports/master/MASTER_GAP_REGISTER.md`
+- `reports/master/MASTER_SURFACE_DISPOSITION.md`
+- `reports/master/MASTER_API_CONTRACT.md`
+- `reports/evidence/primary-ledger-evidence.json`
+- `_ORVION_CANONICAL/manifest.md`
+- `ai-map.json`
+- `repository-index.md`
+
+## Out of Scope — Files Forbidden to Modify
+
+- `supabase/migrations/202607041800_create_finance_foundation_tables.sql`
+- `supabase/migrations/202607051300_complete_catalog_enforcement.sql`
+- `supabase/migrations/202607059800_capability_grants_are_per_user_not_only_per_role.sql`
+- `supabase/migrations/20260926140000_manifest_freeze_cannot_be_left.sql`
+- `supabase/tests/29_financial_write_authority_test.sql`
+- `supabase/tests/58_write_grants_and_config_capability_test.sql`
+- `supabase/tests/89_finance_periphery_parent_state_test.sql`
+- `supabase/tests/145_a_journal_line_is_written_only_with_its_entry_test.sql`
+- `supabase/tests/146_a_posted_journal_entry_is_never_rewritten_test.sql`
+- `scripts/verify_database.sql`
+- `scripts/batch6_select_target.ps1`
+- `scripts/check_agent_continuity.ps1`
+- `scripts/check_repository_consistency.ps1`
+- `_ORVION_CANONICAL/14_finance_rules.md`
+- `_ORVION_CANONICAL/27_event_catalog.md`
+- `_ORVION_CANONICAL/30_database_conventions.md`
+- `reports/architecture-decision-records.md`
+- `reports/future-backlog.md`
+- `reports/master/MASTER_EXECUTION_PLAN.md`
+
+## Required Reading
+
+- `AGENTS.md`; `CR_LIFECYCLE.md`; `ENGINEERING_METHOD.md` §§1–5
+- `_ORVION_CANONICAL/14_finance_rules.md` (Chart Of Accounts); `_ORVION_CANONICAL/24_entity_registry.md` (Chart Of Account); `_ORVION_CANONICAL/30_database_conventions.md` (physical enforcement of status/type codes)
+- `reports/architecture-decision-records.md` (ADR-0006); `reports/future-backlog.md` (the closed `account_type` row)
+- `reports/master/MASTER_GAP_REGISTER.md` (JE-1, JE-3, JE-5, STEPUP-1, USR-3); `reports/master/MASTER_SURFACE_DISPOSITION.md`; `reports/master/MASTER_EXECUTION_PLAN.md`, Batch 6 method, EC-1…EC-11 and the Action registry
+- `supabase/tests/10_grant_model_test.sql` assertion 9 and its comment; `supabase/tests/146_a_posted_journal_entry_is_never_rewritten_test.sql` (the fixture shape)
+- Current local `app.create_journal_entry`, `app.seed_default_chart_of_accounts`, `app.authorize`, `app.guard_parent_state_allows_write`, `app.forbid_used_account_redenomination` (the precedent for "fixed once used")
+
+## Runtime Checkpoint
+
+Resume Step: 1
+Blocker: None
+Recovery Attempt: 0
+
+## Required Capabilities
+
+- docker
+- supabase-local
+- supabase-primary
+- github
+
+## Additional Verification
+
+- `pwsh -NoProfile -File scripts/verify_api_end_to_end.ps1`
+- `pwsh -NoProfile -File scripts/verify_journey_branches.ps1`
+- `pwsh -NoProfile -File scripts/verify_lifecycle_branches.ps1`
+
+## Pre-Approval Evidence
+
+Change Class: Significant
+
+### Consumer Closure
+
+Applicability: APPLICABLE
+
+| Changed fact or surface | Relevant consumer | Disposition | Evidence / preserved behavior |
+| --- | --- | --- | --- |
+| A chart account's code and type are fixed once a journal line is posted to it | `app.create_journal_entry` (resolves by code and `is_active`); `app.guard_parent_state_allows_write` (JE-1 at the door); `journal_entry_lines` (composite FK) | WRITE | Prototype: a clean reset of the `4347817` local stack plus the migration (253 migrations), applied from a disposable clone. The migration is SHA-256 `8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc`, md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes, LF, ASCII. A retype and a recode of a posted account are refused 23514 for the finance manager at `aal2` and for a session-less caller. Rename, retire, re-parent, and the recode or retype of an unused account still land. |
+| `name`, `parent_account_id` and `is_active` stay editable on a used account | every catalog object and repository consumer (Business Reason) | UNAFFECTED | No reader of `name` or of the hierarchy exists. `is_active` is read only to refuse a new posting (JE-1), and `89_...` and `145_...` still pass. |
+| `account_type` stays plain text | ADR-0006; `202607051300`'s exclusion; the closed backlog row | UNAFFECTED | No CHECK, trigger or catalog family is added. The guard constrains only a used account's type changing, as `app.forbid_used_account_redenomination` does for `financial_accounts`. |
+| The door charges `app.authorize('CREATE_JOURNAL_ENTRY')` for every signed-in caller | `scope_insert`/`scope_update` RLS (unchanged); `29_...`, `89_...`, `145_...`; the HTTP suites | WRITE | Prototype: `aal1` insert and update are refused 42501 `multi-factor authentication required for this role`. The `aal2` retirements in `89_...` and `145_...` pass. `29_...`'s employee refusal keeps 42501 for the same missing permission. HTTP 35/0, 85/0, 122/0. |
+| Test 10 assertion 9's bespoke-guard list grows from ten to eleven, with its justification | `supabase/tests/10_grant_model_test.sql` | WRITE | The edit adds `chart_of_accounts` to the array and states why `guard_write_capability` was not used. LF blob `36dfceb92dbc0c707a0418e5ec2a269f9025f487`, SHA-256 `61f4e6d4069bd99b3fe91ea63e84f4fc838169d68eeb0ffdd87c5ec4ae33465c`, 21290 bytes; from HEAD blob `814f1e4dae0ac98b9fb0059ace86167463cff130`. Test 10 is 9/9 on the prototype; without the edit, assertion 9 fails (measured). |
+| Test 157 | `supabase/tests` | WRITE | SHA-256 `e501187f4514f7ebb6843799ccb4229e477c1298640af0bac8b3e81a57982608`, md5 `6d4e5eb1f154a921c349e5831e5f567a`, `plan(25)`, 13638 bytes, LF, ASCII: 25/25 on the prototype. |
+| Other tests and the suite | the full pgTAP suite | VERIFY | On the prototype with the pinned CLI 2.120.0: Pass A `Files=157, Tests=2994`, PASS; the three HTTP suites; Pass B 2994, PASS. 157 files whose literal `plan(N)` values sum to 2994. |
+| Smoke | `scripts/verify_database.sql` | VERIFY | On the prototype: `ALL CHECKS PASSED (78 tables, … 71/623 catalog, …)`. No table, catalog value, policy, constraint or transition is added. |
+| Structural surface on Primary | `scripts/parity_surface.sql`; `primary-ledger-evidence.json` | WRITE | Measured on the prototype: functions 332 (+1, `app.guard_chart_account`, not executable by `authenticated` or `anon`), triggers 319 (+1, `chart_of_accounts_guard`), `_combined` 3136 (+2). Constraints (527), policies, grants, columns, views, indexes, status transitions and RLS are unchanged. Step 9 writes Primary values only from fresh post-deploy readings. |
+| Client API | `MASTER_API_CONTRACT.md` (Check L3) | VERIFY | No RPC is added, removed or changed; the generator is predicted to leave it byte-identical. It is in Write Scope because a migration makes Check L3 apply. |
+| The lesson this slice's own proofs taught | `ENGINEERING_METHOD.md` §3 | WRITE | One bullet after "A failed run is not automatically a finding", per §3 "A lesson is promoted, never only remembered". LF blob `62580e36a61b84b9a5282377e0a9fa3571b03669`, SHA-256 `58989bcb3c84ef94f9a3c7de0d17bb565cc591600fd1e934632d8f47d6e6483c`, 36525 bytes; from HEAD blob `b726938d67d9c1f151facce3e69c245179356620`. No heading changes, so no pointer moves. |
+| Measured state that moves | manifest (`Live state`, suite figure, `Last Completed`, `Current Module`, `Next capability`); `primary-ledger-evidence.json`; `ai-map.json` and `repository-index.md` (one generator, Check 7) | WRITE | 252 → 253 migrations, latest `20261013120000`; 156 → 157 files and 2969 → 2994 assertions; coverage 42 → 43 of 78. Catalog (71/623), HTTP (464), tables (78), views (8) and client RPCs (80) do not move. |
+| COA-1 and COA-2 fixed; STEPUP-1's member closed; the surface recorded | `MASTER_GAP_REGISTER.md`; `MASTER_SURFACE_DISPOSITION.md`; Checks 21, 22, 24, 25, 29 | WRITE | The `COA-` prefix is unused at `4347817`. Test 157's `-- ATTACK-CLASSES:` line declares eight classes with STATE and REPLAY `=N/A`, each with its reason, and carries negative assertions, so Check 24 admits `ADVERSARIAL`. New rows have Owner `—` and are settled, so Check 29 needs no registry row. The recorded positions are not findings. STEPUP-1 stays open for its other members. Coverage 43 recorded: 19 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 35 `NOT-RECORDED`. |
+| CI-only guard self-tests and repository consistency | `scripts/test_*_guard.ps1` (four); `scripts/check_repository_consistency.ps1` | VERIFY | Measured in the rehearsal clone with Steps 1–4 committed: consistency reports exactly the six measured-state issues (252 vs 253 migrations, latest, ledger fingerprint, 156 vs 157 files, assertion count, the Primary-evidence record). The primary-ledger and cold-start self-tests are predicted to fail only their CONTROL and restore cases because of it. These are not waived: Step 9 makes them true and Step 10 requires them green. |
+
+Unresolved Material Consumers: None
+
+### Execution-Boundary Satisfiability
+
+Applicability: APPLICABLE
+
+Irreversible Action Step: Step 8 (Primary deployment)
+
+| Invariant | Required At | Red Opens After Step | Restored By Step | Mandatory Gate Before Step |
+| --- | --- | --- | --- | --- |
+| Clean reset, focused tests, pgTAP A/B, the declared HTTP suites, smoke, the mutants and the race | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 6 |
+| COA-1, COA-2 and the disposition describe the local evidence | BEFORE_IRREVERSIBLE_ACTION | NONE | NONE | Step 6 |
+| Manifest, recorded Primary evidence and Primary ledger agree | AFTER_IRREVERSIBLE_ACTION | Step 1 | Step 9 | Step 10 |
+| Manifest suite and coverage figures equal the files and the disposition record | BEFORE_COMPLETION | Step 2 | Step 9 | Step 10 |
+| API contract and map match their generators | BEFORE_COMPLETION | Step 1 | Step 9 | Step 10 |
+| The four CI-only guard self-tests pass | BEFORE_COMPLETION | Step 1 | Step 9 | Step 10 |
+
+### Permanent-Control Admission
+
+Applicability: APPLICABLE
+
+Existing Mechanism Reusable: NO
+
+Existing Mechanism: The RLS policies charge `app.has_permission('CREATE_JOURNAL_ENTRY')` without step-up. `app.create_journal_entry` and `app.guard_parent_state_allows_write` refuse a posting to an inactive account (JE-1) and never ask what an account meant when a line was posted. `app.forbid_used_account_redenomination` protects `financial_accounts` alone. `guard_write_capability` has no mapping for this table, and Risks explains why it was not extended. This contract reuses the `financial_accounts` "fixed once used" idiom, PAY-6's 23514 for integrity, and the platform exemption every capability guard keeps (canon 35 principle 6).
+
+Added Property: Once a journal line is posted to a chart account, its code and type never change for any caller, and a posting in flight is waited for. Every signed-in write at the door needs CREATE_JOURNAL_ENTRY with step-up.
+
+Causal Negative: These are the pre-repair measurements in Business Reason, at `4347817`.
+- On a clean reset of the unrepaired 252 migrations, test 157 fails assertions 4, 5, 6, 11, 14, 15 and 19, then aborts at assertion 21, whose `drop trigger chart_of_accounts_guard` names a trigger that does not exist.
+- Assertion 11 fails only because assertion 6 has already freed the code `1000`.
+- With only the row lock removed from the prototype, two live sessions stored a posted revenue line under an `expense` account.
+
+Positive Test Design: One tenant has a `finance_manager` who seeds the default chart and posts 1000/1000 through the RPC at `aal2`, and an `employee`. A rival tenant has its own finance manager. Positive controls:
+- the seed writes ten accounts;
+- the posting lands;
+- the used revenue account is renamed and the used cash account re-parented;
+- an unused account is recoded and retyped;
+- an account is retired;
+- a session-less caller adds an account;
+- the posted entry's meaning and its one event are unchanged at the end.
+
+Negative Test Design:
+- **Meaning (COA-1):** a retype, a recode, and a combined recode, retype and rename of a posted account are refused 23514, also for a session-less caller.
+- **Step-up (COA-2):** an `aal1` insert and update are refused 42501, beside the seed RPC's own `aal1` refusal.
+- **Input:** a duplicate code is refused 23505.
+- **Authority and tenancy:** the employee's insert, and the rival's read and insert, are refused.
+- **Privilege:** the guard is not executable by `authenticated` or `anon`.
+- **Injection:** with the guard dropped in a savepoint, the `aal1` retype lands; after rollback it is refused again.
+
+Non-Empty Population Obligation: The tenant has two users with roles, ten seeded accounts and one posted entry with two lines; the rival has a user. Each refusal is asserted by exact SQLSTATE and, for the guard's own refusals, its exact message. Assertion 2 counts the ten accounts, assertion 23 compares the posted lines' meaning by value, and assertion 24 reads the one event by its contents.
+
+Mutation Obligation: Each mutant replaces the guard, or grants it, on the prototype stack. The run proves the mutant installed from a changed fingerprint, runs test 157, records the failing assertions, then restores. It proves the restoration byte-equal before the next mutant: `md5(prosrc)` `6cafcfacc4ef4648df5af67e5952dbdb`, 4 constraints, no `authenticated` EXECUTE, and 25/25. A mutant not proven installed is a harness error, never a kill.
+
+| Mutant | Change | Failed on the prototype |
+| --- | --- | --- |
+| M1 | the used-account check removed | 4, 5, 6, 11, 19, 22, 23 |
+| M2 | `code` left out of the fixed pair | 5, 19, 22, 23 |
+| M3 | `account_type` left out | 4, 19, 22, 23 |
+| M4 | the row lock removed | none in pgTAP; killed by the two-session race |
+| M5 | the capability charge removed | 14, 15 |
+| M6 | step-up dropped (`has_permission` only) | 14, 15 |
+| M7 | the platform path charged | 19, 20 |
+| M8 | integrity exempted for the platform | 19, 23 |
+| M9 | the guard granted to `authenticated` | 25 |
+
+Prototype result: all nine were killed as listed, M4 only by its race, and every restoration was proven byte-equal and 25/25.
+
+Post-Implementation Proof Obligation: All of the following, on the final bytes and through canonical `-Finish`, from the main checkout with the pinned CLI:
+- the focused test, a clean reset, pgTAP Pass A, the declared HTTP suites, pgTAP Pass B and smoke;
+- mutants M1–M9, the two-session race with and without the row lock, and the pre-repair causal negative;
+- the generated artifacts, the four CI-only guard self-tests, repository consistency and `git diff --check`;
+- fresh Primary evidence, parity evidence and the Primary ledger check.
+
+## Implementation Steps
+
+1. **Check** that `supabase/migrations/20261013120000_a_used_ledger_account_keeps_its_meaning.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc`, md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes, blob `94b594c1408d9c33d2a2cbb6209eb57c11aa8995`.
+   - After a comment block stating the rule and the measurements, it creates `app.guard_chart_account()` (SECURITY DEFINER, empty `search_path`, commented, PUBLIC revoked) with its BEFORE INSERT OR UPDATE trigger `chart_of_accounts_guard`. It adds no constraint.
+   - If the target exists with different bytes, stop.
+2. **Check** that `supabase/tests/157_a_used_ledger_account_keeps_its_meaning_test.sql` is absent.
+   - If absent, create it LF and ASCII, byte-identical to the prototype: SHA-256 `e501187f4514f7ebb6843799ccb4229e477c1298640af0bac8b3e81a57982608`, md5 `6d4e5eb1f154a921c349e5831e5f567a`, 13638 bytes, blob `bf0246be997e4f62faf55f453115c1444e4debaa`, `select plan(25);`.
+   - Its `-- ATTACK-CLASSES:` line reads `AUTH TENANT DOOR BUSINESS INPUT PRIVILEGE CONCURRENCY OBSERVABILITY STATE=N/A REPLAY=N/A`.
+   - If the target exists with different bytes, stop.
+3. **Check** the blob of `supabase/tests/10_grant_model_test.sql`.
+   - If it is `36dfceb92dbc0c707a0418e5ec2a269f9025f487`, record Already Applied.
+   - If it is `814f1e4dae0ac98b9fb0059ace86167463cff130`, make it `36dfceb92dbc0c707a0418e5ec2a269f9025f487`. The edit adds `'chart_of_accounts'` first in assertion 9's array, changes `TEN` to `ELEVEN`, appends one sentence to the assertion's description, and adds the "IT WENT FROM TEN TO ELEVEN" comment paragraph before the section's closing rule.
+   - Otherwise stop.
+4. **Check** the blob of `ENGINEERING_METHOD.md`.
+   - If it is `62580e36a61b84b9a5282377e0a9fa3571b03669`, record Already Applied.
+   - If it is `b726938d67d9c1f151facce3e69c245179356620`, make it `62580e36a61b84b9a5282377e0a9fa3571b03669`: one §3 bullet, "A harness result is evidence only after every participant's own output is read", directly after the bullet ending "Establish which it is before recording anything.".
+   - Otherwise stop.
+5. **Check** whether `reports/master/MASTER_GAP_REGISTER.md` already contains a `COA-1` row. If not, make these edits and nothing else:
+   - **Register:**
+     - a 2026-10-13 Slice-42 freshness entry, with the previous one demoted to `Previously:`;
+     - new rows COA-1 (High) and COA-2 (Medium), placed after RCPT-4, each leading `FIXED … locally; Primary deployment pending`, with Cert `🛡`, Owner `—`, this contract as session, and the measurements above;
+     - in STEPUP-1's status cell, one sentence after its `journal_entry_lines` sentence: `chart_of_accounts` was audited in Batch 6 Slice 42 (SPEC-278), its member reproduced as COA-2 and closed, and it no longer meets the criterion, because `app.guard_chart_account` charges `app.authorize`.
+   - **Disposition:**
+     - a freshness entry, with the previous one demoted;
+     - coverage 43 of 78 (19 `AUDITED`, 21 `AUDITED-OPEN`, 3 `PARTIAL`, 0 `EXEMPT`, 35 `NOT-RECORDED`) and the "All 43" line;
+     - the `chart_of_accounts` row `AUDITED` / `ADVERSARIAL` / SPEC-278 / COA-1, COA-2.
+     - Its text gives the evidence, the consumers of `name`, `parent_account_id` and `is_active`, and the swept non-defects.
+     - It also gives the recorded positions, each with its reopening trigger: the `account_type` vocabulary under ADR-0006 and the hierarchy ("the first consumer of the account type or the hierarchy"), and the blank code with its measured consequence ("the first client application that submits journal lines"). It also records the blank name, the event vocabulary and the two unread columns.
+
+   If a target carries content other than its `4347817` bytes, stop.
+6. **Check** for a `Pre-deploy readiness gate` Execution Log entry. If absent, run and record, with actual counts, exits and exact SHA-256 values, all from the main checkout with the repository's pinned CLI:
+   - a clean local reset; test 157 and the focused tests 10, 29, 89, 145 and 146;
+   - pgTAP Pass A, the three declared HTTP suites, then pgTAP Pass B without reset; smoke and the plan sum;
+   - mutants M1–M9 and the two-session race (with the row lock, and with only it removed), with each restoration proven byte-equal;
+   - the causal negative on a clean reset with the migration held aside;
+   - the local structural fingerprints of `scripts/parity_surface.sql`, before and after the migration;
+   - the API-contract and map generators;
+   - the four CI-only guard self-tests;
+   - the scope check, `git diff --check` and repository consistency.
+
+   Treat as expected at this boundary only:
+   - an undeployed Primary;
+   - the pre-deploy repository-consistency drift listed in Consumer Closure;
+   - the guard self-test CONTROL failures that drift causes.
+
+   Read a fresh Primary baseline, read-only:
+   - the project URL, the full ordered ledger and the absence of the target migration;
+   - the function and structural surfaces;
+   - the triggers and constraints of `chart_of_accounts`;
+   - the tenant, chart-account and journal-line counts.
+
+   Record the predicted delta.
+7. **Check** that exact owner authorization for the migration SHA-256 is recorded in the Execution Log. If absent, stop after Step 6 and present the Gate-2 package. Approval of this contract does not authorize deployment.
+8. **Check** that Primary `vrvtsxexkiiiivlkdxzp` lacks `20261013120000_a_used_ledger_account_keeps_its_meaning`. If it is absent and deployment is separately authorized:
+   - Immediately re-read HEAD, the hashes, the project URL, the full ordered ledger, target absence, the business counts and the triggers and constraints of `chart_of_accounts`.
+   - On an exact match, prove the transmitted text's md5 server-side, then apply only the authorized migration through the Primary connector.
+   - If the connector assigns a temporary version, rename only that one newly inserted ledger row. The rename requires exactly one new row, its stored statement md5 equal to the file's, and no existing target version.
+   - Read fresh: the ledger, the function surface and all ten structural surfaces; the triggers and constraints of `chart_of_accounts`; the guard's definition, security mode and ACL; the business counts.
+
+   Never contact Secondary `brplkqmbzffpxqgkkdzo`.
+9. **Check** that fresh Primary evidence contains the new migration exactly once. If so:
+   - Update `reports/evidence/primary-ledger-evidence.json` from those readings only.
+   - In `_ORVION_CANONICAL/manifest.md`, set `Live state` from the same readings, with the catalog figure `71/623` and 464 HTTP assertions unchanged.
+   - Confirm that `supabase/tests` holds 157 files whose literal `plan(N)` values sum to 2994, then set `Suite **157 files / 2994 assertions**`. If either differs, stop.
+   - Mark COA-1 and COA-2 `DEPLOYED` with Cert `✅`, worded without a date beneath the register's freshness line.
+   - Regenerate `MASTER_API_CONTRACT.md`, `ai-map.json` and `repository-index.md` (stored LF) with the canonical generators.
+   - Run the four `scripts/test_*_guard.ps1` and require each to pass.
+   - Set the Runtime Checkpoint to DONE.
+   - Run `check_primary_ledger.ps1`, `check_database_parity_evidence.ps1`, repository consistency and `git diff --check`.
+
+   If Primary is unproven, stop.
+10. **Check** for a `Post-deploy local certification` Execution Log entry. If absent:
+    - Run canonical `pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish` and require `LOCAL_CERTIFY: READY`.
+    - Independently Review the committed implementation against every Acceptance Criterion. After `Verdict: Confirmed Complete`, do all of the following in the Complete commit:
+      - transition to Complete, tick the Acceptance Criteria and the Review Gate, and clear `Active Change Request`;
+      - run `scripts/batch6_select_target.ps1` and record its Top-12;
+      - set `Last Completed` to SPEC-278 / Slice 42;
+      - set `Current Module` to Foundation Completion Programme Batch 6 resuming at Slice 43;
+      - set `Next capability` to **Foundation Completion Programme — Batch 6 Slice 43**, naming the measured first target, followed by the existing Phase-8 order, closed-chapter and standing-fact sentences unchanged;
+      - keep the manifest within 7000 characters;
+      - regenerate `ai-map.json` and `repository-index.md` LF.
+    - Prove the committed range with `-Gate -BaseRef origin/main`, publish the exact committed candidate with `scripts/publish_candidate.ps1` and require exact-SHA candidate CI.
+    - Promote the same accepted SHA, require main CI, and run `-Certify` for `REMOTE_CERTIFY: READY`.
+    - Verify synchronized clean refs.
+
+## Acceptance Criteria
+
+- [ ] A retype or recode of a chart account that has a posted journal line is refused (23514) for every caller, the platform path included; renaming, retiring and re-parenting it, and recoding or retyping an unused account, still succeed.
+- [ ] A signed-in insert or update at the `chart_of_accounts` door at `aal1` is refused 42501 `multi-factor authentication required for this role`; a session-less insert succeeds.
+- [ ] `app.guard_chart_account` is SECURITY DEFINER with an empty `search_path` and is executable by neither `authenticated` nor `anon`; the migration adds no constraint and no catalog enforcement to `account_type`.
+- [ ] Mutants M1–M9 are each killed, M4 by its race, with installation and byte-equal restoration proven, and the causal negative is recorded.
+- [ ] `10_grant_model_test` assertion 9 names eleven tables, `chart_of_accounts` among them, with the stated justification.
+- [ ] `ENGINEERING_METHOD.md` §3 carries the "A harness result is evidence only after every participant's own output is read" bullet.
+- [ ] COA-1 and COA-2 are fixed and deployed in the register, and STEPUP-1 records its `chart_of_accounts` member closed; no other row changed.
+- [ ] `chart_of_accounts` is `AUDITED` / `ADVERSARIAL` in the disposition record, with its recorded positions and their reopening trigger, and coverage is 43 of 78. No other surface's row changed.
+- [ ] The migration, test 157, test 10 and `ENGINEERING_METHOD.md` matched their frozen values when applied.
+- [ ] Primary, the recorded evidence, the manifest (253 migrations; 71/623 catalog; 157 files / 2994 assertions; 464 HTTP assertions), the API contract, `ai-map.json` and `repository-index.md` agree. The four CI-only guard self-tests and repository consistency pass.
+- [ ] The manifest names Batch 6 Slice 43 and its measured target as the next capability, with no Active Change Request.
+- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [ ] No file outside Write Scope was created, modified or deleted.
+
+## Execution Log
+
+None.
+
+## Verification Notes
+
+None.
+
+## Review Gate
+
+- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+      Already Applied per its verification check.
+- [ ] No file outside Write Scope was modified, created, or deleted.
+- [ ] No section was added, removed, or restructured outside the approved steps.
+- [ ] Every Acceptance Criteria item is confirmed true.
+- [ ] Any step that could not be resolved deterministically was reported, not guessed.
+- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+      Status has been updated accordingly.
+- [ ] The repository is in a clean, releasable state.
+
+## Notes
+
+**Prototype environment (2026-10-13).** The owner authorized repeated local-only database resets for Batch 6 on the same day, on conditions that were each verified before the first reset:
+- the target is the local `supabase_db_ORVION` on port 54322, and the CLI is not linked to any remote;
+- every row in it was regenerable fixture data from the HTTP suites;
+- a full `pg_dump` was taken (2.9 MB, 4051 TOC entries readable).
+
+The candidate files were applied from a disposable clone with its push URL set to `none`, using the main checkout's pinned CLI 2.120.0 through `--workdir`. A first attempt used a `git worktree`, which `ENGINEERING_METHOD.md` §2 forbids for a sandbox. It made no commits and was removed.
+
+**Two-session race (pre-approval, on the prototype stack).** Both sessions are session-less, so the integrity rule applies to them. Each run uses a fresh tenant, restores the prototype guard from source first, and prints session A's own output. Session A posts a header and two balanced lines, one to account X, and sleeps 4 s before committing. Session B retypes X.
+- With the row lock: A committed; B waited 3 s and was refused 23514; X stayed `revenue` with 1 line.
+- With only the row lock removed: A committed; B did not wait; X became `expense` with the posted line under it.
+
+**Revision after the owner's Draft-level review (2026-10-13).** The owner asked which consumers read `name`, `parent_account_id` and `is_active`. The answer is in Business Reason. The same read found that the first Draft's COA-2 conflicted with ADR-0006:
+- it added a hard-coded `CHECK (account_type in (...))`, which is neither of the two per-column techniques ADR-0006 and canon 30 name, on a column `202607051300` excluded by name, the backlog closed as NOT A GAP, and no consumer reads;
+- it also added blank-text and parent-cycle rules with no measured consequence that warranted them.
+
+A second review asked whether a blank code, which the posting RPC does consume, can be posted to. The measurement and its bounded consequence are in Business Reason. They correct this contract's earlier statement that no blank text has a consumer, and they add no constraint.
+
+That repair is removed, its observations are recorded as positions with a reopening trigger, and the step-up finding is renumbered COA-2. Every hash, count and proof in this contract was re-measured on the revised bytes.
+
+**What went wrong first, disclosed.**
+- The first race posted nothing. A bare journal header is refused at COMMIT by the deferred balance check, so the fixture's own header never existed, and its "B did not wait" line was no evidence at all.
+- A first injected rerun replayed stale rows, because journal rows cannot be deleted.
+
+Both were caught by reading session A's output and the final state, and the harness was fixed. They are the lesson Step 4 promotes into `ENGINEERING_METHOD.md`.
