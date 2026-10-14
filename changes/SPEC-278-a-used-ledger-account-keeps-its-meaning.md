@@ -118,7 +118,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -387,6 +387,41 @@ From the main checkout at HEAD `f923c0d`, with the pinned CLI 2.120.0 (SPEC-271)
 
   No drift from the approved baseline. **Predicted delta on Primary:** ledger 253, `b144bdf0f5a31ac66a0f0a723fb009bc`, with `20261013120000` once; functions `2cd20c3fea8247598eb9b2bbb559f2ca`/332; triggers 319; `_combined` `56625ae4118e1ddc85bab99114b17899`/3136; the guard and its trigger as above; no business row written.
 - **Readiness verdict: PASS.** Step 7 finds no Gate 2 recorded, so execution stops here and the Gate-2 package goes to the owner.
+
+### 2026-10-14 — Gate 2 recorded (Step 7)
+
+- The owner first wrote "If you are satisfied with your work at that point, then I give you my approval." That conditional delegation was not taken as Gate 2, which requires the owner's own exact-byte authorization. The owner was asked the exact question and answered **"Authorize these exact bytes"** to: deploy exactly `supabase/migrations/20261013120000_a_used_ledger_account_keeps_its_meaning.sql`, SHA-256 `8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc`, md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, valid only if the Step 8 recheck matches the recorded baseline exactly.
+- It authorizes no other migration and no business-data write. Secondary `brplkqmbzffpxqgkkdzo` is never contacted.
+- **Working-tree incident after Step 6, corrected before this gate.** To commit `97bd8b0` with only this contract, the uncommitted Steps 1–5 were backed up with their blobs and set aside with `git stash push --keep-index --include-untracked`; the unmodified hook ran and passed, and `git stash pop` restored them. Every blob matched, but `core.autocrlf=true` re-wrote the migration and test 157 as CRLF on disk (migration SHA-256 `7dcb6d47…`). The LF bytes were copied back from the backup and re-verified at their pinned SHA-256 values. **Lesson:** after any stash or checkout, verify the pinned SHA-256 of the bytes, not only the blob.
+
+### 2026-10-14 — Primary deployment (Step 8)
+
+- **Prewrite recheck**, immediately before the write, matched every Gate-2 condition exactly:
+  - HEAD `97bd8b0`, 4 ahead of and 0 behind `origin/main` `4347817` after a fetch; the working tree held only Write Scope paths;
+  - the migration file `8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc`, md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes, 68 LF, 0 CR; test 157 `e501187f4514f7ebb6843799ccb4229e477c1298640af0bac8b3e81a57982608`;
+  - project URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 252 `5f13c62d2f609e7794a0193a2f203c50`, latest `20261012120000`, target absent by version and by name;
+  - functions (Check L2/P2) `e6a65849bc390360dcb53b2be4f1a0b8`/331; `chart_of_accounts` triggers `chart_of_accounts_enforce_subscription_write_gate` and `chart_of_accounts_set_updated_at`, 4 constraints, no `app.guard_chart_account`;
+  - 0 tenants, chart accounts, journal entries, journal lines and events; `catalog_values` 623.
+- **Write.** The transmitted text was proven server-side before the write by a read-only `select`: md5 `635d504d4069cafb52bd113112126a78`, 3858 bytes, 68 LF, 0 CR. It was applied once through `supabase-primary` as `a_used_ledger_account_keeps_its_meaning`. The connector assigned the temporary version `20261014071921`, whose single stored statement has the file's md5. One guarded UPDATE, in a block that raises unless exactly one row is renamed, renamed it to `20261013120000`; the guard required exactly one row after `20261012120000`, that statement md5, and no existing target.
+- **Fresh post-deploy reads** (read at `2026-10-14T07:21:27Z`, Primary's clock):
+  - ledger 253 `b144bdf0f5a31ac66a0f0a723fb009bc`, equal to the migration files, with `20261013120000` exactly once;
+  - functions `2cd20c3fea8247598eb9b2bbb559f2ca`/332, triggers `9b53576506088625f67f8156f122bd44`/319, `_combined` `56625ae4118e1ddc85bab99114b17899`/3136. Policies, constraints, grants, columns, views, indexes, status transitions and RLS are unchanged. Every value equals the local stack after a clean reset (Step 6);
+  - `chart_of_accounts` triggers now add `chart_of_accounts_guard`; 4 constraints, none added;
+  - `app.guard_chart_account` `md5(prosrc)` `6cafcfacc4ef4648df5af67e5952dbdb`, SECURITY DEFINER, `search_path=""`, ACL `{postgres=X/postgres}`, executable by neither `authenticated` nor `anon`;
+  - `catalog_values` 623; 0 tenants, chart accounts, journal entries, journal lines and events.
+
+  No business row was written. Secondary was not contacted.
+
+### 2026-10-14 — Post-deploy state (Step 9)
+
+- `primary-ledger-evidence.json` was rewritten from the Step 8 readings only, read at `2026-10-14T07:21:27Z`. The 253-entry ledger is the previous 252 plus `20261013120000_a_used_ledger_account_keeps_its_meaning`, and that list hashes to Primary's own `b144bdf0f5a31ac66a0f0a723fb009bc`.
+- The manifest's Live state is 253 migrations with the same fingerprints, verified 2026-10-14; the catalog (71/623) and the 464 HTTP assertions are unchanged.
+- `supabase/tests` holds 157 files whose literal `plan(N)` values sum to 2994, so the suite is `157 files / 2994 assertions`.
+- COA-1 and COA-2 are `DEPLOYED` with Cert `✅`, and their freshness entry reads "new and fixed" without a new date.
+- **Generators.** `MASTER_API_CONTRACT.md` changes the one line Step 6 recorded (`chart_of_accounts`: insert guard `yes`, update guard `conditional`); `ai-map.json` and `repository-index.md` regenerate unchanged.
+- **Guard self-tests, all green:** `test_future_date_guard` 18/0, `test_status_contradiction_guard` 33/0, `test_cold_start_state_guard` 42/0, `test_primary_ledger_guard` 13/0.
+- **Checks:** `check_primary_ledger` `RECOVER-1 LEDGER EVIDENCE: CLEAN`; `check_database_parity_evidence` `PRIMARY PARITY EVIDENCE: CLEAN`; `REPOSITORY CONSISTENCY: CLEAN`; `git diff --check` clean. `git status` shows only Write Scope paths.
+- **Runtime Checkpoint:** DONE.
 
 ## Verification Notes
 

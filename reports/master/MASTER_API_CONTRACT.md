@@ -170,7 +170,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `campaign_daily_metrics` | `SIU-` | no | no | scope_isolation |
 | `catalog_types` | `S---` | no | no | read_all_authenticated |
 | `catalog_values` | `SIU-` | no | no | catalog_read, catalog_tenant_delete, catalog_tenant_insert, catalog_tenant_update |
-| `chart_of_accounts` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `chart_of_accounts` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `company_assets` | `SIU-` | yes | conditional | tenant_isolation |
 | `complaints` | `SIU-` | yes | conditional | scope_isolation |
 | `conversation_messages` | `SIU-` | yes | conditional | scope_isolation |
