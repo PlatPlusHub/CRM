@@ -68,7 +68,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -146,8 +146,23 @@ Irreversible Action Step: NONE
 
 ## Execution Log
 
-None.
+### 2026-10-14 — Claude
 
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows.
+
+Step results:
+- **Step 1: Applied.** Exactly one line began `| Frontend design tooling and dashboard contracts`; the Step 1 row, taken from this contract's committed text, was inserted directly after it. `reports/future-backlog.md` is blob `82fbffa049559b7724e1ed62bd4fca038bbae60a`, one line added.
+- **Step 2: Applied.** `the relevant history in Git, the register and the CRs;` occurred once in `ENGINEERING_METHOD.md` and was replaced by the Step 2 text. Blob `7ccc836b6521c60ab859b2fb845d3c37b8f2ac35`, one line changed.
+- **Step 3: Applied.** `as the generators do.` occurred once in `CODING_STANDARDS.md` and was replaced by the Step 3 text. Blob `3b4a55aad4eff41eb7f79e981b49b8b100fc0bdf`, one line changed. The file had been checked out with CRLF (68 CR bytes) and is written LF.
+- **Step 4: Applied.** `git diff --name-only 9e67adc` (the Approve commit) listed only `CODING_STANDARDS.md`, `ENGINEERING_METHOD.md`, `reports/future-backlog.md` and this contract. The Runtime Checkpoint is DONE.
+
+**Approval prerequisites, re-verified before the first commit.**
+- HEAD, `origin/main` and `origin/orvion-preflight` were `f4233f3` after a fetch; the only change in the tree was the untracked Draft; no other worktree or stash existed.
+- The Draft's blob was `d43084958405cbbdac25dc105a26bcd94f6921fc`, its SHA-256 `9d3ee356a5f46c5e2d1e7c3207445751b3ad33d0d9be085a5b763e525e5c378b`, 12770 bytes, 0 CR, recomputed from its bytes and equal to the approved identity in full.
+- `SPEC-280` appeared in no reachable history, tracked text or added path before the Draft commit.
+- Each Step anchor occurred exactly once. No Primary or Secondary contact was made.
+
+Commits: Draft `d9b4328`, Approve `9e67adc`, Begin `cf8964d`, and this Implement commit.
 ## Verification Notes
 
 None.

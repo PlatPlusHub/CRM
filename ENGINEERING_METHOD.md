@@ -32,7 +32,7 @@ This document owns ORVION's engineering *method*: how a decision is classified a
   - the Canon and the ADRs;
   - the actual code and tests;
   - current Primary — read only; a write still needs its own Gate 2;
-  - the relevant history in Git, the register and the CRs;
+  - the relevant history in Git, the register and the CRs, including every later change to a line that a Step or Criterion copied from a precedent will write (`git log <precedent>..HEAD -- <file>`): `SPEC-278` copied `SPEC-268`'s manifest step after `SPEC-270` had deleted that copy, and was cancelled;
   - for a fast-moving external API, SDK or tool, its current official documentation (`AGENTS.md §3` FRESHNESS).
 
   Then state a falsifiable hypothesis, with a positive and a negative control, and verify the effect rather than the intention. This is Learn-Before-Designing (stage 2 below) applied to every decision, not a second procedure. A routine choice needs a quick check; a major capability needs the fuller study that stage 2 describes.
