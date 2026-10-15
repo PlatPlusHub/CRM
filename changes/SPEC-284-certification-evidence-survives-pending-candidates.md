@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -173,6 +173,9 @@ Post-Implementation Proof Obligation: The new focused suite and all derived CONT
 ## Execution Log
 
 None.
+
+### 2026-10-16 — execution opened
+Owner Human Gate 1 explicitly approved the exact reviewed Draft (SHA-256 d7edf3795ec9a955eca89583102879ab010d61d533a2773f44151d1445568100). Boot READY/PLAN; baseline HEAD/main/preflight 082d106, only the Draft uncommitted. Prototype source hashes and final 60/20 logs recovered without rerunning. The guard required a Draft origination commit before the approval transition; no guard was bypassed. Approval admissibility PASS. Implementation begins at Step 1; publication and promotion remain owner actions.
 
 ## Verification Notes
 
