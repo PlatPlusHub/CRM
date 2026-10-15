@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -1282,15 +1282,15 @@ Selection: the text V2 and V3 produced, which is this Draft; the V1 text is not 
 
 ## Acceptance Criteria
 
-- [ ] `CR_LIFECYCLE.md` is its `246284d` text with only the Step 1 patch applied. `check: blob CR_LIFECYCLE.md 7ee05f5a3c18636b21647aa9afc702b1893f350d`
-- [ ] `ENGINEERING_METHOD.md` is its `246284d` text with only the Step 1 patch applied. `check: blob ENGINEERING_METHOD.md 6a5fdca1160d353647a01f0219db99d459a7f201`
-- [ ] `AGENTS.md` is its `246284d` text with only the Step 1 patch applied. `check: blob AGENTS.md b2412d15cd6fcf710055114fe734ba69178f35cc`
-- [ ] `scripts/check_agent_continuity.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/check_agent_continuity.ps1 4d67468f479076f28e95f223070788016281a59c`
-- [ ] `scripts/test_agent_continuity.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/test_agent_continuity.ps1 3e554c25f5d3ee9f015615f1be143817ca4ce0ca`
-- [ ] `scripts/run_timed.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/run_timed.ps1 722ca31e5cd999d7fa968a2fd23ce943cebc37bc`
-- [ ] `scripts/watch_run.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/watch_run.ps1 e327c2ff9b8c7acf8851f7153c1e1acb066d4e9b`
-- [ ] `scripts/watch_selftest.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/watch_selftest.ps1 144828ebdc82fa1812ca1971834b277bc9b94b31`
-- [ ] The publication, promotion and CI surfaces are unchanged. `check: blob scripts/publish_candidate.ps1 f55e7a165744fd0207b5da5733ae5e047f85f2a1` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .githooks/pre-commit 40e6df021b0a9959462c51aab30981b7a82af860` `check: blob .github/workflows/agent-control.yml 48e90c2b23c4c56f49b1117e4598d63bc2fc267e` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e`
+- [x] `CR_LIFECYCLE.md` is its `246284d` text with only the Step 1 patch applied. `check: blob CR_LIFECYCLE.md 7ee05f5a3c18636b21647aa9afc702b1893f350d`
+- [x] `ENGINEERING_METHOD.md` is its `246284d` text with only the Step 1 patch applied. `check: blob ENGINEERING_METHOD.md 6a5fdca1160d353647a01f0219db99d459a7f201`
+- [x] `AGENTS.md` is its `246284d` text with only the Step 1 patch applied. `check: blob AGENTS.md b2412d15cd6fcf710055114fe734ba69178f35cc`
+- [x] `scripts/check_agent_continuity.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/check_agent_continuity.ps1 4d67468f479076f28e95f223070788016281a59c`
+- [x] `scripts/test_agent_continuity.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/test_agent_continuity.ps1 3e554c25f5d3ee9f015615f1be143817ca4ce0ca`
+- [x] `scripts/run_timed.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/run_timed.ps1 722ca31e5cd999d7fa968a2fd23ce943cebc37bc`
+- [x] `scripts/watch_run.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/watch_run.ps1 e327c2ff9b8c7acf8851f7153c1e1acb066d4e9b`
+- [x] `scripts/watch_selftest.ps1` is its `246284d` text with only the Step 1 patch applied. `check: blob scripts/watch_selftest.ps1 144828ebdc82fa1812ca1971834b277bc9b94b31`
+- [x] The publication, promotion and CI surfaces are unchanged. `check: blob scripts/publish_candidate.ps1 f55e7a165744fd0207b5da5733ae5e047f85f2a1` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .githooks/pre-commit 40e6df021b0a9959462c51aab30981b7a82af860` `check: blob .github/workflows/agent-control.yml 48e90c2b23c4c56f49b1117e4598d63bc2fc267e` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e`
 
 ## Execution Log
 
@@ -1317,17 +1317,33 @@ Commits: Draft `7d35953`, Approve `af2d218`, Begin `f1d8cdf`, and this Implement
 [Appended by the reviewing agent after independently re-checking the Execution Log
 against the live repository state. Append-only — never edit or delete a prior entry.]
 
+### 2026-10-15 — Claude (independent review)
+
+Verdict: Confirmed Complete
+
+Findings: re-checked against the live repository at `bcbcca8`, not against the Execution Log.
+- **R1.** `git diff --name-only 246284d bcbcca8` lists only Write Scope paths: the eight Step 1 files, this contract, `_ORVION_CANONICAL/manifest.md` and `ai-map.json`. `repository-index.md` did not change.
+- **R2.** Since the Draft commit `7d35953`, this contract changed only in Status, the Runtime Checkpoint and the Execution Log, and the pre-commit Gate reported READY at Draft, Approve, Begin and Implement; the Approve Gate reported `APPROVAL_EVIDENCE: PASS`.
+- **R3.** All 13 criterion checks hold in the working tree and at `HEAD`: the eight files have their target blobs and the publication, promotion, hook and CI surfaces keep theirs. Nothing changed in `scripts/publish_candidate.ps1`, `scripts/promote_main.ps1`, `.githooks/`, `.github/`, `supabase/`, `GOVERNANCE.md` or `CODING_STANDARDS.md`.
+- **R4.** `-Finish` at `bcbcca8`, started through `scripts/run_timed.ps1` with `scripts/watch_run.ps1 -Brief` attached 2 s after it started, nothing else running: CONTROL (the five control suites, 38.1 min), REPOSITORY (consistency and `git diff --check`) and the Additional Verification `scripts/watch_selftest.ps1` (7.0 min) PASS; `LOCAL_CERTIFY: READY` in 45.5 min. The run printed its stages, each command's and profile's time and `TIME: Finish 00:45:31`, and the watcher recorded it.
+- **R5.** No Primary or Secondary contact, no push to `main`, and no GitHub setting, ruleset or credential change.
+
+Defect found by this run, carried forward, not fixed here: the watcher's `-Brief` progress line understates elapsed time in its estimate. It looks up the step of the last result but subtracts only the time since the line just read, so after a long silence the estimate is a whole run. Evidence, this `-Finish`: the last result before the first progress line was `ORVION: READY` at 0.3 min; the three comparable runs had 30.9, 33.5 and 36.6 min left after it; the heartbeats, which subtract the time since then, fell 28, 23, 18, 13, 8; the progress line at 29.2 min said about 33 min left (range 31 to 37). The run ended at 45.5 min. The heartbeat's shortfall is not this defect: this run added the 7.0-minute watcher self-test that two of the three earlier runs lacked, and the estimate was labelled a low sample. No verdict, criterion or recorded time depends on an estimate, and `scripts/watch_run.ps1` is fixed by criterion 7, so the correction belongs to a later contract: keep the time of the last result's line and subtract the time since it in both the progress line and the heartbeat, with a self-test case in which a progress line after a silence agrees with the heartbeat.
+
+Review Gate: every step matched its text and was Applied. Nothing was written outside Write Scope, and no section was restructured. Every Acceptance Criterion is true. No step needed a guess. `Supersedes / Depends On` names no file to update. The tree is clean.
+
+Recommendation to human: Set Status to Complete
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as
       Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
