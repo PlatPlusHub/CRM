@@ -22,15 +22,11 @@ state of `Acceptance Criteria` and `Review Gate`, and appends to `Execution Log`
 and the section set is required only of the *governing* Change Request — historical Change Requests
 keep their own original format and are never retrofitted.
 
----
-
 ## Objective
 
 [One sentence. State exactly what this task produces. No ambiguity. No compound objectives.
 Context, rationale, and anything that does not fit in one sentence belongs in Business Reason
 or Notes below, not here.]
-
----
 
 ## Business Reason
 
@@ -38,15 +34,11 @@ or Notes below, not here.]
 evaluating whether to approve the task — the execution agent is not required to read or act on
 it. One short paragraph or a short bullet list.]
 
----
-
 ## Risks
 
 [What could go wrong if this task is approved and executed, and how severe. For human reviewers
 only, same as Business Reason. If there is no material risk, state that explicitly rather than
 leaving the section blank.]
-
----
 
 ## Supersedes / Depends On
 
@@ -55,16 +47,12 @@ completed. Write "None" if not applicable. A Change Request that supersedes anot
 explicitly here, and the superseded file's Status must be updated to Cancelled with a note pointing
 to the new file — never leave two files describing overlapping work both marked Draft or Approved.]
 
----
-
 ## Write Scope
 
 [List every file that MAY be created, modified, or deleted during this task. Exact paths only.
 Repository reading/search is unrestricted and never grants write authority.]
 
 -
-
----
 
 ## Out of Scope — Files Forbidden to Modify
 
@@ -82,8 +70,6 @@ violation; this exception is defined once, there, and is not restated here.]
 
 -
 
----
-
 ## Required Reading
 
 [List the minimum starting context. Additional repository reading/search is always allowed for
@@ -92,23 +78,17 @@ grants write authority.]
 
 -
 
----
-
 ## Runtime Checkpoint
 
 Resume Step: 1
 Blocker: None
 Recovery Attempt: 0
 
----
-
 ## Required Capabilities
 
 [List only capabilities actually required by this task, one per bullet, or write `None`.]
 
 None
-
----
 
 ## Additional Verification
 
@@ -117,8 +97,6 @@ command. This section may add checks; it may never subtract a mandatory profile.
 such as "Prove that..." or "Verify that..." are invalid for new Change Requests.]
 
 None
-
----
 
 ## Pre-Approval Evidence
 
@@ -187,8 +165,6 @@ Mutation Obligation: [each load-bearing predicate that must be independently mut
 
 Post-Implementation Proof Obligation: [what the certified suite must prove before Complete]
 
----
-
 ## Implementation Steps
 
 [Number each step. Each step must be deterministic. Each step must identify exactly what to change,
@@ -207,8 +183,6 @@ partially matches), the agent must stop and report the discrepancy rather than g
 is correct.]
 
 1.
-
----
 
 ## Acceptance Criteria
 
@@ -233,8 +207,6 @@ self-assertion the receipt exists to replace. Assert what the work produced, not
 
 - [ ]
 
----
-
 ## Execution Log
 
 [Appended by the executing agent after each run against this Change Request, before
@@ -257,8 +229,6 @@ Blocker: <only present if Outcome is Blocked or Failed. One factual paragraph de
 exactly which verification check produced an unanticipated result and where. Do not propose
 or apply a guessed resolution.>
 
----
-
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log
@@ -272,8 +242,6 @@ Findings: <what was independently re-checked, and what was found>
 
 Recommendation to human: Set Status to Complete | Set Status to Cancelled | Approve corrective
 Change Request `changes/SPEC-00N-*.md`
-
----
 
 ## Review Gate
 
@@ -290,8 +258,6 @@ is checked.]
 - [ ] If this Change Request's Supersedes / Depends On section names another file, that file's
       Status has been updated accordingly.
 - [ ] The repository is in a clean, releasable state.
-
----
 
 ## Notes
 

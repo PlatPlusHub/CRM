@@ -204,7 +204,7 @@ Normal CR execution and routine checkpoints do not require a session report. CR 
     |---|---|---|---|
     | `_ORVION_CANONICAL/manifest.md` | `Current Module` | `scripts/batch6_select_target.ps1` | `63c303fb1bcfde20de5d8f6c9f16ab38436e451c6bf8795cb93d7da97114ca77` |
     | `_ORVION_CANONICAL/manifest.md` | `Batch 6 surface coverage` | `reports/master/MASTER_SURFACE_DISPOSITION.md` | `166b2f42e10851e6c13be8d578229e72ff22865d6761bfb2a2d8f78296ce8a16` |
-    | `_ORVION_CANONICAL/manifest.md` | `Next capability` | `scripts/batch6_select_target.ps1` | `c03a5e39b0beafeb08781346fb05f5968aed98e96587036a9f2ec48f423d55b5` |
+    | `_ORVION_CANONICAL/manifest.md` | `Next capability` | `scripts/batch6_select_target.ps1` | `90b037bb396498533eb9209c81d73278a5da8ad481562a02941440a3219557ee` |
 
 ---
 

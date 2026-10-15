@@ -57,7 +57,7 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
 - Consequences: the trigger mechanism is enabled before the first trigger; each table adds its trigger in its own migration.
 
 ## ADR-0009 — Git workflow: direct-to-`main`, publish on Complete
-- Date: 2026-07 · Status: Accepted · Source: Governance decision; SPEC-026
+- Date: 2026-07 · Status: Accepted (its last Decision sentence, "Completing a CR pushes to the configured upstream.", is Superseded by ADR-0031; linear history stays in force) · Source: Governance decision; SPEC-026
 - Decision: Change Requests execute as linear commits on the current branch (direct-to-`main` in practice); branch/PR topology is intentionally undefined. Completing a CR pushes to the configured upstream.
 - Why: "Git is the execution history"; the CR lifecycle already provides review gates; a linear history mirrors the state machine. Publishing on Complete removes a separately-remembered manual push.
 - Consequences: no branch/PR governance is defined; a failed push does not invalidate a local Complete.
@@ -379,6 +379,36 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
   - any `GOOGLE_ADS_SCRIPTS` change alarm;
   - a need for keyword planning, forecasting or invoices, which needs the API at Basic and brand verification;
   - a second tenant or more Google Ads accounts, which brings in CDD-7's per-tenant configuration and a manager account.
+
+## ADR-0031 — Publication is candidate-first: a Change Request publishes a candidate, and `main` moves only by the owner's promotion of that exact SHA
+
+- Date: 2026-10-15 · Status: Accepted (owner-ratified 2026-10-15). Supersedes the publication half of ADR-0009 ("Completing a CR pushes to the configured upstream"). ADR-0009's linear history stays in force.
+- **Context.** ADR-0009 published a Change Request by pushing on Complete. The repository then built another route, one contract at a time, without recording it as a decision: `SPEC-168` made one acceptance workflow, `orvion-acceptance`, run on the `orvion-preflight` branch; `SPEC-184` added `scripts/publish_candidate.ps1`, which proves the committed range with `-Gate` and pushes the candidate there and nowhere else; ruleset 22950574 requires that check on `main`; `SPEC-281` added `-Gate -Trusted` and `scripts/promote_main.ps1`. The lifecycle text still said `git push`, so an agent that followed it reached a push the ruleset is configured to refuse.
+- **Decision:**
+  1. A completed Change Request is published as a candidate with `scripts/publish_candidate.ps1`, to `orvion-preflight` only. No agent pushes `main`.
+  2. `main` moves only by a fast-forward to one candidate SHA that `orvion-acceptance` accepted, promoted by the owner with `scripts/promote_main.ps1` from a clean checkout of `main`.
+  3. A candidate awaiting promotion is a valid intermediate state. Synchronization and `-Certify` follow promotion.
+  4. The procedure is stated once, in `CR_LIFECYCLE.md` §9 (`Complete`). Other files point to it.
+- **Why.** Admission is judged on the exact SHA that becomes `main`, before it does. ADR-0009's linear history is kept, because promotion is a fast-forward.
+- **Alternatives rejected:**
+  - Keeping ADR-0009's push on Complete: the ruleset is configured to refuse it, and it would move `main` before acceptance.
+  - Pull requests: publication has never used them, and a merge commit is a SHA that acceptance did not judge.
+  - A trusted check run from `main` by `workflow_run`: another workflow can impersonate it without an owner-held GitHub App (`SPEC-281` Notes).
+- **Consequences:**
+  - The completing agent's `HEAD` is ahead of `@{u}` until promotion. That is not a blocker.
+  - Promotion is the owner's action, and so is the GitHub configuration it relies on.
+- **Constraints on future work:**
+  - Never push `main` from an agent, and never add a second publication route.
+  - Never promote a SHA that `orvion-acceptance` did not accept, or one that does not descend from `main`.
+- **Evidence basis:**
+  - PROVEN in the repository: `scripts/publish_candidate.ps1` is exercised by `scripts/test_agent_continuity.ps1`, and `scripts/promote_main.ps1` by `SPEC-281`'s tests 281-R*.
+  - INFERENCE, from configuration read on 2026-10-15: ruleset 22950574 is active on the default branch with `non_fast_forward`, `deletion`, the required status check `orvion-acceptance` and an empty bypass list. That GitHub refuses a direct push of a commit lacking the check is configuration and platform documentation, not behaviour ORVION has observed, and it is deliberately not tested against the live `main`. Whether only the owner can move `main` is CTRL-19 (`MASTER_GAP_REGISTER.md`).
+- **Class:** governance / publication. **Basis:** owner-ratified (directive of 2026-10-15); system-derived (the route `SPEC-168`, `SPEC-184` and `SPEC-281` built).
+- **Related:** ADR-0009 · CTRL-19 · `CR_LIFECYCLE.md` §9 · `scripts/publish_candidate.ps1`, `scripts/promote_main.ps1`.
+- **Revisit trigger:** any of
+  - CTRL-19 closed or changed;
+  - a second publication route proposed, or pull requests adopted;
+  - a change in how GitHub applies a ruleset's required status checks to a push.
 
 ## Programme lesson numbering (resolved 2026-08-31)
 

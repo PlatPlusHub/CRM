@@ -33,7 +33,7 @@ Never invent policy, expose/request secrets, force-push, use `--no-verify`, rewr
 - **Owner boundary:** never invent business policy, legal/compliance risk acceptance, commercial preference, or a genuinely new strategic architecture direction.
 - **Repository memory:** chat is not state. Persist durable truth in its existing authority; reusable executable failure classes become guards/tests.
 
-The active capability must finish on every relevant axis before another begins: implement, verify, Review-Gate, synchronize, commit, push, clean tree, no known in-unit debt. A checkpoint records progress; it is not a routine permission pause.
+The active capability must finish on every relevant axis before another begins: implement, verify, Review-Gate, synchronize, commit, publish as a candidate, clean tree, no known in-unit debt. A checkpoint records progress; it is not a routine permission pause.
 
 **Durable checkpoint test (owner-ratified continuity authority, restored 2026-09-11).** A meaningful engineering boundary is not checkpointed until the repository itself can carry it forward. Apply one question: *if this agent disappears permanently right now, can a completely fresh agent resume correctly from repository evidence alone?* If not, synchronize the Runtime Checkpoint to the exact next step, append the Execution Log entry, and commit the coherent boundary before stopping. Compact semantic state plus a durable Git checkpoint is the whole mechanism — this never requires a session report, and a knowingly inconsistent half-migration is never committed merely because a session is ending.
 
@@ -147,7 +147,7 @@ Delegation is not default and must earn its cost. Use the fewest non-overlapping
 
 ## 8. Definition of done and maintenance
 
-Done means approved scope implemented; exact acceptance criteria and Review Gate proven against live state; derived profiles pass; cross-path impact handled when triggered; repository and generated artifacts synchronized; CR Runtime Checkpoint `DONE`; no unresolved blocker; working tree clean; committed and normally pushed; relevant CI verified. Never call UNPROVEN a pass.
+Done means approved scope implemented; exact acceptance criteria and Review Gate proven against live state; derived profiles pass; cross-path impact handled when triggered; repository and generated artifacts synchronized; CR Runtime Checkpoint `DONE`; no unresolved blocker; working tree clean; committed and published as a candidate for the owner's promotion (`CR_LIFECYCLE.md` §9, `Complete`); relevant CI verified. Never call UNPROVEN a pass.
 
 Token efficiency never authorizes semantic loss. Keep automatic bootstrap context as small as practical through routing and just-in-time reading, but never delete, weaken, or relocate an owner-ratified rule merely to satisfy a byte budget.
 

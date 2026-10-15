@@ -2,7 +2,9 @@
 
 Status: **Permanent cumulative decision ledger.** Never recreate; evolve. This is the ARB's decision-tracking overlay; the **authoritative ADR log remains `architecture-decision-records.md`**. This file tracks: (a) accepted ADRs and any ARB-proposed amendments, and (b) decisions the ARB proposes but the **owner has not yet ratified** (proposed ADRs must be recorded per the owner policy — design is not withheld). No canonical/ADR file is modified until the owner approves.
 
-Last updated: 2026-09-28 (**item 11 (A3) reconciled — the owner decided it on 2026-09-01 and this overlay still called it open.** The small money-storage ADR the owner asked for is now **ADR-0029** in `architecture-decision-records.md`; nothing else in this overlay changed.)
+Last updated: 2026-10-15 (**ADR-0009's publication half is superseded by ADR-0031 (SPEC-282).** ADR-0009 published a Change Request by pushing on Complete; publication has been candidate-first since SPEC-184, and ADR-0031 records it. Linear history and the additive-migration rule keep ADR-0009.)
+
+Previously: 2026-09-28 (**item 11 (A3) reconciled — the owner decided it on 2026-09-01 and this overlay still called it open.** The small money-storage ADR the owner asked for is now **ADR-0029** in `architecture-decision-records.md`; nothing else in this overlay changed.)
 
 Previously: 2026-09-05 (**overlay caught up with the ratified log — found by Check 21, STALE-1.** This line read `2026-08-10` while the table below already carried ADR-0024/0025/0026 marked **New (2026-08-31)**, so the header's "No ADR ratified … both remain tracked proposals awaiting owner ratification" — true of the 2026-08-10 pass it describes — was being read as a statement about the file's current content. Chasing it found the larger half: **ADR-0027 and ADR-0028 were ratified on 2026-09-02 and 2026-09-04 and had never been entered here at all**, while §3 of this file promises to track "(a) accepted ADRs". Both added below with their ARB verdict; the authoritative text stays where it belongs, in `architecture-decision-records.md`. Prior entry follows.)
 
@@ -19,7 +21,7 @@ Previously: 2026-08-10 (Decision-reconciliation pass — corrected item 11 (A3)'
 | 0006 | Status/type codes plain text | **Tighten (N1):** require event_type registry validation for contract-bearing codes |
 | 0007 | FK default restrict/no-action | Reaffirmed |
 | 0008 | updated_at via moddatetime trigger | Reaffirmed |
-| 0009 | Direct-to-main, publish on Complete | Reaffirmed (governs additive-migration rule) |
+| 0009 | Direct-to-main, publish on Complete | Linear history reaffirmed (governs additive-migration rule); publication superseded by ADR-0031 (candidate-first, owner promotion) |
 | 0010 | Reference data natural keys | Reaffirmed |
 | 0011 | users = tenant membership | Reaffirmed |
 | 0012 | Auth artifacts re-home to human identity | Reaffirmed |
