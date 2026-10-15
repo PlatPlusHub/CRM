@@ -36,11 +36,17 @@ $head = (git rev-parse --short HEAD 2>$null); if (-not $head) { $head = 'none' }
 $before = Get-ConcurrentScripts
 $envLabel = 'host={0} pwsh={1} cpus={2} head={3} concurrent={4}' -f $env:COMPUTERNAME, $PSVersionTable.PSVersion, [Environment]::ProcessorCount, $head, $(if ($before.Count) { $before -join ',' } else { '0' })
 $sw = [Diagnostics.Stopwatch]::StartNew()
+# What it runs can see that it is timed and where: `check_agent_continuity.ps1 -Finish` refuses to
+# start without this (SPEC-283, CR_LIFECYCLE.md §9).
+$env:ORVION_TIMED_LOG = $Log
 '[{0}] START pid={1} {2} | {3}' -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $PID, $envLabel, $Command | Out-File -LiteralPath $Log -Encoding utf8
-pwsh -NoProfile -Command "$Command`nexit `$LASTEXITCODE" 2>&1 | ForEach-Object { '[+{0,6:N1} min] {1}' -f $sw.Elapsed.TotalMinutes, $_ } | Out-File -LiteralPath $Log -Append -Encoding utf8
+# Stamped to a thousandth of a minute (0.06 s), culture-invariant, so every test line a suite prints
+# carries its own measurable time (SPEC-283); a tenth of a minute hid every test shorter than 6 s.
+function Stamp { $sw.Elapsed.TotalMinutes.ToString('0.000', [Globalization.CultureInfo]::InvariantCulture).PadLeft(8) }
+pwsh -NoProfile -Command "$Command`nexit `$LASTEXITCODE" 2>&1 | ForEach-Object { '[+{0} min] {1}' -f (Stamp), $_ } | Out-File -LiteralPath $Log -Append -Encoding utf8
 # `pwsh -Command` collapses a child's exit code to 1 unless it is propagated explicitly, exactly as
 # `check_agent_continuity.ps1` Invoke-Verification does; the appended `exit $LASTEXITCODE` is that propagation.
 $code = $LASTEXITCODE
 $after = Get-ConcurrentScripts
-'[+{0,6:N1} min] END exit={1} total={0:N1} min concurrent_end={2}' -f $sw.Elapsed.TotalMinutes, $code, $(if ($after.Count) { $after -join ',' } else { '0' }) | Out-File -LiteralPath $Log -Append -Encoding utf8
+'[+{0} min] END exit={1} total={2} min concurrent_end={3}' -f (Stamp), $code, $sw.Elapsed.TotalMinutes.ToString('0.0', [Globalization.CultureInfo]::InvariantCulture), $(if ($after.Count) { $after -join ',' } else { '0' }) | Out-File -LiteralPath $Log -Append -Encoding utf8
 exit $code

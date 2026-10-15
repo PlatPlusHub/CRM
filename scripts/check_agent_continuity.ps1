@@ -10,6 +10,71 @@ param(
     [string]$HeadRef='HEAD'
 )
 $ErrorActionPreference='Stop'
+# SPEC-283. Every run states how long it took, in every mode and on every exit path - the pre-commit
+# hook, CI, the owner's promoter and an agent alike. The `finally` around the run prints
+# `TIME: <mode> hh:mm:ss` after the verdict; `exit` runs it and keeps the exit code.
+$script:RunClock=[Diagnostics.Stopwatch]::StartNew()
+function Format-Elapsed([TimeSpan]$T){'{0:00}:{1:00}:{2:00}' -f [Math]::Floor($T.TotalHours),$T.Minutes,$T.Seconds}
+# A run nobody timed - the pre-commit hook, a direct Boot or Gate, the publisher's and promoter's Gates,
+# -Certify - is recorded here, in the history `scripts/watch_run.ps1` keeps and reports on. A run under
+# `scripts/run_timed.ps1` is recorded by its watcher from the runner's log, and CI keeps its own run
+# timings on GitHub, so every run has exactly one writer. Reporting only: a record that cannot be
+# written is said so and never changes a verdict or an exit code. `$script:Outcome` is set where each
+# verdict is printed, because a `finally` cannot read the code `exit` was given.
+$script:RunStarted=Get-Date;$script:Outcome=$null
+# Each stage is the time since the previous mark, and whatever follows the last mark is `other`, so the
+# stages always sum to the run. One line carries them all - `TIME: STAGES <mode> <name>=1.23s ...` - so a
+# run's output grows by one line, and the watcher or this file turns it into one history row per stage.
+$script:Stages=[ordered]@{};$script:StageMark=[TimeSpan]::Zero
+function Mark-Stage([string]$Name){$now=$script:RunClock.Elapsed;$script:Stages[$Name]=$now-$script:StageMark;$script:StageMark=$now}
+function Format-Stages([string]$Label){
+    $script:Stages['other']=$script:RunClock.Elapsed-$script:StageMark
+    "TIME: STAGES $Label "+(@($script:Stages.GetEnumerator()|ForEach-Object{"$($_.Key)=$($_.Value.TotalSeconds.ToString('0.00',[Globalization.CultureInfo]::InvariantCulture))s"})-join' ')
+}
+function Write-TimingRecord([string]$Label){
+    if($env:ORVION_TIMED_LOG-or$env:GITHUB_ACTIONS){return}
+    try{
+        $csv=if($env:ORVION_TIMINGS_CSV){$env:ORVION_TIMINGS_CSV}else{Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'ORVION\timings.csv'}
+        [void][IO.Directory]::CreateDirectory((Split-Path $csv -Parent))
+        $head="$(git -C $Root rev-parse --short HEAD 2>$null)".Trim();$global:LASTEXITCODE=0
+        $conditions="host=$env:COMPUTERNAME pwsh=$($PSVersionTable.PSVersion) cpus=$([Environment]::ProcessorCount) head=$head via=$(if($env:GIT_INDEX_FILE){'hook'}else{'direct'})"
+        $outcome=if($script:Outcome){$script:Outcome}else{'OUTCOME UNRECORDED'}
+        $inv=[Globalization.CultureInfo]::InvariantCulture;$min=$script:RunClock.Elapsed.TotalMinutes.ToString('0.0###',$inv)
+        $run='orvion-'+($Label.ToLowerInvariant()-replace' ','-');$at=$script:RunStarted.ToString('yyyy-MM-dd HH:mm:ss.fff')
+        $row={param($Step,$T,$D)'"{0}","{1}","{2}",{3},{4},"{5}"' -f $run,$at,($Step-replace'"',"'"),$T,$D,$conditions}
+        $rows=@(& $row "TIME: $Label $(Format-Elapsed $script:RunClock.Elapsed)" $min $min)
+        $at2=[TimeSpan]::Zero
+        foreach($s in $script:Stages.GetEnumerator()){$at2+=$s.Value;$rows+=& $row "STAGE $Label $($s.Key)" $at2.TotalMinutes.ToString('0.0###',$inv) $s.Value.TotalMinutes.ToString('0.0###',$inv)}
+        $rows+=& $row "END exit=$(if($outcome-match'READY$'){0}else{1}) $outcome" $min $min
+        Add-TimingRows $csv $rows $(if($env:ORVION_TIMINGS_MAX_BYTES){[long]$env:ORVION_TIMINGS_MAX_BYTES}else{10MB})
+    }catch{Write-Output "TIME_RECORD: not written - $($_.Exception.Message)"}
+}
+# The history's one write path, shared VERBATIM with scripts/watch_run.ps1 (scripts/watch_selftest.ps1
+# holds the two copies equal). A named mutex per history file serialises every writer and the watcher's
+# reads across processes, so an append never interleaves with another append or with a trim. The bound
+# holds after every append: past $MaxBytes the history keeps its newest whole rows within half of it,
+# written to a temporary file beside it and moved over it, so the history is never rewritten in place.
+function Use-TimingHistory([string]$Path, [scriptblock]$Body) {
+    $id = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes([IO.Path]::GetFullPath($Path).ToLowerInvariant())))
+    $lock = [Threading.Mutex]::new($false, 'Global\ORVION-timings-' + $id.Substring(0, 32))
+    try {
+        # An abandoned mutex (its holder was killed) is acquired: the history is only ever replaced whole.
+        try { if (-not $lock.WaitOne(15000)) { throw "the timing history $Path stayed locked for 15 s" } } catch [Threading.AbandonedMutexException] { }
+        try { & $Body } finally { $lock.ReleaseMutex() }
+    } finally { $lock.Dispose() }
+}
+function Add-TimingRows([string]$Path, [string[]]$Rows, [long]$MaxBytes) {
+    Use-TimingHistory $Path {
+        if (-not [IO.File]::Exists($Path)) { [IO.File]::WriteAllText($Path, 'run,date,step,elapsed_min,delta_min,env' + [Environment]::NewLine) }
+        if ($Rows.Count) { [IO.File]::AppendAllText($Path, ($Rows -join [Environment]::NewLine) + [Environment]::NewLine) }
+        if ([IO.FileInfo]::new($Path).Length -le $MaxBytes) { return }
+        $b = [IO.File]::ReadAllBytes($Path); $h = [Array]::IndexOf($b, [byte]10) + 1
+        $n = [Array]::IndexOf($b, [byte]10, [int][Math]::Max($h, $b.Length - [Math]::Floor($MaxBytes / 2))); $cut = if ($n -lt 0) { $b.Length } else { $n + 1 }
+        $tmp = "$Path.tmp"; $f = [IO.File]::Create($tmp); try { $f.Write($b, 0, $h); $f.Write($b, $cut, $b.Length - $cut) } finally { $f.Dispose() }
+        [IO.File]::Move($tmp, $Path, $true)
+        'history: kept the newest {0:N0} of {1:N0} bytes of rows (limit {2:N0})' -f ($b.Length - $cut), ($b.Length - $h), $MaxBytes
+    }
+}
 
 # Native command output (git) is decoded using the console code page, which on a
 # default Windows shell is OEM (ibm437) and silently corrupts every non-ASCII
@@ -1890,14 +1955,17 @@ function Git-State {
 # Success is one line. Failure keeps everything a diagnosis needs: the command,
 # the exit code, a diagnostic tail and the full log path. Streaming the entire
 # successful child output buried the result it was meant to report.
-function Invoke-Verification([string]$Command,[switch]$Additional){
+function Invoke-Verification([string]$Command,[string]$Label,[switch]$Additional){
     $log=Join-Path([IO.Path]::GetTempPath())("orvion-verify-$([guid]::NewGuid().ToString('N')).log")
     # `pwsh -Command` collapses a child's exit code to 1, which would report the
     # wrong failure code for every verification command. Propagate it explicitly.
+    $clock=[Diagnostics.Stopwatch]::StartNew()
     & pwsh -NoProfile -Command "$Command`nexit `$LASTEXITCODE" *>$log
-    $code=$LASTEXITCODE
-    if($code-eq0){Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue;Write-Output "PASS: $Command";return}
-    Write-Output "FAILED: $Command (exit $code)"
+    $code=$LASTEXITCODE;$clock.Stop()
+    if(-not$script:ProfileTime.Contains($Label)){$script:ProfileTime[$Label]=[TimeSpan]::Zero};$script:ProfileTime[$Label]+=$clock.Elapsed
+    $took="TIME: $Label $Command $(Format-Elapsed $clock.Elapsed)"
+    if($code-eq0){Remove-Item -LiteralPath $log -Force -ErrorAction SilentlyContinue;Write-Output "PASS: $Command";Write-Output $took;return}
+    Write-Output "FAILED: $Command (exit $code)";Write-Output $took
     if(Test-Path -LiteralPath $log){
         Write-Output '--- last 20 lines ---'
         foreach($line in @(Get-Content -LiteralPath $log -Tail 20)){Write-Output $line}
@@ -1938,8 +2006,10 @@ function Finish-Checks($c,[string[]]$profiles,[string]$rel){
     # Verification is one piece of evidence, not two. Deduplicate the execution;
     # Additional Verification remains strictly additive.
     $extra=@($c.AdditionalVerification|Where-Object{$mandatory-notcontains$_})
-    foreach($command in $mandatory){Invoke-Verification $command}
-    foreach($command in $extra){Invoke-Verification $command -Additional}
+    $script:ProfileTime=[ordered]@{}
+    foreach($command in $mandatory){Invoke-Verification $command $(if($seen.ContainsKey($command)){$seen[$command]}else{'CAPABILITY'})}
+    foreach($command in $extra){Invoke-Verification $command 'ADDITIONAL' -Additional}
+    foreach($p in $script:ProfileTime.Keys){Write-Output "TIME: PROFILE $p $(Format-Elapsed $script:ProfileTime[$p])"}
 
     $notExecuted=@()
     foreach($d in $deferred){
@@ -2034,18 +2104,18 @@ function Certify-Remote {
     Write-Output "SHA: $sha"
     $path=Receipt-Path
     if(!(Test-Path -LiteralPath $path)){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: no local certification receipt — the expected workflow set is unknown, so nothing can be proven. Run -Finish, then push, then certify.'
         exit 1
     }
     try{$receipt=Get-Content -Raw -LiteralPath $path|ConvertFrom-Json}catch{
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: the local certification receipt is unreadable'
         exit 1
     }
     $expected=@($receipt.expected|Where-Object{$_})
     if(!$expected.Count){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: the local certification receipt records no expected workflow set'
         exit 1
     }
@@ -2055,7 +2125,7 @@ function Certify-Remote {
     # though it were evidence about the promotion.
     $target=("$($receipt.target)").Trim()
     if(!$target){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: the local certification receipt records no target branch — it predates context-aware certification. Run -Finish again.'
         exit 1
     }
@@ -2072,7 +2142,7 @@ function Certify-Remote {
     # ARRAY when the resolved command is a PowerShell script.
     $raw=gh run list --commit $sha --branch $target --event push --limit 100 --json 'attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName' 2>$null
     if($LASTEXITCODE-ne0-or!$raw){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: gh could not read workflow runs for this SHA'
         exit 1
     }
@@ -2083,7 +2153,7 @@ function Certify-Remote {
     # because it only ever read members across the collection, which PowerShell flattens;
     # it becomes a real defect the moment individual rows are inspected.
     try{$parsed=$raw|ConvertFrom-Json}catch{
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output 'EVIDENCE: gh returned evidence this command cannot parse'
         exit 1
     }
@@ -2102,7 +2172,7 @@ function Certify-Remote {
     }
     foreach($i in $ignored){Write-Output "IGNORED: $i — not this SHA on $target by push"}
     if(!$runs.Count){
-        Write-Output 'REMOTE_CERTIFY: PENDING'
+        $script:Outcome='REMOTE_CERTIFY: PENDING';Write-Output 'REMOTE_CERTIFY: PENDING'
         Write-Output "EVIDENCE: no workflow run exists for this SHA on $target yet — push it, or wait for the run to start"
         exit 1
     }
@@ -2114,7 +2184,7 @@ function Certify-Remote {
     # settling, and FAILED once every observed run has completed without it. Both are
     # NOT READY; the distinction only tells the reader whether waiting can still help.
     if($missing.Count-and$running.Count){
-        Write-Output 'REMOTE_CERTIFY: PENDING'
+        $script:Outcome='REMOTE_CERTIFY: PENDING';Write-Output 'REMOTE_CERTIFY: PENDING'
         Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING so far: $($missing-join', ') — $($running.Count) run(s) on this SHA have not completed"
         exit 1
     }
@@ -2131,18 +2201,18 @@ function Certify-Remote {
     $missing=$kept
     $running=@($runs|Where-Object{$_.status-ne'completed'})
     if($missing.Count){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: REQUIRED_WORKFLOW_MISSING: $($missing-join', ') produced no run on this SHA. Success on any other SHA proves nothing about this one."
         exit 1
     }
     if($running.Count){
-        Write-Output 'REMOTE_CERTIFY: PENDING'
+        $script:Outcome='REMOTE_CERTIFY: PENDING';Write-Output 'REMOTE_CERTIFY: PENDING'
         Write-Output "EVIDENCE: $($running.Count) run(s) still in progress on this SHA"
         exit 1
     }
     $bad=@($runs|Where-Object{$_.conclusion-ne'success'})
     if($bad.Count){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: $((@($bad|ForEach-Object{$_.workflowName})|Sort-Object -Unique)-join', ')"
         exit 1
     }
@@ -2152,18 +2222,18 @@ function Certify-Remote {
     # remote, never a local cache, and refuse rather than assume when it cannot be read.
     git -C $Root fetch origin $target --quiet 2>$null|Out-Null
     if($LASTEXITCODE-ne0){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: TARGET_REF_UNREADABLE:$target — the remote target ref could not be read, so it cannot be proven to stand at this SHA"
         exit 1
     }
     $remote=(git -C $Root rev-parse "refs/remotes/origin/$target" 2>$null)
     $remote=if($LASTEXITCODE-eq0){("$remote").Trim()}else{''}
     if($remote-ne$sha){
-        Write-Output 'REMOTE_CERTIFY: FAILED'
+        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
         Write-Output "EVIDENCE: TARGET_REF_MOVED:$target is at $remote, not the certified $sha"
         exit 1
     }
-    Write-Output 'REMOTE_CERTIFY: READY'
+    $script:Outcome='REMOTE_CERTIFY: READY';Write-Output 'REMOTE_CERTIFY: READY'
     # Exits directly rather than returning a code: this function WRITES its
     # result, so a returned value would join that output stream and the caller
     # would fall through into the Boot pipeline instead of stopping.
@@ -2180,8 +2250,14 @@ function Block($message){
     Write-Output 'NEXT: inspect the named authority/evidence, repair within Write Scope, then rerun.'
 }
 
-try{
+try{try{
     Set-Location $Root
+    # SPEC-283. -Finish is the longest run an agent starts, and it is started only through
+    # `scripts/run_timed.ps1`, which names its log here, so `scripts/watch_run.ps1` can follow it
+    # and say how long is left (CR_LIFECYCLE.md §9). Anti-omission, not anti-forgery, like the receipt.
+    if($Finish-and(-not$env:ORVION_TIMED_LOG-or-not(Test-Path -LiteralPath $env:ORVION_TIMED_LOG))){
+        throw 'FINISH_NOT_TIMED:start -Finish through scripts/run_timed.ps1 and follow it with scripts/watch_run.ps1 (CR_LIFECYCLE.md §9)'
+    }
     if(!(Test-Path(Join-Path $Root 'AGENTS.md'))){throw 'AGENTS_MISSING'}
     if($Certify){Certify-Remote}
     if($BaseRef){Assert-Ref $BaseRef;Assert-Ref $HeadRef}
@@ -2199,8 +2275,10 @@ try{
         if($at-ne$want-or@(git -C $Root status --porcelain).Count){throw "TRUSTED_DATA_NOT_CANDIDATE:$Root is not a clean checkout of $want"}
     }
 
+    Mark-Stage 'setup'
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'}
     Validate-HistoryAndIds $records $base
+    Mark-Stage 'history'
     # Allocation is judged locally on every run, and in range mode only when the
     # base itself was already under enforcement - current rules are never applied
     # retroactively to history that predates the marker. Reservation, unlike
@@ -2218,11 +2296,15 @@ try{
     $script:RangeAllocationActive=[bool]$BaseRef-and(Allocation-ActiveAt $BaseRef)
     $script:PublicationSegments=@()
     if($BaseRef){$script:PublicationSegments=@(Get-PublicationSegments)}
+    Mark-Stage 'allocation'
     $m=Manifest
-    $rel=Resolve-Contract $m $records;$repo=if($Trusted){'not run (-Trusted executes no candidate file)'}else{Repo-Guard};$git=Git-State
+    $rel=Resolve-Contract $m $records;Mark-Stage 'contract'
+    $repo=if($Trusted){'not run (-Trusted executes no candidate file)'}else{Repo-Guard};Mark-Stage 'repo-guard'
+    $git=Git-State;Mark-Stage 'git'
     if(!$git.Synced){throw "GIT_NOT_SYNCHRONIZED:$($git.Text)"}
     # SPEC-281. A state invariant like the consistency guard's, so it binds in every mode.
     Validate-PinnedAuthority $(if($BaseRef){$HeadRef}else{''})
+    Mark-Stage 'pins'
 
     if(!$rel){
         Validate-ManifestCrState $m
@@ -2239,6 +2321,7 @@ try{
         Write-Output "NEXT_CAPABILITY: $($m.Next)"
         Write-Output 'WRITE_AUTHORITY: none (Draft CR authoring only)'
         Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo"
+        $script:Outcome='ORVION: READY'
         exit 0
     }
 
@@ -2272,12 +2355,13 @@ try{
         if($baselineStatus-eq'Draft'-and$c.Status-eq'Approved'){$script:Criteria=Get-CriteriaReport $c 'carry a check verified at Complete'}
         if($baselineStatus-ne'Complete'-and$c.Status-eq'Complete'){$script:Criteria=Get-CriteriaReport $c 'verified'}
     }
+    Mark-Stage 'transition'
 
     # The endpoint view above proves what the range LANDED ON. This proves what it
     # PASSED THROUGH, which a net diff cannot see. It runs before the pointer
     # invariant because a forbidden committed state is the deeper defect, and the
     # pointer is a final-state property that would otherwise report the symptom.
-    if($BaseRef){if($script:PublicationSegments.Count-gt1){Validate-PublicationSegments}else{Validate-CommittedRange $rel}}
+    if($BaseRef){if($script:PublicationSegments.Count-gt1){Validate-PublicationSegments}else{Validate-CommittedRange $rel};Mark-Stage 'range-walk'}
     # SPEC-281 (ACI). The hook's view of the authority-change closure the walk applies per commit.
     if(!$BaseRef){
         $pinPaths=@(@(Get-PinnedAuthority 'HEAD')+@(Get-PinnedAuthority '')|ForEach-Object{$_.Path})
@@ -2349,7 +2433,7 @@ try{
     # and a capability line that looked like a probe result would be a false green.
     foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — $($script:Capabilities[$name].Note)"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
-    if($Finish){Finish-Checks $c $profiles ($rel-replace'\\','/')}
+    if($Finish){Mark-Stage 'checks';Finish-Checks $c $profiles ($rel-replace'\\','/');Mark-Stage 'verification'}
     # A successful run states its OWN status (SPEC-166). Falling off the end leaves
     # whatever the last native command set, and `Read-GitFile` deliberately runs a
     # `git show` that FAILS whenever a path is absent at a ref - it leaves 128 behind
@@ -2359,10 +2443,17 @@ try{
     # MODE: VERIFY and BLOCKER: none, and the CI step failed with no error to read -
     # on the first push of a new Change Request, which is when the governing contract
     # is absent at the range base. Success is an assertion, not a leftover.
+    $script:Outcome='ORVION: READY'
     exit 0
 }catch{
     if($Finish){Write-Output 'CERTIFY: FAILED'}
+    $script:Outcome="ORVION: BLOCKED $(($_.Exception.Message-split':',2)[0])"
     Block $_.Exception.Message
     exit 1
+}}finally{
+    $label=if($Boot){'Boot'}elseif($Gate){if($Trusted){'Gate trusted'}elseif($BaseRef){'Gate range'}else{'Gate'}}elseif($Finish){'Finish'}else{'Certify'}
+    Write-Output (Format-Stages $label)
+    Write-Output "TIME: $label $(Format-Elapsed $script:RunClock.Elapsed)"
+    Write-TimingRecord $label
 }
 

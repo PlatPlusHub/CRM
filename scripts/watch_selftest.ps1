@@ -36,7 +36,7 @@ function Wait-Exit($Process, [int]$Seconds) { if (-not $Process.WaitForExit($Sec
 function New-Name([string]$Ext) { Join-Path $Work ([guid]::NewGuid().ToString('N') + $Ext) }
 
 $RepoRoot = Split-Path $Tools -Parent   # where check_agent_continuity.ps1, the CI contract's authority, lives
-$Runner = Join-Path $Tools 'run_timed.ps1'; $Watcher = Join-Path $Tools 'watch_run.ps1'; $Ci = Join-Path $Tools 'watch_ci.ps1'
+$Runner = Join-Path $Tools 'run_timed.ps1'; $Watcher = Join-Path $Tools 'watch_run.ps1'; $Ci = Join-Path $Tools 'watch_ci.ps1'; $Evaluator = Join-Path $Tools 'check_agent_continuity.ps1'
 $Stage = Join-Path $Work 'scripts\fake_stage.ps1'
 # A silent stage whose NEWEST descendant is not a script (as a real suite's git or docker child is):
 # the heartbeat must still name the script.
@@ -53,10 +53,113 @@ function Case-Vocabulary([string]$WatcherPath) {
         '== 41 passed, 1 failed ==', 'not ok 3 - fixture', 'ERROR:  relation "x" does not exist', 'FAIL 12 the guard refused',
         'END exit=1 total=0.4 min concurrent_end=0', 'M1 KILLED', 'ALL CHECKS PASSED',
         'WORKSTATION VERIFICATION: PASSED', 'WORKSTATION PREPARATION: COMPLETE', 'PUBLISH: DONE', 'REMOTE_CERTIFY: PENDING',
-        'DATABASE PARITY: UNPROVEN -- local matches the repository, but PRIMARY WAS NOT CONTACTED.', 'HARD_BLOCKED: RECOVERY_EXHAUSTED', 'DATABASE PARITY: 3 issue(s) found')
+        'DATABASE PARITY: UNPROVEN -- local matches the repository, but PRIMARY WAS NOT CONTACTED.', 'HARD_BLOCKED: RECOVERY_EXHAUSTED', 'DATABASE PARITY: 3 issue(s) found',
+        'TIME: Gate range 00:00:04', 'TIME: REPOSITORY pwsh -NoProfile -File scripts/check_repository_consistency.ps1 00:00:12', 'TIME: PROFILE CONTROL 00:31:02',
+        'TIME: STAGES Gate range setup=0.05s range-walk=3.10s other=0.20s')
     $noise = @('PASS 101 the guard holds', 'the guard is fail-closed by design', 'CODE: none', 'error: lowercase prose', 'Checking 27 anchors', 'Failed attempts are retried by nobody', 'MODE: PLAN')
     $missed = @($results | Where-Object { -not (Test-ResultLine $_) }); $leaked = @($noise | Where-Object { Test-ResultLine $_ })
     [pscustomobject]@{ Ok = (-not $missed -and -not $leaked); Detail = "missed=[$($missed -join ' | ')] leaked=[$($leaked -join ' | ')]" }
+}
+# ---- history, ETA, findings and report (SPEC-283): unit cases on fixture rows -------------------------
+function Rows([string]$Name, [string]$Date, [object[]]$Steps) {
+    foreach ($s in $Steps) { [pscustomobject]@{ run = $Name; date = $Date; step = $s[0]; elapsed_min = "$($s[1])"; delta_min = "$($s[2])"; env = 'host=H' } }
+}
+function OkRun([string]$Date, [double]$End, [double]$XDelta = 1) { Rows 'r' $Date @(@('PASS: x', 1, $XDelta), @('PASS: y', 2, 1), @("END exit=0 total=$End min", $End, ($End - 2))) }
+# Successful runs only, the median of what each still had to do, its range, and no estimate from one run.
+function Case-Eta([string]$WatcherPath) {
+    . $WatcherPath
+    $hist = @(Read-History @((OkRun 'a' 5) + (OkRun 'b' 6) + (OkRun 'c' 7) + (Rows 'r' 'f' @(@('PASS: x', 1, 1), @('END exit=1', 1.5, 0.5)))) 'r')
+    $three = Get-Eta $hist 'PASS: x' 0 1; $one = Get-Eta @($hist | Where-Object { $_.Date -in 'a', 'f' }) 'PASS: x' 0 1; $new = Get-Eta $hist 'PASS: a test no run has had' 0 1
+    $log = New-Name '.log'; Set-Content -LiteralPath $log -Value @('[2026-10-15 10:00:00] START pid=1 host=H | x', '[+   1.0 min] PASS: x', '[+   2.0 min] END exit=0 total=2.0 min concurrent_end=0') -Encoding utf8
+    $ended = @(& pwsh -NoProfile -File $WatcherPath -Log $log -Run 'r' -Eta -Csv (New-Name '.csv') 2>&1) -join ' '
+    [pscustomobject]@{ Ok = ($three -eq 'eta: ~5.0 min left (median of 3 comparable successful runs, low sample; range 4.0 to 6.0)' -and $new -eq 'eta: ~5.0 min left (median of 3 comparable successful runs, by run totals, low sample; range 4.0 to 6.0)' -and $one -match '^eta: none - 1 comparable' -and $ended -match '^eta: the run has ended \(END exit=0'); Detail = "three=[$three] new=[$new] one=[$one] ended=[$ended]" }
+}
+# Each finding once, labelled by what the evidence supports.
+function Case-Findings([string]$WatcherPath) {
+    . $WatcherPath
+    $hist = @(Read-History @((OkRun 'a' 5) + (OkRun 'b' 6) + (OkRun 'c' 7) + (Rows 'r' 'f' @(@('FAILED: z (exit 1)', 1, 1), @('END exit=1', 1.5, 0.5)))) 'r')
+    $st = New-FindingState
+    $f = @(foreach ($b in 'FAILED: z (exit 1)', 'FAILED: z (exit 1)', 'PASS: x', 'PASS: x', 'PASS: x') { Get-StepFindings $hist $st $b $(if ($b -eq 'PASS: x') { 5 } else { 1 }) }) + @(Get-EndFindings $hist $st 20) + @(Get-EndFindings $hist $st 20)
+    $want = @('finding [confirmed] recurring failure: FAILED: z (exit 1) - also in 1 of 4 earlier runs', 'finding [hypothesis] repeated execution: z ran twice',
+        'finding [hypothesis] slow step: PASS: x took 5.0 min', 'finding [hypothesis] repeated execution: x ran twice', 'finding [hypothesis] expected step absent: PASS: y', 'finding [hypothesis] slower run: 20.0 min')
+    $missing = @($want | Where-Object { $w = $_; -not @($f | Where-Object { $_.StartsWith($w) }).Count })
+    $calm = @(Get-StepFindings @() (New-FindingState) 'FAILED: z (exit 1)' 9)
+    [pscustomobject]@{ Ok = ($f.Count -eq $want.Count -and -not $missing -and -not $calm.Count); Detail = "count=$($f.Count) missing=[$($missing -join ' | ')] calm=[$($calm -join ' | ')] all=[$($f -join ' | ')]" }
+}
+# A failure rate is per run of its own name: two failures in three runs outrank two in twenty.
+function Case-Report([string]$WatcherPath) {
+    $csv = New-Name '.csv'; 'run,date,step,elapsed_min,delta_min,env' | Out-File -LiteralPath $csv -Encoding utf8
+    $rows = foreach ($i in 1..20) { Rows 'often' "o$i" @(@('PASS: build', 2, 2), @($(if ($i -le 2) { 'FAILED: flaky (exit 1)' } else { 'PASS: flaky' }), 3, 1), @("END exit=$([int]($i -le 2))", 3, 0)) }
+    $rows += foreach ($i in 1..3) { Rows 'rare' "r$i" @(@($(if ($i -le 2) { 'FAILED: rare (exit 1)' } else { 'PASS: rare' }), 1, 1), @("END exit=$([int]($i -le 2))", 1, 0)) }
+    $rows | Export-Csv -LiteralPath $csv -Append -NoTypeInformation -Encoding utf8
+    $o = @(& pwsh -NoProfile -File $WatcherPath -Report -Csv $csv 2>&1 | ForEach-Object { "$_" }); $code = $LASTEXITCODE
+    $i = [array]::IndexOf($o, ($o | Where-Object { $_ -match 'FAILED: rare' } | Select-Object -First 1)); $j = [array]::IndexOf($o, ($o | Where-Object { $_ -match 'FAILED: flaky' } | Select-Object -First 1))
+    [pscustomobject]@{ Ok = ($code -eq 0 -and $i -ge 0 -and $j -gt $i -and @($o -match 'time\s+67%\s+PASS: build').Count -eq 1 -and @($o -match '67%\s+FAILED: rare \(exit 1\) in 2 of 3 rare runs - investigate \[hypothesis\]').Count -eq 1); Detail = "exit=$code rare@$i flaky@$j || $($o -join ' || ')" }
+}
+function Case-Redact([string]$WatcherPath) {
+    . $WatcherPath
+    $r = Hide-Secret 'FAIL 3 secret scanning on; token=abc123 Authorization: Bearer xyz9 ghp_aaaaaaaaaaaaaaaaaaaaaaaa1 password: hunter2'
+    [pscustomobject]@{ Ok = ($r -match 'secret scanning on' -and $r -notmatch 'abc123|xyz9|ghp_a|hunter2'); Detail = $r }
+}
+# One append past the bound leaves the history within it: the header, then the newest WHOLE rows, the new one last.
+function Case-Limit([string]$WatcherPath) {
+    . $WatcherPath
+    $csv = New-Name '.csv'; [IO.File]::WriteAllLines($csv, @('run,date,step,elapsed_min,delta_min,env') + @(1..200 | ForEach-Object { """r"",""d$_"",""PASS: x"",1,1,""h""" }))
+    $said = Add-TimingRows $csv @('"r","dnew","PASS: newest",1,1,"h"') 2000; $left = [IO.File]::ReadAllLines($csv); $bytes = (Get-Item -LiteralPath $csv).Length
+    $broken = @($left | Select-Object -Skip 1 | Where-Object { $_ -notmatch '^"r","d\w+","PASS: \w+",1,1,"h"$' }).Count
+    [pscustomobject]@{ Ok = ($bytes -le 2000 -and $left[0] -like 'run,*' -and $left[-1] -match 'dnew' -and $left[-2] -match '"d200"' -and -not $broken -and $said -match 'kept the newest' -and -not (Test-Path -LiteralPath "$csv.tmp")); Detail = "bytes=$bytes lines=$($left.Count) broken=$broken said=[$said]" }
+}
+# A failed test is a TEST - timed, counted and ranked with the others - and a failure; a TAP `not ok` with a
+# TODO or SKIP directive is a test but not a failure (TAP 14).
+function Case-Classify([string]$WatcherPath) {
+    . $WatcherPath
+    $kinds = (@('FAIL 7 the slow failing test', 'not ok 4 - a failing tap test', 'not ok 5 - later # TODO not yet', 'PASS 8 fine', 'FAILED: x (exit 1)') | ForEach-Object { Get-StepKind $_ }) -join ','
+    $failing = @(@('FAIL 7 the slow failing test', 'not ok 4 - a failing tap test', 'not ok 5 - later # TODO not yet', 'not ok 6 # skip no database', 'PASS 8 fine') | Where-Object { $_ -cmatch $script:FailedTestRx }).Count
+    $csv = New-Name '.csv'; 'run,date,step,elapsed_min,delta_min,env' | Out-File -LiteralPath $csv -Encoding utf8
+    $rows = foreach ($i in 1..3) { Rows 'suite' "s$i" @(@('PASS 8 fine', 1, 0.1), @($(if ($i -le 2) { 'FAIL 7 the slow failing test' } else { 'PASS 7 the slow test' }), 4, 3), @("END exit=$([int]($i -le 2))", 4, 0)) }
+    $rows | Export-Csv -LiteralPath $csv -Append -NoTypeInformation -Encoding utf8
+    $o = @(& pwsh -NoProfile -File $WatcherPath -Report -Csv $csv 2>&1 | ForEach-Object { "$_" })
+    [pscustomobject]@{ Ok = ($kinds -eq 'test,test,test,test,result' -and $failing -eq 2 -and @($o -match '^\s+slowest test\s+3\.000 min\s+FAIL 7 the slow failing test$').Count -eq 1 -and @($o -match '67%\s+FAIL 7 the slow failing test in 2 of 3 suite runs').Count -eq 1)
+                       Detail = "kinds=[$kinds] failing=$failing || $($o -join ' || ')" }
+}
+# Writers in separate processes - the evaluator's copy of the write path and the watcher's - appending at
+# once: with no bound reached every row arrives whole, exactly once; past a small bound the history stays
+# within it, every line whole, and what each writer still has is its own newest rows.
+function Get-FunctionText([string]$Path, [string]$Name) {
+    $ast = [Management.Automation.Language.Parser]::ParseFile($Path, [ref]$null, [ref]$null)
+    @($ast.FindAll({ param($n) $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $Name }, $true) | ForEach-Object { $_.Extent.Text })
+}
+function Case-Concurrent([string]$WatcherPath, [string]$EvaluatorPath, [long]$Max, [int]$Count = 150) {
+    $fns = New-Name '.ps1'; (@('Use-TimingHistory', 'Add-TimingRows') | ForEach-Object { Get-FunctionText $EvaluatorPath $_ }) -join "`n" | Set-Content -LiteralPath $fns -Encoding utf8
+    $writer = New-Name '.ps1'; $go = New-Name '.go'; $csv = New-Name '.csv'
+    @('param([string]$Fns, [string]$HistoryFile, [long]$Limit, [int]$Count, [string]$Tag, [string]$Go)',
+      'function Write-All { . $Fns; while (-not (Test-Path -LiteralPath $Go)) { Start-Sleep -Milliseconds 20 }',
+      '  foreach ($i in 1..$Count) { try { Add-TimingRows $HistoryFile @(''"{0}","d","PASS {0} row {1}",1,1,"h"'' -f $Tag, $i) $Limit | Out-Null } catch { "error: $($_.Exception.Message)" } } }',
+      'Write-All') | Set-Content -LiteralPath $writer -Encoding utf8
+    $procs = foreach ($w in @(@('eval1', $fns), @('eval2', $fns), @('eval3', $fns), @('watch1', $WatcherPath), @('watch2', $WatcherPath), @('watch3', $WatcherPath))) {
+        $out = New-Name '.out'; [pscustomobject]@{ Tag = $w[0]; Out = $out; P = (Start-Pwsh ('-File {0} -Fns {1} -HistoryFile {2} -Limit {3} -Count {4} -Tag {5} -Go {6}' -f (Q $writer), (Q $w[1]), (Q $csv), $Max, $Count, $w[0], (Q $go)) $out) }
+    }
+    Start-Sleep -Seconds 4; Set-Content -LiteralPath $go -Value 'go'
+    $done = @($procs | Where-Object { Wait-Exit $_.P 120 }).Count -eq $procs.Count
+    $errors = @($procs | ForEach-Object { Get-Content -LiteralPath $_.Out -ErrorAction SilentlyContinue } | Where-Object { $_ -match '^error:' })
+    $lines = @(if (Test-Path -LiteralPath $csv) { [IO.File]::ReadAllLines($csv) }); $bytes = if (Test-Path -LiteralPath $csv) { (Get-Item -LiteralPath $csv).Length } else { -1 }
+    $broken = @($lines | Select-Object -Skip 1 | Where-Object { $_ -notmatch '^"(eval|watch)\d","d","PASS (eval|watch)\d row \d+",1,1,"h"$' }).Count
+    $suffix = $true; foreach ($p in $procs) {
+        $mine = @($lines | Where-Object { $_ -match "^""$($p.Tag)""," } | ForEach-Object { [int]($_ -replace '^.* row (\d+)",.*$', '$1') })
+        if ($mine.Count -and (($mine -join ',') -ne ((($Count - $mine.Count + 1)..$Count) -join ','))) { $suffix = $false }
+    }
+    [pscustomobject]@{ Done = $done; Errors = $errors.Count; Header = ($lines.Count -and $lines[0] -eq 'run,date,step,elapsed_min,delta_min,env'); Rows = $lines.Count - 1; Unique = @($lines | Select-Object -Skip 1 -Unique).Count; Broken = $broken; Bytes = $bytes; Suffix = $suffix; Last = $(if ($lines.Count) { $lines[-1] } else { '' })
+                       Detail = "done=$done errors=$($errors.Count) [$(($errors | Select-Object -First 2) -join ' | ')] rows=$($lines.Count - 1) broken=$broken bytes=$bytes suffix=$suffix last=[$(if ($lines.Count) { $lines[-1] })]" }
+}
+function Case-ConcurrentAll([string]$WatcherPath, [string]$EvaluatorPath) {
+    $a = Case-Concurrent $WatcherPath $EvaluatorPath 100MB; $b = Case-Concurrent $WatcherPath $EvaluatorPath 6000
+    $okA = $a.Done -and -not $a.Errors -and $a.Header -and $a.Rows -eq 900 -and $a.Unique -eq 900 -and -not $a.Broken
+    $okB = $b.Done -and -not $b.Errors -and $b.Header -and $b.Bytes -le 6000 -and $b.Rows -lt 900 -and -not $b.Broken -and $b.Suffix -and $b.Last -match ' row 150",'
+    [pscustomobject]@{ Ok = ($okA -and $okB); Detail = "unbounded: $($a.Detail) || bounded 6000: $($b.Detail)" }
+}
+function Case-SharedWriter([string]$WatcherPath, [string]$EvaluatorPath) {
+    $diff = @(foreach ($n in 'Use-TimingHistory', 'Add-TimingRows') { $w = @(Get-FunctionText $WatcherPath $n); $e = @(Get-FunctionText $EvaluatorPath $n); if ($w.Count -ne 1 -or $e.Count -ne 1 -or $w[0] -cne $e[0]) { $n } })
+    [pscustomobject]@{ Ok = (-not $diff.Count); Detail = "differ=[$($diff -join ',')]" }
 }
 function Case-StartLine([string]$WatcherPath) {
     . $WatcherPath
@@ -139,6 +242,42 @@ function Case-Steps([string]$RunnerPath, [string]$WatcherPath) {
 }
 # Steady-state cost at the PRODUCTION cadence (10 s polls, 5-minute heartbeat): CPU sampled 20 s
 # after start, once pwsh has loaded, and again a minute later.
+# Every test line and every evaluator stage is recorded with its own time, at the runner's 0.06-second
+# resolution; tests are recorded, not printed; a `TIME:` line keeps the duration it states.
+function Case-Tests([string]$RunnerPath, [string]$WatcherPath) {
+    $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
+    # A failed test straight after a passing one: its time is the time since that line (about 0), not since
+    # the last RESULT four seconds earlier, which is what it got while `FAIL` was judged a result first.
+    $r = Start-Runner $RunnerPath $log "Write-Output 'PASS: pwsh -NoProfile -File scripts/fake_a.ps1'; Start-Sleep -Seconds 4; Write-Output 'PASS t1 the first test'; Write-Output 'FAIL t2 the second test :: evidence'; Write-Output 'ok 3 - a tap test'; Write-Output 'not ok 4 - a failing tap test'; Write-Output 'not ok 5 - pending # TODO later'; Write-Output 'TIME: STAGES Gate setup=0.60s repo-guard=12.00s other=0.30s'; Write-Output 'TIME: Gate 00:00:13'; exit 0"
+    $w = Start-Watcher $WatcherPath $log 'tests' 5 $csv $out; $done = Wait-Exit $w 60; [void](Wait-Exit $r 10)
+    $o = @(Get-Content -LiteralPath $out); $rows = @(Import-Csv -LiteralPath $csv); $row = { param($s) @($rows | Where-Object { $_.step -eq $s })[0] }
+    $inv = [Globalization.CultureInfo]::InvariantCulture; $d = { param($s) $x = & $row $s; if ($x) { [double]::Parse($x.delta_min, $inv) } else { -1 } }
+    $stamps = @(Get-Content -LiteralPath $log | Where-Object { $_ -match '^\[\+\s*\d+\.\d{3} min\] ' }).Count
+    $fail2 = & $d 'FAIL t2 the second test :: evidence'; $fail4 = & $d 'not ok 4 - a failing tap test'
+    $ok = $done -and $stamps -ge 9 -and (& $d 'PASS t1 the first test') -ge 0.06 -and $fail2 -ge 0 -and $fail2 -lt 0.03 -and (& $d 'ok 3 - a tap test') -ge 0 -and $fail4 -ge 0 -and $fail4 -lt 0.03 -and (& $d 'not ok 5 - pending # TODO later') -ge 0 -and
+          [Math]::Abs((& $d 'STAGE Gate repo-guard') - 0.2) -lt 0.001 -and [Math]::Abs((& $d 'STAGE Gate setup') - 0.01) -lt 0.001 -and [Math]::Abs((& $d 'TIME: Gate 00:00:13') - 13 / 60) -lt 0.001 -and
+          -not @($o -match 'PASS t1|ok 3 - a tap|not ok 5').Count -and @($o -match 'FAIL t2').Count -eq 1 -and @($o -match 'not ok 4 - a failing').Count -eq 1
+    [pscustomobject]@{ Ok = $ok; Detail = "done=$done stamps=$stamps || $($o -join ' || ') || $(($rows | ForEach-Object { "$($_.step)=$($_.delta_min)" }) -join ' | ')" }
+}
+# -Brief prints what needs attention and a progress line; the history still receives everything.
+function Case-Quiet([string]$RunnerPath, [string]$WatcherPath) {
+    $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
+    $r = Start-Runner $RunnerPath $log "Write-Output 'PASS: pwsh -NoProfile -File scripts/fake_a.ps1'; Write-Output 'PASS t1 quiet'; Start-Sleep -Seconds 2; Write-Output 'FAILED: pwsh -NoProfile -File scripts/fake_b.ps1 (exit 1)'; exit 1"
+    $w = Start-Pwsh ('-File {0} -Log {1} -Run quiet -QuietMinutes 5 -PollSeconds 1 -Csv {2} -Brief -ProgressMinutes 0.01' -f (Q $WatcherPath), (Q $log), (Q $csv)) $out
+    $done = Wait-Exit $w 60; [void](Wait-Exit $r 10); $o = @(Get-Content -LiteralPath $out); $rows = @(Import-Csv -LiteralPath $csv)
+    $ok = $done -and $w.ExitCode -eq 1 -and -not @($o -match '\] PASS: |PASS t1').Count -and @($o -match '\] FAILED: ').Count -eq 1 -and @($o -match '\] END exit=1').Count -eq 1 -and @($o -match '^progress: [\d.]+ min - \d+ tests and \d+ results so far').Count -ge 1 -and
+          @($rows | Where-Object { $_.step -like 'PASS: *' -or $_.step -eq 'PASS t1 quiet' }).Count -eq 2
+    [pscustomobject]@{ Ok = $ok; Detail = "done=$done exit=$(if ($done) { $w.ExitCode }) rows=$($rows.Count) || $($o -join ' || ')" }
+}
+# A credential a step prints never reaches the watcher's output or the history. The runner's log, which the
+# history names as evidence, is the raw output and keeps it: the redaction claim stops at the watcher.
+function Case-RedactRun([string]$RunnerPath, [string]$WatcherPath) {
+    $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
+    $r = Start-Runner $RunnerPath $log "Write-Output 'FAILED: pwsh -NoProfile -File scripts/fake_c.ps1 token=SECRETVALUE42 (exit 1)'; exit 1"
+    $w = Start-Watcher $WatcherPath $log 'redact' 5 $csv $out; $done = Wait-Exit $w 60; [void](Wait-Exit $r 10)
+    $o = (Get-Content -Raw -LiteralPath $out); $c = (Get-Content -Raw -LiteralPath $csv); $raw = (Get-Content -Raw -LiteralPath $log)
+    [pscustomobject]@{ Ok = ($done -and $o -match 'token=<redacted>' -and "$o$c" -notmatch 'SECRETVALUE42' -and $c -match 'log=' -and $raw -match 'token=SECRETVALUE42'); Detail = "done=$done raw-log-keeps-it=$($raw -match 'SECRETVALUE42') || $o || $c" }
+}
 function Case-Overhead([string]$RunnerPath, [string]$WatcherPath) {
     $log = New-Name '.log'
     $r = Start-Runner $RunnerPath $log 'Start-Sleep -Seconds 95'
@@ -200,6 +339,17 @@ try {
     $c = Case-Gone $Runner $Watcher;  Check 'W6 a runner killed mid-run is reported as RUNNER GONE and the watcher exits 1' $c.Ok $c.Detail
     $c = Case-NeverStarted $Watcher;  Check 'W7 a runner that never starts is reported, not waited on silently' $c.Ok $c.Detail
     $c = Case-Rearm $Runner $Watcher $steps; Check 'W8 a watcher re-armed on a finished failed run exits 1 and adds no duplicate rows; a later successful run exits 0 and compares with the previous one and both conditions' $c.Ok $c.Detail
+    $c = Case-Eta $Watcher;          Check 'W9 an ETA is the median of what comparable successful runs still had to do, with its range; a new step falls back to run totals; one run gives none; an ended run says so' $c.Ok $c.Detail
+    $c = Case-Findings $Watcher;     Check 'W10 findings: a recurring failure is [confirmed]; a repeated command, a slow step, an absent step and a slow run are [hypothesis]; each once' $c.Ok $c.Detail
+    $c = Case-Report $Watcher;       Check 'W11 the report ranks failures by rate per run of their own name and says where the time goes' $c.Ok $c.Detail
+    $c = Case-Redact $Watcher;       Check 'W12 credentials are redacted by shape and by key; prose that names a secret is kept' $c.Ok $c.Detail
+    $c = Case-RedactRun $Runner $Watcher; Check 'W13 a credential a step prints reaches neither the watcher''s output nor the history; each row names its log, which keeps the raw line unredacted' $c.Ok $c.Detail
+    $c = Case-Limit $Watcher;        Check 'W14 one append past the bound leaves the history within it: header, then the newest whole rows' $c.Ok $c.Detail
+    $c = Case-Tests $Runner $Watcher; Check 'W15 every test line, failed ones included, and every evaluator stage is recorded with its own time at 0.06 s resolution; only failed tests are printed; a TIME line keeps its stated duration' $c.Ok $c.Detail
+    $c = Case-Quiet $Runner $Watcher; Check 'W16 -Brief prints failures, the end and progress, and still records every line' $c.Ok $c.Detail
+    $c = Case-Classify $Watcher;     Check 'W17 FAIL and TAP not ok are tests, ranked by time and by failure rate; a TODO or SKIP not ok is not a failure' $c.Ok $c.Detail
+    $c = Case-ConcurrentAll $Watcher $Evaluator; Check 'W18 six concurrent writers (three evaluator, three watcher): every row once and whole; past the bound, within it, whole, newest rows kept' $c.Ok $c.Detail
+    $c = Case-SharedWriter $Watcher $Evaluator; Check 'W19 the evaluator and the watcher share one write path, text for text' $c.Ok $c.Detail
     $c = Case-CiBranch $Ci;          Check 'C1 the candidate and main runs on one SHA are judged separately, each against its own contract' $c.Ok $c.Detail
     $c = Case-CiMissing $Ci;         Check 'C2 an expected check that never ran is missing (another event never stands in for it); an unexpected run is reported, not required' $c.Ok $c.Detail
     $c = Case-CiContract $Ci;        Check 'C3 the contract at real SHAs: ORVION Acceptance on the candidate only; Migration CI only where a migration path changed' $c.Ok $c.Detail
@@ -237,7 +387,24 @@ try {
         @{ Name = 'M11 PASS lines read as evidence';          File = $Ci;      Find = "`$message -cnotmatch '^PASS\b' -and "; Replace = ''; Case = { param($p) Case-CiEvidence $p } },
         @{ Name = 'M12 contract derived for the wrong branch'; File = $Ci;     Find = '$expected = @(Workflow-Expectations $changed $Branch)'; Replace = '$expected = @(Workflow-Expectations $changed ''orvion-preflight'')'; Case = { param($p) Case-CiContract $p } },
         @{ Name = 'M13 a missing check never reported';       File = $Ci;      Find = 'Missing    = @($Expected | Where-Object { $present -notcontains $_ })'; Replace = 'Missing    = @()'; Case = { param($p) Case-CiMissing $p } },
-        @{ Name = 'M14 another event stands in for a push';   File = $Ci;      Find = " -and `$_.event -eq 'push'"; Replace = ''; Case = { param($p) Case-CiMissing $p } }
+        @{ Name = 'M14 another event stands in for a push';   File = $Ci;      Find = " -and `$_.event -eq 'push'"; Replace = ''; Case = { param($p) Case-CiMissing $p } },
+        @{ Name = 'M17 an ETA from a single run';             File = $Watcher; Find = 'if ($left.Count -lt 2)'; Replace = 'if ($left.Count -lt 1)'; Case = { param($p) Case-Eta $p } },
+        @{ Name = 'M18 a recurring failure not recognised';   File = $Watcher; Find = 'if ($prior.Count) {'; Replace = 'if ($false) {'; Case = { param($p) Case-Findings $p } },
+        @{ Name = 'M19 findings repeated';                    File = $Watcher; Find = '@($found | Where-Object { $State.Said.Add($_) })'; Replace = '@($found)'; Case = { param($p) Case-Findings $p } },
+        @{ Name = 'M20 failures ranked by count, not rate';   File = $Watcher; Find = 'Rate = $k.Count / [Math]::Max(1, $h.Count)'; Replace = 'Rate = $k.Count'; Case = { param($p) Case-Report $p } },
+        @{ Name = 'M21 redaction disabled';                   File = $Watcher; Find = 'function Hide-Secret([string]$Text) {'; Replace = 'function Hide-Secret([string]$Text) { return $Text'; Case = { param($p) Case-Redact $p } },
+        @{ Name = 'M22 a step''s line not redacted';           File = $Watcher; Find = '$body = Hide-Secret $m.Groups[''body''].Value'; Replace = '$body = $m.Groups[''body''].Value'; Case = { param($p) Case-RedactRun $Runner $p } },
+        @{ Name = 'M23 the history never bounded';            File = $Watcher; Find = 'if ([IO.FileInfo]::new($Path).Length -le $MaxBytes) { return }'; Replace = 'return'; Case = { param($p) Case-Limit $p } },
+        @{ Name = 'M24 test lines not recorded';              File = $Watcher; Find = 'if (Test-TestLine $body) {'; Replace = 'if ($false) {'; Case = { param($p) Case-Tests $Runner $p } },
+        @{ Name = 'M29 a failed test judged a result first';   File = $Watcher; Find = 'if (Test-TestLine $body) {'; Replace = 'if ((Test-TestLine $body) -and -not (Test-ResultLine $body)) {'; Case = { param($p) Case-Tests $Runner $p } },
+        @{ Name = 'M30 the history reads a failed test as a result'; File = $Watcher; Find = "elseif (Test-TestLine `$Step) { 'test' }"; Replace = "elseif ((Test-TestLine `$Step) -and -not (Test-ResultLine `$Step)) { 'test' }"; Case = { param($p) Case-Classify $p } },
+        @{ Name = 'M31 a TODO not ok counted as a failure';    File = $Watcher; Find = '(?!.*#\s*(?i:todo|skip)\b)'; Replace = ''; Case = { param($p) Case-Classify $p } },
+        @{ Name = 'M32 test times ranked from successful runs only'; File = $Watcher; Find = '$per = @{}; foreach ($r in $h) {'; Replace = '$per = @{}; foreach ($r in $ok) {'; Case = { param($p) Case-Classify $p } },
+        @{ Name = 'M33 writers not serialised';               File = $Watcher; Find = "'Global\ORVION-timings-' + `$id.Substring(0, 32)"; Replace = "'Global\ORVION-timings-' + [guid]::NewGuid().ToString('N')"; Case = { param($p) Case-ConcurrentAll $p $Evaluator } },
+        @{ Name = 'M25 -Brief prints everything';             File = $Watcher; Find = 'if (-not $Brief -or $body -cmatch $script:AttentionRx)'; Replace = 'if ($true)'; Case = { param($p) Case-Quiet $Runner $p } },
+        @{ Name = 'M26 a TIME line''s stated duration ignored'; File = $Watcher; Find = '$(if ($null -ne $stated -and $step -like ''TIME: *'') { $stated } else { $delta })'; Replace = '$delta'; Case = { param($p) Case-Tests $Runner $p } },
+        @{ Name = 'M27 stages not split';                     File = $Watcher; Find = '$stages = @(Split-Stages $body)'; Replace = '$stages = @()'; Case = { param($p) Case-Tests $Runner $p } },
+        @{ Name = 'M28 the runner stamps a tenth of a minute'; File = $Runner;  Find = "ToString('0.000',"; Replace = "ToString('0.0',"; Case = { param($p) Case-Tests $p $Watcher } }
     )
     foreach ($m in $mutants) {
         $source = [IO.File]::ReadAllText($m.File); $mutated = $source.Replace($m.Find, $m.Replace)

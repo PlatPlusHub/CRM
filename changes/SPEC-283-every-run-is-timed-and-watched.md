@@ -83,7 +83,7 @@ None. Built on `SPEC-282` (`246284d`).
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -1301,6 +1301,17 @@ Append-only — never edit or delete a prior entry, including a Blocked or Faile
 Leave this section's bracketed instructions in place in an unused template; remove them
 only in a CR that has at least one real entry.]
 
+### 2026-10-15 — Claude
+
+Outcome: Implemented. The Runtime Checkpoint is DONE; `-Finish` follows, started through `scripts/run_timed.ps1` with `scripts/watch_run.ps1` attached concurrently.
+
+Step results:
+- **Step 1: Applied.** All eight files had their base blob at `246284d`. The patch was taken from this contract's committed code block (each line without its first three characters), applied with `git apply`, and every file now has its target blob: `CR_LIFECYCLE.md` `7ee05f5a3c18636b21647aa9afc702b1893f350d`, `ENGINEERING_METHOD.md` `6a5fdca1160d353647a01f0219db99d459a7f201`, `AGENTS.md` `b2412d15cd6fcf710055114fe734ba69178f35cc`, `scripts/check_agent_continuity.ps1` `4d67468f479076f28e95f223070788016281a59c`, `scripts/test_agent_continuity.ps1` `3e554c25f5d3ee9f015615f1be143817ca4ce0ca`, `scripts/run_timed.ps1` `722ca31e5cd999d7fa968a2fd23ce943cebc37bc`, `scripts/watch_run.ps1` `e327c2ff9b8c7acf8851f7153c1e1acb066d4e9b`, `scripts/watch_selftest.ps1` `144828ebdc82fa1812ca1971834b277bc9b94b31`.
+- **Step 2: Applied.** `git diff --name-only af2d218` (the Approve commit) listed only Write Scope paths: AGENTS.md, CR_LIFECYCLE.md, ENGINEERING_METHOD.md, changes/SPEC-283-every-run-is-timed-and-watched.md, scripts/check_agent_continuity.ps1, scripts/run_timed.ps1, scripts/test_agent_continuity.ps1, scripts/watch_run.ps1, scripts/watch_selftest.ps1. The Runtime Checkpoint is DONE.
+
+**Approval prerequisites, re-verified before the first commit.** The approved Draft's bytes were recomputed from the owner-review copy: blob `dd54eb29a8aaf86880d3392322f13577dbccd143`, SHA-256 `eb69e0f5ce5dc61b5ca1a047e41a177c5f6e8c783b8e84939d59cfe99e2cd6ba`, 139609 bytes, 0 CR, equal to the approved identity, and the committed copy has the same blob. After a fetch HEAD and `origin/orvion-preflight` were `246284d` (`origin/main` `349825e`; `SPEC-282` awaits the owner's promotion), the tree was clean, no index lock existed, and `SPEC-283` appeared in no tracked text. The Approve Gate reported `APPROVAL_EVIDENCE: PASS`. No Primary or Secondary contact was made.
+
+Commits: Draft `7d35953`, Approve `af2d218`, Begin `f1d8cdf`, and this Implement commit.
 ## Verification Notes
 
 [Appended by the reviewing agent after independently re-checking the Execution Log

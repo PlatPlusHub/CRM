@@ -469,6 +469,8 @@ function MutationKillRange([string]$Name,[string]$Expect,[string]$Find,[string]$
 }
 try{
     [IO.Directory]::CreateDirectory($sandbox)|Out-Null
+    # SPEC-283. -Finish starts only under scripts/run_timed.ps1, which names its log; the fixtures stand in for it.
+    $timedLog=Join-Path $sandbox 'timed.log';[IO.File]::WriteAllText($timedLog,'');$env:ORVION_TIMED_LOG=$timedLog
     git init --bare $remote --quiet;git clone $remote $root --quiet
     git -C $root config user.email test@orvion.invalid;git -C $root config user.name ORVION-Test
     Put 'AGENTS.md' '# fixture'
@@ -602,6 +604,100 @@ try{
     Reset-Fixture;Rebase (ContractText -Resume DONE -Scope scripts/test_agent_continuity.ps1);Put 'scripts/test_agent_continuity.ps1' 'exit 9';$r=Run Finish;Assert '40 failing mandatory CONTROL verification makes Finish fail' ($r.Code-ne0-and$r.Text-match'CERTIFY: FAILED'-and$r.Text-match'MANDATORY_VERIFICATION_FAILED') $r.Text
     Reset-Fixture;Rebase (ContractText -Resume DONE -Additional 'pwsh -NoProfile -Command "exit 7"');$r=Run Finish;Assert '41 failing Additional Verification makes Finish fail' ($r.Code-ne0-and$r.Text-match'ADDITIONAL_VERIFICATION_FAILED') $r.Text
     Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Resume DONE);$r=Run Finish;Assert '42 successful mandatory verification precedes LOCAL_CERTIFY READY' ($r.Code-eq0-and$r.Text-match'PASS: pwsh -NoProfile -File scripts/check_repository_consistency.ps1'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
+    # ---- TIME (SPEC-283) ----
+    # Every run reports how long it took, after its verdict, on every exit path and in both invocation
+    # shapes; -Finish reports each verification command and each profile, and starts only under
+    # scripts/run_timed.ps1. Before SPEC-283 no run printed a time, and a -Finish started directly could
+    # not be followed by scripts/watch_run.ps1 (measured on SPEC-282's own -Finish).
+    function TimeLine([string]$Label){'(?m)^TIME: '+[regex]::Escape($Label)+' \d\d:\d\d:\d\d\s*$'}
+    function RunWith([string]$Evaluator,[string]$Mode){$o=& pwsh -NoProfile -File $Evaluator "-$Mode" -Root $root 2>&1;[pscustomobject]@{Text=($o|Out-String);Code=$LASTEXITCODE}}
+    function Untimed([scriptblock]$Body,[string]$Value=''){$saved=$env:ORVION_TIMED_LOG;if($Value){$env:ORVION_TIMED_LOG=$Value}else{Remove-Item Env:ORVION_TIMED_LOG};try{& $Body}finally{$env:ORVION_TIMED_LOG=$saved}}
+    $finishFixture={Reset-Fixture;Put 'changes/SPEC-900-fixture.md' (ContractText -Resume DONE)}
+
+    Reset-Fixture;$r=Run
+    Assert '283-T1 TIME: a READY Boot ends with its time and keeps exit 0' ($r.Code-eq0-and$r.Text-match(TimeLine 'Boot')) $r.Text
+    Pop 'TIME' 'accept'
+    Reset-Fixture;Put 'secret.txt' 'a write no contract authorised';$r=Run Gate
+    Assert '283-T2 TIME: a refused Gate reports its time and keeps its non-zero exit' ($r.Code-ne0-and$r.Text-match'ORVION: BLOCKED'-and$r.Text-match(TimeLine 'Gate')) $r.Text
+    Pop 'TIME' 'accept'
+    Reset-Fixture;$r=RunRange 'origin/main'
+    Assert '283-T3 TIME: dot-sourced as CI runs it, the range reports its time and its exit still matches its verdict' ($r.Text-match(TimeLine 'Gate range')-and(($r.Code-eq0)-eq($r.Text-match'ORVION: READY'))) "code=$($r.Code) $($r.Text)"
+    Pop 'TIME' 'accept'
+    & $finishFixture;$r=Run Finish
+    Assert '283-T4 TIME: Finish reports each verification command and each profile' ($r.Code-eq0-and$r.Text-match'LOCAL_CERTIFY: READY'-and$r.Text-match'(?m)^TIME: REPOSITORY pwsh -NoProfile -File scripts/check_repository_consistency\.ps1 \d\d:\d\d:\d\d'-and$r.Text-match(TimeLine 'PROFILE REPOSITORY')-and$r.Text-match(TimeLine 'Finish')) $r.Text
+    Pop 'TIME' 'accept'
+    $r=Untimed {& $finishFixture|Out-Null;Run Finish}
+    Assert '283-T5 TIME: Finish started outside scripts/run_timed.ps1 is refused before it verifies anything' ($r.Code-ne0-and$r.Text-match'CODE: FINISH_NOT_TIMED'-and$r.Text-notmatch'PASS: '-and$null-eq(ReceiptJson)) $r.Text
+    Pop 'TIME' 'reject'
+    $r=Untimed {& $finishFixture|Out-Null;Run Finish} (Join-Path $sandbox 'no-such-timed.log')
+    Assert '283-T6 TIME: a runner log that does not exist is refused the same way' ($r.Code-ne0-and$r.Text-match'CODE: FINISH_NOT_TIMED'-and$null-eq(ReceiptJson)) $r.Text
+    Pop 'TIME' 'reject'
+    $tl=Join-Path $sandbox 'runner.log';& pwsh -NoProfile -File (Join-Path $sourceRoot 'scripts/run_timed.ps1') -Log $tl -Command 'Write-Output "seen=$env:ORVION_TIMED_LOG"' 2>&1|Out-Null
+    $seen=if(Test-Path -LiteralPath $tl){Get-Content -Raw -LiteralPath $tl}else{''}
+    Assert '283-T7 TIME: scripts/run_timed.ps1 names its own log to the command it runs' ($seen.Contains("seen=$([IO.Path]::GetFullPath($tl))")) $seen
+    Pop 'TIME' 'accept'
+    # Mutations, each killed by the one case only it breaks.
+    $src=Get-Content -Raw $control;$mutant=Join-Path $sandbox 'time-mutant.ps1'
+    function TimeMutant([string]$Old,[string]$New){$m=$src.Replace($Old,$New);[IO.File]::WriteAllText($mutant,$m,(New-Object Text.UTF8Encoding($false)));$m-ne$src}
+    $ok=TimeMutant "if(`$Finish-and(-not`$env:ORVION_TIMED_LOG" "if(`$false-and(-not`$env:ORVION_TIMED_LOG"
+    $r=Untimed {& $finishFixture|Out-Null;RunWith $mutant 'Finish'};Pop 'TIME' 'mutation'
+    Assert '283-TM1 TIME MUTATION: the guard is what refuses an untimed Finish' ($ok-and$r.Text-notmatch'FINISH_NOT_TIMED'-and$r.Text-match'LOCAL_CERTIFY: READY') $r.Text
+    $ok=TimeMutant 'Write-Output "TIME: $label $(Format-Elapsed $script:RunClock.Elapsed)"' '$null'
+    Reset-Fixture;$r=RunWith $mutant 'Boot';Pop 'TIME' 'mutation'
+    Assert '283-TM2 TIME MUTATION: the finally is what prints a run''s time' ($ok-and$r.Code-eq0-and$r.Text-notmatch'(?m)^TIME: Boot') $r.Text
+    $ok=TimeMutant 'Write-Output "PASS: $Command";Write-Output $took;return' 'Write-Output "PASS: $Command";return'
+    & $finishFixture;$r=RunWith $mutant 'Finish';Pop 'TIME' 'mutation'
+    Assert '283-TM3 TIME MUTATION: Invoke-Verification is what times each command' ($ok-and$r.Text-match'LOCAL_CERTIFY: READY'-and$r.Text-notmatch'(?m)^TIME: REPOSITORY pwsh') $r.Text
+    # HISTORY. A run nobody timed - the hook, a direct Boot or Gate - is appended to the timing history
+    # with its true outcome; a timed run (its watcher records it) and a CI run (GitHub keeps its timings)
+    # are not; a history that cannot be written changes no verdict and no exit code.
+    $hist=Join-Path $sandbox 'timings.csv'
+    function Recorded([scriptblock]$Body,[hashtable]$With=@{},[string[]]$Seed=@()){
+        $saved=@{};foreach($k in @('ORVION_TIMED_LOG','GITHUB_ACTIONS','ORVION_TIMINGS_CSV','ORVION_TIMINGS_MAX_BYTES')){$saved[$k]=[Environment]::GetEnvironmentVariable($k)}
+        [Environment]::SetEnvironmentVariable('ORVION_TIMED_LOG',$null);[Environment]::SetEnvironmentVariable('GITHUB_ACTIONS',$null);$env:ORVION_TIMINGS_CSV=$hist
+        foreach($k in $With.Keys){[Environment]::SetEnvironmentVariable($k,$With[$k])}
+        Remove-Item -LiteralPath $hist -Force -ErrorAction SilentlyContinue
+        if($Seed.Count){[IO.File]::WriteAllLines($hist,$Seed)}
+        try{$r=& $Body;[pscustomobject]@{R=$r;Rows=@(if(Test-Path -LiteralPath $hist -PathType Leaf){Import-Csv -LiteralPath $hist})}}
+        finally{foreach($k in $saved.Keys){[Environment]::SetEnvironmentVariable($k,$saved[$k])}}
+    }
+    $x=Recorded {Reset-Fixture|Out-Null;Run}
+    $stageRows=@($x.Rows|Where-Object{$_.step-like'STAGE Boot *'});$inv=[Globalization.CultureInfo]::InvariantCulture
+    $stageSum=($stageRows|ForEach-Object{[double]::Parse($_.delta_min,$inv)}|Measure-Object -Sum).Sum;$total=if($x.Rows.Count){[double]::Parse($x.Rows[0].elapsed_min,$inv)}else{-1}
+    Assert '283-T8 HISTORY: an untimed Boot is recorded with its time, each stage, its outcome and its conditions' ($x.R.Code-eq0-and$x.Rows[0].run-eq'orvion-boot'-and$x.Rows[0].step-match'^TIME: Boot \d\d:\d\d:\d\d$'-and$x.Rows[-1].step-eq'END exit=0 ORVION: READY'-and$x.Rows[-1].env-match'head=[0-9a-f]{7,} via=direct'-and@($stageRows|Where-Object{$_.step-in'STAGE Boot repo-guard','STAGE Boot other'}).Count-eq2-and[Math]::Abs($stageSum-$total)-lt0.01) "sum=$stageSum total=$total`n$($x.R.Text)`n$($x.Rows|ConvertTo-Json)"
+    Pop 'TIME' 'accept'
+    $x=Recorded {Reset-Fixture|Out-Null;Put 'secret.txt' 'a write no contract authorised';Run Gate}
+    Assert '283-T9 HISTORY: a refused Gate is recorded as refused, with its code' ($x.R.Code-ne0-and$x.Rows[0].run-eq'orvion-gate'-and$x.Rows[-1].step-match'^END exit=1 ORVION: BLOCKED [A-Z_]+$') "$($x.R.Text)`n$($x.Rows|ConvertTo-Json)"
+    Pop 'TIME' 'accept'
+    Reset-Fixture;$r=Run
+    Assert '283-T12 STAGES: one line names every stage of an EXECUTE-mode Boot with its own time' ($r.Code-eq0-and$r.Text-match'(?m)^TIME: STAGES Boot setup=[\d.]+s history=[\d.]+s allocation=[\d.]+s contract=[\d.]+s repo-guard=[\d.]+s git=[\d.]+s pins=[\d.]+s transition=[\d.]+s other=[\d.]+s\s*$') $r.Text
+    Pop 'TIME' 'accept'
+    $t=Recorded {Reset-Fixture|Out-Null;Run} @{ORVION_TIMED_LOG=$timedLog};$c=Recorded {Reset-Fixture|Out-Null;Run} @{GITHUB_ACTIONS='true'}
+    Assert '283-T10 HISTORY: a timed run and a CI run leave the history to their own writers' ($t.R.Code-eq0-and$c.R.Code-eq0-and$t.Rows.Count-eq0-and$c.Rows.Count-eq0) "timed=$($t.Rows.Count) ci=$($c.Rows.Count)"
+    Pop 'TIME' 'reject'
+    $x=Recorded {Reset-Fixture|Out-Null;Run} @{ORVION_TIMINGS_CSV=$sandbox}
+    Assert '283-T11 HISTORY: a history that cannot be written is reported and changes no verdict or exit code' ($x.R.Code-eq0-and$x.R.Text-match'ORVION: READY'-and$x.R.Text-match'TIME_RECORD: not written') $x.R.Text
+    Pop 'TIME' 'accept'
+    # The bound holds on the evaluator's own append, not only when a watcher starts: a history already past
+    # ORVION_TIMINGS_MAX_BYTES keeps its header and its newest whole rows, this run's among them.
+    $seed=@('run,date,step,elapsed_min,delta_min,env')+@(1..300|ForEach-Object{"""old"",""2026-01-01 00:00:00"",""PASS seeded row $_"",1,1,""host=H"""})
+    $x=Recorded {Reset-Fixture|Out-Null;Run} @{ORVION_TIMINGS_MAX_BYTES='8000'} $seed;$bytes=if(Test-Path -LiteralPath $hist){(Get-Item -LiteralPath $hist).Length}else{-1}
+    $lines=if($bytes-gt0){[IO.File]::ReadAllLines($hist)}else{@()}
+    Assert '283-T13 HISTORY: the evaluator''s own append keeps the history within its bound, header first, newest rows whole' ($x.R.Code-eq0-and$bytes-gt0-and$bytes-le8000-and$lines[0]-eq$seed[0]-and$x.Rows[-1].step-eq'END exit=0 ORVION: READY'-and@($x.Rows|Where-Object{$_.step-eq'PASS seeded row 1'}).Count-eq0-and@($x.Rows|Where-Object{$_.step-eq'PASS seeded row 300'}).Count-eq1-and@($lines|Where-Object{$_-notmatch'^"[^"]*","[^"]*","[^"]*",[\d.]+,[\d.]+,"[^"]*"$'}).Count-eq1-and$x.R.Text-match'history: kept the newest') "bytes=$bytes lines=$($lines.Count)`n$($x.R.Text)"
+    Pop 'TIME' 'accept'
+    $ok=TimeMutant 'if ([IO.FileInfo]::new($Path).Length -le $MaxBytes) { return }' 'return'
+    $x=Recorded {Reset-Fixture|Out-Null;RunWith $mutant 'Boot'} @{ORVION_TIMINGS_MAX_BYTES='8000'} $seed;$bytes=if(Test-Path -LiteralPath $hist){(Get-Item -LiteralPath $hist).Length}else{-1};Pop 'TIME' 'mutation'
+    Assert '283-TM7 HISTORY MUTATION: Add-TimingRows is what bounds the evaluator''s append' ($ok-and$x.R.Code-eq0-and$bytes-gt8000) "bytes=$bytes"
+    $ok=TimeMutant 'Write-TimingRecord $label' '$null'
+    $x=Recorded {Reset-Fixture|Out-Null;RunWith $mutant 'Boot'};Pop 'TIME' 'mutation'
+    Assert '283-TM4 HISTORY MUTATION: the finally is what records a run' ($ok-and$x.R.Code-eq0-and$x.Rows.Count-eq0) "rows=$($x.Rows.Count)"
+    $ok=TimeMutant '$script:Outcome="ORVION: BLOCKED $(($_.Exception.Message-split'':'',2)[0])"' '$null'
+    $x=Recorded {Reset-Fixture|Out-Null;Put 'secret.txt' 'a write no contract authorised';RunWith $mutant 'Gate'};Pop 'TIME' 'mutation'
+    Assert '283-TM5 HISTORY MUTATION: the outcome is set where the refusal is printed' ($ok-and$x.R.Code-ne0-and@($x.Rows|Where-Object{$_.step-match'BLOCKED'}).Count-eq0) "$($x.Rows|ConvertTo-Json)"
+    $ok=TimeMutant 'function Mark-Stage([string]$Name){$now=$script:RunClock.Elapsed;$script:Stages[$Name]=$now-$script:StageMark;$script:StageMark=$now}' 'function Mark-Stage([string]$Name){}'
+    Reset-Fixture;$r=RunWith $mutant 'Boot';Pop 'TIME' 'mutation'
+    Assert '283-TM6 STAGES MUTATION: Mark-Stage is what times each stage' ($ok-and$r.Code-eq0-and$r.Text-notmatch'repo-guard=') $r.Text
+    Remove-Item -LiteralPath $mutant,$tl,$hist -Force -ErrorAction SilentlyContinue
 
     $collisionNeedle='SPEC-155 Agent'+' Control Plane';$collision=@(git -C $sourceRoot grep -n -F $collisionNeedle -- . 2>$null);$product=@(git -C $sourceRoot grep -n -F 'SPEC-155' -- 'supabase/migrations/*' 'reports/master/MASTER_EXECUTION_PLAN.md' 2>$null)
     Assert '43 control-plane identifier collision absent and product SPEC-155 remains' ($collision.Count-eq0-and$product.Count-gt0) "collision=$($collision.Count) product=$($product.Count)"
@@ -3639,13 +3735,14 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','PIN','ACI','TRUST','PROMOTE')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','PIN','ACI','TRUST','PROMOTE','TIME')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }
 
 }finally{
     Remove-Item Env:ORVION_GUARD_MARKER -ErrorAction SilentlyContinue
+    Remove-Item Env:ORVION_TIMED_LOG -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_LOG -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_GH -ErrorAction SilentlyContinue
     Remove-Item Env:ORVION_STUB_GH_LOG -ErrorAction SilentlyContinue

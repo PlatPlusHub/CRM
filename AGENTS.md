@@ -59,10 +59,13 @@ PLAN → FRESHNESS → PRECHECK → EXECUTE → VERIFY → CERTIFY
 - **VERIFY:** repeat the observation and exercise allowed/blocked behavior proportional to risk.
 - **CERTIFY:** run `-Gate`, all derived mandatory profiles plus CR additions, repository consistency, generated-artifact freshness, checkpoint validation, and Git checks.
 
-Before completion run:
+Before completion run it through the timed runner and watch it while it runs (`CR_LIFECYCLE.md` §9); started directly, `-Finish` refuses. The runner blocks until the run ends, so the watcher runs at the same time, from a second shell or the agent's background monitor, never after the runner returns; it waits for the log if the run has not started:
 
 ```powershell
-pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish
+# first shell: blocks until the run ends
+pwsh -NoProfile -File scripts/run_timed.ps1 -Log <log> -Command "pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Finish"
+# at the same time, a second shell or a background monitor
+pwsh -NoProfile -File scripts/watch_run.ps1 -Log <log> -Run finish-control -Brief
 ```
 
 Only a successful Finish permits Review/Complete, and that is now enforced rather than asked for: Finish writes a local certification receipt bound to the implementation state it certified, and the Gate refuses a Complete transition without a fresh matching one. CR transitions, immutable contract sections, synchronization, and command vocabulary live in `CR_LIFECYCLE.md`.
@@ -137,7 +140,7 @@ Read it before writing or quoting any test, guard, or measurement. The kernel ke
 
 ## 7. Governance and tooling boundaries
 
-Governance changes follow `GOVERNANCE.md §15` and owner authorization. Protected Canon, ADR, frozen baselines, schema, business rules, credentials, and external production systems require their owning authority. Tools and client hooks are adapters only; repository scripts/contracts + Git + CI own correctness. Skills may help but are never mandatory for correctness. Do not create parallel authorities, nested `AGENTS.md`, RAG/vector databases, knowledge graphs, context daemons/watchers, or generic semantic/dependency engines without separate owner-approved architecture. The on-demand run and CI watchers (`scripts/run_timed.ps1`, `scripts/watch_run.ps1`, `scripts/watch_ci.ps1`; owner-approved 2026-10-09) are reporting adapters inside this rule: started for one run and never resident, they write only a local timings file, never retry, rerun, dismiss, classify or approve anything, and never replace `-Finish` or `-Certify`.
+Governance changes follow `GOVERNANCE.md §15` and owner authorization. Protected Canon, ADR, frozen baselines, schema, business rules, credentials, and external production systems require their owning authority. Tools and client hooks are adapters only; repository scripts/contracts + Git + CI own correctness. Skills may help but are never mandatory for correctness. Do not create parallel authorities, nested `AGENTS.md`, RAG/vector databases, knowledge graphs, context daemons/watchers, or generic semantic/dependency engines without separate owner-approved architecture. The on-demand run and CI watchers (`scripts/run_timed.ps1`, `scripts/watch_run.ps1`, `scripts/watch_ci.ps1`; owner-approved 2026-10-09) are reporting adapters inside this rule: started for one run and never resident, they write only the local timing history, which the evaluator also appends to (`SPEC-283`), never retry, rerun, dismiss or approve anything, never classify a failure's cause - a finding is labelled only by what its evidence supports - and never replace `-Finish` or `-Certify`.
 
 Reports are durable only when they own evidence not better represented in CR/Git/tests/Canon/ADR: forensic/audit work, substantial research, architectural decisions, phase/capability boundaries, or a failure investigation that cannot be encoded more strongly. Historical reports are immutable. Ordinary checkpoints do not require a new report.
 
