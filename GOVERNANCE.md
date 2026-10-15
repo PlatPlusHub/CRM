@@ -4,9 +4,10 @@ Status: **Authoritative governance operating system for the knowledge/decision/r
 
 **Precedence & scope boundary (no overlap):** `AGENTS.md` is authoritative for **execution conduct** (how work is done, when to continue/stop, standing authorities). This document is authoritative for **knowledge governance** (where information lives and how decisions/documents flow). Where the two touch, AGENTS.md governs conduct and GOVERNANCE.md governs knowledge placement. Neither restates the other. `CR_LIFECYCLE.md` remains authoritative for the Change Request state machine.
 
-Version 1.20 · 2026-10-14 · Governs every future human, Claude, Codex, and AI/MCP session.
+Version 1.20.1 · 2026-10-16 · Governs every future human, Claude, Codex, and AI/MCP session.
 
 **Governance changelog** (governance governs itself — §15):
+- v1.20.1 (2026-10-16) — SPEC-284, owner-ratified Human Gate 1. Clarifies the existing certification lifecycle in `CR_LIFECYCLE.md` §§8–9: preserve original Finish evidence per exact candidate SHA, prepare locally before the next Finish independently of owner publication, retain the original checkout, and certify ordered promotions. PATCH: no SSOT reassignment, new CR status, credential boundary or certification authority.
 - v1.20 (2026-10-14) — SPEC-281. §6 rule 10: a line that names its owner holds exactly its ratified text, pinned by SHA-256 and refused by the Gate when it differs; changing one is an authority change that closes its consumers. The three Batch 6 pointer lines of the manifest are pinned. No authority moved.
 - v1.19 (2026-10-12) — SPEC-270. One deterministic generator, `scripts/generate-ai-map.ps1`, now writes both repository-only projections, `ai-map.json` and `repository-index.md`, and Check 7 verifies that both reproduce from their sources. The §2 rows and the authority graph name it. No authority moved.
 - v1.18 (2026-10-12) — owner objective of 2026-10-12, integrated by SPEC-269. The §2 execution-plan row now names the gate's **Action registry**, the one classification of every open obligation, whose trigger states `scripts/readiness_population.ps1` derives and Check 29 enforces. No authority moved: the register keeps every status, and the plan keeps the gate.

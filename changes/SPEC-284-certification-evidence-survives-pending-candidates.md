@@ -75,7 +75,7 @@ All external settings, authentication, production/database operations, Batch 6, 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -176,6 +176,16 @@ None.
 
 ### 2026-10-16 — execution opened
 Owner Human Gate 1 explicitly approved the exact reviewed Draft (SHA-256 d7edf3795ec9a955eca89583102879ab010d61d533a2773f44151d1445568100). Boot READY/PLAN; baseline HEAD/main/preflight 082d106, only the Draft uncommitted. Prototype source hashes and final 60/20 logs recovered without rerunning. The guard required a Draft origination commit before the approval transition; no guard was bypassed. Approval admissibility PASS. Implementation begins at Step 1; publication and promotion remain owner actions.
+
+### 2026-10-16 — Steps 1–5 implemented; Step 6 ready for Finish
+
+Schema-2 Finish receipts preserve every original field, contract identity, existing Git anchor and canonical digest. The existing evaluator now supports local full-SHA range Gate/binding, atomically retains the original claim per completion SHA, reuses valid records and refuses conflicts. Publisher requests the same binding before its unchanged preflight transport. Finish checks pending historical associations before removing working evidence, including missing-working-receipt and Git-proven legacy retirement. Completed certification selects only its exact record; clean nonterminal exact-Finish-HEAD certification, the existing remote reader, trusted Gate, promotion leases and ancestor proof remain. Runtime records are ignored. CR_LIFECYCLE §§8–9 clarify original-checkout retention, local preparation and owner publication/promotion; GOVERNANCE 1.20.1 is the ratified PATCH. Manifest pinned Batch 6 lines and all excluded files remain unchanged.
+
+Targeted implemented-code evidence, timed and watched while running where long: codec 3/0 (`implementation-codec-v2.log`); receipt mutation subset 33/0 (`implementation-mutations.log`, seven independent mutations: overwrite protection, SHA, CR, profiles, fingerprint, checksum and exact selection); existing reader assertions extracted unchanged with their fixtures 48/0 (`implemented-reader-regression-v2.log`, including all 15 inherited-run mutations); cutover/atomic/nonterminal subset 19/0 (`implemented-cutover-probe-v2.log`). Logs are in the existing owner-review evidence directory recorded in Notes. These subprocess probes use explicit child-command stubs and synthetic gh data against disposable bare Git, not full profiles or hosted enforcement. The final suite will execute all populations against the final implementation during Finish.
+
+Development failures were preserved and corrected, never counted as passes: JSON timestamp coercion, singleton-array unwrapping and decorated pipeline scalars broke canonical round trips; codec tests now exercise those representations. The sequence's missing-ref helper ignored Git's nonzero exit (34/3 before correction); its ordered C1/C2 certification/restoration assertions themselves passed, and the corrected helper passes in the mutation subset. A superseded reader extraction loaded the earlier codec. The first cutover extraction used an 8.3 TEMP alias rejected by PowerShell's provider; the long-path fixture correction passes. No guard, assertion population or mandatory command was removed. Independent fixture configurations remain explicit. No production/authentication/settings write or external security test occurred.
+
+Implementation is coherent and Resume Step DONE for the one required timed/watched Finish on this committed boundary. Acceptance/Review boxes remain unchecked until that final verification and independent Review. After local completion commit, prepare the exact SHA in this original checkout, retain a named pending-tail branch and the ignored evidence, and stop for owner publication with the existing publisher. Do not publish or promote as the agent. CTRL-19 and hosted security/PAT safety remain unproven/open under the owner's temporary risk acceptance.
 
 ## Verification Notes
 

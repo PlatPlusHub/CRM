@@ -3,6 +3,7 @@ param(
     [Parameter(ParameterSetName='Boot',Mandatory=$true)][switch]$Boot,
     [Parameter(ParameterSetName='Gate',Mandatory=$true)][switch]$Gate,
     [Parameter(ParameterSetName='Gate')][switch]$Trusted,
+    [Parameter(ParameterSetName='Gate')][switch]$BindCandidate,
     [Parameter(ParameterSetName='Finish',Mandatory=$true)][switch]$Finish,
     [Parameter(ParameterSetName='Certify',Mandatory=$true)][switch]$Certify,
     [string]$Root=(Split-Path $PSScriptRoot -Parent),
@@ -1549,6 +1550,10 @@ function Certification-Paths($Contract,[string]$Rel){
 function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
     $target=Target-Branch
     $receipt=[ordered]@{
+        # Receipt Schema: 2. Finish is the only origin of verification claims.
+        schema=2
+        contract=$Rel
+        finishHead=("$(git -C $Root rev-parse HEAD)").Trim()
         cr=$Contract.Id
         profiles=@($Profiles|Sort-Object)
         fingerprint=(Implementation-Fingerprint $Contract $Rel)
@@ -1563,18 +1568,219 @@ function Write-Certification($Contract,[string]$Rel,[string[]]$Profiles){
         result='READY'
         at=(Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
     }
-    [IO.File]::WriteAllText((Receipt-Path),(ConvertTo-Json $receipt -Depth 4),(New-Object Text.UTF8Encoding($false)))
+    $receipt.digest=Receipt-Digest $receipt
+    [IO.File]::WriteAllText((Receipt-Path),(ConvertTo-Json $receipt -Depth 12),(New-Object Text.UTF8Encoding($false)))
 }
 
+function Receipt-Json($Value){
+    # Canonical key order, recursively; arrays retain their order and empty arrays.
+    if($null-eq$Value){return 'null'}
+    # Pipeline-decorated strings can also satisfy -is [pscustomobject]. Serialize
+    # scalar values before examining object properties (a string's Length is not data).
+    if($Value-is[string]-or$Value-is[ValueType]){return (ConvertTo-Json -InputObject $Value -Compress)}
+    if($Value-is[Collections.IDictionary]-or$Value-is[pscustomobject]){
+        $keys=[string[]]$(if($Value-is[Collections.IDictionary]){@($Value.Keys)}else{@($Value.PSObject.Properties.Name)})
+        [Array]::Sort($keys,[StringComparer]::Ordinal)
+        $parts=@(foreach($key in $keys){
+            if($Value-is[Collections.IDictionary]){$v=$Value[$key]}else{$v=$Value.$key}
+            (ConvertTo-Json -InputObject $key -Compress)+':'+(Receipt-Json $v)
+        })
+        return '{'+($parts-join',')+'}'
+    }
+    if($Value-is[Collections.IEnumerable]-and$Value-isnot[string]){
+        return '['+(@(foreach($v in $Value){Receipt-Json $v})-join',')+']'
+    }
+    ConvertTo-Json -InputObject $Value -Compress -Depth 30
+}
+function Receipt-Digest($Record){
+    $fields=[ordered]@{}
+    if($Record-is[Collections.IDictionary]){foreach($k in $Record.Keys){if($k-cne'digest'){$fields[$k]=$Record[$k]}}}
+    else{foreach($p in $Record.PSObject.Properties){if($p.Name-cne'digest'){$fields[$p.Name]=$p.Value}}}
+    Get-TextSha256 (Receipt-Json $fields)
+}
+function Assert-ReceiptDigest($Record){
+    if($null-eq$Record-or$Record.digest-isnot[string]-or$Record.digest-cnotmatch'^[0-9a-f]{64}$'-or$Record.digest-cne(Receipt-Digest $Record)){throw 'RECEIPT_ALTERED'}
+}
+function Receipt-Value([System.Text.Json.JsonElement]$Element){
+    # ConvertFrom-Json converts ISO timestamps into DateTime on supported PS versions,
+    # changing their subsequent JSON spelling. Preserve JSON string values exactly.
+    switch("$($Element.ValueKind)"){
+        'Object'{
+            $fields=[ordered]@{}
+            foreach($p in $Element.EnumerateObject()){
+                if($fields.Contains($p.Name)){throw 'RECEIPT_DUPLICATE_FIELD'}
+                $fields[$p.Name]=Receipt-Value $p.Value
+            }
+            return [pscustomobject]$fields
+        }
+        'Array'{return ,@(foreach($v in $Element.EnumerateArray()){Receipt-Value $v})}
+        'String'{return $Element.GetString()}
+        'Number'{return $Element.GetInt64()}
+        'True'{return $true}
+        'False'{return $false}
+        'Null'{return $null}
+        default{throw 'RECEIPT_VALUE_INVALID'}
+    }
+}
+function Read-ReceiptJson([string]$Path){
+    if(!(Test-Path -LiteralPath $Path -PathType Leaf)){throw "RECEIPT_MISSING:$Path"}
+    $document=$null
+    try{$document=[System.Text.Json.JsonDocument]::Parse([IO.File]::ReadAllText($Path));$r=Receipt-Value $document.RootElement}catch{throw "RECEIPT_UNREADABLE:$Path"}
+    finally{if($document){$document.Dispose()}}
+    if($r-isnot[pscustomobject]){throw "RECEIPT_UNREADABLE:$Path"}
+    $r
+}
+function Assert-Certification($receipt,$Contract,[string]$Rel,[string[]]$Profiles,[switch]$Historical){
+    if($receipt.result-cne'READY'){throw "COMPLETION_PREREQUISITE:certification result $($receipt.result)"}
+    if($receipt.cr-cne$Contract.Id){throw "COMPLETION_PREREQUISITE:certification receipt names $($receipt.cr), not $($Contract.Id)"}
+    $certified=(@($receipt.profiles|Sort-Object)-join',');$derived=(@($Profiles|Sort-Object)-join',')
+    if($certified-cne$derived){throw "COMPLETION_PREREQUISITE:certification profiles $certified do not match the derived $derived"}
+    if(!$Historical-and$receipt.fingerprint-ne(Implementation-Fingerprint $Contract $Rel)){throw 'COMPLETION_PREREQUISITE:stale certification receipt - the implementation changed after it was certified'}
+    if($receipt.schema-isnot[ValueType]-or$receipt.schema-ne2){throw 'RECEIPT_SCHEMA_UNSUPPORTED:run -Finish; legacy evidence cannot be upgraded'}
+    Assert-ReceiptDigest $receipt
+    if($receipt.cr-isnot[string]-or$receipt.result-isnot[string]-or$receipt.contract-isnot[string]-or$receipt.profiles-isnot[array]){throw 'RECEIPT_IDENTITY_OR_PROFILES_INVALID'}
+    if($receipt.contract-cne$Rel){throw 'RECEIPT_IDENTITY_MISMATCH'}
+    if($receipt.contract-cnotmatch('^changes/'+[regex]::Escape($Contract.Id)+'-[A-Za-z0-9_.-]+\.md$')){throw 'RECEIPT_CONTRACT_INVALID'}
+    if($receipt.finishHead-isnot[string]-or$receipt.finishHead-cnotmatch'^[0-9a-f]{40}$'){throw 'RECEIPT_BASE_INVALID'}
+    Assert-Ref $receipt.finishHead
+    if($receipt.fingerprint-isnot[string]-or$receipt.fingerprint-cnotmatch'^[0-9a-f]{64}$'){throw 'RECEIPT_FINGERPRINT_INVALID'}
+    if($receipt.target-isnot[string]-or!$receipt.target.Trim()){throw 'RECEIPT_CONTEXT_MISSING:target branch missing; run -Finish'}
+    git -C $Root check-ref-format "refs/heads/$($receipt.target)" *> $null
+    if($LASTEXITCODE-ne0){throw 'RECEIPT_TARGET_INVALID'}
+    if($receipt.expected-isnot[array]-or!@($receipt.expected).Count-or@($receipt.expected|Where-Object{$_-isnot[string]-or!$_.Trim()}).Count){throw 'RECEIPT_CONTEXT_MISSING:expected workflows missing; run -Finish'}
+    $at=[datetime]::MinValue
+    if($receipt.at-isnot[string]-or![datetime]::TryParseExact($receipt.at,'yyyy-MM-ddTHH:mm:ssZ',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::AssumeUniversal,[ref]$at)){throw 'RECEIPT_TIME_INVALID'}
+}
 function Validate-Certification($Contract,[string]$Rel,[string[]]$Profiles){
     $path=Receipt-Path
     if(!(Test-Path -LiteralPath $path)){throw 'COMPLETION_PREREQUISITE:no local certification receipt - run -Finish and earn LOCAL_CERTIFY: READY first'}
-    try{$receipt=Get-Content -Raw -LiteralPath $path|ConvertFrom-Json}catch{throw 'COMPLETION_PREREQUISITE:unreadable local certification receipt'}
-    if($receipt.result-ne'READY'){throw "COMPLETION_PREREQUISITE:certification result $($receipt.result)"}
-    if($receipt.cr-ne$Contract.Id){throw "COMPLETION_PREREQUISITE:certification receipt names $($receipt.cr), not $($Contract.Id)"}
-    $certified=(@($receipt.profiles|Sort-Object)-join',');$derived=(@($Profiles|Sort-Object)-join',')
-    if($certified-ne$derived){throw "COMPLETION_PREREQUISITE:certification profiles $certified do not match the derived $derived"}
-    if($receipt.fingerprint-ne(Implementation-Fingerprint $Contract $Rel)){throw 'COMPLETION_PREREQUISITE:stale certification receipt - the implementation changed after it was certified'}
+    $receipt=Read-ReceiptJson $path
+    Assert-Certification $receipt $Contract $Rel $Profiles
+}
+
+function Candidate-ReceiptPath([string]$Sha){
+    if($Sha-cnotmatch'^[0-9a-f]{40}$'){throw 'RECEIPT_SHA_INVALID'}
+    Join-Path $Root ".orvion-certifications/$Sha.json"
+}
+function Candidate-Contract([string]$Sha,[string]$Rel){
+    # Minimal historical projection: never apply today's whole-contract schema to history.
+    if($Rel-cnotmatch'^changes/(?<id>SPEC-[0-9]+)-[A-Za-z0-9_.-]+\.md$'){throw 'RECEIPT_CONTRACT_INVALID'}
+    $id=$Matches.id
+    $text=Read-GitFile $Sha $Rel
+    if(!$text-or$text-cnotmatch('(?m)^# Change Request — '+[regex]::Escape($id)+'\s*$')){throw 'RECEIPT_IDENTITY_MISMATCH'}
+    if((Status-FromText $text)-ne'Complete'-or(Status-FromText (Read-GitFile "$Sha^" $Rel))-ne'In Progress'){throw 'RECEIPT_NOT_COMPLETION_SHA'}
+    [pscustomobject]@{Id=$id;Status='Complete';Scope=@(Bullets (Section $text 'Write Scope') 'WRITE_SCOPE')}
+}
+function Read-CandidateReceipt([string]$Sha,[string]$Rel,[switch]$Historical){
+    $record=Read-ReceiptJson (Candidate-ReceiptPath $Sha)
+    Assert-ReceiptDigest $record
+    if($record.schema-ne2-or$record.candidate-cne$Sha){throw 'RECEIPT_SHA_MISMATCH'}
+    $c=Candidate-Contract $Sha $Rel
+    Assert-Certification $record.receipt $c $Rel @(Profiles $c.Scope) -Historical:$Historical
+    git -C $Root merge-base --is-ancestor $record.receipt.finishHead $Sha *> $null
+    if($LASTEXITCODE-ne0){throw 'RECEIPT_BASE_NOT_ANCESTOR'}
+    $record
+}
+function Bind-CandidateReceipt($c,[string]$Rel,[string[]]$Profiles,[string]$Sha){
+    if(@(git -C $Root status --porcelain).Count){throw 'RECEIPT_DIRTY_TREE'}
+    if($Sha-cne("$(git -C $Root rev-parse HEAD)").Trim()){throw 'RECEIPT_SHA_MISMATCH'}
+    if($c.Status-ne'Complete'){
+        Write-Output 'PREPARE: NONTERMINAL (no completion record created)'
+        return
+    }
+    $path=Candidate-ReceiptPath $Sha
+    if(Test-Path -LiteralPath $path){
+        $null=Read-CandidateReceipt $Sha $Rel
+    }else{
+        $receipt=Read-ReceiptJson (Receipt-Path)
+        Assert-Certification $receipt $c $Rel $Profiles
+        $null=Candidate-Contract $Sha $Rel
+        git -C $Root merge-base --is-ancestor $receipt.finishHead $Sha *> $null
+        if($LASTEXITCODE-ne0){throw 'RECEIPT_BASE_NOT_ANCESTOR'}
+        $record=[ordered]@{schema=2;candidate=$Sha;receipt=$receipt}
+        $record.digest=Receipt-Digest $record
+        [void][IO.Directory]::CreateDirectory((Split-Path $path -Parent))
+        $temp="$path.$([guid]::NewGuid().ToString('N')).tmp"
+        try{
+            [IO.File]::WriteAllText($temp,(ConvertTo-Json $record -Depth 12),[Text.UTF8Encoding]::new($false))
+            # No overwrite, including a record created concurrently. An interrupted temp file
+            # is never a selectable record; retry still needs the original working receipt.
+            [IO.File]::Move($temp,$path,$false)
+        }finally{if(Test-Path -LiteralPath $temp){Remove-Item -LiteralPath $temp -Force}}
+        $null=Read-CandidateReceipt $Sha $Rel
+    }
+    Write-Output "PREPARED: $Sha"
+    Write-Output 'PREPARE: READY (local evidence bound; publication unproven)'
+}
+
+function Pending-Completions([string]$Upstream){
+    foreach($sha in @(git -C $Root rev-list --reverse "$Upstream..HEAD")){
+        foreach($r in @(Records-For $sha)){
+            if($r.Path-notmatch'^changes/SPEC-[0-9]+-.*\.md$'){continue}
+            $now=Read-GitFile $sha $r.Path
+            if(!$now){continue}
+            if((Status-FromText $now)-eq'Complete'-and(Status-FromText (Read-GitFile "$sha^" $r.Path))-ne'Complete'){
+                [pscustomobject]@{Sha=$sha;Rel=$r.Path}
+            }
+        }
+    }
+}
+function Receipt-AlreadyPromoted($Receipt){
+    # Cutover retires legacy evidence only on positive Git evidence, never by age,
+    # by the current CR, or by upgrading a legacy claim into schema 2.
+    if(!$Receipt.cr-or$Receipt.target-isnot[string]-or!$Receipt.target.Trim()){return $false}
+    git -C $Root check-ref-format "refs/heads/$($Receipt.target)" *> $null
+    if($LASTEXITCODE-ne0){return $false}
+    $target="refs/remotes/origin/$($Receipt.target)"
+    $paths=@(git -C $Root ls-tree -r --name-only $target -- changes 2>$null|Where-Object{$_-cmatch('^changes/'+[regex]::Escape($Receipt.cr)+'-[A-Za-z0-9_.-]+\.md$')})
+    if($LASTEXITCODE-ne0-or$paths.Count-ne1){return $false}
+    $text=Read-GitFile $target $paths[0]
+    if(!$text-or(Status-FromText $text)-ne'Complete'){return $false}
+    if($Receipt.schema-eq2){
+        try{Assert-ReceiptDigest $Receipt;Assert-Ref $Receipt.finishHead}catch{return $false}
+        git -C $Root merge-base --is-ancestor $Receipt.finishHead $target *> $null
+        if($LASTEXITCODE-ne0){return $false}
+    }
+    return $true
+}
+function Protect-PendingCertifications($c,[string]$Rel){
+    $upstream=git -C $Root rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
+    if($LASTEXITCODE-ne0){throw 'GIT_UPSTREAM_MISSING'}
+    $saved=@()
+    foreach($pending in @(Pending-Completions ("$upstream").Trim())){
+        if($pending.Rel-ceq$Rel){continue}
+        try{
+            $record=Read-CandidateReceipt $pending.Sha $pending.Rel -Historical
+            git -C $Root merge-base --is-ancestor $pending.Sha HEAD *> $null
+            if($LASTEXITCODE-ne0){throw 'RECEIPT_CANDIDATE_NOT_ANCESTOR'}
+            $saved+=,$record
+        }catch{throw "PENDING_RECEIPT_UNBOUND:$($pending.Sha):$($_.Exception.Message)"}
+    }
+    if(Test-Path -LiteralPath (Receipt-Path)){
+        $prior=Read-ReceiptJson (Receipt-Path)
+        # Same-CR retry still removes its previous receipt before any verification.
+        if($prior.cr-ceq$c.Id){return}
+        if(Receipt-AlreadyPromoted $prior){return}
+        if($prior.schema-ne2){throw 'PENDING_RECEIPT_UNBOUND:legacy evidence is not proven promoted'}
+        Assert-ReceiptDigest $prior
+        if(!@($saved|Where-Object{$_.receipt.digest-ceq$prior.digest}).Count){throw 'PENDING_RECEIPT_UNBOUND:working evidence has no retained pending candidate'}
+    }
+}
+function Select-Certification([string]$Sha){
+    if(@(git -C $Root status --porcelain).Count){throw 'RECEIPT_DIRTY_TREE'}
+    $m=Manifest
+    if(!$m.Active){
+        # A completed HEAD has exactly one door: its exact-SHA record. Never borrow
+        # the active working receipt, even when it happens to name this CR.
+        $record=Read-ReceiptJson (Candidate-ReceiptPath $Sha)
+        return (Read-CandidateReceipt $Sha $record.receipt.contract).receipt
+    }
+    $c=Contract (Join-Path $Root $m.Active)
+    if($c.Status-notin@('Approved','In Progress')){throw 'RECEIPT_IDENTITY_MISMATCH'}
+    $receipt=Read-ReceiptJson (Receipt-Path)
+    Assert-Certification $receipt $c $m.Active @(Profiles $c.Scope)
+    if($receipt.finishHead-cne$Sha){throw 'RECEIPT_SHA_MISMATCH'}
+    $receipt
 }
 
 function Validate-CompletionPrerequisites($Contract){
@@ -1976,6 +2182,7 @@ function Invoke-Verification([string]$Command,[string]$Label,[switch]$Additional
 }
 
 function Finish-Checks($c,[string[]]$profiles,[string]$rel){
+    Protect-PendingCertifications $c $rel
     # A previous receipt is destroyed FIRST. A Finish that fails must never leave a
     # READY receipt behind for the completion Gate to find.
     Remove-Item -LiteralPath (Receipt-Path) -Force -ErrorAction SilentlyContinue
@@ -2102,15 +2309,9 @@ function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
 function Certify-Remote {
     $sha=(git -C $Root rev-parse HEAD).Trim()
     Write-Output "SHA: $sha"
-    $path=Receipt-Path
-    if(!(Test-Path -LiteralPath $path)){
+    try{$receipt=Select-Certification $sha}catch{
         $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: no local certification receipt — the expected workflow set is unknown, so nothing can be proven. Run -Finish, then push, then certify.'
-        exit 1
-    }
-    try{$receipt=Get-Content -Raw -LiteralPath $path|ConvertFrom-Json}catch{
-        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: the local certification receipt is unreadable'
+        Write-Output "EVIDENCE: certification receipt refused: $($_.Exception.Message)"
         exit 1
     }
     $expected=@($receipt.expected|Where-Object{$_})
@@ -2260,6 +2461,12 @@ try{try{
     }
     if(!(Test-Path(Join-Path $Root 'AGENTS.md'))){throw 'AGENTS_MISSING'}
     if($Certify){Certify-Remote}
+    if($BindCandidate){
+        if($Trusted-or!$BaseRef){throw 'BIND_LOCAL_RANGE_REQUIRED:-BindCandidate requires a local, non-Trusted range Gate'}
+        if($BaseRef-cnotmatch'^[0-9a-f]{40}$'-or$HeadRef-cnotmatch'^[0-9a-f]{40}$'){throw 'BIND_FULL_SHA_REQUIRED'}
+        if($HeadRef-cne("$(git -C $Root rev-parse HEAD)").Trim()){throw 'RECEIPT_SHA_MISMATCH'}
+        if(@(git -C $Root status --porcelain).Count){throw 'RECEIPT_DIRTY_TREE'}
+    }
     if($BaseRef){Assert-Ref $BaseRef;Assert-Ref $HeadRef}
     # SPEC-281. A candidate's own CI runs the candidate's own evaluator, so a candidate that edits
     # it, or its workflow, certifies itself; GitHub also counts a skipped required check as passing.
@@ -2434,6 +2641,7 @@ try{try{
     foreach($name in $declaredCapabilities){Write-Output "CAPABILITY: $name EXTERNAL_EVIDENCE — $($script:Capabilities[$name].Note)"}
     Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo";Write-Output "BLOCKER: $($c.Blocker.ToLowerInvariant())"
     if($Finish){Mark-Stage 'checks';Finish-Checks $c $profiles ($rel-replace'\\','/');Mark-Stage 'verification'}
+    if($BindCandidate){Bind-CandidateReceipt $c ($rel-replace'\\','/') $profiles $HeadRef;Mark-Stage 'binding'}
     # A successful run states its OWN status (SPEC-166). Falling off the end leaves
     # whatever the last native command set, and `Read-GitFile` deliberately runs a
     # `git show` that FAILS whenever a path is absent at a ref - it leaves 128 behind

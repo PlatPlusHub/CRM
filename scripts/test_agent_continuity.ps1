@@ -71,7 +71,13 @@ function ManifestText([string]$Active='changes/SPEC-900-fixture.md'){"Active Cha
 # leaves ignored files alone, so it would otherwise survive every reset and let one
 # case certify the next one's fixture. It is removed explicitly.
 $receipt=Join-Path $root '.orvion-local-certification.json'
-function Reset-Fixture{git -C $root checkout main --quiet 2>$null;git -C $root branch --set-upstream-to origin/main main --quiet 2>$null;git -C $root reset --hard origin/main --quiet;git -C $root clean -fdq;Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue}
+function Reset-Fixture{
+    git -C $root checkout main --quiet 2>$null;git -C $root branch --set-upstream-to origin/main main --quiet 2>$null;git -C $root reset --hard origin/main --quiet;git -C $root clean -fdq
+    Remove-Item -LiteralPath $receipt -Force -ErrorAction SilentlyContinue
+    $records=[IO.Path]::GetFullPath((Join-Path $root '.orvion-certifications'))
+    if(!$records.StartsWith([IO.Path]::GetFullPath($sandbox)+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'fixture cleanup escaped sandbox'}
+    if(Test-Path -LiteralPath $records){Remove-Item -LiteralPath $records -Recurse -Force}
+}
 # `npx` and `docker` stubs, deliberately OUTSIDE the work tree so `git clean` cannot
 # remove them. Prepending them to PATH is what keeps this suite from running a real
 # `supabase db reset` against a developer's stack; the DATABASE cases assert that the
@@ -86,7 +92,27 @@ function Stub([string]$Name){
 function StubLog{if(Test-Path -LiteralPath $stubLog){(Get-Content -Raw -LiteralPath $stubLog)}else{''}}
 function StubGhLog{if(Test-Path -LiteralPath (Join-Path $sandbox 'gh.log')){(Get-Content -Raw -LiteralPath (Join-Path $sandbox 'gh.log'))}else{''}}
 function Receipt($Object){[IO.File]::WriteAllText($receipt,(ConvertTo-Json $Object -Depth 5),(New-Object Text.UTF8Encoding($false)))}
-function ReceiptJson{if(Test-Path -LiteralPath $receipt){Get-Content -Raw -LiteralPath $receipt|ConvertFrom-Json}else{$null}}
+function ReceiptJson{if(Test-Path -LiteralPath $receipt){Read-ReceiptJson $receipt}else{$null}}
+# Synthetic receipt setup for the existing CI-reader/segmented orchestration cases.
+# Reuse the implementation's serialization and fingerprint, never a second algorithm.
+# These helpers assert no verification claim about the authoritative checkout.
+$fixtureFunctions=@('Get-TextSha256','Receipt-Json','Receipt-Digest','Receipt-Value','Read-ReceiptJson','AiMap-CertifiedProjection','Implementation-Fingerprint','Normalize','Section','Bullets','Status-FromText','Section-OutOfScope','ChecklistItems','Contract','Contract-FromText','Get-ControlSurface','Test-ControlPath','Profiles')
+$tokens=$null;$parseErrors=$null
+$controlAst=[Management.Automation.Language.Parser]::ParseFile($control,[ref]$tokens,[ref]$parseErrors)
+if($parseErrors.Count){throw 'fixture evaluator parse failed'}
+foreach($fn in $controlAst.EndBlock.Statements|Where-Object{$_-is[Management.Automation.Language.FunctionDefinitionAst]-and$_.Name-in$fixtureFunctions}){. ([scriptblock]::Create($fn.Extent.Text))}
+function RemoteReceipt($Object,[string]$Rel='changes/SPEC-900-fixture.md'){
+    $c=Contract (Join-Path $root $Rel)
+    $Object.schema=2;$Object.contract=$Rel;$Object.finishHead=(git -C $root rev-parse HEAD).Trim()
+    $Object.fingerprint=Implementation-Fingerprint $c $Rel;$Object.profiles=@(Profiles $c.Scope)
+    $Object.at='2026-10-16T00:00:00Z';$Object.digest=Receipt-Digest $Object
+    Receipt $Object
+}
+function Retain-FixtureReceipt{
+    $sha=(git -C $root rev-parse HEAD).Trim()
+    $record=[ordered]@{schema=2;candidate=$sha;receipt=(ReceiptJson)};$record.digest=Receipt-Digest $record
+    Put ".orvion-certifications/$sha.json" (ConvertTo-Json $record -Depth 12)
+}
 function Run([string]$Mode='Boot'){
     $o=& pwsh -NoProfile -File $control "-$Mode" -Root $root 2>&1;$code=$LASTEXITCODE
     [pscustomobject]@{Text=($o|Out-String);Code=$code;Lines=@($o).Count}
@@ -489,7 +515,7 @@ try{
     Put 'changes/SPEC-900-fixture.md' (ContractText)
     Put 'changes/SPEC-800-complete.md' (ContractText -Id SPEC-800 -Status Complete -Resume DONE)
     Put 'changes/SPEC-801-cancelled.md' (ContractText -Id SPEC-801 -Status Cancelled -Resume DONE)
-    Put '.gitignore' ".orvion-local-certification.json`n"
+    Put '.gitignore' ".orvion-local-certification.json`n.orvion-certifications/`n"
     # DATABASE fixtures. The protocol is now EXECUTED rather than listed, so the
     # sandbox needs every file it reads and a project-local CLI for the
     # `supabase-local` probe. Real Supabase and Docker are replaced by stubs below.
@@ -1380,7 +1406,7 @@ exit 0
         $rows=@($Runs|ForEach-Object{if(!$_.headSha){$_.headSha=$Sha};$_})
         [IO.File]::WriteAllText((Join-Path $ghDir "$Sha.json"),(ConvertTo-Json @($rows) -Depth 6 -AsArray))
     }
-    function ExpectBoth([string]$Target='main'){Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';target=$Target;expected=@('Agent Control','Repository Consistency')}}
+    function ExpectBoth([string]$Target='main'){RemoteReceipt @{cr='SPEC-900';result='READY';target=$Target;expected=@('Agent Control','Repository Consistency')}}
 
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
     GhRuns @((Run1 'Agent Control')) $sha;$r=RunCertify
@@ -1447,7 +1473,7 @@ exit 0
     # A receipt written before the target branch existed cannot be rescued by guessing a
     # default, because guessing the branch IS the defect.
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
-    Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';expected=@('Agent Control','Repository Consistency')}
+    RemoteReceipt @{cr='SPEC-900';result='READY';expected=@('Agent Control','Repository Consistency')}
     GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
     Assert '148 a receipt recording no target branch fails closed and names -Finish' ($r.Code-ne0-and$r.Text-notmatch'REMOTE_CERTIFY: READY'-and$r.Text-match'target branch'-and$r.Text-match'-Finish') $r.Text
 
@@ -1470,7 +1496,7 @@ exit 0
     function GhAdd([object[]]$Runs,[string]$File){[IO.File]::WriteAllText((Join-Path $ghDir "$File.json"),(ConvertTo-Json @($Runs) -Depth 6 -AsArray))}
     function RunAt([string]$Name,[string]$Sha,[string]$Status='completed',[string]$Conclusion='success',[string]$Branch='main',[string]$Evt='push'){Run1 $Name $Status $Conclusion $Branch $Evt $Sha}
     function PushHead([string]$Message){Commit $Message;git -C $root push origin main --quiet 2>$null;(git -C $root rev-parse HEAD).Trim()}
-    function ExpectFlow([string]$Flow='Db'){Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='0';result='READY';target='main';expected=@('Always',$Flow)}}
+    function ExpectFlow([string]$Flow='Db'){RemoteReceipt @{cr='SPEC-900';result='READY';target='main';expected=@('Always',$Flow)}}
     function InhBase{Reset-Fixture;$script:iB=(git -C $root rev-parse HEAD).Trim()}
     function InhRestore{Remove-Item Env:ORVION_STUB_GH_PERMISSIVE -ErrorAction SilentlyContinue;git -C $root checkout main --quiet 2>$null;git -C $root push origin +"$($script:iB):refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
     function InhCase([string]$Name,[string]$Kind,[scriptblock]$Build,[scriptblock]$Pass){
@@ -3190,9 +3216,11 @@ exit 0
         git -C $root push origin main --quiet
         Put 'supabase/migrations/20260101_fixture.sql' 'select 2;'
         if($FirstExtra){Put $FirstExtra 'first-segment unauthorized write'}
+        RemoteReceipt @{cr='SPEC-900';result='READY';target='main';expected=@('Always','Docs','Db')}
         Put 'changes/SPEC-900-fixture.md' (ContractText -Status Complete -Resume DONE -Scope $first -Capabilities 'supabase-local' -Additional 'pwsh -NoProfile -File scripts/verify_fixture.ps1' -Closeable)
         if(-not $KeepFirstPointer){Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')}
         Commit first-segment-complete
+        Retain-FixtureReceipt
         Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Draft -Scope $SecondScope -Evidence (EvidenceText))
         Commit second-draft
         Put 'changes/SPEC-901-born.md' (ContractText -Id SPEC-901 -Status Approved -Scope $SecondScope -Evidence (EvidenceText))
@@ -3285,7 +3313,7 @@ exit 0
     Assert 'SEG-16 each completed segment keeps the In Progress to Complete transition' ($r.Code-ne0-and$r.Text-match'INVALID_COMPLETION_TRANSITION|ILLEGAL_STATUS_TRANSITION:Approved->Complete') $r.Text
 
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
-    Receipt @{cr='SPEC-900';profiles=@('REPOSITORY');fingerprint='fixture';result='READY';target='main';expected=@('Always','Docs','Db')}
+    RemoteReceipt @{cr='SPEC-900';result='READY';target='main';expected=@('Always','Docs','Db')}
     GhRuns @((Run1 'Always'),(Run1 'Docs')) $sha;$r=RunCertify
     Assert 'SEG-5 absent prior-segment Db run fails certification' ($r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db') $r.Text
     GhRuns @((Run1 'Always'),(Run1 'Docs'),(Run1 'Db' 'completed' 'failure')) $sha;$r=RunCertify

@@ -66,7 +66,7 @@ Write-Output "HEAD: $head"
 #    range needs no rule of its own: the Gate already fails it closed as NO_GOVERNING_CR.
 $gate = Join-Path $Root 'scripts/check_agent_continuity.ps1'
 if (-not (Test-Path -LiteralPath $gate)) { Fail 'GATE_SCRIPT_MISSING' $gate }
-& pwsh -NoProfile -File $gate -Gate -Root $Root -BaseRef $base -HeadRef $head
+& pwsh -NoProfile -File $gate -Gate -BindCandidate -Root $Root -BaseRef $base -HeadRef $head
 if ($LASTEXITCODE -ne 0) { Fail 'RANGE_GATE_FAILED' "committed range $base..$head was refused; nothing was pushed" }
 
 # 5. Push. Exactly one of two forms, chosen by whether the caller supplied an expectation.

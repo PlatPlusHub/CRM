@@ -45,3 +45,4 @@ backup/
 # an observation about a machine, never repository truth: CI holds no receipt and re-executes
 # the certification instead. Committing it would publish a claim nobody can re-derive.
 .orvion-local-certification.json
+.orvion-certifications/
