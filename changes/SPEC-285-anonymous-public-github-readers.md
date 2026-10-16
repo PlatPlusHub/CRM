@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -186,6 +186,10 @@ Post-Implementation Proof Obligation: final derived CONTROL and REPOSITORY comma
 ## Execution Log
 
 None.
+
+### 2026-10-16 — Gate 1 approval recorded
+
+Owner explicitly approved frozen Draft SHA256 05FD9912A6E097CF4227E79568DE0A26CC46E75101C4AAAFF0B75FDF3917CE2F at baseline ff6a8a0db2d95dd79838578470b482afbe33e1a0. Immediately revalidated hash, all ten source anchors and refreshed origin/main; allocator cursor 284 and SPEC-285 unreserved before Draft allocation 6ff5745. No implementation performed before this transition. CTRL-19 remains OPEN.
 
 ## Verification Notes
 
