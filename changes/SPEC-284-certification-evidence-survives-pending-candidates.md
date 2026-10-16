@@ -161,14 +161,14 @@ Post-Implementation Proof Obligation: The new focused suite and all derived CONT
 
 ## Acceptance Criteria
 
-- [ ] Finish remains the sole source of local claims and records schema 2 plus all original certification fields. `check: has scripts/check_agent_continuity.ps1 "Receipt Schema: 2"`
-- [ ] Local Gate/binding prepares the exact completion SHA without authentication or transport; the existing publisher reuses it before preflight push. `check: has scripts/publish_candidate.ps1 "-BindCandidate"`
-- [ ] Retained exact-SHA records survive later successful/failed Finish, and unbound pending evidence cannot be silently removed.
-- [ ] Wrong/missing/altered/stale evidence and contradictory identity/profiles/context fail closed; no old record or CI success can be borrowed.
-- [ ] Two candidates can be prepared before owner publication; fresh-process, checkout-restoration and remote-reader tests prove ordered certification in the original checkout, with required mutations killed and restored.
-- [ ] Existing transition, scope, trusted-evaluator, nonterminal exact-SHA certification, CI applicability, target-ref and ancestor-proof behavior is preserved.
-- [ ] Certification procedure, ignored runtime output and governance clarification agree. `check: has CR_LIFECYCLE.md "Receipt Schema: 2"`
-- [ ] Generated projections match their source; promotion remains owner-only and CTRL-19 remains open.
+- [x] Finish remains the sole source of local claims and records schema 2 plus all original certification fields. `check: has scripts/check_agent_continuity.ps1 "Receipt Schema: 2"`
+- [x] Local Gate/binding prepares the exact completion SHA without authentication or transport; the existing publisher reuses it before preflight push. `check: has scripts/publish_candidate.ps1 "-BindCandidate"`
+- [x] Retained exact-SHA records survive later successful/failed Finish, and unbound pending evidence cannot be silently removed.
+- [x] Wrong/missing/altered/stale evidence and contradictory identity/profiles/context fail closed; no old record or CI success can be borrowed.
+- [x] Two candidates can be prepared before owner publication; fresh-process, checkout-restoration and remote-reader tests prove ordered certification in the original checkout, with required mutations killed and restored.
+- [x] Existing transition, scope, trusted-evaluator, nonterminal exact-SHA certification, CI applicability, target-ref and ancestor-proof behavior is preserved.
+- [x] Certification procedure, ignored runtime output and governance clarification agree. `check: has CR_LIFECYCLE.md "Receipt Schema: 2"`
+- [x] Generated projections match their source; promotion remains owner-only and CTRL-19 remains open.
 
 ## Execution Log
 
@@ -187,17 +187,30 @@ Development failures were preserved and corrected, never counted as passes: JSON
 
 Implementation is coherent and Resume Step DONE for the one required timed/watched Finish on this committed boundary. Acceptance/Review boxes remain unchecked until that final verification and independent Review. After local completion commit, prepare the exact SHA in this original checkout, retain a named pending-tail branch and the ignored evidence, and stop for owner publication with the existing publisher. Do not publish or promote as the agent. CTRL-19 and hosted security/PAT safety remain unproven/open under the owner's temporary risk acceptance.
 
+### 2026-10-16 — final local verification
+
+The required Finish ran once on committed implementation b868959a248225959ae7fe4c92788720f90fcf11 through run_timed.ps1 with watch_run.ps1 attached concurrently. `LOCAL_CERTIFY: READY`, exit 0, total 76.7 minutes; START conditions: Windows host DESKTOP-6J1RJ8V, PowerShell 7.6.7, 8 CPUs, concurrent=0. Full CONTROL 522 passed / 0 failed; cold-start 42/0; status-contradiction, primary-ledger and future-date guard commands PASS; repository consistency and git diff --check PASS. Full Additional receipt suite 64/0, with all seven mutations admitting the wrong behavior and restoring refusal. No required command was skipped or repeated. The suite's profile children are orchestration stubs and its gh evidence synthetic; bare Git transport and actual evaluator/publisher processes ran. Hosted acceptance, credential isolation and PAT safety are not proven by these results.
+
+Evidence in the existing owner-review directory: spec-284-finish.log SHA-256 10a6394ceb001fd6281f3023e5e7ca436b0c7523418804aae6ea738caf550726; spec-284-control.log ff3b556f5bab68b57a68e61515668bcad8401096bebf30256e458a543f5807b2; spec-284-receipts.log 8c1dcc324109f55a9080d6fd44096f67f4035b16f11b0b94158a3241dddc1128. The watcher marked elapsed-time comparisons as hypotheses; they establish duration, not a cause or an implemented performance change.
+
 ## Verification Notes
 
 None.
 
+### 2026-10-16 — independent Review against live state
+Verdict: Confirmed Complete
+
+Reviewed the live implementation, full verification outputs and actual schema-2 working receipt, rather than relying on the execution narrative. All eight Acceptance Criteria and five Review Gate items are satisfied locally: original fields/digests and anchor are present; standalone Gate/binding and publisher reuse are tested; successful/failed Finish and transport preserve pending records; wrong SHA/CR/profiles/content/context and missing records fail closed; two unpublished candidates, restart, atomic recovery, ordered reader certification and checkout restoration pass; all existing CONTROL assertions remain (522/0), including SPEC-167, SPEC-281, promotion leases and ancestor proof; lifecycle/ignore/governance agree; generated state reproduces. Re-fetch observed ahead 4 / behind 0 and a clean tree. The committed diff contains only approved paths, and excluded scripts, workflows, historical contracts, master registers and pinned Batch 6 authority lines are unchanged.
+
+The real working receipt names SPEC-284, CONTROL + REPOSITORY, finishHead b868959a248225959ae7fe4c92788720f90fcf11, target main, expected Agent Control + Repository Consistency, result READY, digest 8efcf5155e14ebbf1a10edc628e6f5030ff6ac48f458d1bdd02bd6d0212a1e10. It remains local evidence. Current-candidate binding necessarily follows its completion commit; prepare with the existing evaluator in this original checkout, preserve a named pending-tail branch and ignored records, then hand the exact SHA to the owner for the existing publisher. Publication, hosted acceptance, owner promotion and exact-SHA Remote Certification remain pending. No new architectural/business decision, authentication change or external write was introduced. CTRL-19 remains open.
+
 ## Review Gate
 
-- [ ] Every change matches the approved steps; no unrelated scope change.
-- [ ] All acceptance criteria hold and all required positive/negative/mutation populations are nonempty.
-- [ ] No existing test, guard, profile or immutable historical contract was weakened.
-- [ ] Original Finish evidence is retained; preparation never claims publication, acceptance or promotion, which remain separate owner actions and observations.
-- [ ] Repository/generated state is consistent and the candidate handoff separates LOCAL, POST_PUSH and EXTERNAL evidence.
+- [x] Every change matches the approved steps; no unrelated scope change.
+- [x] All acceptance criteria hold and all required positive/negative/mutation populations are nonempty.
+- [x] No existing test, guard, profile or immutable historical contract was weakened.
+- [x] Original Finish evidence is retained; preparation never claims publication, acceptance or promotion, which remain separate owner actions and observations.
+- [x] Repository/generated state is consistent and the candidate handoff separates LOCAL, POST_PUSH and EXTERNAL evidence.
 
 ## Notes
 
