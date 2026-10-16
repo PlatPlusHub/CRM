@@ -6,6 +6,32 @@ $publisher=Join-Path $sourceRoot 'scripts/publish_candidate.ps1'
 $promoter=Join-Path $sourceRoot 'scripts/promote_main.ps1'
 $sandbox=Join-Path ([IO.Path]::GetTempPath())("orvion-agent-control-test-$([guid]::NewGuid().ToString('N'))")
 $remote=Join-Path $sandbox 'remote.git';$root=Join-Path $sandbox 'work';$writer=Join-Path $sandbox 'writer'
+
+# Explicit judgment fixture: only transport is stubbed; actual HTTP has its own suite.
+[void][IO.Directory]::CreateDirectory($sandbox)
+$readerFixture=Join-Path $sandbox 'reader-fixture.ps1'
+$readerSource=Join-Path $sourceRoot 'scripts/github_public_read.ps1'
+$fixtureText=". '$($readerSource.Replace("'","''"))'"+[char]10
+$fixtureText+=@'
+function Get-OrvionPublicRepo([string]$Root) { 'fixture/repository' }
+function Test-OrvionPublicGithub([string]$Root) { throw 'PUBLIC_READ:FIXTURE_NOT_PUBLIC' }
+function Get-OrvionPublicRuns([string]$Repo,[string]$Sha='',[string]$Branch='',[string]$Event='',[string]$WorkflowPath='') {
+    $a=@('run','list','--branch',$Branch,'--event',$Event,'--limit','100','--json','attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName')
+    if($Sha){$a+=@('--commit',$Sha)}
+    if($WorkflowPath){$yaml=[IO.File]::ReadAllText((Join-Path $Root $WorkflowPath));$name=[regex]::Match($yaml,'(?m)^name:\s*(.+?)\s*$').Groups[1].Value;$a+=@('--workflow',$name)}
+    $raw=gh @a
+    if($LASTEXITCODE-ne0){throw 'PUBLIC_READ:FIXTURE_UNREADABLE'}
+    $parsed=$raw|ConvertFrom-Json
+    $parsed
+}
+'@
+[IO.File]::WriteAllText($readerFixture,$fixtureText)
+$controlCopy=Join-Path $sandbox 'evaluator.ps1'
+$controlText=[IO.File]::ReadAllText($control)
+$controlText=$controlText.Replace('. (Join-Path $PSScriptRoot ''github_public_read.ps1'')',(". '"+$readerFixture.Replace("'","''")+"'"))
+[IO.File]::WriteAllText($controlCopy,$controlText)
+$control=$controlCopy
+
 $script:pass=0;$script:fail=0
 function Assert($Name,[bool]$Condition,[string]$Evidence=''){if($Condition){$script:pass++;Write-Host "PASS $Name"}else{$script:fail++;Write-Host "FAIL $Name :: $Evidence"}}
 function ContractText(
@@ -1048,11 +1074,11 @@ try{
     # is exactly how this case failed in CI while passing on an authenticated
     # workstation. What must hold everywhere is that a registered capability is never
     # treated as unknown; the outcome is then checked against what is actually true here.
-    gh auth status *>$null;$ghAuthed=($LASTEXITCODE-eq0)
+    # The local-bare fixture is deliberately not a public GitHub origin.
     Reset-Fixture;Rebase (ContractText -Capabilities github);$r=Run
     $probed=($r.Text-notmatch'NO_DETERMINISTIC_CAPABILITY_PROBE')-and($r.Text-notmatch'CAPABILITY: github')
-    $honest=if($ghAuthed){$r.Code-eq0-and$r.Text-match'MODE: EXECUTE'}else{$r.Code-ne0-and$r.Text-match'MISSING_REQUIRED_CAPABILITY:github'}
-    Assert "90 MUST-ACCEPT: a LOCAL_PROBE capability is probed and reports honestly (gh authenticated: $ghAuthed)" ($probed-and$honest) $r.Text
+    $honest=$r.Code-ne0-and$r.Text-match'MISSING_REQUIRED_CAPABILITY:github:PUBLIC_READ:FIXTURE_NOT_PUBLIC'
+    Assert "90 a LOCAL_PROBE capability refuses a fixture that has no public GitHub origin" ($probed-and$honest) $r.Text
     Reset-Fixture;Rebase (ContractText -Capabilities n8n);$r=Run
     Assert '91 an EXTERNAL_EVIDENCE capability is declared, never claimed proven' ($r.Code-eq0-and$r.Text-match'CAPABILITY: n8n EXTERNAL_EVIDENCE'-and$r.Text-notmatch'MISSING_REQUIRED_CAPABILITY') $r.Text
 
@@ -1486,6 +1512,15 @@ exit 0
     git -C $root reset --hard $sha --quiet;$r=RunCertify
     Assert '149 a target ref that moved past the certified SHA is FAILED, never READY' ($r.Code-ne0-and$r.Text-match'TARGET_REF_MOVED'-and$r.Text-notmatch'REMOTE_CERTIFY: READY') $r.Text
     git -C $root push origin +"$sha`:refs/heads/main" --quiet 2>$null
+
+
+    foreach($result in @('failure','skipped','neutral','success')){
+        Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
+        $current=Run1 'Repository Consistency' 'completed' $result;$current.attempt=2
+        GhRuns @((Run1 'Agent Control'),$current) $sha;$r=RunCertify
+        $ok=if($result-eq'success'){$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'}else{$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'}
+        Assert "PUBLIC-READER current attempt 2 literal $result retains existing judgment" ($ok-and$r.Text-match"attempt 2 completed/$result") $r.Text
+    }
 
     # ---- A path-filtered workflow GitHub never started may carry its nearest run (SPEC-263) ----
     # Measured on `f61ed84`: Migration CI ran and passed on `a87fa92`, the Complete commit

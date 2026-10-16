@@ -9,6 +9,23 @@ $publisher=Join-Path $PSScriptRoot 'publish_candidate.ps1'
 $sandbox=Join-Path ([IO.Path]::GetTempPath()) ('orvion-receipts-'+[guid]::NewGuid().ToString('N'))
 $root=Join-Path $sandbox 'original';$remote=Join-Path $sandbox 'remote.git'
 $bin=Join-Path $sandbox 'bin';$rows=Join-Path $sandbox 'rows';$hooks=Join-Path $sandbox 'hooks'
+
+# Reader-only dependency bridge. Receipt implementation and every prior assertion stay unchanged.
+[void][IO.Directory]::CreateDirectory($sandbox)
+$readerFixture=Join-Path $sandbox 'reader-fixture.ps1'
+$fixture=@'
+function Get-OrvionPublicRepo([string]$Root) { 'fixture/repository' }
+function Get-OrvionPublicRuns([string]$Repo,[string]$Sha='',[string]$Branch='',[string]$Event='',[string]$WorkflowPath='') {
+    $raw=gh run list --commit $Sha --branch $Branch --event $Event
+    if($LASTEXITCODE-ne0){throw 'PUBLIC_READ:FIXTURE_UNREADABLE'}
+    $raw|ConvertFrom-Json
+}
+'@
+[IO.File]::WriteAllText($readerFixture,$fixture)
+$copy=Join-Path $sandbox 'evaluator.ps1'
+$text=[IO.File]::ReadAllText($control).Replace('. (Join-Path $PSScriptRoot ''github_public_read.ps1'')',(". '"+$readerFixture.Replace("'","''")+"'"))
+[IO.File]::WriteAllText($copy,$text);$control=$copy
+
 $script:pass=0;$script:fail=0
 function Assert([string]$Name,[bool]$Ok,[string]$Evidence=''){
     if($Ok){$script:pass++;Write-Host "PASS $Name"}else{$script:fail++;Write-Host "FAIL $Name :: $Evidence"}

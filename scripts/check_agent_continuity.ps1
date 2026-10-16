@@ -11,6 +11,7 @@ param(
     [string]$HeadRef='HEAD'
 )
 $ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'github_public_read.ps1')
 # SPEC-283. Every run states how long it took, in every mode and on every exit path - the pre-commit
 # hook, CI, the owner's promoter and an agent alike. The `finally` around the run prints
 # `TIME: <mode> hh:mm:ss` after the verdict; `exit` runs it and keeps the exit code.
@@ -1979,6 +1980,7 @@ function Get-ControlSurface {
         'README.md','llms.txt','CLAUDE.md','GEMINI.md',
         '.cursor/rules/orvion.mdc','.github/copilot-instructions.md',
         'scripts/check_agent_continuity.ps1','scripts/test_agent_continuity.ps1',
+        'scripts/github_public_read.ps1','scripts/test_github_public_read.ps1',
         'scripts/check_repository_consistency.ps1',
         '.githooks/','.claude/hooks/','.github/workflows/agent-control.yml'
     )
@@ -2098,8 +2100,8 @@ function Get-ProfileEvidence([string]$Profile){
 # the MCP servers `.workstation/doctor.ps1` verifies in `.mcp.json`.
 $script:Capabilities=@{
     'github'          =@{Class='LOCAL_PROBE';Probe={
-        gh auth status *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:github:gh_auth_status'}
-        git -C $Root ls-remote origin HEAD *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:github:git_ls_remote'}}}
+        try{Test-OrvionPublicGithub $Root}catch{throw ('MISSING_REQUIRED_CAPABILITY:github:'+$_.Exception.Message)}
+        }}
     'docker'          =@{Class='LOCAL_PROBE';Probe={
         docker info *>$null;if($LASTEXITCODE-ne0){throw 'MISSING_REQUIRED_CAPABILITY:docker:docker_info'}}}
     'supabase-local'  =@{Class='LOCAL_PROBE';Probe={
@@ -2270,9 +2272,9 @@ function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
     if(($block.Success-and$bullets-ne$globs.Count)-or@($globs|Where-Object{$_-cnotmatch'^[A-Za-z0-9_./*-]+$'}).Count){
         return (& $no "the path filter of $Workflow cannot be read exactly")
     }
-    $raw=gh run list --workflow $Workflow --branch $Target --event push --limit 100 --json 'attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName' 2>$null
-    if($LASTEXITCODE-ne0-or!$raw){return (& $no "gh could not read the runs of $Workflow on $Target")}
-    try{$parsed=$raw|ConvertFrom-Json}catch{return (& $no "gh returned runs of $Workflow this command cannot parse")}
+    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Branch $Target -Event push -WorkflowPath $def) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$LASTEXITCODE=1}
+    if($LASTEXITCODE-ne0-or!$raw){return (& $no "anonymous API could not read the runs of $Workflow on $Target")}
+    try{$parsed=$raw|ConvertFrom-Json}catch{return (& $no "anonymous API returned runs of $Workflow this command cannot parse")}
     # Nearness is position in this SHA's own ancestry, never the order gh returns.
     $order=@{};$i=0
     foreach($c in @(git -C $Root rev-list --topo-order $Sha)){$order[("$c").Trim()]=$i++}
@@ -2341,10 +2343,10 @@ function Certify-Remote {
     # The field list is quoted so it stays ONE token however `gh` resolves: in argument
     # mode a bare `a,b,c` reaches a native executable as a single string but becomes an
     # ARRAY when the resolved command is a PowerShell script.
-    $raw=gh run list --commit $sha --branch $target --event push --limit 100 --json 'attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName' 2>$null
+    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Sha $sha -Branch $target -Event push) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$LASTEXITCODE=1}
     if($LASTEXITCODE-ne0-or!$raw){
         $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: gh could not read workflow runs for this SHA'
+        Write-Output 'EVIDENCE: anonymous API could not read workflow runs for this SHA'
         exit 1
     }
     # ASSIGN, then wrap. `ConvertFrom-Json` emits a JSON array as ONE pipeline item, so
@@ -2355,7 +2357,7 @@ function Certify-Remote {
     # it becomes a real defect the moment individual rows are inspected.
     try{$parsed=$raw|ConvertFrom-Json}catch{
         $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: gh returned evidence this command cannot parse'
+        Write-Output 'EVIDENCE: anonymous API returned evidence this command cannot parse'
         exit 1
     }
     $all=@($parsed)

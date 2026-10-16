@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -74,7 +74,7 @@ No authentication cutover, PAT/account/App creation, security settings, database
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -190,6 +190,15 @@ None.
 ### 2026-10-16 — Gate 1 approval recorded
 
 Owner explicitly approved frozen Draft SHA256 05FD9912A6E097CF4227E79568DE0A26CC46E75101C4AAAFF0B75FDF3917CE2F at baseline ff6a8a0db2d95dd79838578470b482afbe33e1a0. Immediately revalidated hash, all ten source anchors and refreshed origin/main; allocator cursor 284 and SPEC-285 unreserved before Draft allocation 6ff5745. No implementation performed before this transition. CTRL-19 remains OPEN.
+
+### 2026-10-16 — Implementation checkpoint (Codex)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: refreshed authoritative baseline and all ten blob anchors matched; exact owner-approved Draft allocated as 6ff5745 and approval recorded as bf9bd68 after APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: installed reviewed anonymous bounded GET/schema adapter, existing github capability and evaluator/watcher read calls; registered adapter/test in existing CONTROL surface. Existing certification/inheritance bodies change only transport and read-error text. No authentication fallback, new verdict authority or receipt/release changes.
+- Step 3 Applied: explicit transport-only bridges preserve existing judgment/receipt fixtures; dedicated real HTTP, pagination, failure and mutation cases plus current-attempt literal-result assertions installed. watch_selftest, doctor and owner launchers unchanged. Generated projections synchronized.
+- Step 4 implementation checkpoint: Resume Step DONE; fresh timed/watched Finish, independent Review, Complete and candidate binding remain next. Pre-approval measurements are not final verification. CTRL-19 remains OPEN.
 
 ## Verification Notes
 

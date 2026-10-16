@@ -42,6 +42,8 @@ param(
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent)
 )
 
+. (Join-Path $RepoRoot 'scripts/github_public_read.ps1')
+
 # ---- the contract: the authority's own deriver, applied to the workflow files at the SHA --------------
 # Read from the authority's AST and defined here, never copied: a copy would drift from what -Certify judges.
 $authority = Join-Path $RepoRoot 'scripts/check_agent_continuity.ps1'
@@ -110,21 +112,26 @@ $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
 function T { '[{0,5:N1} min]' -f $sw.Elapsed.TotalMinutes }
 function Show-Evidence([long]$Id, [int]$Att) {
-    $jobs = @(gh api "repos/$Repo/actions/runs/$Id/attempts/$Att/jobs" --jq '.jobs[] | select(.conclusion=="failure") | "\(.id)\t\(.name)\t\([.steps[] | select(.conclusion=="failure") | .name] | join("; "))"')
-    if (-not $jobs) { '    no failed job recorded (conclusion other than failure: read the run page)'; return }
-    foreach ($j in $jobs) {
-        $f = $j -split "`t"
-        "    failed job: $($f[1]) | failed step: $($f[2])"
-        $log = @(gh api --allow-escape-sequences "repos/$Repo/actions/jobs/$($f[0])/logs" 2>$null)
+    try { $jobs = @(Get-OrvionPublicJobs $Repo $Id $Att) }
+    catch { "    UNREADABLE jobs: $($_.Exception.Message)"; $script:EvidenceUnreadable=$true; return }
+    $failed = @($jobs | Where-Object { $_.conclusion -eq 'failure' })
+    if (-not $failed) { '    no failed job recorded (conclusion other than failure: read the run page)'; return }
+    foreach ($j in $failed) {
+        "    failed job: $($j.name) | failed step: $((@($j.steps | Where-Object { $_.conclusion -eq 'failure' } | ForEach-Object name)) -join '; ')"
+        try { $log = @(Get-OrvionPublicLog $Repo $j.id) }
+        catch { "    UNREADABLE log: $($_.Exception.Message)"; $script:EvidenceUnreadable=$true; continue }
         "    log lines: $($log.Count) | migrations applied: $(@($log | Select-String 'Applying migration').Count)"
         Select-ErrorLines $log | ForEach-Object { '    > ' + $_ }
     }
 }
 
 if ($RunId) {
-    $r = gh run view $RunId --repo $Repo --attempt $Attempt --json name,conclusion,status,attempt,headSha,headBranch | ConvertFrom-Json
+    try { $v = Get-OrvionPublicAttempt $Repo $RunId $Attempt }
+    catch { "$(T) UNREADABLE run: $($_.Exception.Message)"; exit 2 }
+    $r = [pscustomobject]@{name=$v.name;attempt=$v.run_attempt;status=$v.status;conclusion=$v.conclusion;headSha=$v.head_sha;headBranch=$v.head_branch}
     "$(T) run $RunId attempt $($r.attempt) [$($r.name)] on $($r.headBranch) $($r.status)/$($r.conclusion) sha=$($r.headSha.Substring(0,7))"
     if ($r.status -eq 'completed' -and $r.conclusion -ne 'success') { Show-Evidence $RunId $Attempt }
+    if ($script:EvidenceUnreadable) { exit 2 }
     exit 0
 }
 if (-not $Sha -or -not $Branch -or -not $Base) { throw 'usage: watch_ci.ps1 -Sha <full sha> -Branch <branch> -Base <main commit it is published on>   (or -RunId <id> [-Attempt <n>])' }
@@ -136,18 +143,18 @@ $contract = Get-CiContract $Sha $Base $Branch $RepoRoot
 $reported = @{}; $otherSeen = @{}; $settleAt = $null; $missingSince = $null; $failures = 0; $quiet = [Diagnostics.Stopwatch]::StartNew()
 while ($true) {
     try {
-        # A failed `gh` prints nothing to stdout, and an empty pipeline parses as "no runs" -- so
-        # its exit code is checked, or an outage would read as a quiet SHA.
-        $json = gh run list --repo $Repo --commit $Sha --json databaseId,name,status,conclusion,attempt,event,headBranch,createdAt --limit 50
-        if ($LASTEXITCODE -ne 0) { throw "gh run list exited $LASTEXITCODE" }
-        $runs = @($json | ConvertFrom-Json)
+        # The adapter throws on incomplete or unreadable evidence; never treat an outage as no runs.
+        $runs = @(Get-OrvionPublicRuns $Repo -Sha $Sha)
         $failures = 0
     } catch {
         $failures++
         "$(T) poll failed ($failures of 5): $($_.Exception.Message)"
         if ($failures -ge 5) { "$(T) STOPPED: five consecutive polls failed - nothing about this SHA was observed since"; exit 2 }
-        Start-Sleep -Seconds $PollSeconds; continue
+        $retry = [long]$_.Exception.Data['RetryAfterSeconds']
+        if ($retry -gt 60) { "$(T) STOPPED: public API retry-after=$retry seconds; resume later; evidence unreadable"; exit 2 }
+        Start-Sleep -Seconds ([Math]::Max($PollSeconds,$retry)); continue
     }
+    if ($script:EvidenceUnreadable) { "$(T) STOPPED: diagnostics unreadable; -Certify remains the verdict"; exit 2 }
     $state = Get-CiState $runs $Branch $contract.Expected
     foreach ($r in $state.Mine) {
         $key = "$($r.databaseId)#$($r.attempt)"
@@ -158,6 +165,7 @@ while ($true) {
             if ($r.conclusion -ne 'success') { Show-Evidence $r.databaseId $r.attempt }
         }
     }
+    if ($script:EvidenceUnreadable) { "$(T) STOPPED: diagnostics unreadable; -Certify remains the verdict"; exit 2 }
     foreach ($r in $state.Others) {
         $key = "$($r.databaseId)#$($r.attempt)#$($r.status)"
         if (-not $otherSeen.ContainsKey($key)) { $otherSeen[$key] = 1; "$(T) (not this watch: $($r.event) on $($r.headBranch)) $($r.name): $($r.status)/$($r.conclusion)" }
