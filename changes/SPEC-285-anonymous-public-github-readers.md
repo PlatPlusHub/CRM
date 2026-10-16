@@ -177,11 +177,11 @@ Post-Implementation Proof Obligation: final derived CONTROL and REPOSITORY comma
 
 ## Acceptance Criteria
 
-- [ ] Anonymous transport fixtures preserve all consumed run/attempt/jobs fields and yield complete bounded observations without credential fallback.
-- [ ] Inaccessible, rate-limited, malformed, oversized, timed-out or incomplete evidence cannot produce a successful observation.
-- [ ] Existing certification, inheritance and watcher judgments retain expected workflow, SHA, branch, event, current-attempt, target-ref, nearest-run/path and literal-success behavior.
-- [ ] Public capability probe and evaluator fixture agree on read readiness without asserting write authority or isolation.
-- [ ] Owner launchers, publisher, promoter, receipt formats, Human Gates and historical contracts remain unchanged.
+- [x] Anonymous transport fixtures preserve all consumed run/attempt/jobs fields and yield complete bounded observations without credential fallback.
+- [x] Inaccessible, rate-limited, malformed, oversized, timed-out or incomplete evidence cannot produce a successful observation.
+- [x] Existing certification, inheritance and watcher judgments retain expected workflow, SHA, branch, event, current-attempt, target-ref, nearest-run/path and literal-success behavior.
+- [x] Public capability probe and evaluator fixture agree on read readiness without asserting write authority or isolation.
+- [x] Owner launchers, publisher, promoter, receipt formats, Human Gates and historical contracts remain unchanged.
 
 ## Execution Log
 
@@ -204,12 +204,27 @@ Outcome: Complete (implementation steps; final verification pending)
 
 None.
 
+### 2026-10-16 — Independent live-state Review (Codex)
+
+Verdict: Confirmed Complete
+
+Findings:
+- Rechecked the final source and live Git scope rather than relying on the Execution Log. All six implementation/test files equal the reviewed prototype bytes; only approved paths differ from baseline. The original Draft allocation stores exact approved blob e135e6bea47669bfbf404b94c3e4091384732611. Frozen authority remains unchanged.
+- Fresh timed/watched Finish on implementation 22909fdeb2f72df05a4a02ee22a5b7d3c34e18dd returned LOCAL_CERTIFY: READY and exit 0. Every CONTROL command (agent continuity, cold-start, status contradiction, primary ledger, future date), REPOSITORY command (consistency, diff check), and all three Additional Verification commands passed in that single run. Evidence: C:/Users/My Lab/Documents/ORVION-Owner-Review/guarded-autonomy-2026-10-15/spec-285-finish.log. Finish printed 00:56:08; START recorded pwsh 7.6.7, 8 CPUs, concurrent=0. No SPEC-284 measurement substitutes for these results. Successful child output is suppressed by the existing runner, so no unprinted assertion count is claimed.
+- Anonymous schema/transport positives, complete three-page population, malformed/inaccessible/rate/size/timeout refusals, watcher subprocess gaps and three mutation/restoration cases are covered by the fresh adapter suite using real loopback HTTP. This is not a claim of a real GitHub rate-limit event. Current-attempt literal results and all existing certification/inheritance mutations remain in the fresh full evaluator suite. The fresh receipt suite exercises actual evaluator/publisher processes with synthetic transport and stubbed profile children, not production release.
+- Independently inspected evaluator diff: 105 functions identical; changed functions are Get-ControlSurface and the transport/error blocks of Inherited-Run and Certify-Remote. Existing receipt selection/fingerprint/format, workflow deriver, ancestry/path, exact-SHA/branch/event/current-attempt/literal-success judgments are preserved. Watcher contract/state/error-selection functions are identical. No new verdict authority, authenticated fallback or success from an unreadable log was introduced.
+- Fresh live public capability Review returned PUBLIC_CAPABILITY: PASS via anonymous API and configuration-isolated native Git; evidence: adjacent spec-285-public-capability-review.log. This proves read readiness only, not write permission or Windows credential isolation. HTTP job-log 403 remains unreadable and is covered by fail-closed fixtures.
+- Publisher, promoter, workflows, watch_selftest, doctor, governance and historical contracts are unchanged. Installed Owner-Publish and Owner-Promote hashes still equal the frozen tested hashes. The retained SPEC-284 exact-SHA receipt hash remains CF7E9C623C536A034987AEA6A88B6573A78B377B894951F0BC238BC081371E5D. CTRL-19 remains OPEN.
+- Watcher duration comparisons are hypotheses only; their cause is UNPROVEN. No failure cause, retry, repair or new architecture is inferred from timing. No implementation discrepancy found; all five Acceptance Criteria and four Review Gate items confirmed.
+
+Recommendation: Complete under the existing approved architecture, then bind the exact candidate locally; publication and promotion remain owner actions.
+
 ## Review Gate
 
-- [ ] Exact approved steps and exhaustive scope independently confirmed.
-- [ ] Every acceptance criterion confirmed against final local evidence.
-- [ ] Mandatory profiles, additional suites, generated state and Git checks pass through fresh Finish.
-- [ ] Existing evidence/release authorities preserved; CTRL-19 remains OPEN.
+- [x] Exact approved steps and exhaustive scope independently confirmed.
+- [x] Every acceptance criterion confirmed against final local evidence.
+- [x] Mandatory profiles, additional suites, generated state and Git checks pass through fresh Finish.
+- [x] Existing evidence/release authorities preserved; CTRL-19 remains OPEN.
 
 ## Notes
 
