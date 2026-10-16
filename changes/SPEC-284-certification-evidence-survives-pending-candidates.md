@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -192,6 +192,10 @@ Implementation is coherent and Resume Step DONE for the one required timed/watch
 The required Finish ran once on committed implementation b868959a248225959ae7fe4c92788720f90fcf11 through run_timed.ps1 with watch_run.ps1 attached concurrently. `LOCAL_CERTIFY: READY`, exit 0, total 76.7 minutes; START conditions: Windows host DESKTOP-6J1RJ8V, PowerShell 7.6.7, 8 CPUs, concurrent=0. Full CONTROL 522 passed / 0 failed; cold-start 42/0; status-contradiction, primary-ledger and future-date guard commands PASS; repository consistency and git diff --check PASS. Full Additional receipt suite 64/0, with all seven mutations admitting the wrong behavior and restoring refusal. No required command was skipped or repeated. The suite's profile children are orchestration stubs and its gh evidence synthetic; bare Git transport and actual evaluator/publisher processes ran. Hosted acceptance, credential isolation and PAT safety are not proven by these results.
 
 Evidence in the existing owner-review directory: spec-284-finish.log SHA-256 10a6394ceb001fd6281f3023e5e7ca436b0c7523418804aae6ea738caf550726; spec-284-control.log ff3b556f5bab68b57a68e61515668bcad8401096bebf30256e458a543f5807b2; spec-284-receipts.log 8c1dcc324109f55a9080d6fd44096f67f4035b16f11b0b94158a3241dddc1128. The watcher marked elapsed-time comparisons as hypotheses; they establish duration, not a cause or an implemented performance change.
+
+### 2026-10-16 — local completion and owner-publication boundary
+
+Independent Review is committed with Verdict: Confirmed Complete; all local acceptance and Review items are checked. Complete locally and synchronize the active pointer/Last Completed and generated projections. Next, capture the resulting exact SHA and prepare it through the implemented evaluator's full-SHA range Gate/binding in this original checkout, with temporary gh/Git-transport tripwires and GH tokens omitted from that one child process. These observers add no qualification logic or credential boundary. Preserve branch `orvion/spec-284-pending` and the original ignored working/retained records. The exact SHA, archive and preparation outcome are derived from Git plus the existing evaluator, never invented in this pre-commit entry. Stop for owner publication via scripts/publish_candidate.ps1; then observe exact-SHA preflight acceptance, await explicit owner promotion, and run the existing exact-SHA Certify reader before main advances. No agent publication/promotion, sandbox creation or authentication migration is authorized here. Remote certification remains unproven while those owner actions are pending.
 
 ## Verification Notes
 
