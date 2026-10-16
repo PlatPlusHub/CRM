@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -199,6 +199,12 @@ Outcome: Complete (implementation steps; final verification pending)
 - Step 2 Applied: installed reviewed anonymous bounded GET/schema adapter, existing github capability and evaluator/watcher read calls; registered adapter/test in existing CONTROL surface. Existing certification/inheritance bodies change only transport and read-error text. No authentication fallback, new verdict authority or receipt/release changes.
 - Step 3 Applied: explicit transport-only bridges preserve existing judgment/receipt fixtures; dedicated real HTTP, pagination, failure and mutation cases plus current-attempt literal-result assertions installed. watch_selftest, doctor and owner launchers unchanged. Generated projections synchronized.
 - Step 4 implementation checkpoint: Resume Step DONE; fresh timed/watched Finish, independent Review, Complete and candidate binding remain next. Pre-approval measurements are not final verification. CTRL-19 remains OPEN.
+
+### 2026-10-16 — Local completion (Codex)
+
+Outcome: Complete
+
+Step 4 Applied: fresh timed/watched Finish returned LOCAL_CERTIFY: READY (all mandatory and additional commands exit 0); independent live-state Review recorded in d7d33b2. No new architecture or out-of-scope change. Manifest active pointer cleared, Last Completed synchronized, projections regenerated. Exact-SHA local candidate binding follows this completion commit through the existing Gate; retain the named pending-tail branch and original checkout/receipts. Owner publication/promotion and post-promotion remote certification remain separate. CTRL-19 remains OPEN.
 
 ## Verification Notes
 
