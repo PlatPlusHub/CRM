@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -310,12 +310,12 @@ Post-Implementation Proof Obligation: the full control suites, every other deriv
 
 ## Acceptance Criteria
 
-- [ ] The evaluator retires only a cancelled contract's valid working receipt and reads a commit's first line as the working tree does, with exactly the reviewed bytes. `check: blob scripts/check_agent_continuity.ps1 256879e512235b1e8744ea64862dd1e82ce65c6d` `check: has scripts/check_agent_continuity.ps1 "if($was-and(Status-FromText $was)-ceq'Cancelled'){return}"` `check: has scripts/check_agent_continuity.ps1 "if($t-and$t[0]-eq[char]0xFEFF){$t=$t.Substring(1)};return $t"`
-- [ ] The control suites prove A and E positively, negatively and by mutation. `check: blob scripts/test_agent_continuity.ps1 52934332def1608d6bc12b6ac5847db34f4b37f7` `check: has scripts/test_agent_continuity.ps1 "281-CM6 CHECK MUTATION: the commit side drops the BOM the working tree drops"` `check: blob scripts/test_certification_receipts.ps1 c85cf120d4689633a550f45db0be005ef5de9037` `check: has scripts/test_certification_receipts.ps1 "unbound pending completion still blocks beside a cancelled receipt"`
-- [ ] The date-guard suite takes its verdict from one civil day while the guard's ceiling is unchanged. `check: blob scripts/test_future_date_guard.ps1 2e2732e82d9c887202b52b830272ab69f21274bb` `check: has scripts/test_future_date_guard.ps1 "ONE CIVIL DAY PER VERDICT"` `check: blob scripts/check_repository_consistency.ps1 3e6d2810e03bfac15b96dba3bc46d119d97ad658`
-- [ ] The method and receipt authority say how a rehearsal carries ignored certification state and when a working receipt retires. `check: blob ENGINEERING_METHOD.md 6f77b435ac20274f4e5ef7bb4ce47871f0b5e2df` `check: has ENGINEERING_METHOD.md "copy the authoritative checkout's ignored certification state into the clone first"` `check: blob CR_LIFECYCLE.md a80d15cdf805932623a0a8ea93aaae9740fac870`
-- [ ] Release authorities, pins and the watcher are unchanged. `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf`
-- [ ] The manifest keeps the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
+- [x] The evaluator retires only a cancelled contract's valid working receipt and reads a commit's first line as the working tree does, with exactly the reviewed bytes. `check: blob scripts/check_agent_continuity.ps1 256879e512235b1e8744ea64862dd1e82ce65c6d` `check: has scripts/check_agent_continuity.ps1 "if($was-and(Status-FromText $was)-ceq'Cancelled'){return}"` `check: has scripts/check_agent_continuity.ps1 "if($t-and$t[0]-eq[char]0xFEFF){$t=$t.Substring(1)};return $t"`
+- [x] The control suites prove A and E positively, negatively and by mutation. `check: blob scripts/test_agent_continuity.ps1 52934332def1608d6bc12b6ac5847db34f4b37f7` `check: has scripts/test_agent_continuity.ps1 "281-CM6 CHECK MUTATION: the commit side drops the BOM the working tree drops"` `check: blob scripts/test_certification_receipts.ps1 c85cf120d4689633a550f45db0be005ef5de9037` `check: has scripts/test_certification_receipts.ps1 "unbound pending completion still blocks beside a cancelled receipt"`
+- [x] The date-guard suite takes its verdict from one civil day while the guard's ceiling is unchanged. `check: blob scripts/test_future_date_guard.ps1 2e2732e82d9c887202b52b830272ab69f21274bb` `check: has scripts/test_future_date_guard.ps1 "ONE CIVIL DAY PER VERDICT"` `check: blob scripts/check_repository_consistency.ps1 3e6d2810e03bfac15b96dba3bc46d119d97ad658`
+- [x] The method and receipt authority say how a rehearsal carries ignored certification state and when a working receipt retires. `check: blob ENGINEERING_METHOD.md 6f77b435ac20274f4e5ef7bb4ce47871f0b5e2df` `check: has ENGINEERING_METHOD.md "copy the authoritative checkout's ignored certification state into the clone first"` `check: blob CR_LIFECYCLE.md a80d15cdf805932623a0a8ea93aaae9740fac870`
+- [x] Release authorities, pins and the watcher are unchanged. `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf`
+- [x] The manifest keeps the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
 
 ## Execution Log
 
@@ -337,6 +337,12 @@ Outcome: Complete (implementation steps; final verification pending)
 - Step 6 Applied: the rehearsal bullet and the receipt-authority sentence; `ENGINEERING_METHOD.md` blob 6f77b435ac20274f4e5ef7bb4ce47871f0b5e2df, `CR_LIFECYCLE.md` blob a80d15cdf805932623a0a8ea93aaae9740fac870.
 - Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, `git diff --name-only` names only Write Scope paths. Each file was copied from the reviewed sandbox bytes and its Git blob checked against this contract before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
+### 2026-10-19 — Local completion (Claude)
+
+Outcome: Complete
+
+Step 8 Applied: fresh timed and watched Finish returned LOCAL_CERTIFY: READY (every derived CONTROL and REPOSITORY command and the Additional Verification exit 0); independent live-state Review recorded in the preceding commit. No out-of-scope change. Manifest active pointer cleared, Last Completed set to the approved line recording the owner's Batch 6 hold, projections regenerated. Exact-SHA local candidate binding follows this completion commit through the existing Gate. Owner publication/promotion and post-promotion remote certification remain separate. CTRL-19 remains OPEN.
+
 ## Verification Notes
 
 None.
@@ -356,10 +362,10 @@ Recommendation to human: Set Status to Complete, then bind the exact candidate l
 
 ## Review Gate
 
-- [ ] Exact approved steps and exhaustive scope independently confirmed.
-- [ ] Every acceptance criterion confirmed against final local evidence.
-- [ ] Mandatory profiles, Additional Verification and Git checks pass through fresh Finish.
-- [ ] Release authorities, pending-evidence protection and historical evidence preserved; CTRL-19 remains OPEN.
+- [x] Exact approved steps and exhaustive scope independently confirmed.
+- [x] Every acceptance criterion confirmed against final local evidence.
+- [x] Mandatory profiles, Additional Verification and Git checks pass through fresh Finish.
+- [x] Release authorities, pending-evidence protection and historical evidence preserved; CTRL-19 remains OPEN.
 
 ## Notes
 
