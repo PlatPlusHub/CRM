@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -258,6 +258,10 @@ Post-Implementation Proof Obligation: the full control suite, every other derive
 ## Execution Log
 
 None.
+
+### 2026-10-18 — Gate 1 approval recorded
+
+Owner conditionally approved frozen Draft SHA256 0449080FCD55C61F069FE9B510CFA823F4369C21EAE6B6C0C2C28BD7F8BC28A7 at baseline fd118fae6c76271100d67fdb44923bb0b406c986, subject to two evidence checks; both passed from retained evidence without changing the Draft. The final rehearsal's Complete hook ran all five criterion checks (Validate-TransitionEvidence) before the receipt check and refused only at the missing receipt; its range and trusted judgments were READY on the final bytes. The five remaining harness cases are one pre-existing keyed-BOM false refusal, identical before and after the correction, unused by this contract's criteria, and absent from Platinum (0 of 976 blobs carry a BOM); it is preserved for CR C. Immediately revalidated the hash, all eleven source anchors, refreshed origin/main and the allocator; Draft allocated as df19501. No implementation performed before this transition. CTRL-19 remains OPEN.
 
 ## Verification Notes
 
