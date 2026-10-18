@@ -697,7 +697,9 @@ function Get-CheckTarget($Check,[string]$Ref){
     $text-replace"`r`n","`n"
 }
 function Get-RepoBlob([string]$Ref,[string]$Path){
-    $b=if($Ref){git -C $Root rev-parse "${Ref}:$Path" 2>$null}else{$f=Join-Path $Root $Path;if(Test-Path -LiteralPath $f){git -C $Root hash-object -- $f 2>$null}}
+    $b=if($Ref){git -C $Root rev-parse "${Ref}:$Path" 2>$null}else{$f=Join-Path $Root $Path;if(Test-Path -LiteralPath $f){
+        # A tracked file Git sees as unchanged is its index blob: hash-object alone re-normalizes a CRLF blob that `git add` keeps.
+        git -C $Root diff --quiet -- $Path 2>$null;if($LASTEXITCODE-eq0-and(git -C $Root ls-files -- $Path)){git -C $Root rev-parse ":$Path" 2>$null}else{git -C $Root hash-object -- $f 2>$null}}}
     $global:LASTEXITCODE=0
     "$b".Trim()
 }
@@ -713,7 +715,14 @@ function Test-CriterionCheck($Check,[string]$Ref){
     if($null-eq$now){return "$where does not exist"}
     if($Check.Kind-eq'has'-and-not$now.Contains($Check.Text)){return "$where does not contain `"$($Check.Text)`""}
     if($Check.Kind-eq'lacks'-and$now.Contains($Check.Text)){return "$where contains `"$($Check.Text)`""}
-    if($Check.Kind-eq'same'){
+    if($Check.Kind-eq'same'-and-not$Check.Key){
+        # A whole file is its Git blob, as `blob` judges it: `git show` text loses the final newline
+        # and the working tree's line endings, so a text comparison could never hold in the hook.
+        $was=Get-RepoBlob $Check.Ref $Check.Path
+        if(-not$was){return "$where does not exist at $($Check.Ref)"}
+        if($was-ne(Get-RepoBlob $Ref $Check.Path)){return "$where differs from $($Check.Ref)"}
+    }
+    if($Check.Kind-eq'same'-and$Check.Key){
         $was=Get-CheckTarget $Check $Check.Ref
         if($null-eq$was){return "$where does not exist at $($Check.Ref)"}
         if(-not(Same-Text $was $now)){return "$where differs from $($Check.Ref)"}
@@ -752,7 +761,7 @@ function Assert-AssuranceAdmission($Contract,[string]$BaseRef){
         $clash=switch("$($a.Kind)/$($b.Kind)"){
             'has/lacks'{$a.Text.Contains($b.Text)}
             'blob/blob'{$a.Sha-ne$b.Sha}
-            'same/same'{-not(Same-Text "$(Get-CheckTarget $a $a.Ref)" "$(Get-CheckTarget $b $b.Ref)")}
+            'same/same'{if($a.Key){-not(Same-Text "$(Get-CheckTarget $a $a.Ref)" "$(Get-CheckTarget $b $b.Ref)")}else{(Get-RepoBlob $a.Ref $a.Path)-ne(Get-RepoBlob $b.Ref $b.Path)}}
             {$_-in'same/has','same/lacks','same/blob'}{$null-ne(Test-CriterionCheck $b $a.Ref)}
             default{$false}
         }

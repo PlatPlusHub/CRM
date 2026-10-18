@@ -3596,6 +3596,39 @@ exit 0
     MutationKill '281-CM2 CHECK MUTATION: Approval refuses contradictory checks' {ChApprove @{Scope=$chPlain;Acceptance=$clash}|Out-Null} 'cannot both hold' 'if($clash){' 'if($false){' 'CHECK'
     MutationKillRangeAt '281-CM3 CHECK MUTATION: Complete refuses a failing check' {ChLife @{Scope=$chPlain;Acceptance=$ship} -NoReset} 'CRITERION_CHECK_FAILED' `
         'if($why){throw "CRITERION_CHECK_FAILED' 'if($false){throw "CRITERION_CHECK_FAILED' 'CHECK'
+    # A whole-file `same` is the file's Git blob. Compared as text, `git show` lost the final newline,
+    # so the hook refused every unchanged file (SPEC-282 recorded it) and neither mode saw a
+    # changed final newline. Reaching the receipt prerequisite proves the criterion stage passed.
+    # ChLife re-commits the unchanged base, so its returned text carries git's "nothing to commit".
+    function ChWhole([string]$Rel='notes.md',[string]$Scope=$chPlain,[scriptblock]$Mid={},[switch]$Open){
+        $b=ChBase;ChLife @{Scope=$Scope;Acceptance="$Rel is unchanged. ``check: same $Rel @$b``"} -NoReset -Mid $Mid -Open:$Open|Out-Null;$b
+    }
+    $atReceipt='CODE: COMPLETION_PREREQUISITE[\s\S]*no local certification receipt'
+    ChWhole -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert '281-C9 CHECK: an unchanged file holds a whole-file same in the hook' ($r.Text-notmatch'CRITERION_CHECK_FAILED'-and$r.Text-match$atReceipt) $r.Text
+    Pop 'CHECK' 'accept'
+    $b=ChWhole;$r=RunRange $b
+    Assert '281-C10 CHECK: the same completion is READY in the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'CHECK' 'accept'
+    $newline={Put 'notes.md' 'Agents read the Release channel line before a release.';Commit 'ch-newline'}
+    $b=ChWhole -Scope "notes.md;$chPlain" -Mid $newline;$r=RunRange $b
+    Assert '281-C11 CHECK: a removed final newline fails a whole-file same in the range' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_FAILED.*notes\.md differs') $r.Text
+    Pop 'CHECK' 'reject'
+    ChWhole -Scope "notes.md;$chPlain" -Open|Out-Null;Put 'notes.md' 'Agents read the Release channel line before a release.';Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert '281-C12 CHECK: the same change fails it in the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED') $r.Text
+    Pop 'CHECK' 'reject'
+    # An unchanged file is its index blob: under core.autocrlf=true hash-object alone re-normalizes a
+    # CRLF blob that `git add` keeps, and would refuse it.
+    $crlf={ChBase|Out-Null;git -C $root config core.autocrlf true;Put 'crlf.txt' "a`r`nb`r`n";git -C $root -c core.autocrlf=false add crlf.txt;git -C $root commit -m 'ch-crlf' --quiet
+        $b=(git -C $root rev-parse HEAD).Trim();ChLife @{Scope=$chPlain;Acceptance="crlf.txt is unchanged. ``check: same crlf.txt @$b``"} -NoReset -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')}
+    & $crlf;$r=Run 'Gate';git -C $root config --unset core.autocrlf
+    Assert '281-C13 CHECK: an unchanged CRLF blob holds under core.autocrlf=true' ($r.Text-notmatch'CRITERION_CHECK_FAILED'-and$r.Text-match$atReceipt) $r.Text
+    Pop 'CHECK' 'accept'
+    MutationKill '281-CM4 CHECK MUTATION: a whole-file same is judged by blob, not text' {ChWhole -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')} $atReceipt `
+        "if(`$Check.Kind-eq'same'-and`$Check.Key){" "if(`$Check.Kind-eq'same'){" 'CHECK'
+    MutationKill '281-CM5 CHECK MUTATION: an unchanged file is its index blob' $crlf $atReceipt `
+        "if(`$LASTEXITCODE-eq0-and(git -C `$Root ls-files -- `$Path)){" 'if($false){' 'CHECK'
+    git -C $root config --unset core.autocrlf
 
     # SACI / PIN. A pinned line holds its ratified text whatever Write Scope allows, and a contract
     # that names one says what it does to it; only a contract that moves the pin may write it.

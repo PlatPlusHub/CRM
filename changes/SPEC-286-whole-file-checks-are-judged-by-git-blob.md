@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -71,7 +71,7 @@ The three pinned manifest lines stay unchanged. Batch 6 is ON HOLD in both repos
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -262,6 +262,15 @@ None.
 ### 2026-10-18 — Gate 1 approval recorded
 
 Owner conditionally approved frozen Draft SHA256 0449080FCD55C61F069FE9B510CFA823F4369C21EAE6B6C0C2C28BD7F8BC28A7 at baseline fd118fae6c76271100d67fdb44923bb0b406c986, subject to two evidence checks; both passed from retained evidence without changing the Draft. The final rehearsal's Complete hook ran all five criterion checks (Validate-TransitionEvidence) before the receipt check and refused only at the missing receipt; its range and trusted judgments were READY on the final bytes. The five remaining harness cases are one pre-existing keyed-BOM false refusal, identical before and after the correction, unused by this contract's criteria, and absent from Platinum (0 of 976 blobs carry a BOM); it is preserved for CR C. Immediately revalidated the hash, all eleven source anchors, refreshed origin/main and the allocator; Draft allocated as df19501. No implementation performed before this transition. CTRL-19 remains OPEN.
+
+### 2026-10-18 — Implementation checkpoint (Claude)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: the owner's Gate 1 approval names this exact Draft's SHA-256; remote main was fd118fae6c76271100d67fdb44923bb0b406c986 and all eleven source anchors matched at HEAD; Draft allocated as df19501 and approved as fa7f49e with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: the three evaluator replacements, copied from the reviewed sandbox bytes; `scripts/check_agent_continuity.ps1` blob b7ffba9cc4907794ca45d410c74fa8c103a432d7 (12 insertions, 3 deletions).
+- Step 3 Applied: the seven control tests inserted after the named line; `scripts/test_agent_continuity.ps1` blob 30be3819df4caad865d1665a881760cee53ad396 (33 insertions).
+- Step 4 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, `git diff --name-only` names only Write Scope paths. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Preparation measurements are not final verification. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 
