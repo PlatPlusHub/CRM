@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -249,11 +249,11 @@ Post-Implementation Proof Obligation: the full control suite, every other derive
 
 ## Acceptance Criteria
 
-- [ ] The Gate judges a whole-file same by Git blob in both modes and an unchanged tracked file by its index blob, with exactly the transferred bytes. `check: blob scripts/check_agent_continuity.ps1 b7ffba9cc4907794ca45d410c74fa8c103a432d7` `check: has scripts/check_agent_continuity.ps1 "if($Check.Kind-eq'same'-and-not$Check.Key){"` `check: has scripts/check_agent_continuity.ps1 "git -C $Root diff --quiet -- $Path 2>$null"`
-- [ ] The control suite proves the correction positively, negatively and by mutation. `check: blob scripts/test_agent_continuity.ps1 30be3819df4caad865d1665a881760cee53ad396` `check: has scripts/test_agent_continuity.ps1 "281-CM4 CHECK MUTATION: a whole-file same is judged by blob, not text"` `check: has scripts/test_agent_continuity.ps1 "281-CM5 CHECK MUTATION: an unchanged file is its index blob"`
-- [ ] No Founder-only content is transferred. `check: lacks scripts/test_agent_continuity.ps1 "SPEC-288"` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: lacks scripts/watch_ci.ps1 "FOUNDER_REPOSITORY_MISMATCH"`
-- [ ] Release authorities and the date-guard test are unchanged. `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/test_future_date_guard.ps1 3c841e0e5a7bce65844c624630ad08be98651ec8`
-- [ ] The manifest records the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
+- [x] The Gate judges a whole-file same by Git blob in both modes and an unchanged tracked file by its index blob, with exactly the transferred bytes. `check: blob scripts/check_agent_continuity.ps1 b7ffba9cc4907794ca45d410c74fa8c103a432d7` `check: has scripts/check_agent_continuity.ps1 "if($Check.Kind-eq'same'-and-not$Check.Key){"` `check: has scripts/check_agent_continuity.ps1 "git -C $Root diff --quiet -- $Path 2>$null"`
+- [x] The control suite proves the correction positively, negatively and by mutation. `check: blob scripts/test_agent_continuity.ps1 30be3819df4caad865d1665a881760cee53ad396` `check: has scripts/test_agent_continuity.ps1 "281-CM4 CHECK MUTATION: a whole-file same is judged by blob, not text"` `check: has scripts/test_agent_continuity.ps1 "281-CM5 CHECK MUTATION: an unchanged file is its index blob"`
+- [x] No Founder-only content is transferred. `check: lacks scripts/test_agent_continuity.ps1 "SPEC-288"` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: lacks scripts/watch_ci.ps1 "FOUNDER_REPOSITORY_MISMATCH"`
+- [x] Release authorities and the date-guard test are unchanged. `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/test_future_date_guard.ps1 3c841e0e5a7bce65844c624630ad08be98651ec8`
+- [x] The manifest records the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
 
 ## Execution Log
 
@@ -271,6 +271,12 @@ Outcome: Complete (implementation steps; final verification pending)
 - Step 2 Applied: the three evaluator replacements, copied from the reviewed sandbox bytes; `scripts/check_agent_continuity.ps1` blob b7ffba9cc4907794ca45d410c74fa8c103a432d7 (12 insertions, 3 deletions).
 - Step 3 Applied: the seven control tests inserted after the named line; `scripts/test_agent_continuity.ps1` blob 30be3819df4caad865d1665a881760cee53ad396 (33 insertions).
 - Step 4 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, `git diff --name-only` names only Write Scope paths. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Preparation measurements are not final verification. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
+
+### 2026-10-18 — Local completion (Claude)
+
+Outcome: Complete
+
+Step 5 Applied: fresh timed and watched Finish returned LOCAL_CERTIFY: READY (every derived CONTROL and REPOSITORY command exit 0); independent live-state Review recorded in 1929c66. No out-of-scope change. Manifest active pointer cleared, Last Completed set to the approved line recording the owner's Batch 6 hold, projections regenerated. Exact-SHA local candidate binding follows this completion commit through the existing Gate. Owner publication/promotion and post-promotion remote certification remain separate. CTRL-19 remains OPEN.
 
 ## Verification Notes
 
@@ -292,10 +298,10 @@ Recommendation to human: Set Status to Complete, then bind the exact candidate l
 
 ## Review Gate
 
-- [ ] Exact approved steps and exhaustive scope independently confirmed.
-- [ ] Every acceptance criterion confirmed against final local evidence.
-- [ ] Mandatory profiles and Git checks pass through fresh Finish.
-- [ ] Release authorities, Founder isolation and historical evidence preserved; CTRL-19 remains OPEN.
+- [x] Exact approved steps and exhaustive scope independently confirmed.
+- [x] Every acceptance criterion confirmed against final local evidence.
+- [x] Mandatory profiles and Git checks pass through fresh Finish.
+- [x] Release authorities, Founder isolation and historical evidence preserved; CTRL-19 remains OPEN.
 
 ## Notes
 
