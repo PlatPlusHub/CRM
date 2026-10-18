@@ -341,6 +341,19 @@ Outcome: Complete (implementation steps; final verification pending)
 
 None.
 
+### 2026-10-19 — Independent live-state Review (Claude)
+
+Verdict: Confirmed Complete
+
+Findings:
+- Rechecked live Git, not the Execution Log. The range 4a22aa513a34f1157a6467f7225b1aa60bf4926e..2b715e48645a408bbac4dddae7ede1459a74f52c changes only Write Scope paths (this contract, the four scripts, `ENGINEERING_METHOD.md`, `CR_LIFECYCLE.md`, manifest, ai-map.json); none of the sixteen forbidden paths changed. The allocation deedc2e stores the approved blob cb2cab176b9b2360295c3790b0561ffc88b222dd, and later edits to this file touch only Status, Runtime Checkpoint and the logs. Every commit in the range is authored by PlatPlusHub.
+- The changed lines of `scripts/check_agent_continuity.ps1` (11), `scripts/test_agent_continuity.ps1` (20), `scripts/test_certification_receipts.ps1` (28), `scripts/test_future_date_guard.ps1` (17) and `CR_LIFECYCLE.md` (2) equal the separately approved correction in the Founder repository line for line. No Founder identity, contract identifier or watcher restriction was added outside this contract.
+- Fresh timed and watched Finish on 2b715e48645a408bbac4dddae7ede1459a74f52c returned LOCAL_CERTIFY: READY, exit 0, in 45.2 min (pwsh 7.6.7, 8 CPUs, concurrent=0): CONTROL (agent continuity 31:04, cold-start 4:48, status contradiction 2:29, primary ledger 0:11, future date 3:20), REPOSITORY (consistency 0:11, diff check) and ADDITIONAL (`scripts/test_certification_receipts.ps1` 2:52) all passed. Evidence: C:/Users/My Lab/Documents/ORVION-Owner-Review/cr-c-execution-2026-10-19/spec-287-finish.log. The receipt names SPEC-287, finishHead 2b715e4, profiles CONTROL and REPOSITORY, result READY; the three bound records are preserved and the Finish passed pending-certification protection with the promoted SPEC-286 receipt in place.
+- All Acceptance Criteria checks verified directly at 2b715e4 (19 of 19 hold, the manifest hold line included). `generate-ai-map.ps1 -Check` exits 0.
+- Defects A, B, C and E are closed locally only; they stay OPEN until exact-SHA remote certification on `main`. CTRL-19 remains OPEN. Batch 6 remains ON HOLD.
+
+Recommendation to human: Set Status to Complete, then bind the exact candidate locally; publication and promotion remain owner actions.
+
 ## Review Gate
 
 - [ ] Exact approved steps and exhaustive scope independently confirmed.
