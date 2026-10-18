@@ -586,9 +586,12 @@ function StepNumber([string]$Value,[int]$Max){
 # Each reads Git, the contract and the repository - never an account of them.
 # ---------------------------------------------------------------------------
 
-# A tracked file at a commit, or in the working tree when $Ref is empty.
+# A tracked file at a commit, or in the working tree when $Ref is empty. `ReadAllText` drops one
+# leading BOM and `git show` keeps it, so a first-line key was missing at every commit: the commit
+# side drops it the same way. `Read-GitFile` itself keeps it, because CTRL-4 must see a BOM a
+# contract gains.
 function Read-RepoFile([string]$Ref,[string]$Path){
-    if($Ref){return Read-GitFile $Ref $Path}
+    if($Ref){$t=Read-GitFile $Ref $Path;if($t-and$t[0]-eq[char]0xFEFF){$t=$t.Substring(1)};return $t}
     $p=Join-Path $Root $Path
     if(Test-Path -LiteralPath $p){[IO.File]::ReadAllText($p)}else{$null}
 }
@@ -1773,6 +1776,10 @@ function Protect-PendingCertifications($c,[string]$Rel){
         if(Receipt-AlreadyPromoted $prior){return}
         if($prior.schema-ne2){throw 'PENDING_RECEIPT_UNBOUND:legacy evidence is not proven promoted'}
         Assert-ReceiptDigest $prior
+        # Its own contract Cancelled at HEAD can never complete, bind or publish: obsolete evidence,
+        # not pending. Without this a cancelled contract's READY receipt blocked every successor.
+        $was=if($prior.contract-is[string]-and$prior.contract-cmatch('^changes/'+[regex]::Escape("$($prior.cr)")+'-[A-Za-z0-9_.-]+\.md$')){Read-GitFile HEAD $prior.contract}
+        if($was-and(Status-FromText $was)-ceq'Cancelled'){return}
         if(!@($saved|Where-Object{$_.receipt.digest-ceq$prior.digest}).Count){throw 'PENDING_RECEIPT_UNBOUND:working evidence has no retained pending candidate'}
     }
 }

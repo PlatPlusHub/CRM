@@ -298,6 +298,34 @@ if(!(Test-Path -LiteralPath (Candidate-ReceiptPath $Sha))){return (Read-ReceiptJ
         Put 'allowed.txt' 'dirty';Refused 'nonterminal dirty content refused' 'RECEIPT_DIRTY_TREE' (RunEval Certify);git -C $root restore allowed.txt
         $text=[IO.File]::ReadAllText((Join-Path $root $thirdRel));Put $thirdRel ($text.Replace('## Execution Log',"## Execution Log`n`nA later bookkeeping boundary."));$later=Commit 'C3 later bookkeeping'
         OwnerPush $later main;Green $later;Refused 'nonterminal later SHA cannot borrow earlier Finish evidence' 'RECEIPT_SHA_MISMATCH' (RunEval Certify)
+        # A contract Git records as Cancelled at HEAD can never complete, bind or publish, so its READY
+        # working receipt no longer blocks a successor. One whose contract is not cancelled, one whose
+        # checksum fails, and an unbound pending completion beside it all still block.
+        $fourthId='SPEC-'+(900+3);$fourthRel="changes/$fourthId-fixture.md";$c3=[IO.File]::ReadAllText($working)
+        SetContract $thirdId $thirdRel Cancelled;$null=Commit 'C3 cancelled'
+        SetContract $fourthId $fourthRel Draft;$null=Commit 'C4 draft'
+        SetContract $fourthId $fourthRel Approved;SetManifest $fourthRel;$null=Commit 'C4 approved'
+        SetContract $fourthId $fourthRel 'In Progress';Put 'allowed.txt' 'four';$null=Commit 'C4 implementation'
+        # Not cancelled: C2's receipt claiming an unproven target (its contract is Complete at HEAD), and
+        # a receipt whose contract HEAD does not hold at all, as one from an abandoned branch.
+        $t=(Json $record2).receipt;$t.target='never-published';SaveJson $working (Resign $t);$open=[IO.File]::ReadAllText($working)
+        $f=RunEval Finish
+        Assert 'receipt of a contract not cancelled at HEAD still blocks its successor' ($f.Code-ne0-and$f.Text-match'PENDING_RECEIPT_UNBOUND'-and[IO.File]::ReadAllText($working)-ceq$open) $f.Text
+        Mutant cancelled "(Status-FromText `$was)-ceq'Cancelled'" '$true' {[IO.File]::WriteAllText($working,$open)} {param($e)RunEval Finish @() $e} 'PENDING_RECEIPT_UNBOUND' 'LOCAL_CERTIFY: READY'
+        $t=(Json $record2).receipt;$t.cr='SPEC-'+(900+5);$t.contract="changes/$($t.cr)-fixture.md";$t.target='never-published';SaveJson $working (Resign $t)
+        Refused 'receipt whose contract HEAD does not hold still blocks' 'PENDING_RECEIPT_UNBOUND' (RunEval Finish)
+        [IO.File]::WriteAllText($working,$c3);$t=Json $working;$t.expected=@('Tampered');SaveJson $working $t;$tampered=[IO.File]::ReadAllText($working)
+        $f=RunEval Finish
+        Assert 'tampered receipt of a cancelled contract is refused, never retired' ($f.Code-ne0-and$f.Text-match'RECEIPT_ALTERED'-and[IO.File]::ReadAllText($working)-ceq$tampered) $f.Text
+        Mutant integrity '        Assert-ReceiptDigest $prior' '        $null=$prior.digest' {[IO.File]::WriteAllText($working,$tampered)} {param($e)RunEval Finish @() $e} 'RECEIPT_ALTERED' 'LOCAL_CERTIFY: READY'
+        [IO.File]::WriteAllText($working,$c3);$f=RunEval Finish;$new=Json $working
+        Assert 'cancelled contract receipt no longer blocks: successor Finish earns its own receipt, records intact' ($f.Code-eq0-and$f.Text-match'LOCAL_CERTIFY: READY'-and$new.cr-ceq$fourthId-and(Hash $script:record1)-ceq$hash1-and(Hash $record2)-ceq$hash2) $f.Text
+        $candidate4=CompleteFixture $fourthId $fourthRel;$fifthId='SPEC-'+(900+4);$fifthRel="changes/$fifthId-fixture.md"
+        SetContract $fifthId $fifthRel Draft;$null=Commit 'C5 draft'
+        SetContract $fifthId $fifthRel Approved;SetManifest $fifthRel;$null=Commit 'C5 approved'
+        SetContract $fifthId $fifthRel 'In Progress';Put 'allowed.txt' 'five';$null=Commit 'C5 implementation'
+        [IO.File]::WriteAllText($working,$c3);$f=RunEval Finish
+        Assert 'unbound pending completion still blocks beside a cancelled receipt' ($f.Code-ne0-and$f.Text-match"PENDING_RECEIPT_UNBOUND:$candidate4"-and[IO.File]::ReadAllText($working)-ceq$c3) $f.Text
     }
     $script:completed=$true
 }finally{

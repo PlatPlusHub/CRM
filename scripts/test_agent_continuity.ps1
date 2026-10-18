@@ -3629,6 +3629,26 @@ exit 0
     MutationKill '281-CM5 CHECK MUTATION: an unchanged file is its index blob' $crlf $atReceipt `
         "if(`$LASTEXITCODE-eq0-and(git -C `$Root ls-files -- `$Path)){" 'if($false){' 'CHECK'
     git -C $root config --unset core.autocrlf
+    # A keyed check reads a line the same way at a commit and in the working tree. `git show` keeps the
+    # leading BOM that ReadAllText drops, so a first-line key was missing at every commit: Approval
+    # refused it in the range, the hook refused an unchanged file, and a real change failed as "missing".
+    function ChBom([string]$Scope=$chPlain,[scriptblock]$Mid={},[switch]$Open){
+        ChBase|Out-Null;[IO.File]::WriteAllText((Join-Path $root 'bom.txt'),"Channel: train 6`nOwner: release`n",[Text.UTF8Encoding]::new($true));Commit 'ch-bom'
+        $b=(git -C $root rev-parse HEAD).Trim();ChLife @{Scope=$Scope;Acceptance="bom.txt keeps its channel. ``check: same bom.txt#Channel @$b``"} -NoReset -Mid $Mid -Open:$Open|Out-Null;$b
+    }
+    $bomOther={[IO.File]::WriteAllText((Join-Path $root 'bom.txt'),"Channel: train 6`nOwner: platform`n",[Text.UTF8Encoding]::new($true));Commit 'ch-bom-other'}
+    $b=ChBom -Scope "bom.txt;$chPlain" -Mid $bomOther;$r=RunRange $b
+    Assert '281-C14 CHECK: a first-line key of a BOM file holds in the range when another line changed' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'CHECK' 'accept'
+    ChBom -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert '281-C15 CHECK: the unchanged first-line key holds in the hook' ($r.Text-notmatch'CRITERION_CHECK_FAILED'-and$r.Text-match$atReceipt) $r.Text
+    Pop 'CHECK' 'accept'
+    ChBom -Scope "bom.txt;$chPlain" -Open|Out-Null;[IO.File]::WriteAllText((Join-Path $root 'bom.txt'),"Channel: train 7`nOwner: release`n",[Text.UTF8Encoding]::new($true))
+    Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert '281-C16 CHECK: a changed first-line key fails because it differs, not because it is missing' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_FAILED.*bom\.txt#Channel differs') $r.Text
+    Pop 'CHECK' 'reject'
+    MutationKill '281-CM6 CHECK MUTATION: the commit side drops the BOM the working tree drops' {ChBom -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')} $atReceipt `
+        'if($t-and$t[0]-eq[char]0xFEFF){$t=$t.Substring(1)};' '' 'CHECK'
 
     # SACI / PIN. A pinned line holds its ratified text whatever Write Scope allows, and a contract
     # that names one says what it does to it; only a contract that moves the pin may write it.

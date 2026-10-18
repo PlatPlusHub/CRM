@@ -53,8 +53,9 @@ $inv = [System.Globalization.CultureInfo]::InvariantCulture
 function Iso([datetime]$d) { $d.ToString('yyyy-MM-dd', $inv) }
 
 # The boundary, computed here INDEPENDENTLY of the guard so the two must agree by arithmetic and not
-# by sharing a variable.
-$edge = [datetimeoffset]::UtcNow.AddHours(14).Date
+# by sharing a variable. It rolls over at 10:00 UTC; see the end of this file for a run that crosses it.
+function Get-Edge { [datetimeoffset]::UtcNow.AddHours(14).Date }
+$edge = Get-Edge
 
 # Check 23's cutoff is READ FROM THE GUARD rather than copied, so this probe cannot drift to the
 # wrong side of a cutoff someone later moves. One day after it is unambiguously "on or after".
@@ -344,6 +345,18 @@ try {
 }
 finally { Remove-Item $sandbox -Recurse -Force -ErrorAction SilentlyContinue }
 Write-Host ""
+# ONE CIVIL DAY PER VERDICT. Every probe above is dated from the `$edge` read at the start, and the
+# guard reads its own ceiling minutes later. A run that crosses 10:00 UTC therefore judges `edge + 1`
+# probes against a ceiling that has already reached them, and four of them failed in a 2026-10-18
+# `-Finish`. Such a run measured nothing, so its verdict is void and the suite runs once more, whole,
+# in a fresh process: the next rollover is a day away. The guard and its ceiling are untouched, and
+# this is never a retry of a failure: a run that stays on one day keeps its verdict, pass or fail.
+if ((Get-Edge) -ne $edge -and -not $env:ORVION_FDATE_RERUN) {
+    Write-Host "CEILING ROLLED OVER DURING THIS RUN ($(Iso $edge) -> $(Iso (Get-Edge))): verdict void, running once more" -ForegroundColor Yellow
+    $env:ORVION_FDATE_RERUN = '1'
+    & pwsh -NoProfile -File $PSCommandPath
+    exit $LASTEXITCODE
+}
 if ($fail -gt 0) {
     Write-Host "FUTURE-DATE GUARD TEST: $pass passed, $fail FAILED" -ForegroundColor Red
     exit 1
