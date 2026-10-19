@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -81,7 +81,7 @@ The admission workflow and its frozen runner and checkout pin stay unchanged. No
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -228,6 +228,18 @@ None.
 ### 2026-10-19 — Gate 1 approval recorded
 
 The owner's delegation directive of 2026-10-19 approved this prepared contract, conditional on its frozen SHA-256 equalling the digest in its Gate 1 packet (51FDB356102352B13600015E92699FCA70DD512AA741B14387BA968568A409FB), successful rehearsal, complete scope and unchanged assumptions. Immediately before allocation the hash, the Draft blob 30fe878d46c81ea65e937082d00eb497d0c72a87, all 16 source anchors, refreshed origin/main 7e06438d3574cba5151e207bf527ced710224dfa (the promoted predecessor), a clean checkout and an enabled private vulnerability-reporting channel were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 372dbaa. No implementation performed before this transition. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
+
+### 2026-10-19 — Implementation checkpoint (Claude)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: the frozen Draft's SHA-256 equals its Gate 1 packet digest, which the owner's 2026-10-19 directive approved; remote main was 7e06438d3574cba5151e207bf527ced710224dfa, every source anchor matched at HEAD, and private vulnerability reporting read enabled with this repository's own account; Draft allocated as 372dbaa and approved as 1e36463 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml` deleted; nothing else changed.
+- Step 3 Applied: checkout pinned to `11d5960a…` (v4) and `permissions: contents: read` inserted before `jobs:`; `.github/workflows/migration-ci.yml` blob 9bf8ca02d8ffac6591871b66bff53d5dbfc6e75c (4 insertions, 1 deletions).
+- Step 4 Applied: the same two edits; `.github/workflows/repository-consistency.yml` blob ed3ef8d8e954c8a2c5710fe44f46eb1f569c7492 (4 insertions, 1 deletions).
+- Step 5 Applied: checkout pinned to `d23441a4…` (v6); `.github/workflows/agent-control.yml` blob 41243b7c9a499df4cf011385a046c53107084ba3 (1 insertions, 1 deletions).
+- Step 6 Applied: `.github/SECURITY.md` created with the contract's exact content; blob 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132.
+- Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Each file was copied from the reviewed sandbox bytes and its Git blob checked against this contract before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 

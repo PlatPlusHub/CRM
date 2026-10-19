@@ -15,13 +15,16 @@ on:
       - "supabase/config.toml"
       - "scripts/verify_database.sql"
 
+permissions:
+  contents: read
+
 jobs:
   db-reset:
     name: supabase db reset (migrations apply cleanly)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       # The Supabase CLI is the lockfile's, installed by `npm ci` exactly as ORVION Acceptance does.
       # A `uses:` pin here was a second version authority: it stayed at 2.109.1 after the lockfile
