@@ -192,9 +192,18 @@ function EvidenceText(
     [string]$Boundary='ok',          # ok | conflict | badstep | openended
     [string]$HJ='ok',                # ok | missing
     [string]$Applicability='ok',     # ok | selfexempt
-    [string]$Irreversible='NONE'     # SPEC-198: a declared irreversible action is itself
+    [string]$Irreversible='NONE',    # SPEC-198: a declared irreversible action is itself
                                      # an applicability input, so it must be settable.
+    [string]$Assurance='ok'          # ok | missing | placeholder | repeated | recased | undated | baddate | future | dupfield | dupsection | recasedsection | recasedfield
 ){
+    $p1='Fixture initial design.'
+    $p2=switch($Assurance){'placeholder'{'[adversarial challenge]'}'repeated'{$p1}'recased'{'FIXTURE   initial design.'}default{'Fixture adversarial challenge.'}}
+    $p3=switch($Assurance){'undated'{'Fixture evidence refreshed.'}'baddate'{'Fixture evidence refreshed on 2026-02-30.'}'future'{'Fixture evidence refreshed on 2999-01-01.'}default{'Fixture evidence refreshed on 2026-10-19.'}}
+    $extra=if($Assurance-eq'dupfield'){"`nPass 1 Design: Fixture second design.`n"}else{''}
+    $da=if($Assurance-eq'missing'){''}else{"### Draft Assurance`n`nPass 1 Design: $p1`n$extra`nPass 2 Adversarial Review: $p2`n`nPass 3 Evidence Refresh: $p3`n`nSelected Version: Fixture version 3.`n"}
+    if($Assurance-eq'dupsection'){$da="$da`n$da"}
+    if($Assurance-eq'recasedsection'){$da="$da`n### draft assurance`n`nSelected Version: Fixture version 2.`n"}
+    if($Assurance-eq'recasedfield'){$da="${da}selected version: Fixture version 2.`n"}
     $rows=switch($Consumer){
         'none'         {''}
         'unknown'      {"| Fixture changed fact | Fixture consumer | UNKNOWN | Fixture evidence. |"}
@@ -248,6 +257,7 @@ Change Class: $Class
 | Permanent-Control Admission | Fixture derived fact. | $derivedTable |
 | SPEC Allocation | Fixture derived fact. | $derivedTable |
 
+$da
 ### Consumer Closure
 
 Applicability: $derived
@@ -3649,6 +3659,131 @@ exit 0
     Pop 'CHECK' 'reject'
     MutationKill '281-CM6 CHECK MUTATION: the commit side drops the BOM the working tree drops' {ChBom -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')} $atReceipt `
         'if($t-and$t[0]-eq[char]0xFEFF){$t=$t.Substring(1)};' '' 'CHECK'
+    # A criterion can say a path is gone. SPEC-289 retired two workflows and no check kind could
+    # state it, so Review alone judged that criterion.
+    function ChGone([string]$Path='retired.txt',[string]$Scope="retired.txt;$chPlain",[scriptblock]$Mid={},[switch]$Open,[switch]$NoReset){
+        ChBase -NoReset:$NoReset|Out-Null;Put 'retired.txt' "Retired.`n";Commit 'ch-retired';$b=(git -C $root rev-parse HEAD).Trim()
+        ChLife @{Scope=$Scope;Acceptance="$Path is retired. ``check: absent $Path``"} -NoReset -Mid $Mid -Open:$Open|Out-Null;$b
+    }
+    $retire={git -C $root rm -q retired.txt;Commit 'ch-retire'}
+    $b=ChGone -Mid $retire;$r=RunRange $b
+    Assert 'AB1 CHECK: a removed path holds an absent check in the range' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'CHECK' 'accept'
+    $b=ChGone;$r=RunRange $b
+    Assert 'AB2 CHECK: a path that still exists fails an absent check in the range' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_FAILED.*retired\.txt exists') $r.Text
+    Pop 'CHECK' 'reject'
+    ChGone -Open|Out-Null;Remove-Item -LiteralPath (Join-Path $root 'retired.txt');Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert 'AB3 CHECK: the removed path holds it in the hook' ($r.Text-notmatch'CRITERION_CHECK_FAILED'-and$r.Text-match$atReceipt) $r.Text
+    Pop 'CHECK' 'accept'
+    ChGone -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert 'AB4 CHECK: a path that still exists fails it in the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED') $r.Text
+    Pop 'CHECK' 'reject'
+    ChApprove @{Scope=$chPlain;Acceptance='notes.md is gone. `check: absent notes.md`'}|Out-Null;$r=Run 'Gate'
+    Assert 'AB5 CHECK: an absent check on an existing path outside Write Scope refuses Approval' ($r.Code-ne0-and$r.Text-match'CODE: APPROVAL_EVIDENCE'-and$r.Text-match'can never hold') $r.Text
+    Pop 'CHECK' 'reject'
+    $goneClash='allowed.txt is gone. `check: absent allowed.txt`'+"`n- [ ] "+'allowed.txt is ready. `check: has allowed.txt "ready"`'
+    ChApprove @{Scope=$chPlain;Acceptance=$goneClash}|Out-Null;$r=Run 'Gate'
+    Assert 'AB6 CHECK: absent beside a check that needs the path refuses Approval' ($r.Code-ne0-and$r.Text-match'CODE: APPROVAL_EVIDENCE'-and$r.Text-match'cannot both hold') $r.Text
+    Pop 'CHECK' 'reject'
+    # Only a canonical repository-relative path is a check: never one outside the repository or spelled two ways.
+    foreach($p in @('../secret.txt','/etc/passwd','C:/Windows/win.ini','docs\channel.md','docs/./channel.md','docs/')){
+        ChApprove @{Scope=$chPlain;Acceptance="$p is gone. ``check: absent $p``"}|Out-Null;$r=Run 'Gate'
+        Assert "AB7 CHECK: absent refuses the non-canonical path $p" ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_MALFORMED') $r.Text
+        Pop 'CHECK' 'reject'
+    }
+    # A case-only difference is the same file to Windows and macOS: at a commit it must not read as absent.
+    $b=ChGone -Path 'Retired.txt';$r=RunRange $b
+    Assert 'AB8 CHECK: a path tracked in another letter case fails absent in the range' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_FAILED.*Retired\.txt exists') $r.Text
+    Pop 'CHECK' 'reject'
+    ChApprove @{Scope=$chPlain;Acceptance='The docs are gone. `check: absent docs`'}|Out-Null;$r=Run 'Gate'
+    Assert 'AB9 CHECK: a directory holding tracked files is present' ($r.Code-ne0-and$r.Text-match'can never hold'-and$r.Text-match'docs exists') $r.Text
+    Pop 'CHECK' 'reject'
+    MutationKill 'ABM1 CHECK MUTATION: absent refuses a path that still exists' {ChGone -Open|Out-Null;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.')} 'retired\.txt exists' `
+        'if($hit.Count-or(' 'if($false-and(' 'CHECK'
+    MutationKillRangeAt 'ABM3 CHECK MUTATION: absence is judged in any letter case' {ChGone -Path 'Retired.txt' -NoReset} 'Retired\.txt exists' `
+        '[StringComparison]::OrdinalIgnoreCase)-or$_.StartsWith' '[StringComparison]::Ordinal)-or$_.StartsWith' 'CHECK'
+    MutationKill 'ABM4 CHECK MUTATION: a non-canonical path is malformed' {ChApprove @{Scope=$chPlain;Acceptance='It is gone. `check: absent ../secret.txt`'}|Out-Null} 'CRITERION_CHECK_MALFORMED' `
+        '(?!.*(?:^|/)\.\.?(?:/|$))' '' 'CHECK'
+    MutationKill 'ABM2 CHECK MUTATION: absent clashes with a check that needs the path' {ChApprove @{Scope=$chPlain;Acceptance=$goneClash}|Out-Null} 'cannot both hold' `
+        "if(`$a.Kind-eq'absent'-and" "if(`$false-and`$a.Kind-eq'absent'-and" 'CHECK'    # A listing Git cannot finish is not absence: a missing object stopped ls-tree part-way and the
+    # range was READY with retired.txt still in the tree. The lost subtree sits in the range base, so
+    # no diff in the walk reads it and only the listing meets the damage. Moved objects are put back.
+    $script:chLost=@()
+    function ChLost([switch]$NoReset){
+        if(-not$NoReset){Reset-Fixture};Put "aaa-lost/$([guid]::NewGuid().ToString('N')).txt" "lost`n"
+        $b=ChGone -NoReset;$t=(git -C $root rev-parse 'HEAD:aaa-lost').Trim()
+        $o=Join-Path $root ".git/objects/$($t.Substring(0,2))/$($t.Substring(2))";$k=Join-Path $sandbox "lost-$t"
+        Move-Item -LiteralPath $o -Destination $k;$script:chLost+=,@($k,$o);$b
+    }
+    function ChFound{foreach($x in $script:chLost){Move-Item -LiteralPath $x[0] -Destination $x[1]};$script:chLost=@()}
+    $b=ChLost;$r=RunRange $b;ChFound
+    Assert 'AB10 CHECK: an absent check Git cannot list is refused as indeterminate, never held' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_INDETERMINATE:retired\.txt.*@[0-9a-f]{7}'-and$r.Text-notmatch'ORVION: READY') $r.Text
+    Pop 'CHECK' 'reject'
+    ChGone -Open|Out-Null;git -C $root rm -q --cached retired.txt;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
+    Assert 'AB11 CHECK: a staged deletion still on disk fails absent in the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED'-and$r.Text-match'retired\.txt exists') $r.Text
+    Pop 'CHECK' 'reject'
+    MutationKillRangeAt 'ABM5 CHECK MUTATION: a failed listing is indeterminate, not absent' {ChLost -NoReset} 'CRITERION_CHECK_INDETERMINATE' `
+        'if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE' 'if($false){throw "CRITERION_CHECK_INDETERMINATE' 'CHECK'
+    ChFound
+
+    # DRAFT ASSURANCE. Approval of evidence-applicable work needs three distinct, filled passes, a dated
+    # evidence refresh and the selected version. The Gate proves the record exists, never that the
+    # review was good: that is the human's Approval decision.
+    $daScope="scripts/parity_surface.sql;$chPlain"
+    foreach($c in @(
+        @{No='DA1';A='missing';E='Draft Assurance missing'},
+        @{No='DA2';A='placeholder';E='Draft Assurance field missing: Pass 2 Adversarial Review'},
+        @{No='DA3';A='repeated';E='not three distinct records'},
+        @{No='DA4';A='undated';E='names no date'},
+        @{No='DA7';A='recased';E='not three distinct records'},
+        @{No='DA8';A='baddate';E='2026-02-30 is not a calendar date'},
+        @{No='DA9';A='future';E='2999-01-01 is in the future'},
+        @{No='DA10';A='dupfield';E='field repeated: Pass 1 Design'},
+        @{No='DA11';A='dupsection';E='Draft Assurance appears 2 times'},
+        @{No='DA14';A='recasedsection';E='Draft Assurance appears 2 times'},
+        @{No='DA15';A='recasedfield';E='field repeated: Selected Version'})){
+        ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance $c.A)}|Out-Null;$r=Run 'Gate'
+        Assert "$($c.No) DRAFT ASSURANCE: a $($c.A) record refuses Approval" ($r.Code-ne0-and$r.Text-match'APPROVAL_EVIDENCE'-and$r.Text-match$c.E) $r.Text
+        Pop 'DA' 'reject'
+    }
+    ChApprove @{Scope=$daScope;Evidence=(EvidenceText)}|Out-Null;$r=Run 'Gate'
+    Assert 'DA5 DRAFT ASSURANCE MUST-ACCEPT: a complete record is admitted' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: PASS') $r.Text
+    Pop 'DA' 'accept'
+    ChApprove @{Scope=$chPlain}|Out-Null;$r=Run 'Gate'
+    Assert 'DA6 DRAFT ASSURANCE: work the section is not derived for needs no record' ($r.Code-eq0-and$r.Text-match'APPROVAL_EVIDENCE: NOT APPLICABLE') $r.Text
+    Pop 'DA' 'accept'
+    MutationKill 'DAM1 DRAFT ASSURANCE MUTATION: Approval reads the record' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'missing')}|Out-Null} 'Draft Assurance missing' `
+        'Assert-DraftAssurance $body' '' 'DA'
+    MutationKill 'DAM2 DRAFT ASSURANCE MUTATION: every field is filled' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'placeholder')}|Out-Null} 'Draft Assurance field missing' `
+        "if(`$v[`$f]-eq''){throw" 'if($false){throw' 'DA'
+    MutationKill 'DAM3 DRAFT ASSURANCE MUTATION: the passes are distinct' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'repeated')}|Out-Null} 'not three distinct records' `
+        '[StringComparer]::Ordinal).Count-ne3){' '[StringComparer]::Ordinal).Count-lt0){' 'DA'
+    MutationKill 'DAM4 DRAFT ASSURANCE MUTATION: the evidence refresh is dated' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'undated')}|Out-Null} 'names no date' `
+        'if(-not$dates.Count){throw' 'if($false){throw' 'DA'
+    MutationKill 'DAM5 DRAFT ASSURANCE MUTATION: passes differing only in case and spacing are one pass' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'recased')}|Out-Null} 'not three distinct records' `
+        "(`$v[`$_]-replace'\s+',' ').ToLowerInvariant()" '$v[$_]' 'DA'
+    MutationKill 'DAM6 DRAFT ASSURANCE MUTATION: the date is a calendar day' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'baddate')}|Out-Null} 'is not a calendar date' `
+        'if(-not[DateTime]::TryParseExact(' 'if($false-and-not[DateTime]::TryParseExact(' 'DA'
+    MutationKill 'DAM7 DRAFT ASSURANCE MUTATION: the date is not in the future' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'future')}|Out-Null} 'is in the future' `
+        'if($day-gt$latest){throw' 'if($false){throw' 'DA'
+    MutationKill 'DAM8 DRAFT ASSURANCE MUTATION: a field has one line' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'dupfield')}|Out-Null} 'field repeated' `
+        'if($lines-gt1){throw' 'if($false){throw' 'DA'
+    MutationKill 'DAM9 DRAFT ASSURANCE MUTATION: the record appears once' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'dupsection')}|Out-Null} 'appears 2 times' `
+        'if($n-gt1){throw' 'if($false){throw' 'DA'
+    MutationKill 'DAM10 DRAFT ASSURANCE MUTATION: a heading in another letter case is the same record' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'recasedsection')}|Out-Null} 'appears 2 times' `
+        "'(?mi)^### Draft Assurance" "'(?m)^### Draft Assurance" 'DA'
+    MutationKill 'DAM11 DRAFT ASSURANCE MUTATION: a field name in another letter case is the same field' {ChApprove @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'recasedfield')}|Out-Null} 'field repeated' `
+        '"(?mi)^$([regex]::Escape($f)):"' '"(?m)^$([regex]::Escape($f)):"' 'DA'
+    # SACI: a Draft-to-Approved transition is judged only inside the range being admitted, so a contract
+    # approved before this rule is never re-judged, while one approved inside the range is.
+    ChLife @{Scope=$daScope;Evidence=(EvidenceText -Assurance 'missing')}|Out-Null
+    $chBaseSha=(git -C $root log --format=%H --grep='^ch-base$' -1).Trim();$chApproveSha=(git -C $root log --format=%H --grep='^ch-approve$' -1).Trim()
+    $r=RunRange $chBaseSha
+    Assert 'DA12 DRAFT ASSURANCE: an Approval inside the admitted range is judged' ($r.Code-ne0-and$r.Text-match'Draft Assurance missing') $r.Text
+    Pop 'DA' 'reject'
+    $r=RunRange $chApproveSha
+    Assert 'DA13 DRAFT ASSURANCE SACI: an Approval before the range is never re-judged' ($r.Code-eq0-and$r.Text-match'ORVION: READY') $r.Text
+    Pop 'DA' 'accept'
 
     # SACI / PIN. A pinned line holds its ratified text whatever Write Scope allows, and a contract
     # that names one says what it does to it; only a contract that moves the pin may write it.
@@ -3851,7 +3986,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','PIN','ACI','TRUST','PROMOTE','TIME')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','DA','PIN','ACI','TRUST','PROMOTE','TIME')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

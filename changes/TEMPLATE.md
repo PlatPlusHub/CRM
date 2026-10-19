@@ -118,6 +118,20 @@ This section is frozen at Approval.]
 
 Change Class: [Routine | Significant | Owner-Decision]
 
+### Draft Assurance
+
+[Required wherever Consumer Closure is, once, one line per field. The Gate refuses a missing,
+duplicated, bracketed or repeated record and a missing, impossible or future date; the human judges
+its quality at Approval (`ENGINEERING_METHOD.md`).]
+
+Pass 1 Design: [the initial design and what it covers]
+
+Pass 2 Adversarial Review: [what an adversarial challenge of Pass 1 rejected, changed or confirmed, and why]
+
+Pass 3 Evidence Refresh: [the evidence re-read or re-measured, with its date in YYYY-MM-DD form]
+
+Selected Version: [the version approved, and why it was preferred]
+
 ### Consumer Closure
 
 Applicability: [APPLICABLE / NOT APPLICABLE]
@@ -192,9 +206,11 @@ broad criteria — this makes partial completion and partial failure both indivi
 
 Where an item states a repository fact, end it with a check the Gate evaluates:
 `check: same <path>[#<line key>] @<commit>`, `check: has <path>[#<line key>] "<text>"`,
-`check: lacks <path>[#<line key>] "<text>"` or `check: blob <path> <sha1>`. A check that can never
-hold refuses Approval, and every check must hold at Complete, in the hook and in CI. An item without
-a check is judged by Review alone, and the Gate reports it as such.
+`check: lacks <path>[#<line key>] "<text>"`, `check: blob <path> <sha1>` or `check: absent <path>`
+(Git holds neither the repository-relative path nor anything under it, in any letter case, and in the
+working tree nothing is on disk there). A check that can never hold refuses Approval, and every check
+must hold at Complete, in the hook and in CI. An item without a check is judged by Review alone, and
+the Gate reports it as such.
 
 Assert LOCAL evidence ONLY (`CR_LIFECYCLE.md §8`). A criterion naming remote workflow results on
 the completion commit's own SHA cannot be true when it is ticked, because that commit does not

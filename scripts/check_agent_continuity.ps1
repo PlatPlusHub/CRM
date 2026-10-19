@@ -685,6 +685,7 @@ function Get-CriterionChecks($Contract){
                 'same'{[regex]::Match($a,'^(?<path>[^\s#@"]+)(?:#(?<key>[^@"]+?))?\s+@(?<ref>[0-9a-f]{7,40})$')}
                 {$_-in'has','lacks'}{[regex]::Match($a,'^(?<path>[^\s#@"]+)(?:#(?<key>[^@"]+?))?\s+"(?<text>[^"]+)"$')}
                 'blob'{[regex]::Match($a,'^(?<path>[^\s#@"]+)\s+(?<sha>[0-9a-f]{40})$')}
+                'absent'{[regex]::Match($a,'^(?<path>(?!/)(?!.*//)(?!.*(?:^|/)\.\.?(?:/|$))[^\s#@"\\:]+(?<!/))$')}
                 default{[regex]::Match('','x')}
             }
             if(-not$p.Success){throw "CRITERION_CHECK_MALFORMED:criterion $i - $($m.Value)"}
@@ -709,6 +710,20 @@ function Get-RepoBlob([string]$Ref,[string]$Path){
 # $null when the check holds at $Ref ('' = working tree); otherwise why it does not.
 function Test-CriterionCheck($Check,[string]$Ref){
     $where=if($Check.Key){"$($Check.Path)#$($Check.Key)"}else{$Check.Path}
+    # SPEC-289 retired two workflows and no check could say so, so Review alone judged it. A path is
+    # present when the judged tree holds it, or anything under it, in any letter case (a case-only
+    # rename must not read as a deletion while the file still exists). At a commit that tree is Git's;
+    # in the working tree it is what Git knows that is still on disk, plus the path itself on disk.
+    if($Check.Kind-eq'absent'){
+        $entries=@(if($Ref){git -C $Root ls-tree -r --name-only $Ref 2>$null}else{git -C $Root ls-files --cached --others --exclude-standard 2>$null})
+        # A listing Git could not finish proves nothing: a missing object stops ls-tree part-way, and
+        # the path read as absent while it was still there. Unknown is refused, never absent.
+        if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE:$where - Git could not list $(if($Ref){$Ref}else{'the working tree'})"}
+        $global:LASTEXITCODE=0
+        $hit=@($entries|Where-Object{[string]::Equals($_,$Check.Path,[StringComparison]::OrdinalIgnoreCase)-or$_.StartsWith("$($Check.Path)/",[StringComparison]::OrdinalIgnoreCase)}|Where-Object{$Ref-or(Test-Path -LiteralPath (Join-Path $Root $_))})
+        if($hit.Count-or(-not$Ref-and(Test-Path -LiteralPath (Join-Path $Root $Check.Path)))){return "$where exists"}
+        return $null
+    }
     if($Check.Kind-eq'blob'){
         $b=Get-RepoBlob $Ref $Check.Path
         if($b-ne$Check.Sha){return "$where is blob $(if($b){$b}else{'(absent)'})"}
@@ -760,6 +775,7 @@ function Assert-AssuranceAdmission($Contract,[string]$BaseRef){
     # Two checks on one target that no final state can satisfy together: `has` beside a `lacks`
     # it implies, two different blobs, or `same` beside a value the pinned commit does not hold.
     foreach($a in $checks){foreach($b in $checks){
+        if($a.Kind-eq'absent'-and$b.Kind-ne'absent'-and$a.Path-eq$b.Path){throw "APPROVAL_EVIDENCE:FAIL:criteria $($a.Item) and $($b.Item) cannot both hold - $($a.Raw) and $($b.Raw)"}
         if($a.Path-ne$b.Path-or$a.Key-ne$b.Key-or[object]::ReferenceEquals($a,$b)){continue}
         $clash=switch("$($a.Kind)/$($b.Kind)"){
             'has/lacks'{$a.Text.Contains($b.Text)}
@@ -869,6 +885,38 @@ $script:EvidenceWriteClosure=@(
     @{When='^supabase/migrations/';Needs='reports/master/MASTER_API_CONTRACT.md'
       Why='mandatory Check L3 regenerates the API contract from the live surface and byte-compares it'}
 )
+# THREE-PASS DRAFT ASSURANCE (owner requirement of 2026-10-15). A Draft that reaches a
+# surface this section is derived for is approved only with the record of three distinct passes:
+# the initial design, an adversarial challenge of it, and a dated refresh of the evidence it rests
+# on, plus the version selected. Until now that record lived in Notes by convention and nothing
+# refused its absence. The Gate proves the record exists, is filled and is not one pass restated
+# three times; whether the review was good is the human's Approval decision (CR_LIFECYCLE.md §5).
+$script:DraftAssuranceFields=@('Pass 1 Design','Pass 2 Adversarial Review','Pass 3 Evidence Refresh','Selected Version')
+function Assert-DraftAssurance([string]$Body){
+    $n=([regex]::Matches("$Body",'(?mi)^### Draft Assurance\s*$')).Count
+    if($n-eq0){throw 'APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance missing'}
+    if($n-gt1){throw "APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance appears $n times"}
+    $a=SubSection $Body 'Draft Assurance'
+    $v=@{}
+    foreach($f in $script:DraftAssuranceFields){
+        $lines=([regex]::Matches($a,"(?mi)^$([regex]::Escape($f)):")).Count
+        if($lines-gt1){throw "APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance field repeated: $f"}
+        $v[$f]=EvidenceBody (EvidenceField $a $f)
+        if($v[$f]-eq''){throw "APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance field missing: $f"}
+    }
+    $passes=@('Pass 1 Design','Pass 2 Adversarial Review','Pass 3 Evidence Refresh')|ForEach-Object{($v[$_]-replace'\s+',' ').ToLowerInvariant()}
+    if([Collections.Generic.HashSet[string]]::new([string[]]$passes,[StringComparer]::Ordinal).Count-ne3){
+        throw 'APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance passes are not three distinct records'
+    }
+    # Dated as Check 12 dates evidence: a real calendar day, not after the newest civil date on Earth (UTC+14).
+    $dates=@([regex]::Matches($v['Pass 3 Evidence Refresh'],'\b\d{4}-\d{2}-\d{2}\b')|ForEach-Object{$_.Value})
+    if(-not$dates.Count){throw 'APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance Pass 3 Evidence Refresh names no date'}
+    $latest=[DateTime]::UtcNow.AddHours(14).Date
+    foreach($d in $dates){$day=[DateTime]::MinValue
+        if(-not[DateTime]::TryParseExact($d,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::None,[ref]$day)){throw "APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance Pass 3 Evidence Refresh date $d is not a calendar date"}
+        if($day-gt$latest){throw "APPROVAL_EVIDENCE:INDETERMINATE:Draft Assurance Pass 3 Evidence Refresh date $d is in the future"}
+    }
+}
 function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles,[string]$BaseRef='HEAD'){
     # DERIVED applicability, from the inputs ENGINEERING_METHOD actually names: Write
     # Scope, derived verification profiles, known control/governance surfaces,
@@ -960,6 +1008,8 @@ function Evaluate-PreApprovalEvidence($Contract,[string[]]$Profiles,[string]$Bas
             throw 'APPROVAL_EVIDENCE:INDETERMINATE:derived applicability contradicts repository evidence'
         }
     }
+
+    Assert-DraftAssurance $body
 
     # D - CONSUMER CLOSURE. Closes what DEPENDS on a changed fact, which is a
     # different question from Write Scope's what may be modified, so it is never

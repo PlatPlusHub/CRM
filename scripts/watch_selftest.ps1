@@ -219,6 +219,46 @@ function Case-ExitCode([string]$RunnerPath) {
     $end = @(Get-Content -LiteralPath $log | Where-Object { $_ -match '\] END exit=' })
     [pscustomobject]@{ Ok = ($done -and $r.ExitCode -eq 3 -and $end.Count -eq 1 -and $end[0] -match 'END exit=3 '); Detail = "runner exit=$(if ($done) { $r.ExitCode }) end=[$end]" }
 }
+# The runner samples its own resources while the command runs and summarises them on one line before
+# END, which stays last; the command's exit code is untouched.
+function Case-Resources([string]$RunnerPath) {
+    $log = New-Name '.log'; $saved = $env:ORVION_RESOURCE_SECONDS; $env:ORVION_RESOURCE_SECONDS = '1'
+    try { $r = Start-Runner $RunnerPath $log "Write-Output 'PASS: x'; Start-Sleep -Seconds 6; exit 4" } finally { $env:ORVION_RESOURCE_SECONDS = $saved }
+    $done = Wait-Exit $r 60; $lines = @(Get-Content -LiteralPath $log)
+    $sum = @($lines | Where-Object { $_ -match '\] RESOURCES: samples=(\d+) min_free_gb=[\d.]+ peak_tree_mb=(\d+) max_cpu_pct=\d+ ' })
+    $n = if ($sum.Count -eq 1) { [int]([regex]::Match($sum[0], 'samples=(\d+)').Groups[1].Value) } else { 0 }
+    $rows = @(if (Test-Path -LiteralPath "$log.resources.csv") { Import-Csv -LiteralPath "$log.resources.csv" })
+    $ok = $done -and $r.ExitCode -eq 4 -and $n -ge 2 -and $rows.Count -eq $n -and [double]$rows[0].tree_mb -gt 0 -and $lines[-1] -match '\] END exit=4 ' -and $lines[-2] -match '\] RESOURCES: '
+    [pscustomobject]@{ Ok = $ok; Detail = "done=$done exit=$(if ($done) { $r.ExitCode }) samples=$n rows=$($rows.Count) || $($lines -join ' || ')" }
+}
+# Two runs at once each sample into their own file and keep their own exit code and summary.
+function Case-ResourcesConcurrent([string]$RunnerPath) {
+    $logs = @((New-Name '.log'), (New-Name '.log')); $saved = $env:ORVION_RESOURCE_SECONDS; $env:ORVION_RESOURCE_SECONDS = '1'
+    try { $rs = @((Start-Runner $RunnerPath $logs[0] "Start-Sleep -Seconds 5; exit 5"), (Start-Runner $RunnerPath $logs[1] "Start-Sleep -Seconds 5; exit 6")) } finally { $env:ORVION_RESOURCE_SECONDS = $saved }
+    $done = (Wait-Exit $rs[0] 60) -and (Wait-Exit $rs[1] 60); $detail = @(); $ok = $done; $paths = @()
+    foreach ($i in 0, 1) {
+        $lines = @(Get-Content -LiteralPath $logs[$i]); $sum = @($lines | Where-Object { $_ -match '\] RESOURCES: samples=(\d+) .*\((.+)\)$' })
+        $path = if ($sum.Count -eq 1) { [regex]::Match($sum[0], '\((.+)\)$').Groups[1].Value } else { '' }; $paths += $path
+        $n = if ($sum.Count -eq 1) { [int]([regex]::Match($sum[0], 'samples=(\d+)').Groups[1].Value) } else { 0 }
+        $rows = @(if ($path -and (Test-Path -LiteralPath $path)) { Import-Csv -LiteralPath $path })
+        $ok = $ok -and $done -and $rs[$i].ExitCode -eq (5 + $i) -and $n -ge 2 -and $rows.Count -eq $n -and $path -eq "$($logs[$i]).resources.csv" -and $lines[-1] -match "\] END exit=$(5 + $i) "
+        $detail += "run$i exit=$(if ($done) { $rs[$i].ExitCode }) samples=$n rows=$($rows.Count) path=$path"
+    }
+    [pscustomobject]@{ Ok = ($ok -and $paths[0] -ne $paths[1]); Detail = ($detail -join ' || ') }
+}
+# Killing the runner stops its sampler with it: the sampler is a thread of the runner, never a process
+# of its own, so nothing keeps appending once the runner is gone.
+function Case-ResourcesInterrupted([string]$RunnerPath) {
+    $log = New-Name '.log'; $csv = "$log.resources.csv"; $saved = $env:ORVION_RESOURCE_SECONDS; $env:ORVION_RESOURCE_SECONDS = '1'
+    try { $r = Start-Runner $RunnerPath $log "Start-Sleep -Seconds 60" } finally { $env:ORVION_RESOURCE_SECONDS = $saved }
+    $sw = [Diagnostics.Stopwatch]::StartNew(); while ($sw.Elapsed.TotalSeconds -lt 30 -and @(if (Test-Path -LiteralPath $csv) { Get-Content -LiteralPath $csv }).Count -lt 3) { Start-Sleep -Milliseconds 250 }
+    $children = @(Get-CimInstance Win32_Process -Filter "ParentProcessId=$($r.Id)" | ForEach-Object { $_.ProcessId })
+    Stop-Process -Id $r.Id -Force; [void]$r.WaitForExit(10000)
+    $at = @(Get-Content -LiteralPath $csv).Count; Start-Sleep -Seconds 3; $later = @(Get-Content -LiteralPath $csv).Count
+    foreach ($c in $children) { Stop-Tree $c }
+    $end = @(Get-Content -LiteralPath $log | Where-Object { $_ -match '\] (END|RESOURCES):' }).Count
+    [pscustomobject]@{ Ok = ($at -ge 3 -and $later -eq $at -and $end -eq 0); Detail = "rows at kill=$at rows 3 s later=$later end-or-summary lines=$end" }
+}
 function Case-Steps([string]$RunnerPath, [string]$WatcherPath) {
     $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
     # Other work already running: the START line must name it, so this run is labelled as contaminated.
@@ -329,6 +369,9 @@ function Case-Rearm([string]$RunnerPath, [string]$WatcherPath, $First) {
 
 try {
     $c = Case-ExitCode $Runner;      Check 'W0 the runner preserves the command''s own exit code (3), in its END line and its own exit' $c.Ok $c.Detail
+    $c = Case-Resources $Runner;     Check 'W20 the runner samples free memory, its own process tree and CPU while the command runs, and summarises them on one line before END' $c.Ok $c.Detail
+    $c = Case-ResourcesConcurrent $Runner; Check 'W21 two concurrent runs each sample into their own file and keep their own exit code, summary and END' $c.Ok $c.Detail
+    $c = Case-ResourcesInterrupted $Runner; Check 'W22 a killed runner leaves no sampler behind: its resource file stops growing and no END or summary is claimed' $c.Ok $c.Detail
     $c = Case-Vocabulary $Watcher;   Check 'W1 result vocabulary: every step, verdict, total and failure line; no prose or per-assertion noise' $c.Ok $c.Detail
     $c = Case-StartLine $Watcher;    Check 'W2 the START line carries date, runner pid and conditions; an old-format line is refused' $c.Ok $c.Detail
     $steps = Case-Steps $Runner $Watcher
@@ -404,7 +447,9 @@ try {
         @{ Name = 'M25 -Brief prints everything';             File = $Watcher; Find = 'if (-not $Brief -or $body -cmatch $script:AttentionRx)'; Replace = 'if ($true)'; Case = { param($p) Case-Quiet $Runner $p } },
         @{ Name = 'M26 a TIME line''s stated duration ignored'; File = $Watcher; Find = '$(if ($null -ne $stated -and $step -like ''TIME: *'') { $stated } else { $delta })'; Replace = '$delta'; Case = { param($p) Case-Tests $Runner $p } },
         @{ Name = 'M27 stages not split';                     File = $Watcher; Find = '$stages = @(Split-Stages $body)'; Replace = '$stages = @()'; Case = { param($p) Case-Tests $Runner $p } },
-        @{ Name = 'M28 the runner stamps a tenth of a minute'; File = $Runner;  Find = "ToString('0.000',"; Replace = "ToString('0.0',"; Case = { param($p) Case-Tests $p $Watcher } }
+        @{ Name = 'M28 the runner stamps a tenth of a minute'; File = $Runner;  Find = "ToString('0.000',"; Replace = "ToString('0.0',"; Case = { param($p) Case-Tests $p $Watcher } },
+        @{ Name = 'M34 resources never sampled';              File = $Runner;  Find = 'if ($IsWindows) {'; Replace = 'if ($false) {'; Case = { param($p) Case-Resources $p } },
+        @{ Name = 'M35 concurrent runs share one resource file'; File = $Runner; Find = '$resources = "$Log.resources.csv"'; Replace = '$resources = Join-Path ([IO.Path]::GetTempPath()) ''orvion-resources.csv'''; Case = { param($p) Case-ResourcesConcurrent $p } }
     )
     foreach ($m in $mutants) {
         $source = [IO.File]::ReadAllText($m.File); $mutated = $source.Replace($m.Find, $m.Replace)
