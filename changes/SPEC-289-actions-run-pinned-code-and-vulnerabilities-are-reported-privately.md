@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -215,11 +215,11 @@ Post-Implementation Proof Obligation: the full control suites and the REPOSITORY
 
 ## Acceptance Criteria
 
-- [ ] The three remaining non-admission workflows run commit-pinned checkout code with explicit read-only permissions, with exactly the reviewed bytes. `check: blob .github/workflows/agent-control.yml 41243b7c9a499df4cf011385a046c53107084ba3` `check: blob .github/workflows/migration-ci.yml 9bf8ca02d8ffac6591871b66bff53d5dbfc6e75c` `check: blob .github/workflows/repository-consistency.yml ed3ef8d8e954c8a2c5710fe44f46eb1f569c7492` `check: lacks .github/workflows/migration-ci.yml "uses: actions/checkout@v"` `check: lacks .github/workflows/repository-consistency.yml "uses: actions/checkout@v"` `check: lacks .github/workflows/agent-control.yml "uses: actions/checkout@v"`
-- [ ] `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml` no longer exist.
-- [ ] The security policy names GitHub private vulnerability reporting as its only channel, with exactly the reviewed bytes. `check: blob .github/SECURITY.md 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132` `check: has .github/SECURITY.md "choose **Report a vulnerability**"`
-- [ ] The admission workflow, the evaluator, the control suite, release authorities and the watcher are unchanged. `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/check_agent_continuity.ps1 256879e512235b1e8744ea64862dd1e82ce65c6d` `check: blob scripts/test_agent_continuity.ps1 52934332def1608d6bc12b6ac5847db34f4b37f7` `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf`
-- [ ] The manifest keeps the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
+- [x] The three remaining non-admission workflows run commit-pinned checkout code with explicit read-only permissions, with exactly the reviewed bytes. `check: blob .github/workflows/agent-control.yml 41243b7c9a499df4cf011385a046c53107084ba3` `check: blob .github/workflows/migration-ci.yml 9bf8ca02d8ffac6591871b66bff53d5dbfc6e75c` `check: blob .github/workflows/repository-consistency.yml ed3ef8d8e954c8a2c5710fe44f46eb1f569c7492` `check: lacks .github/workflows/migration-ci.yml "uses: actions/checkout@v"` `check: lacks .github/workflows/repository-consistency.yml "uses: actions/checkout@v"` `check: lacks .github/workflows/agent-control.yml "uses: actions/checkout@v"`
+- [x] `.github/workflows/claude.yml` and `.github/workflows/claude-code-review.yml` no longer exist.
+- [x] The security policy names GitHub private vulnerability reporting as its only channel, with exactly the reviewed bytes. `check: blob .github/SECURITY.md 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132` `check: has .github/SECURITY.md "choose **Report a vulnerability**"`
+- [x] The admission workflow, the evaluator, the control suite, release authorities and the watcher are unchanged. `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob scripts/check_agent_continuity.ps1 256879e512235b1e8744ea64862dd1e82ce65c6d` `check: blob scripts/test_agent_continuity.ps1 52934332def1608d6bc12b6ac5847db34f4b37f7` `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob scripts/watch_ci.ps1 ca87c18d3ac7fa62f70f5df681c5df18cf482699` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf`
+- [x] The manifest keeps the owner's Batch 6 hold. `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
 
 ## Execution Log
 
@@ -241,6 +241,12 @@ Outcome: Complete (implementation steps; final verification pending)
 - Step 6 Applied: `.github/SECURITY.md` created with the contract's exact content; blob 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132.
 - Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Each file was copied from the reviewed sandbox bytes and its Git blob checked against this contract before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
+### 2026-10-19 — Local completion (Claude)
+
+Outcome: Complete
+
+Step 8 Applied: fresh timed and watched Finish returned LOCAL_CERTIFY: READY (every derived CONTROL and REPOSITORY command exit 0); independent live-state Review recorded in the preceding commit, including that both retired workflows are absent. No out-of-scope change. Manifest active pointer cleared, Last Completed set to the approved line recording the owner's Batch 6 hold, projections regenerated. Exact-SHA local candidate binding follows this completion commit through the existing Gate. Publication, promotion and post-promotion remote certification remain separate. CTRL-19 remains OPEN.
+
 ## Verification Notes
 
 None.
@@ -260,10 +266,10 @@ Recommendation to human: Set Status to Complete, then bind the exact candidate l
 
 ## Review Gate
 
-- [ ] Exact approved steps and exhaustive scope independently confirmed.
-- [ ] Every acceptance criterion confirmed against final local evidence, including the two absent workflows.
-- [ ] Mandatory profiles and Git checks pass through fresh Finish.
-- [ ] Admission workflow, release authorities and historical evidence preserved; no GitHub setting changed; CTRL-19 remains OPEN.
+- [x] Exact approved steps and exhaustive scope independently confirmed.
+- [x] Every acceptance criterion confirmed against final local evidence, including the two absent workflows.
+- [x] Mandatory profiles and Git checks pass through fresh Finish.
+- [x] Admission workflow, release authorities and historical evidence preserved; no GitHub setting changed; CTRL-19 remains OPEN.
 
 ## Notes
 
