@@ -710,6 +710,18 @@ Outcome: Complete (implementation steps; final verification pending)
 
 None.
 
+### 2026-10-19 — Independent live-state Review (Claude)
+
+Verdict: Confirmed Complete
+
+Findings:
+- Rechecked live Git, not the Execution Log. The range b091f0fa002d0d9f4ce9f38713c92cd0dbc6270c..348d9c095d22d0b31d714abaec62b4198d7aa47f changes only Write Scope paths (this contract, the evaluator, its control suite, the timed runner, the runner self-test, ENGINEERING_METHOD.md, changes/TEMPLATE.md, manifest, ai-map.json); none of the 20 forbidden paths changed. The allocation b1caa7e stores the approved blob 55f07e08c7fdd85e420c4d1916fd1392dbad50f7, and later edits to this file touch only Status, Runtime Checkpoint and the logs. Every commit in the range is authored by PlatPlusHub.
+- Fresh timed and watched Finish on 348d9c095d22d0b31d714abaec62b4198d7aa47f returned LOCAL_CERTIFY: READY, exit 0, in 68.8 min (pwsh 7.6.7, 8 CPUs; run beside the Founder repository's own Finish under memory pressure, so it is not a baseline): CONTROL (agent continuity 47:15, cold-start, status contradiction, primary ledger, future date), REPOSITORY (consistency, diff check) and the Additional `scripts/watch_selftest.ps1` passed, 8 of 8 commands. The receipt names SPEC-290, finishHead 348d9c0, profiles CONTROL and REPOSITORY, result READY.
+- The changed runner proved itself on this run: the log carries one `RESOURCES:` line before END (samples=68 min_free_gb=1.93 peak_tree_mb=881) and the real exit code.
+- All Acceptance Criteria checks verified directly at 348d9c0 (21 of 21 hold, the manifest hold line included). `generate-ai-map.ps1 -Check` exits 0. No out-of-scope change; no GitHub setting changed. CTRL-19 remains OPEN. Batch 6 remains ON HOLD.
+
+Recommendation to human: Set Status to Complete, then bind the exact candidate locally; publication and promotion follow `CR_LIFECYCLE.md` §9.
+
 ## Review Gate
 
 - [ ] Exact approved steps and exhaustive scope independently confirmed.
