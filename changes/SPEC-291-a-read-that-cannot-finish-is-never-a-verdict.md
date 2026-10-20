@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -774,6 +774,10 @@ Post-Implementation Proof Obligation: the full control suites and the REPOSITORY
 ## Execution Log
 
 None.
+
+### 2026-10-20 — Gate 1 approval recorded
+
+The owner's Gate 1 approval explicitly approves this exact Draft, SHA-256 5C94E1324730FB4A99AC8D86FA1A2C36D7335338FA98E0B455E2D8B435DF6FBE and Git blob 3a007e12f8a4cf395845cb044e17a5681de677f8, and no superseded or future revision. Immediately before allocation the hash, the Draft blob 3a007e12f8a4cf395845cb044e17a5681de677f8, all 33 source anchors, the baseline HEAD 94e7a39e6da7ac553842d2d2954cae38a574d45b against refreshed origin/main 94e7a39e6da7ac553842d2d2954cae38a574d45b and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 6638b5c. No implementation performed before this transition. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 
