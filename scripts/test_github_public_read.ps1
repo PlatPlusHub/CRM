@@ -14,8 +14,9 @@ public sealed class OrvionHttpFixture : IDisposable {
  public ConcurrentQueue<string> Replies=new ConcurrentQueue<string>();
  public ConcurrentQueue<string> Requests=new ConcurrentQueue<string>();
  public TcpListener Listener; public Thread Worker; public int Port; volatile bool Done;
+ public long Remaining=60; public long Reset=0; public long Window=3600; public int RateReads=0; public int RateFail=0;
  public OrvionHttpFixture(){Listener=new TcpListener(IPAddress.Loopback,0);Listener.Start();Port=((IPEndPoint)Listener.LocalEndpoint).Port;Worker=new Thread(Loop);Worker.IsBackground=true;Worker.Start();}
- void Loop(){while(!Done){try{using(var c=Listener.AcceptTcpClient()){c.ReceiveTimeout=2000;var s=c.GetStream();var reader=new StreamReader(s,Encoding.ASCII,false,1024,true);string line=reader.ReadLine(),h;var req=line+"\n";while(!String.IsNullOrEmpty(h=reader.ReadLine())) req+=h+"\n";Requests.Enqueue(req);string reply;if(!Replies.TryDequeue(out reply))reply="HTTP/1.1 500 Missing fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";if(reply.StartsWith("BODYDELAY")){reply=reply.Substring(9);int k=reply.IndexOf("\r\n\r\n")+4;byte[] hbytes=Encoding.UTF8.GetBytes(reply.Substring(0,k));s.Write(hbytes,0,hbytes.Length);Thread.Sleep(1800);reply=reply.Substring(k);}byte[] b=Encoding.UTF8.GetBytes(reply);s.Write(b,0,b.Length);}}catch{if(Done)return;}}}
+ void Loop(){while(!Done){try{using(var c=Listener.AcceptTcpClient()){c.ReceiveTimeout=2000;var s=c.GetStream();var reader=new StreamReader(s,Encoding.ASCII,false,1024,true);string line=reader.ReadLine(),h;var req=line+"\n";while(!String.IsNullOrEmpty(h=reader.ReadLine())) req+=h+"\n";string reply;if(line!=null&&line.StartsWith("GET /rate_limit")){RateReads++;if(RateFail>0){RateFail--;byte[] fb=Encoding.UTF8.GetBytes("HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");s.Write(fb,0,fb.Length);continue;}long now=DateTimeOffset.UtcNow.ToUnixTimeSeconds();if(Reset==0||now>=Reset){if(Reset!=0)Remaining=60;Reset=now+Window;}string body="{\"resources\":{\"core\":{\"limit\":60,\"remaining\":"+Remaining+",\"reset\":"+Reset+",\"used\":"+(60-Remaining)+"}}}";reply="HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "+Encoding.UTF8.GetByteCount(body)+"\r\nConnection: close\r\n\r\n"+body;byte[] rb=Encoding.UTF8.GetBytes(reply);s.Write(rb,0,rb.Length);continue;}Requests.Enqueue(req);if(!Replies.TryDequeue(out reply))reply="HTTP/1.1 500 Missing fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";if(reply.StartsWith("BODYDELAY")){reply=reply.Substring(9);int k=reply.IndexOf("\r\n\r\n")+4;byte[] hbytes=Encoding.UTF8.GetBytes(reply.Substring(0,k));s.Write(hbytes,0,hbytes.Length);Thread.Sleep(1800);reply=reply.Substring(k);}byte[] b=Encoding.UTF8.GetBytes(reply);s.Write(b,0,b.Length);}}catch{if(Done)return;}}}
  public void Dispose(){Done=true;Listener.Stop();Worker.Join(3000);}
 }
 '@
@@ -23,7 +24,9 @@ $server=[OrvionHttpFixture]::new()
 $source=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'github_public_read.ps1'))
 $original=$source.Replace('https://api.github.com',"http://127.0.0.1:$($server.Port)")
 $probe=Join-Path $work 'adapter.ps1'; [IO.File]::WriteAllText($probe,$original)
+$env:ORVION_PUBLIC_BUDGET=Join-Path $work 'budget.json'  # this suite's own ledger, never the machine's (set before the adapter loads)
 . $probe
+function Budget([long]$Remaining,[int]$ResetIn=3600){$server.Remaining=$Remaining;$server.Reset=[DateTimeOffset]::UtcNow.ToUnixTimeSeconds()+$ResetIn;if(Test-Path -LiteralPath $env:ORVION_PUBLIC_BUDGET){[IO.File]::Delete($env:ORVION_PUBLIC_BUDGET)}}
 function Reply($Body,[int]$Status=200,[string]$Headers='', [string]$Type='application/json') {
     $server.Replies.Enqueue("HTTP/1.1 $Status Fixture`r`nContent-Type: $Type`r`nContent-Length: $([Text.Encoding]::UTF8.GetByteCount($Body))`r`nConnection: close`r`n$Headers`r`n$Body")
 }
@@ -89,6 +92,8 @@ try {
     Check 'real HTTP response body timeout fails closed' (Refuses {Invoke-OrvionPublicHttp ([uri]"http://127.0.0.1:$($server.Port)/slow") 1} 'TRANSPORT_UNREADABLE')
     $closed=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,0);$closed.Start();$port=([Net.IPEndPoint]$closed.LocalEndpoint).Port;$closed.Stop()
     Check 'real HTTP inaccessible port fails closed' (Refuses {Invoke-OrvionPublicHttp ([uri]"http://127.0.0.1:$port/") 1} 'TRANSPORT_UNREADABLE')
+    # Watcher cases below run under a two-second budget window, so polls are spaced about a second apart.
+    $server.Window=2;Budget 60 2
     # Actual watcher subprocess: supplied fixture origin only, same adapter and authority functions.
     $scripts=Join-Path $work 'scripts';[void][IO.Directory]::CreateDirectory($scripts)
     Copy-Item (Join-Path $PSScriptRoot 'watch_ci.ps1'),(Join-Path $PSScriptRoot 'check_agent_continuity.ps1') -Destination $scripts
@@ -109,14 +114,49 @@ try {
     [IO.File]::WriteAllText((Join-Path $work 'probe.txt'),'changed');git -C $work add .;git -C $work commit --quiet -m candidate;$head=(git -C $work rev-parse HEAD).Trim()
     $count=$server.Requests.Count
     Reply '{}' 429 "Retry-After: 120`r`n"
-    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo owner/repo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
-    Check 'actual watcher honors long rate-limit retry by stopping after one unreadable poll' ($LASTEXITCODE-eq2-and($o|Out-String)-match'STOPPED: public API retry-after=120'-and$server.Requests.Count-eq$count+1) ($o|Out-String)
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo owner/repo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 -MaxWaitMinutes 1 2>&1
+    Check 'actual watcher honors long rate-limit retry by stopping after one unreadable poll' ($LASTEXITCODE-eq2-and($o|Out-String)-match'STOPPED: public API retry-after=120 seconds is beyond -MaxWaitMinutes 1'-and$server.Requests.Count-eq$count+1) ($o|Out-String)
     $r=Row;$r.head_sha=$head;Reply (Payload @($r));Reply (Payload @($r))
     $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo owner/repo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
     Check 'actual watcher positive poll retains expected-workflow deriver and literal success summary' ($LASTEXITCODE-eq0-and($o|Out-String)-match'every expected workflow ran and succeeded.*-Certify is the verdict') ($o|Out-String)
     $r.conclusion='failure';Reply (Payload @($r));Reply (ConvertTo-Json -Depth 10 -Compress @{total_count=1;jobs=@($j)});Reply '{}' 403
     $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo owner/repo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
     Check 'actual watcher polling diagnostic gap exits unreadable immediately' ($LASTEXITCODE-eq2-and($o|Out-String)-match'STOPPED: diagnostics unreadable') ($o|Out-String)
+    # The watcher cases use this repository's own watcher identity.
+    $wRepo='owner/repo';$wRow={Row}
+    # THE SHARED BUDGET. GitHub's anonymous 60 an hour is shared by every reader on the address; the rate-limit
+    # endpoint costs nothing and is answered here by the fixture's counter, which refills at its reset.
+    Budget 11 30; $sw=[Diagnostics.Stopwatch]::StartNew(); $null=Wait-OrvionPublicSlot 0 60; $next=[long][IO.File]::ReadAllText($env:ORVION_PUBLIC_BUDGET)
+    Check 'budget: with one spendable request the slot is immediate and the next is spaced to the reset' ($sw.Elapsed.TotalSeconds-lt3-and$next-ge([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()+27000))
+    $server.Window=3600; Budget 10 3; $sw=[Diagnostics.Stopwatch]::StartNew(); $said=@(Wait-OrvionPublicSlot 0 60)
+    Check 'budget: at the Certify reserve a watcher pauses until the reset, says so, and resumes' ($sw.Elapsed.TotalSeconds-ge2-and($said-join' ')-match'PAUSED: .*Certify reserve \(10 left\)'-and$server.Remaining-eq60)
+    Budget 5 600; Check 'budget: a reset beyond the wait bound is refused, not waited for' (Refuses {Wait-OrvionPublicSlot 0 60} 'BUDGET_EXHAUSTED:retry_after=')
+    $count=$server.Requests.Count
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 -MaxWaitMinutes 1 2>&1
+    Check 'budget: an exhausted budget stops the watcher without spending a request' ($LASTEXITCODE-eq2-and($o|Out-String)-match'STOPPED: public API retry-after=\d+ seconds is beyond'-and$server.Requests.Count-eq$count) ($o|Out-String)
+    # Two watchers at once: each records when it was let through; the shared ledger keeps them a spacing apart.
+    $probeSlots={param([string]$Ledger,[string]$Out)
+        $job={param($Probe,$Ledger,$Out)$env:ORVION_PUBLIC_BUDGET=$Ledger;. $Probe;foreach($k in 1,2){$null=Wait-OrvionPublicSlot 2 60;[IO.File]::AppendAllText($Out,"$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())`n")}}
+        $j=@(1,2|ForEach-Object{Start-Job -ScriptBlock $job -ArgumentList $probe,$(if($Ledger-like'*own*'){$Ledger.Replace('.json',"-$_.json")}else{$Ledger}),$Out});$null=$j|Wait-Job -Timeout 60;$j|Remove-Job -Force
+        $ms=@([IO.File]::ReadAllLines($Out)|ForEach-Object{[long]$_}|Sort-Object);@(for($i=1;$i-lt$ms.Count;$i++){$ms[$i]-$ms[$i-1]})}
+    $server.Window=3600; Budget 21 20; $gaps=@(& $probeSlots $env:ORVION_PUBLIC_BUDGET (Join-Path $work 'slots-shared.txt'))
+    Check "budget: two concurrent watchers take turns, never closer than the shared 2 s floor (gaps $($gaps-join', ') ms)" ($gaps.Count-eq3-and@($gaps|Where-Object{$_-lt1900}).Count-eq0)
+    Budget 21 20; $gaps=@(& $probeSlots (Join-Path $work 'own-a.json') (Join-Path $work 'slots-own.txt'))
+    Check "budget: the same two watchers with no shared ledger would collide (causal negative, gaps $($gaps-join', ') ms)" (@($gaps|Where-Object{$_-lt1900}).Count-gt0)
+    $server.Window=2; Budget 60 2
+    $r=& $wRow;$r.head_sha=$head;$server.Replies.Enqueue('garbage');Reply (Payload @($r));Reply (Payload @($r))
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
+    Check 'budget: a transient transport failure costs one turn, and the watch recovers' ($LASTEXITCODE-eq0-and($o|Out-String)-match'poll failed \(1 of 5\): PUBLIC_READ:TRANSPORT_UNREADABLE'-and($o|Out-String)-match'every expected workflow ran and succeeded') ($o|Out-String)
+    Reply '{}' 429 "Retry-After: 2`r`n";Reply (Payload @($r));Reply (Payload @($r))
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
+    Check 'budget: a short retry-after pauses within the bound and the watch recovers' ($LASTEXITCODE-eq0-and($o|Out-String)-match'PAUSED: public API retry-after=2 seconds'-and($o|Out-String)-match'every expected workflow ran and succeeded') ($o|Out-String)
+    $server.RateFail=1;Reply (Payload @($r));Reply (Payload @($r))
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 2>&1
+    Check 'budget: an unreadable budget read waits one poll before retrying, and the watch recovers' ($LASTEXITCODE-eq0-and($o|Out-String)-match'poll failed \(1 of 5\): PUBLIC_READ:'-and($o|Out-String)-match'retrying in 0 s'-and($o|Out-String)-match'every expected workflow ran and succeeded') ($o|Out-String)
+    $server.RateFail=5;$sw=[Diagnostics.Stopwatch]::StartNew()
+    $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 1 -SettleSeconds 0 2>&1
+    Check "budget: five unreadable budget reads stop only after a poll interval between each ($('{0:N1}'-f$sw.Elapsed.TotalSeconds) s)" ($LASTEXITCODE-eq2-and($o|Out-String)-match'five consecutive polls failed'-and$sw.Elapsed.TotalSeconds-ge4) ($o|Out-String)
+    $server.RateFail=0
     $authority=[Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'check_agent_continuity.ps1'),[ref]$null,[ref]$null)
     foreach($fn in $authority.EndBlock.Statements|Where-Object{$_-is[Management.Automation.Language.FunctionDefinitionAst]-and$_.Name-in@('Profiles','Get-ControlSurface','Test-ControlPath','Implementation-Fingerprint')}){. ([scriptblock]::Create($fn.Extent.Text))}
     Check 'adapter and its suite use existing CONTROL classification' ((@(Profiles @('scripts/github_public_read.ps1'))-contains'CONTROL')-and(@(Profiles @('scripts/test_github_public_read.ps1'))-contains'CONTROL'))

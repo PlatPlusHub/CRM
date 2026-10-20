@@ -20,7 +20,7 @@ function Get-OrvionPublicRuns([string]$Repo,[string]$Sha='',[string]$Branch='',[
     if($Sha){$a+=@('--commit',$Sha)}
     if($WorkflowPath){$yaml=[IO.File]::ReadAllText((Join-Path $Root $WorkflowPath));$name=[regex]::Match($yaml,'(?m)^name:\s*(.+?)\s*$').Groups[1].Value;$a+=@('--workflow',$name)}
     $raw=gh @a
-    if($LASTEXITCODE-ne0){throw 'PUBLIC_READ:FIXTURE_UNREADABLE'}
+    if($LASTEXITCODE-ne0){$e=[InvalidOperationException]::new('PUBLIC_READ:FIXTURE_UNREADABLE');if($env:ORVION_STUB_GH_RETRY){$e.Data['RetryAfterSeconds']=[long]$env:ORVION_STUB_GH_RETRY};throw $e}
     $parsed=$raw|ConvertFrom-Json
     $parsed
 }
@@ -490,11 +490,12 @@ function RaBuildReplay{
     Put 'changes/SPEC-900-fixture.md' (ContractText -Status 'In Progress' -Scope $script:raScopeM -Evidence (EvidenceText -Consumer 'unknown'));Commit 'ra-ip-bad'
     $b
 }
-function MutationKillRangeAt([string]$Name,[scriptblock]$Build,[string]$Expect,[string]$Find,[string]$Replace,[string]$Family='RANGE-AUTH'){
-    Reset-Fixture;$b=& $Build;$pristine=RunMutantRange $b
+function MutationKillRangeAt([string]$Name,[scriptblock]$Build,[string]$Expect,[string]$Find,[string]$Replace,[string]$Family='RANGE-AUTH',[string]$PreFind='',[string]$PreReplace=''){
+    $src=Get-Content -Raw $control;$pre=$true
+    if($PreFind){$pre=$src.Contains($PreFind);$src=$src.Replace($PreFind,$PreReplace)}
+    Reset-Fixture;if($PreFind){Put 'scripts/check_agent_continuity.ps1' $src;CommitOnly 'scripts/check_agent_continuity.ps1' 'pre-mutant'};$b=& $Build;$pristine=RunMutantRange $b
     Reset-Fixture
-    $src=Get-Content -Raw $control
-    $applied=$src.Contains($Find)
+    $applied=$pre-and$src.Contains($Find)
     Put 'scripts/check_agent_continuity.ps1' ($src.Replace($Find,$Replace))
     CommitOnly 'scripts/check_agent_continuity.ps1' 'mutant'
     $b2=& $Build;$mutated=RunMutantRange $b2
@@ -534,7 +535,7 @@ try{
     # SPEC-283. -Finish starts only under scripts/run_timed.ps1, which names its log; the fixtures stand in for it.
     $timedLog=Join-Path $sandbox 'timed.log';[IO.File]::WriteAllText($timedLog,'');$env:ORVION_TIMED_LOG=$timedLog
     git init --bare $remote --quiet;git clone $remote $root --quiet
-    git -C $root config user.email test@orvion.invalid;git -C $root config user.name ORVION-Test
+    git -C $root config user.email test@orvion.invalid;git -C $root config user.name ORVION-Test;git -C $root config gc.auto 0;git -C $root config maintenance.auto false
     Put 'AGENTS.md' '# fixture'
     # SPEC-196. The allocation-enforcement marker lives in the identity authority and is
     # read from a commit's FIRST PARENT copy, so it must exist in the baseline commit for
@@ -1402,6 +1403,7 @@ $a=$args
 function Arg([string]$n){$i=[array]::IndexOf($a,$n);if($i-ge0){$a[$i+1]}else{''}}
 $sha=Arg '--commit';$branch=Arg '--branch';$evt=Arg '--event';$wf=Arg '--workflow'
 Add-Content -LiteralPath $env:ORVION_STUB_GH_LOG -Value "gh $($a -join ' ')"
+if($env:ORVION_STUB_GH_UNREADABLE-and($env:ORVION_STUB_GH_UNREADABLE-eq'all'-or$a-contains'--workflow')){'unreadable';exit 1}
 if($sha){
 $f=Join-Path $env:ORVION_STUB_GH "$sha.json"
 if(!(Test-Path -LiteralPath $f)){'[]';exit 0}
@@ -1465,6 +1467,12 @@ exit 0
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim();ExpectBoth
     GhRuns @((Run1 'Agent Control'),(Run1 'Repository Consistency')) $sha;$r=RunCertify
     Assert '108 MUST-ACCEPT: every expected workflow observed and successful on the exact SHA is READY' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match"SHA: $sha") $r.Text
+    # GitHub that cannot be read is UNREADABLE (exit 2): not a CI failure, not success, with the reason and the rerun time.
+    $env:ORVION_STUB_GH_UNREADABLE='all';$env:ORVION_STUB_GH_RETRY='600';$r=RunCertify
+    Remove-Item Env:ORVION_STUB_GH_UNREADABLE,Env:ORVION_STUB_GH_RETRY -ErrorAction SilentlyContinue
+    Assert '108c green runs GitHub cannot read are UNREADABLE with the reason and rerun time, never FAILED or READY' ($r.Code-eq2-and$r.Text-match'REMOTE_CERTIFY: UNREADABLE'-and$r.Text-match'FIXTURE_UNREADABLE'-and$r.Text-match'Rerun -Certify after \d\d:\d\d UTC'-and$r.Text-notmatch'REMOTE_CERTIFY: (FAILED|PENDING|READY)') $r.Text
+    $r=RunCertify
+    Assert '108d once GitHub can be read again the same SHA certifies READY' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY') $r.Text
 
     # Fail closed: with no receipt there is no expected set, so nothing can be proven.
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
@@ -1543,7 +1551,7 @@ exit 0
     function PushHead([string]$Message){Commit $Message;git -C $root push origin main --quiet 2>$null;(git -C $root rev-parse HEAD).Trim()}
     function ExpectFlow([string]$Flow='Db'){RemoteReceipt @{cr='SPEC-900';result='READY';target='main';expected=@('Always',$Flow)}}
     function InhBase{Reset-Fixture;$script:iB=(git -C $root rev-parse HEAD).Trim()}
-    function InhRestore{Remove-Item Env:ORVION_STUB_GH_PERMISSIVE -ErrorAction SilentlyContinue;git -C $root checkout main --quiet 2>$null;git -C $root push origin +"$($script:iB):refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
+    function InhRestore{Remove-Item Env:ORVION_STUB_GH_PERMISSIVE,Env:ORVION_STUB_GH_UNREADABLE -ErrorAction SilentlyContinue;git -C $root checkout main --quiet 2>$null;git -C $root push origin +"$($script:iB):refs/heads/main" --quiet 2>$null;git -C $root fetch origin --quiet 2>$null}
     function InhCase([string]$Name,[string]$Kind,[scriptblock]$Build,[scriptblock]$Pass){
         & $Build;$r=RunCertify;Pop 'CERT-INHERIT' $Kind
         Assert $Name (& $Pass $r) $r.Text
@@ -1625,6 +1633,7 @@ exit 0
     InhCase 'INH-0 MUST-ACCEPT: a database head with its own green Db run is READY and inherits nothing' 'accept' {InhDbHead 'success'} {param($r)$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-notmatch'INHERITED'}
     InhCase 'INH-0b a database head whose own Db run failed is FAILED, and an older green run cannot rescue it' 'reject' {InhDbHead 'failure'} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-notmatch'INHERITED'}
     InhCase 'INH-1 MUST-ACCEPT: a bookkeeping head after a green implementation carries Db forward and is READY' 'accept' {InhImpl} {param($r)$r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY'-and$r.Text-match"INHERITED: Db from $($script:iS) run \d+ attempt 1 completed/success"}
+    InhCase 'INH-1u a nearest run GitHub cannot read is UNREADABLE, never NOT INHERITED or FAILED' 'reject' {InhImpl;$env:ORVION_STUB_GH_UNREADABLE='workflow'} {param($r)$r.Code-eq2-and$r.Text-match'REMOTE_CERTIFY: UNREADABLE'-and$r.Text-match'the runs of Db on main'-and$r.Text-notmatch'NOT INHERITED|REMOTE_CERTIFY: FAILED'}
     InhCase 'INH-2 a bookkeeping head after a failed implementation run is FAILED' 'reject' {InhImpl 'completed' 'failure'} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: FAILED'-and$r.Text-match"INHERITED: Db from $($script:iS) .*completed/failure"-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
     InhCase 'INH-3 a bookkeeping head after an implementation run still in progress is PENDING' 'reject' {InhImpl 'in_progress' ''} {param($r)$r.Code-ne0-and$r.Text-match'REMOTE_CERTIFY: PENDING'-and$r.Text-notmatch'REMOTE_CERTIFY: READY'}
     InhCase 'INH-4 a database head without its own Db run is REQUIRED_WORKFLOW_MISSING despite an older green run' 'reject' {InhUnrun} {param($r)$r.Code-ne0-and$r.Text-match'REQUIRED_WORKFLOW_MISSING: Db'-and$r.Text-match'NOT INHERITED: Db .*supabase/migrations/20260102_impl\.sql changed'}
@@ -3717,14 +3726,63 @@ exit 0
     }
     function ChFound{foreach($x in $script:chLost){Move-Item -LiteralPath $x[0] -Destination $x[1]};$script:chLost=@()}
     $b=ChLost;$r=RunRange $b;ChFound
-    Assert 'AB10 CHECK: an absent check Git cannot list is refused as indeterminate, never held' ($r.Code-ne0-and$r.Text-match'CRITERION_CHECK_INDETERMINATE:retired\.txt.*@[0-9a-f]{7}'-and$r.Text-notmatch'ORVION: READY') $r.Text
+    Assert 'AB10 CHECK: an absent check Git cannot list is refused, never held' ($r.Code-ne0-and$r.Text-match'OBJECT_STORE_INCOMPLETE'-and$r.Text-notmatch'ORVION: READY') $r.Text
     Pop 'CHECK' 'reject'
     ChGone -Open|Out-Null;git -C $root rm -q --cached retired.txt;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
     Assert 'AB11 CHECK: a staged deletion still on disk fails absent in the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED'-and$r.Text-match'retired\.txt exists') $r.Text
     Pop 'CHECK' 'reject'
-    MutationKillRangeAt 'ABM5 CHECK MUTATION: a failed listing is indeterminate, not absent' {ChLost -NoReset} 'CRITERION_CHECK_INDETERMINATE' `
-        'if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE' 'if($false){throw "CRITERION_CHECK_INDETERMINATE' 'CHECK'
+    MutationKillRangeAt 'ABM5 CHECK MUTATION: behind the store guard, a failed listing is indeterminate, not absent' {ChLost -NoReset} 'CRITERION_CHECK_INDETERMINATE' `
+        'if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE' 'if($false){throw "CRITERION_CHECK_INDETERMINATE' 'CHECK' `
+        'Assert-ObjectStoreComplete $(if' '$null=$(if'
     ChFound
+
+    # OBJECT STORE. A missing blob made an identity already in use read as free: `git grep` exits 1 for an
+    # unreadable blob as for no match, and the reservation log and pickaxe returned what they had read. The
+    # Gate now proves the store complete before any read. Moved objects are put back after each run.
+    # An object is lost only after the last commit of a scenario: committing over a missing blob fails.
+    $script:osLost=@()
+    function OsLose([string]$Blob){$o=Join-Path $root ".git/objects/$($Blob.Substring(0,2))/$($Blob.Substring(2))";$k=Join-Path $sandbox "os-lost-$Blob"
+        if(Test-Path -LiteralPath $k){Remove-Item -LiteralPath $o}else{Move-Item -LiteralPath $o -Destination $k;$script:osLost+=,@($k,$o)}}
+    function OsFound{foreach($x in $script:osLost){Move-Item -LiteralPath $x[0] -Destination $x[1]};$script:osLost=@()}
+    # Each note is unique, so its blob is new and loose: a repeated content's blob may already be packed.
+    function OsNote{"historical note naming $(FxId 1) once $([guid]::NewGuid().ToString('N'))"}
+    # The identity's only occurrence is a deleted note's content, so only the reservation log and pickaxe read it.
+    function OsBuild([switch]$NoReset){
+        if(-not$NoReset){OsFound;Reset-Fixture}
+        Put 'changes/SPEC-900-fixture.md' (ContractText -Status Draft);Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None');Commit 'plan-baseline'
+        Put 'lineage.txt' (OsNote);Commit 'reserve-text'
+        $blob=(git -C $root rev-parse 'HEAD:lineage.txt').Trim();git -C $root rm -q 'lineage.txt';Commit 'delete-text'
+        $b=(git -C $root rev-parse HEAD).Trim();Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft);Commit 'reuse'
+        OsLose $blob;$b
+    }
+    ReservedPresentSetup;$r=Run 'Gate'
+    Assert 'OS0 STORE: a complete object store is judged as before (the identity is in use)' ($r.Code-ne0-and$r.Text-match'SPEC_ID_ALREADY_USED'-and$r.Text-notmatch'OBJECT_STORE_INCOMPLETE') $r.Text
+    Pop 'STORE' 'accept'
+    OsFound;PlanBaseline;Put 'lineage.txt' (OsNote);Commit 'reserve-present';Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)
+    OsLose (git -C $root rev-parse 'HEAD:lineage.txt').Trim();$r=Run 'Gate';OsFound
+    Assert 'OS1 STORE: an identity whose only occurrence Git cannot read is refused, never free' ($r.Code-ne0-and$r.Text-match'OBJECT_STORE_INCOMPLETE'-and$r.Text-notmatch'SPEC_ID_ALREADY_USED|ORVION: READY') $r.Text
+    Pop 'STORE' 'reject'
+    $b=OsBuild;$r=RunRange $b;OsFound
+    Assert 'OS2 STORE: a range whose reserving history Git cannot read is refused' ($r.Code-ne0-and$r.Text-match'OBJECT_STORE_INCOMPLETE'-and$r.Text-notmatch'ORVION: READY') $r.Text
+    Pop 'STORE' 'reject'
+    MutationKillRangeAt 'OSM1 STORE MUTATION: an incomplete store is refused before any read' {OsBuild -NoReset} 'OBJECT_STORE_INCOMPLETE' `
+        'Assert-ObjectStoreComplete $(if' '$null=$(if' 'STORE'
+    OsFound
+    # A shallow clone has every object the walk reaches, but not the history beyond its boundary, where the
+    # identity's reservation lives. The boundary is the deleting commit, so only the reserving commit is cut off.
+    # Judged in the hook, as OS1 is; there the unguarded evaluator accepts the reused identity at allocation.
+    $shallowFile=Join-Path $root '.git/shallow'
+    function OsShallowSetup{
+        PlanBaseline;Put 'lineage.txt' (OsNote);Commit 'reserve-text';git -C $root rm -q 'lineage.txt';Commit 'delete-text'
+        [IO.File]::WriteAllText($shallowFile,"$((git -C $root rev-parse HEAD).Trim())`n")
+        Put "changes/$(FxId 1)-reuse.md" (ContractText -Id (FxId 1) -Status Draft)
+    }
+    OsShallowSetup;$r=Run 'Gate';Remove-Item -LiteralPath $shallowFile
+    Assert 'OS3 STORE: a shallow clone, whose reserving history lies beyond its boundary, is refused, never free' ($r.Code-ne0-and$r.Text-match'OBJECT_STORE_INCOMPLETE:shallow clone'-and$r.Text-notmatch'ORVION: READY') $r.Text
+    Pop 'STORE' 'reject'
+    MutationKill 'OSM2 STORE MUTATION: a shallow clone is refused, not judged on cut-off history' {OsShallowSetup} 'OBJECT_STORE_INCOMPLETE:shallow clone' `
+        '"$shallow".Trim()-ne''false''' '$false' 'STORE'
+    Remove-Item -LiteralPath $shallowFile -ErrorAction SilentlyContinue
 
     # DRAFT ASSURANCE. Approval of evidence-applicable work needs three distinct, filled passes, a dated
     # evidence refresh and the selected version. The Gate proves the record exists, never that the
@@ -3986,7 +4044,7 @@ exit 0
     # ---- NON-EMPTY POPULATIONS (SPEC-196) ----
     # A guard reasoning over an empty set reports success while measuring nothing.
     # Every family must have proven acceptance, refusal AND a mutation kill.
-    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','DA','PIN','ACI','TRUST','PROMOTE','TIME')){
+    foreach($family in @('D','F','HJ','APPLIC','WC','CTRL1','CTRL4','RANGE-AUTH','ORIGIN','K-local','K-reservation','K-activation','K-range','CERT-INHERIT','SEG-CARRY','PARITY','CHECK','STORE','DA','PIN','ACI','TRUST','PROMOTE','TIME')){
         $a=$script:pop["$family/accept"];$r=$script:pop["$family/reject"];$k=$script:pop["$family/mutation"]
         Assert "NON-EMPTY POPULATION ${family}: accept, reject and mutation populations are all non-zero" (($a-gt0)-and($r-gt0)-and($k-gt0)) "accept=$a reject=$r mutation=$k"
     }

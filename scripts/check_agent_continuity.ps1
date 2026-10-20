@@ -255,6 +255,21 @@ function Diff-Records {
     @($records|Sort-Object Path -Unique)
 }
 
+# A read Git cannot finish is not "nothing there". `git grep` exits 1 for an unreadable blob, exactly as for
+# no match, and the listing, log and pickaxe reads that judge identity, reservation, consumers and absence
+# each returned what they had read so far: one missing object made an identity already in use read as free
+# (failure injection, 2026-10-19). Every such read meets the same object store, so the store is proven
+# complete once, for the refs the judgment walks, before any of them runs (about 0.2 s).
+function Assert-ObjectStoreComplete([string[]]$Refs){
+    # A shallow clone passes the walk below, which stops at the clone's boundary, but the history beyond the boundary
+    # is unreadable: in a `--depth 50` clone an identity reserved beyond the boundary read as free (measured 2026-10-20).
+    $shallow=@(git -C $Root rev-parse --is-shallow-repository 2>$null);$code=$LASTEXITCODE;$global:LASTEXITCODE=0
+    if($code-ne0-or"$shallow".Trim()-ne'false'){throw "OBJECT_STORE_INCOMPLETE:$(if($code){"git rev-parse exited $code"}else{'shallow clone'}) - history beyond a shallow boundary cannot be judged; fetch it whole (git fetch --unshallow) and rerun"}
+    $out=@(git -C $Root rev-list --objects --missing=print @Refs -- 2>$null);$code=$LASTEXITCODE;$global:LASTEXITCODE=0
+    if($code-ne0){throw "OBJECT_STORE_INCOMPLETE:git rev-list exited $code for $($Refs-join',')"}
+    $missing=@($out|Where-Object{"$_".StartsWith('?')})
+    if($missing.Count){throw "OBJECT_STORE_INCOMPLETE:$($missing.Count) object(s) missing, first $("$($missing[0])".Substring(1)) - a read Git cannot finish is never read as absence; repair the clone (git fetch, or a fresh clone) and rerun"}
+}
 function Read-GitFile([string]$Ref,[string]$Path){$value=git -C $Root show "${Ref}:$Path" 2>$null;if($LASTEXITCODE-ne0){return $null};$value-join"`n"}
 
 function Base-HasId([string]$Ref,[string]$Id){
@@ -2317,7 +2332,7 @@ function Finish-Checks($c,[string[]]$profiles,[string]$rel){
 # path that changed. Renames are split into delete and add, so a file moved out of a watched
 # directory still counts as a watched change.
 function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
-    $no={param($why)[pscustomobject]@{Runs=@();From='';Why=$why}}
+    $no={param($why,$unreadable=$null)[pscustomobject]@{Runs=@();From='';Why=$why;Unreadable=$unreadable}}
     $dir=Join-Path $Root '.github/workflows'
     $defs=@(if(Test-Path -LiteralPath $dir){Get-ChildItem -LiteralPath $dir -File|Where-Object{$_.Extension-in @('.yml','.yaml')}|Where-Object{
         ([regex]::Match([IO.File]::ReadAllText($_.FullName),'(?m)^name:\s*(?<v>.+?)\s*$')).Groups['v'].Value-ceq$Workflow}})
@@ -2338,9 +2353,10 @@ function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
     if(($block.Success-and$bullets-ne$globs.Count)-or@($globs|Where-Object{$_-cnotmatch'^[A-Za-z0-9_./*-]+$'}).Count){
         return (& $no "the path filter of $Workflow cannot be read exactly")
     }
-    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Branch $Target -Event push -WorkflowPath $def) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$LASTEXITCODE=1}
-    if($LASTEXITCODE-ne0-or!$raw){return (& $no "anonymous API could not read the runs of $Workflow on $Target")}
-    try{$parsed=$raw|ConvertFrom-Json}catch{return (& $no "anonymous API returned runs of $Workflow this command cannot parse")}
+    $readError=$null
+    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Branch $Target -Event push -WorkflowPath $def) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$readError=$_;$LASTEXITCODE=1}
+    if($LASTEXITCODE-ne0-or!$raw){return (& $no "anonymous API could not read the runs of $Workflow on $Target" $(if($readError){$readError}else{'no answer'}))}
+    try{$parsed=$raw|ConvertFrom-Json}catch{return (& $no "anonymous API returned runs of $Workflow this command cannot parse" $_)}
     # Nearness is position in this SHA's own ancestry, never the order gh returns.
     $order=@{};$i=0
     foreach($c in @(git -C $Root rev-list --topo-order $Sha)){$order[("$c").Trim()]=$i++}
@@ -2374,6 +2390,17 @@ function Inherited-Run([string]$Workflow,[string]$Sha,[string]$Target){
 # triggering: it produces no run, so there is nothing to fail, and the remaining green
 # workflow certifies the push on its own. The expected set comes from the receipt, so
 # this function derives nothing and adds no second authority.
+# Evidence GitHub did not give is neither a pass nor a CI failure. On 2026-10-20 a -Certify run made while the anonymous
+# budget was spent printed FAILED for two green runs and hid the reason. UNREADABLE stays not READY and exits 2, the
+# code the CI watcher already uses for "GitHub could not be read"; it names the read, the reader's reason and, when
+# GitHub said, when a rerun can succeed. FAILED and PENDING keep meaning what the runs showed.
+function Exit-Unreadable([string]$What,$Problem){
+    $why=if($Problem-is[Management.Automation.ErrorRecord]){$Problem.Exception.Message}elseif($Problem){"$Problem"}else{'no answer'}
+    $retry=if($Problem-is[Management.Automation.ErrorRecord]){[long]$Problem.Exception.Data['RetryAfterSeconds']}else{0}
+    $script:Outcome='REMOTE_CERTIFY: UNREADABLE';Write-Output 'REMOTE_CERTIFY: UNREADABLE'
+    Write-Output "EVIDENCE: GitHub could not be read: $What ($why). Nothing about it was observed, so this is not a CI result.$(if($retry-gt0){" Rerun -Certify after $([DateTime]::UtcNow.AddSeconds($retry).ToString('HH:mm')) UTC."}else{' Rerun -Certify.'})"
+    exit 2
+}
 function Certify-Remote {
     $sha=(git -C $Root rev-parse HEAD).Trim()
     Write-Output "SHA: $sha"
@@ -2409,23 +2436,16 @@ function Certify-Remote {
     # The field list is quoted so it stays ONE token however `gh` resolves: in argument
     # mode a bare `a,b,c` reaches a native executable as a single string but becomes an
     # ARRAY when the resolved command is a PowerShell script.
-    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Sha $sha -Branch $target -Event push) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$LASTEXITCODE=1}
-    if($LASTEXITCODE-ne0-or!$raw){
-        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: anonymous API could not read workflow runs for this SHA'
-        exit 1
-    }
+    $readError=$null
+    try{$raw=ConvertTo-Json -InputObject @(Get-OrvionPublicRuns (Get-OrvionPublicRepo $Root) -Sha $sha -Branch $target -Event push) -Depth 10 -Compress;$LASTEXITCODE=0}catch{$raw=$null;$readError=$_;$LASTEXITCODE=1}
+    if($LASTEXITCODE-ne0-or!$raw){Exit-Unreadable 'the workflow runs for this SHA' $readError}
     # ASSIGN, then wrap. `ConvertFrom-Json` emits a JSON array as ONE pipeline item, so
     # `@($raw|ConvertFrom-Json)` yields a single element that IS the array - one iteration
     # holding every run at once. Assigning first unrolls it, and `@()` then normalises the
     # one-object and empty-array cases. The previous code carried the same shape harmlessly
     # because it only ever read members across the collection, which PowerShell flattens;
     # it becomes a real defect the moment individual rows are inspected.
-    try{$parsed=$raw|ConvertFrom-Json}catch{
-        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output 'EVIDENCE: anonymous API returned evidence this command cannot parse'
-        exit 1
-    }
+    try{$parsed=$raw|ConvertFrom-Json}catch{Exit-Unreadable 'the workflow runs for this SHA, which arrived in a form this command cannot parse' $_}
     $all=@($parsed)
     # The filter is asked for AND the answer is checked. Trusting the query alone would
     # make this function believe whatever the CLI handed back; a row that contradicts the
@@ -2463,6 +2483,7 @@ function Certify-Remote {
     $kept=@()
     foreach($w in $missing){
         $proof=Inherited-Run $w $sha $target
+        if($proof.Unreadable){Exit-Unreadable "the runs of $w on $target, to judge its nearest run" $proof.Unreadable}
         if(!$proof.Runs.Count){Write-Output "NOT INHERITED: $w — $($proof.Why)";$kept+=$w;continue}
         foreach($r in $proof.Runs){Write-Output "INHERITED: $w from $($proof.From) run $($r.databaseId) attempt $($r.attempt) $($r.status)/$($r.conclusion) — no path it watches changed since"}
         $runs+=$proof.Runs
@@ -2490,11 +2511,7 @@ function Certify-Remote {
     # and that is a statement about NOW, not about the moment the runs finished. Read the
     # remote, never a local cache, and refuse rather than assume when it cannot be read.
     git -C $Root fetch origin $target --quiet 2>$null|Out-Null
-    if($LASTEXITCODE-ne0){
-        $script:Outcome='REMOTE_CERTIFY: FAILED';Write-Output 'REMOTE_CERTIFY: FAILED'
-        Write-Output "EVIDENCE: TARGET_REF_UNREADABLE:$target — the remote target ref could not be read, so it cannot be proven to stand at this SHA"
-        exit 1
-    }
+    if($LASTEXITCODE-ne0){Exit-Unreadable "TARGET_REF_UNREADABLE:$target, the remote target ref (git fetch), so this SHA cannot be proven to be where it stands" 'git fetch failed'}
     $remote=(git -C $Root rev-parse "refs/remotes/origin/$target" 2>$null)
     $remote=if($LASTEXITCODE-eq0){("$remote").Trim()}else{''}
     if($remote-ne$sha){
@@ -2550,6 +2567,7 @@ try{try{
         if($at-ne$want-or@(git -C $Root status --porcelain).Count){throw "TRUSTED_DATA_NOT_CANDIDATE:$Root is not a clean checkout of $want"}
     }
 
+    Assert-ObjectStoreComplete $(if($BaseRef){$BaseRef,$HeadRef}else{'HEAD'})
     Mark-Stage 'setup'
     $records=@(Diff-Records);$base=if($BaseRef){$BaseRef}else{'HEAD'}
     Validate-HistoryAndIds $records $base

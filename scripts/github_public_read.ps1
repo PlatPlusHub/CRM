@@ -174,3 +174,49 @@ function Test-OrvionPublicGithub([string]$Root) {
         if($proc.ExitCode-ne0-or$out.GetAwaiter().GetResult()-notmatch'^[0-9a-f]{40}\s+HEAD') { throw 'PUBLIC_READ:GIT_UNREADABLE' }
     } finally {$proc.Dispose()}
 }
+
+# ---- the shared anonymous budget ------------------------------------------------------------------------
+# GitHub allows 60 anonymous requests an hour per IP address, shared by every reader on this machine and by anything
+# else behind the same address. Two watchers polling every 30 s spent it in about 15 minutes and stopped while CI was
+# green, and a -Certify run right after then read nothing (2026-10-20). GitHub's own counter is the truth and
+# `/rate_limit` reads it without spending (measured: `used` unchanged across the call). Watchers take turns through one
+# small machine-local ledger holding the next free poll time, so N watchers split what is left instead of each spending
+# all of it, and they never spend the last $script:OrvionPublicReserve requests, which stay for -Certify.
+$script:OrvionPublicReserve = 10
+$script:OrvionPublicLedger = if ($env:ORVION_PUBLIC_BUDGET) { $env:ORVION_PUBLIC_BUDGET } else { Join-Path ([IO.Path]::GetTempPath()) 'orvion-github-public-budget.json' }
+function Get-OrvionPublicBudget {
+    $j = Read-OrvionPublicJson ([uri]'https://api.github.com/rate_limit')
+    $c = $j.resources.core
+    if ($c -isnot [Collections.IDictionary] -or $c.remaining -isnot [long] -and $c.remaining -isnot [int] -or $c.reset -isnot [long] -and $c.reset -isnot [int]) { throw 'PUBLIC_READ:RATE_LIMIT_SHAPE' }
+    [pscustomobject]@{ Remaining = [long]$c.remaining; Reset = [long]$c.reset }
+}
+# Blocks until this caller may spend one request. Emits one PAUSED line before any wait for the reset (pipe it to the log).
+# Throws PUBLIC_READ:BUDGET_EXHAUSTED when the reset is further away than -MaxWaitSeconds.
+function Wait-OrvionPublicSlot([int]$MinSeconds = 60, [int]$MaxWaitSeconds = 3600) {
+    while ($true) {
+        $lock = $null
+        for ($i = 0; -not $lock; $i++) {
+            try { $lock = [IO.File]::Open("$script:OrvionPublicLedger.lock", 'OpenOrCreate', 'ReadWrite', 'None') }
+            catch { if ($i -ge 300) { throw 'PUBLIC_READ:BUDGET_LOCK' }; Start-Sleep -Milliseconds 100 }
+        }
+        try {
+            $next = 0L
+            if (Test-Path -LiteralPath $script:OrvionPublicLedger) { [void][long]::TryParse(([IO.File]::ReadAllText($script:OrvionPublicLedger)).Trim(), [ref]$next) }
+            $b = Get-OrvionPublicBudget
+            $now = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()   # milliseconds: whole seconds let two turns land 1.1 s apart
+            $spendable = $b.Remaining - $script:OrvionPublicReserve
+            if ($spendable -le 0) { $wait = [Math]::Max(1000, $b.Reset * 1000 - $now + 1000) }
+            else {
+                $spacing = [long][Math]::Max($MinSeconds * 1000, [Math]::Ceiling([Math]::Max(1000, $b.Reset * 1000 - $now) / $spendable))
+                $slot = [Math]::Max($now, $next)
+                [IO.File]::WriteAllText($script:OrvionPublicLedger, "$($slot + $spacing)")
+                $wait = $slot - $now
+            }
+        } finally { $lock.Dispose() }
+        if ($spendable -gt 0) { if ($wait -gt 0) { Start-Sleep -Milliseconds $wait }; return }
+        $waitSeconds = [long][Math]::Ceiling($wait / 1000)
+        if ($waitSeconds -gt $MaxWaitSeconds) { $e = [InvalidOperationException]::new("PUBLIC_READ:BUDGET_EXHAUSTED:retry_after=$waitSeconds"); $e.Data['RetryAfterSeconds'] = $waitSeconds; throw $e }
+        "PAUSED: the anonymous GitHub budget is down to its Certify reserve ($($b.Remaining) left); resuming after the reset at $([DateTimeOffset]::FromUnixTimeSeconds($b.Reset).UtcDateTime.ToString('HH:mm')) UTC"
+        Start-Sleep -Milliseconds $wait
+    }
+}

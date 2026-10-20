@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -84,7 +84,7 @@ No GitHub setting, secret, ruleset, workflow or credential is changed by this co
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -778,6 +778,19 @@ None.
 ### 2026-10-20 — Gate 1 approval recorded
 
 The owner's Gate 1 approval explicitly approves this exact Draft, SHA-256 5C94E1324730FB4A99AC8D86FA1A2C36D7335338FA98E0B455E2D8B435DF6FBE and Git blob 3a007e12f8a4cf395845cb044e17a5681de677f8, and no superseded or future revision. Immediately before allocation the hash, the Draft blob 3a007e12f8a4cf395845cb044e17a5681de677f8, all 33 source anchors, the baseline HEAD 94e7a39e6da7ac553842d2d2954cae38a574d45b against refreshed origin/main 94e7a39e6da7ac553842d2d2954cae38a574d45b and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 6638b5c. No implementation performed before this transition. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
+
+### 2026-10-20 — Implementation checkpoint (Claude)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: the owner's Gate 1 approval names this exact Draft's SHA-256; the baseline HEAD was 94e7a39e6da7ac553842d2d2954cae38a574d45b and every source anchor matched there; Draft allocated as 6638b5c and approved as 38bd40b with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `scripts/check_agent_continuity.ps1` edited exactly as the step states; blob d5d5b2845e7e5620afca82d9ee08aa9de23b483f (38 insertions, 20 deletions).
+- Step 3 Applied: `scripts/test_agent_continuity.ps1` edited exactly as the step states; blob 047370a65254ed92ad1c3ec89d4e6ecc2564002d (69 insertions, 11 deletions).
+- Step 4 Applied: `scripts/github_public_read.ps1` edited exactly as the step states; blob 97f5c8894e5772e5a46e792aef927c5055e402b2 (46 insertions, 0 deletions).
+- Step 5 Applied: `scripts/watch_ci.ps1` edited exactly as the step states; blob 738cb36667d4d9bef8182580c9115bc303a96329 (12 insertions, 8 deletions).
+- Step 6 Applied: `scripts/test_github_public_read.ps1` edited exactly as the step states; blob df7d4616b6f46c050feede9022fde7897877dffc (43 insertions, 3 deletions).
+- Step 7 Applied: `CR_LIFECYCLE.md` edited exactly as the step states; blob bcebabb0665901fa1ebf1b7e28ddbbecddeb5f68 (1 insertions, 1 deletions).
+- Step 8 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 

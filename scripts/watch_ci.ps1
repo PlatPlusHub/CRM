@@ -36,7 +36,8 @@ param(
     [int]$Attempt = 1,
     [int]$SettleSeconds = 90,
     [double]$MissingMinutes = 10,
-    [int]$PollSeconds = 30,
+    [int]$PollSeconds = 60,      # the floor; the shared budget (github_public_read.ps1) spaces polls further when it must
+    [double]$MaxWaitMinutes = 60,
     [double]$QuietMinutes = 5,
     [string]$Repo = 'PlatPlusHub/CRM',
     [string]$RepoRoot = (Split-Path $PSScriptRoot -Parent)
@@ -112,13 +113,13 @@ $ErrorActionPreference = 'Stop'
 $sw = [Diagnostics.Stopwatch]::StartNew()
 function T { '[{0,5:N1} min]' -f $sw.Elapsed.TotalMinutes }
 function Show-Evidence([long]$Id, [int]$Att) {
-    try { $jobs = @(Get-OrvionPublicJobs $Repo $Id $Att) }
+    try { Wait-OrvionPublicSlot 0 ($MaxWaitMinutes*60); $jobs = @(Get-OrvionPublicJobs $Repo $Id $Att) }
     catch { "    UNREADABLE jobs: $($_.Exception.Message)"; $script:EvidenceUnreadable=$true; return }
     $failed = @($jobs | Where-Object { $_.conclusion -eq 'failure' })
     if (-not $failed) { '    no failed job recorded (conclusion other than failure: read the run page)'; return }
     foreach ($j in $failed) {
         "    failed job: $($j.name) | failed step: $((@($j.steps | Where-Object { $_.conclusion -eq 'failure' } | ForEach-Object name)) -join '; ')"
-        try { $log = @(Get-OrvionPublicLog $Repo $j.id) }
+        try { Wait-OrvionPublicSlot 0 ($MaxWaitMinutes*60); $log = @(Get-OrvionPublicLog $Repo $j.id) }
         catch { "    UNREADABLE log: $($_.Exception.Message)"; $script:EvidenceUnreadable=$true; continue }
         "    log lines: $($log.Count) | migrations applied: $(@($log | Select-String 'Applying migration').Count)"
         Select-ErrorLines $log | ForEach-Object { '    > ' + $_ }
@@ -126,7 +127,7 @@ function Show-Evidence([long]$Id, [int]$Att) {
 }
 
 if ($RunId) {
-    try { $v = Get-OrvionPublicAttempt $Repo $RunId $Attempt }
+    try { Wait-OrvionPublicSlot 0 ($MaxWaitMinutes*60); $v = Get-OrvionPublicAttempt $Repo $RunId $Attempt }
     catch { "$(T) UNREADABLE run: $($_.Exception.Message)"; exit 2 }
     $r = [pscustomobject]@{name=$v.name;attempt=$v.run_attempt;status=$v.status;conclusion=$v.conclusion;headSha=$v.head_sha;headBranch=$v.head_branch}
     "$(T) run $RunId attempt $($r.attempt) [$($r.name)] on $($r.headBranch) $($r.status)/$($r.conclusion) sha=$($r.headSha.Substring(0,7))"
@@ -143,7 +144,9 @@ $contract = Get-CiContract $Sha $Base $Branch $RepoRoot
 $reported = @{}; $otherSeen = @{}; $settleAt = $null; $missingSince = $null; $failures = 0; $quiet = [Diagnostics.Stopwatch]::StartNew()
 while ($true) {
     try {
-        # The adapter throws on incomplete or unreadable evidence; never treat an outage as no runs.
+        # Every poll takes its turn in the shared budget first. The adapter throws on incomplete or unreadable
+        # evidence; never treat an outage as no runs.
+        Wait-OrvionPublicSlot $PollSeconds ($MaxWaitMinutes*60) | ForEach-Object { "$(T) $_" }
         $runs = @(Get-OrvionPublicRuns $Repo -Sha $Sha)
         $failures = 0
     } catch {
@@ -151,8 +154,10 @@ while ($true) {
         "$(T) poll failed ($failures of 5): $($_.Exception.Message)"
         if ($failures -ge 5) { "$(T) STOPPED: five consecutive polls failed - nothing about this SHA was observed since"; exit 2 }
         $retry = [long]$_.Exception.Data['RetryAfterSeconds']
-        if ($retry -gt 60) { "$(T) STOPPED: public API retry-after=$retry seconds; resume later; evidence unreadable"; exit 2 }
-        Start-Sleep -Seconds ([Math]::Max($PollSeconds,$retry)); continue
+        if ($retry -gt $MaxWaitMinutes*60) { "$(T) STOPPED: public API retry-after=$retry seconds is beyond -MaxWaitMinutes $MaxWaitMinutes; evidence unreadable"; exit 2 }
+        if ($retry -gt 0) { "$(T) PAUSED: public API retry-after=$retry seconds"; Start-Sleep -Seconds $retry }
+        else { "$(T) retrying in $PollSeconds s"; Start-Sleep -Seconds $PollSeconds }   # an unreadable budget grants no turn to space the retry
+        continue
     }
     if ($script:EvidenceUnreadable) { "$(T) STOPPED: diagnostics unreadable; -Certify remains the verdict"; exit 2 }
     $state = Get-CiState $runs $Branch $contract.Expected
@@ -193,5 +198,4 @@ while ($true) {
         "$(T) heartbeat: nothing new for $('{0:N1}' -f $quiet.Elapsed.TotalMinutes) min - $what"
         $quiet.Restart()
     }
-    Start-Sleep -Seconds $PollSeconds
 }
