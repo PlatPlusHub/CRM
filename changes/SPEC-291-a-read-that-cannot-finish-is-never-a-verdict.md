@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -765,11 +765,11 @@ Post-Implementation Proof Obligation: the full control suites and the REPOSITORY
 
 ## Acceptance Criteria
 
-- [ ] The evaluator, both control suites, the reader, the watcher and the lifecycle hold exactly the reviewed bytes. `check: blob scripts/check_agent_continuity.ps1 d5d5b2845e7e5620afca82d9ee08aa9de23b483f` `check: blob scripts/test_agent_continuity.ps1 047370a65254ed92ad1c3ec89d4e6ecc2564002d` `check: blob scripts/github_public_read.ps1 97f5c8894e5772e5a46e792aef927c5055e402b2` `check: blob scripts/watch_ci.ps1 738cb36667d4d9bef8182580c9115bc303a96329` `check: blob scripts/test_github_public_read.ps1 df7d4616b6f46c050feede9022fde7897877dffc` `check: blob CR_LIFECYCLE.md bcebabb0665901fa1ebf1b7e28ddbbecddeb5f68`
-- [ ] Every judging mode refuses an incomplete object store or a shallow clone before any read, and the suite kills the removal of each. `check: has scripts/check_agent_continuity.ps1 "OBJECT_STORE_INCOMPLETE:"` `check: has scripts/check_agent_continuity.ps1 "rev-parse --is-shallow-repository"` `check: has scripts/test_agent_continuity.ps1 "OSM1 STORE MUTATION"` `check: has scripts/test_agent_continuity.ps1 "OSM2 STORE MUTATION"`
-- [ ] `-Certify` reports evidence GitHub did not give as UNREADABLE (exit 2), never FAILED or READY, and CI watchers share one bounded anonymous budget that leaves a reserve for `-Certify`. `check: has scripts/check_agent_continuity.ps1 "REMOTE_CERTIFY: UNREADABLE"` `check: has scripts/github_public_read.ps1 "function Wait-OrvionPublicSlot"` `check: has scripts/test_agent_continuity.ps1 "108c green runs GitHub cannot read are UNREADABLE"` `check: has scripts/test_github_public_read.ps1 "budget: two concurrent watchers take turns"`
-- [ ] Every file this contract may not modify that exists at the baseline is unchanged: the workflows, the runner, the run watcher, the release authorities, the consistency guard, the generator, the Batch 6 selector, the governance and the method. `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob .github/workflows/agent-control.yml 41243b7c9a499df4cf011385a046c53107084ba3` `check: blob .github/workflows/migration-ci.yml 9bf8ca02d8ffac6591871b66bff53d5dbfc6e75c` `check: blob .github/workflows/repository-consistency.yml ed3ef8d8e954c8a2c5710fe44f46eb1f569c7492` `check: blob .github/SECURITY.md 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132` `check: blob scripts/check_repository_consistency.ps1 3e6d2810e03bfac15b96dba3bc46d119d97ad658` `check: blob scripts/run_timed.ps1 d1fbfc81d41b04b0c8b3a50c4b17cdd19853ca60` `check: blob scripts/watch_run.ps1 e327c2ff9b8c7acf8851f7153c1e1acb066d4e9b` `check: blob scripts/watch_selftest.ps1 b0a838b184a3b0b9d0928cb34e474b045624e4de` `check: blob scripts/test_certification_receipts.ps1 c85cf120d4689633a550f45db0be005ef5de9037` `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob scripts/generate-ai-map.ps1 01165b8570999b79de4d6e854cae2443256e6b64` `check: blob scripts/batch6_select_target.ps1 20e55b308088b4f5405029f02605915231246fbe` `check: blob scripts/readiness_population.ps1 27b7f8158f506d537887fa967401ce2ef1ff45e9` `check: blob .workstation/doctor.ps1 0ad69c87859646283c84e31df5732b2df1d42056` `check: blob README.md 9f15270f25194e4ed0bb08613ca185a16b05ea2d` `check: blob AGENTS.md b2412d15cd6fcf710055114fe734ba69178f35cc` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf` `check: blob ENGINEERING_METHOD.md 874d1eefc1707dc56a9cbc41dfc3e695e2a0b726` `check: blob changes/TEMPLATE.md 6494ecfc57e0212e8b1c35dbab46daa7f510f2f9` `check: blob reports/architecture-decision-records.md 0bc32a7ec591cfbeeb7b26333ce66825d04c3e26` `check: blob reports/master/MASTER_EXECUTION_PLAN.md e957b949bc330cb637a634644664bf93bd2eb5ce` `check: blob reports/master/MASTER_GAP_REGISTER.md 7f957064cf1c3622229e220a85ae123c63648f1c`
-- [ ] The manifest keeps the owner's Batch 6 hold and this repository's own next-work direction (preservation). `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
+- [x] The evaluator, both control suites, the reader, the watcher and the lifecycle hold exactly the reviewed bytes. `check: blob scripts/check_agent_continuity.ps1 d5d5b2845e7e5620afca82d9ee08aa9de23b483f` `check: blob scripts/test_agent_continuity.ps1 047370a65254ed92ad1c3ec89d4e6ecc2564002d` `check: blob scripts/github_public_read.ps1 97f5c8894e5772e5a46e792aef927c5055e402b2` `check: blob scripts/watch_ci.ps1 738cb36667d4d9bef8182580c9115bc303a96329` `check: blob scripts/test_github_public_read.ps1 df7d4616b6f46c050feede9022fde7897877dffc` `check: blob CR_LIFECYCLE.md bcebabb0665901fa1ebf1b7e28ddbbecddeb5f68`
+- [x] Every judging mode refuses an incomplete object store or a shallow clone before any read, and the suite kills the removal of each. `check: has scripts/check_agent_continuity.ps1 "OBJECT_STORE_INCOMPLETE:"` `check: has scripts/check_agent_continuity.ps1 "rev-parse --is-shallow-repository"` `check: has scripts/test_agent_continuity.ps1 "OSM1 STORE MUTATION"` `check: has scripts/test_agent_continuity.ps1 "OSM2 STORE MUTATION"`
+- [x] `-Certify` reports evidence GitHub did not give as UNREADABLE (exit 2), never FAILED or READY, and CI watchers share one bounded anonymous budget that leaves a reserve for `-Certify`. `check: has scripts/check_agent_continuity.ps1 "REMOTE_CERTIFY: UNREADABLE"` `check: has scripts/github_public_read.ps1 "function Wait-OrvionPublicSlot"` `check: has scripts/test_agent_continuity.ps1 "108c green runs GitHub cannot read are UNREADABLE"` `check: has scripts/test_github_public_read.ps1 "budget: two concurrent watchers take turns"`
+- [x] Every file this contract may not modify that exists at the baseline is unchanged: the workflows, the runner, the run watcher, the release authorities, the consistency guard, the generator, the Batch 6 selector, the governance and the method. `check: blob .github/workflows/orvion-acceptance.yml b242e4c7401258404c5d43bffb49c3f53f42467e` `check: blob .github/workflows/agent-control.yml 41243b7c9a499df4cf011385a046c53107084ba3` `check: blob .github/workflows/migration-ci.yml 9bf8ca02d8ffac6591871b66bff53d5dbfc6e75c` `check: blob .github/workflows/repository-consistency.yml ed3ef8d8e954c8a2c5710fe44f46eb1f569c7492` `check: blob .github/SECURITY.md 2b836bdf375a5fc6d0b6a8b01f4fbbed2e8bf132` `check: blob scripts/check_repository_consistency.ps1 3e6d2810e03bfac15b96dba3bc46d119d97ad658` `check: blob scripts/run_timed.ps1 d1fbfc81d41b04b0c8b3a50c4b17cdd19853ca60` `check: blob scripts/watch_run.ps1 e327c2ff9b8c7acf8851f7153c1e1acb066d4e9b` `check: blob scripts/watch_selftest.ps1 b0a838b184a3b0b9d0928cb34e474b045624e4de` `check: blob scripts/test_certification_receipts.ps1 c85cf120d4689633a550f45db0be005ef5de9037` `check: blob scripts/publish_candidate.ps1 d168504cc66c3a0759ac3ee9b5e01045a0f46589` `check: blob scripts/promote_main.ps1 bf64aa893faf9d6be7477254bebf80dca04b4d79` `check: blob scripts/generate-ai-map.ps1 01165b8570999b79de4d6e854cae2443256e6b64` `check: blob scripts/batch6_select_target.ps1 20e55b308088b4f5405029f02605915231246fbe` `check: blob scripts/readiness_population.ps1 27b7f8158f506d537887fa967401ce2ef1ff45e9` `check: blob .workstation/doctor.ps1 0ad69c87859646283c84e31df5732b2df1d42056` `check: blob README.md 9f15270f25194e4ed0bb08613ca185a16b05ea2d` `check: blob AGENTS.md b2412d15cd6fcf710055114fe734ba69178f35cc` `check: blob GOVERNANCE.md 5670c47888bbd6b4194f6c41c54476ee42cb7bdf` `check: blob ENGINEERING_METHOD.md 874d1eefc1707dc56a9cbc41dfc3e695e2a0b726` `check: blob changes/TEMPLATE.md 6494ecfc57e0212e8b1c35dbab46daa7f510f2f9` `check: blob reports/architecture-decision-records.md 0bc32a7ec591cfbeeb7b26333ce66825d04c3e26` `check: blob reports/master/MASTER_EXECUTION_PLAN.md e957b949bc330cb637a634644664bf93bd2eb5ce` `check: blob reports/master/MASTER_GAP_REGISTER.md 7f957064cf1c3622229e220a85ae123c63648f1c`
+- [x] The manifest keeps the owner's Batch 6 hold and this repository's own next-work direction (preservation). `check: has _ORVION_CANONICAL/manifest.md "Batch 6 remains ON HOLD by owner decision (2026-10-18)"`
 
 ## Execution Log
 
@@ -792,6 +792,12 @@ Outcome: Complete (implementation steps; final verification pending)
 - Step 7 Applied: `CR_LIFECYCLE.md` edited exactly as the step states; blob bcebabb0665901fa1ebf1b7e28ddbbecddeb5f68 (1 insertions, 1 deletions).
 - Step 8 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
+### 2026-10-21 — Local completion
+
+Outcome: Complete
+
+The exact approved implementation passed its single fresh timed and watched native Finish (LOCAL_CERTIFY: READY, END exit=0, CONTROL and REPOSITORY). Independent live-state Review returned Verdict: Confirmed Complete; the governing agent repeated the live-Git checks and observed all 39 executable acceptance clauses holding, exhaustive scope preserved, unchanged forbidden/frozen text, and the fresh matching receipt. Local acceptance criteria and Review Gate items are proven. Runtime Checkpoint is DONE with no blocker. This transition synchronizes the manifest and generated projections through the existing native lifecycle. Exact candidate binding, delegated owner publication/promotion, hosted CI and exact-SHA remote certification follow; none is claimed complete by this local transition. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
+
 ## Verification Notes
 
 None.
@@ -813,10 +819,10 @@ Recommendation to human: Set Status to Complete through the native lifecycle, sy
 
 ## Review Gate
 
-- [ ] Exact approved steps and exhaustive scope independently confirmed.
-- [ ] Every acceptance criterion confirmed against final local evidence.
-- [ ] Mandatory profiles and Git checks pass through fresh Finish.
-- [ ] Admission workflow, release authorities and historical evidence preserved; no GitHub setting changed; CTRL-19 remains OPEN.
+- [x] Exact approved steps and exhaustive scope independently confirmed.
+- [x] Every acceptance criterion confirmed against final local evidence.
+- [x] Mandatory profiles and Git checks pass through fresh Finish.
+- [x] Admission workflow, release authorities and historical evidence preserved; no GitHub setting changed; CTRL-19 remains OPEN.
 
 ## Notes
 
