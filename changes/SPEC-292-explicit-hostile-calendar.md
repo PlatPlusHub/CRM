@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -293,6 +293,11 @@ Post-Implementation Proof Obligation: the exact changed suite and mandatory REPO
 ## Execution Log
 
 None.
+
+### 2026-10-21 — Gate 1 LF partial-allocation recovery
+
+Applied only after the live owner approved the frozen LF packet and replacement-tail disposition; the external decision record and packet manifest are checked by the recovery command. SPEC-292 LF SHA-256 is 697059680C50B26F6957B93158C15527C0204F6682A0CC9B1AB85D4EA7DDBC46; its raw, Git-filtered and existing allocated blob are all 65df0e5c8856f5bab07c6acde37885802018b89f. Existing Draft allocation 399137380680672f5c0e5910158f884df558867f and its parent 328b9c948f2a908a8e548826ac875d560ea75551 are preserved. Source anchors, inactive Draft state, clean tree, native hooks, own remote/credential identity and predecessor bound record were revalidated. The predecessor's receipt/history remain unchanged. This transition records Approval only: no implementation, new Finish, publication, promotion or certification is claimed. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
+
 
 ## Verification Notes
 
