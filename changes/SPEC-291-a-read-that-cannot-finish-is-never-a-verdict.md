@@ -796,6 +796,21 @@ Outcome: Complete (implementation steps; final verification pending)
 
 None.
 
+### 2026-10-21 — Independent live-state Review
+
+Verdict: Confirmed Complete
+
+Independent read-only reviewer: Codex, task review_contract_a. The governing agent separately repeated the existing live-Git review checks and observed every clause holding with a fresh matching native receipt.
+
+- Live clean HEAD ae0830de48886cb4e765eacaff4a1aa06e815dd7 descends from baseline 94e7a39e6da7ac553842d2d2954cae38a574d45b. All nine changed paths and every individual commit stay within the ten-path Write Scope; all 24 forbidden paths are unchanged; git diff --check passes.
+- Allocation 6638b5cd198ef1d2e2d5f1b05a6b437ff2188cbc stores the exact approved Draft blob 3a007e12f8a4cf395845cb044e17a5681de677f8. Frozen Draft SHA-256 remains 5C94E1324730FB4A99AC8D86FA1A2C36D7335338FA98E0B455E2D8B435DF6FBE. All six implementation blobs and all 39 executable acceptance clauses hold. All 12 frozen sections are unchanged; zero contract lines were removed outside permitted lifecycle fields.
+- Code inspection confirms the incomplete/shallow object-store refusal before history judgment, UNREADABLE exit 2 for unreadable GitHub evidence, and the shared locked watcher budget with Certify reserve. Disclosed limitations remain documented in Notes for subsequent work.
+- The single native timed and simultaneously watched Finish log pt-finish.log records every CONTROL and REPOSITORY command passing, LOCAL_CERTIFY: READY and END exit=0 total=48.8 min. The runner measured minimum free RAM 3.48 GB and peak process tree 874 MB alongside the concurrency recorded in that log; these are samples, not bounds.
+- Existing native read-only helpers independently validate schema-2 receipt cr SPEC-291, result READY, matching finishHead ae0830de48886cb4e765eacaff4a1aa06e815dd7, profiles CONTROL and REPOSITORY, implementation fingerprint 226a5038d8578ec24b6ce6fc278d11fc941b02ec5130e0c7a6e05d187a774f7d and digest fe66ee80f40d6907dd374c42ba37ee8558acaab374fd94210ff225014ec2104c. The preserved native receipt copy is byte-identical.
+- Admission workflows, release authorities, historical evidence and this repository's existing routing are preserved. No GitHub setting or credential was changed. Batch 6 remains ON HOLD; CTRL-19 remains OPEN. No local Review Gate blocker remains. Publication, promotion and exact-SHA remote certification are pending separate steps.
+
+Recommendation to human: Set Status to Complete through the native lifecycle, synchronize the manifest and generated projections, and bind the resulting exact candidate before the separately authorized publication and promotion steps.
+
 ## Review Gate
 
 - [ ] Exact approved steps and exhaustive scope independently confirmed.
