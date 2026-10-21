@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -73,7 +73,7 @@ Every unlisted path remains outside scope. Batch 6 remains ON HOLD; CTRL-19 rema
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -298,6 +298,15 @@ None.
 
 Applied only after the live owner approved the frozen LF packet and replacement-tail disposition; the external decision record and packet manifest are checked by the recovery command. SPEC-292 LF SHA-256 is 697059680C50B26F6957B93158C15527C0204F6682A0CC9B1AB85D4EA7DDBC46; its raw, Git-filtered and existing allocated blob are all 65df0e5c8856f5bab07c6acde37885802018b89f. Existing Draft allocation 399137380680672f5c0e5910158f884df558867f and its parent 328b9c948f2a908a8e548826ac875d560ea75551 are preserved. Source anchors, inactive Draft state, clean tree, native hooks, own remote/credential identity and predecessor bound record were revalidated. The predecessor's receipt/history remain unchanged. This transition records Approval only: no implementation, new Finish, publication, promotion or certification is claimed. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
+
+### 2026-10-21 — Implementation checkpoint (Claude)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: the owner's Gate 1 approval names this exact Draft's SHA-256; the baseline HEAD was 328b9c948f2a908a8e548826ac875d560ea75551 and every source anchor matched there; Draft allocated as 3991373 and approved as a01468c with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `scripts/test_future_date_guard.ps1` edited exactly as the step states; blob dc23505d60eb4fe25870d70bfdf709759b61ec55 (14 insertions, 3 deletions).
+- Step 3 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 346f88e53111ecc5dde7fcbc73c6527f66fceca8 (4 insertions, 1 deletions).
+- Step 4 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 

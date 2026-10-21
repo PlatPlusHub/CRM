@@ -19,7 +19,7 @@
 # AUD-01b (SPEC-176). The SAME check returned a different verdict for a second reason, and this one
 # was silent. Checks 12, 21 and 23 read the repository's `yyyy-MM-dd` dates with a $null format
 # provider, which .NET resolves to CurrentCulture -- not InvariantCulture. Under a culture whose
-# default calendar is not Gregorian (`ar-SA` -> UmAlQuraCalendar) the year 2026 is out of range,
+# effective calendar is not Gregorian (ar-SA with explicit UmAlQuraCalendar), year 2026 is out of range,
 # EVERY parse returns false, and each check skips the record it was about to judge: Check 12
 # reported "no future-dated evidence" over a tree containing tomorrow's date, and Checks 21 and 23
 # reported success over ZERO documents. A guard that asserts over an empty set is worse than one
@@ -111,13 +111,21 @@ function Invoke-Guard($dateStamp, [string]$Culture) {
             # A REAL process boundary, because that is what a differently-configured machine is. The
             # culture is constructed with user overrides DISABLED so the result depends on the
             # culture alone and not on whatever this workstation's regional panel happens to say.
+            # EXPLICIT-HOSTILE-CALENDAR: locale defaults vary across ICU releases. Select the
+            # parser's calendar explicitly and measure DateTimeFormat.Calendar, not the default
+            # CultureInfo.Calendar (which remains Gregorian on newer Linux images).
             $wrapper = Join-Path $dir '_culture_wrapper.ps1'
             Set-Content -Path $wrapper -Encoding UTF8 -Value @'
 param([string]$Guard, [string]$Root, [string]$Culture)
+$ErrorActionPreference = 'Stop'
 $c = [System.Globalization.CultureInfo]::new($Culture, $false)
+$c.DateTimeFormat.Calendar = [System.Globalization.UmAlQuraCalendar]::new()
 [System.Globalization.CultureInfo]::CurrentCulture   = $c
 [System.Globalization.CultureInfo]::CurrentUICulture = $c
-Write-Output "CULTURE-PROBE: $([System.Globalization.CultureInfo]::CurrentCulture.Name) $([System.Globalization.CultureInfo]::CurrentCulture.Calendar.GetType().Name)"
+Write-Output "CULTURE-PROBE: $([System.Globalization.CultureInfo]::CurrentCulture.Name) $([System.Globalization.CultureInfo]::CurrentCulture.DateTimeFormat.Calendar.GetType().Name)"
+$parsed = [datetime]::MinValue
+$accepted = [datetime]::TryParseExact('2026-01-02', 'yyyy-MM-dd', $null, [System.Globalization.DateTimeStyles]::None, [ref]$parsed)
+Write-Output "CULTURE-NEGATIVE: null-provider accepted=$accepted"
 & $Guard -RepoRoot $Root
 '@
             $out = & pwsh -NoProfile -File $wrapper -Guard $guard -Root $dir -Culture $Culture 2>&1 | Out-String
@@ -184,7 +192,10 @@ Write-Host "== Culture independence of the yyyy-MM-dd contract (AUD-01b), from t
 #    prevent, so the hostile process is made to PROVE its own calendar before it is believed.
 Check "the probe process really ran under a non-Gregorian calendar" `
     ($hostileOut -match "CULTURE-PROBE: $hostileCulture UmAlQuraCalendar") `
-    'the hostile-culture child did not report ar-SA/UmAlQuraCalendar -- the culture proofs below would be vacuous'
+    (($hostileOut -split "`n" | Where-Object { $_ -match '^CULTURE-' }) -join ' | ')
+Check "the hostile parser rejects a Gregorian year without an invariant provider" `
+    ($hostileOut -match 'CULTURE-NEGATIVE: null-provider accepted=False') `
+    (($hostileOut -split "`n" | Where-Object { $_ -match '^CULTURE-' }) -join ' | ')
 
 # 7. CHECK 12 under the hostile culture. The must-flag behaviour is already asserted at 2; what is
 #    added here is that the DIAGNOSTIC speaks the repository's contract and not the machine's
