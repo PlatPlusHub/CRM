@@ -66,6 +66,33 @@ function Rows([string]$Name, [string]$Date, [object[]]$Steps) {
 }
 function OkRun([string]$Date, [double]$End, [double]$XDelta = 1) { Rows 'r' $Date @(@('PASS: x', 1, $XDelta), @('PASS: y', 2, 1), @("END exit=0 total=$End min", $End, ($End - 2))) }
 # Successful runs only, the median of what each still had to do, its range, and no estimate from one run.
+function Case-CountEta([string]$WatcherPath) {
+    . $WatcherPath
+    $history = @(foreach ($date in 'a','b') {
+        $steps = @([pscustomobject]@{Kind='test';Key='PASS 1 repeated';T=1.0},[pscustomobject]@{Kind='test';Key='PASS 1 repeated';T=6.0},[pscustomobject]@{Kind='test';Key='PASS 3 final';T=10.0})
+        [pscustomobject]@{Date=$date;Ok=$true;Total=15.0;Steps=$steps;Index=@{'PASS 1 repeated'=$steps[0];'PASS 3 final'=$steps[2]}}
+    })
+    $second = Get-Eta $history 'PASS 1 repeated' 0 6 2
+    $third = Get-Eta $history 'PASS 3 final' 0 10 3
+    $one = Get-Eta @($history[0]) 'PASS 1 repeated' 0 6 2
+    $missing = Get-Eta $history 'PASS 9 changed' 0 6 2
+    $beyond = Get-Eta $history 'PASS 1 repeated' 0 6 4
+    $failed = Get-Eta @($history[0],[pscustomobject]@{Date='f';Ok=$false;Total=15;Steps=$history[1].Steps;Index=$history[1].Index}) 'PASS 1 repeated' 0 6 2
+    $variant = [pscustomobject]@{Date='v';Ok=$true;Total=17;Steps=@($history[1].Steps)+@([pscustomobject]@{Kind='test';Key='PASS 4 added';T=12});Index=$history[1].Index}
+    $mixed = Get-Eta @($history[0],$variant) 'PASS 1 repeated' 0 6 2
+    $ok = $second -match '^eta: ~9[.,]0 min left' -and $second -match 'observed test count 2 \(historical total 3 tests\)' -and $third -match '^eta: ~5[.,]0 min left' -and $one -match '^eta: none' -and $missing -match '^eta: none' -and $beyond -match '^eta: none' -and $failed -match '^eta: none' -and $mixed -match '^eta: none - incompatible'
+    [pscustomobject]@{Ok=$ok;Detail="second=[$second] third=[$third] one=[$one] missing=[$missing] beyond=[$beyond] failed=[$failed] mixed=[$mixed]"}
+}
+function Case-CountEtaCaller([string]$WatcherPath) {
+    $log=New-Name '.log';$csv=New-Name '.csv'
+    $startAt=(Get-Date).AddMinutes(-6)
+    $lines=@(('['+$startAt.ToString('yyyy-MM-dd HH:mm:ss')+"] START pid=$PID host=fixture | synthetic count fixture"),'[+   1.000 min] PASS 1 repeated','[+   6.000 min] PASS 1 repeated')
+    [IO.File]::WriteAllLines($log,$lines)
+    $rows=@(foreach($date in 'a','b'){Rows 'count-eta' $date @(@('PASS 1 repeated',1,1),@('PASS 1 repeated',6,5),@('PASS 3 final',10,4),@('END exit=0 total=15.0 min',15,5))})
+    $rows|Export-Csv -LiteralPath $csv -NoTypeInformation -Encoding utf8
+    $output=@(& pwsh -NoProfile -File $WatcherPath -Log $log -Run 'count-eta' -Csv $csv -Eta 2>&1);$code=$LASTEXITCODE
+    [pscustomobject]@{Ok=($code-eq0-and($output-join' ')-match'^eta: ~9[.,]0 min left.*observed test count 2');Detail="exit=$code $($output-join' | ')"}
+}
 function Case-Eta([string]$WatcherPath) {
     . $WatcherPath
     $hist = @(Read-History @((OkRun 'a' 5) + (OkRun 'b' 6) + (OkRun 'c' 7) + (Rows 'r' 'f' @(@('PASS: x', 1, 1), @('END exit=1', 1.5, 0.5)))) 'r')
@@ -300,6 +327,24 @@ function Case-Tests([string]$RunnerPath, [string]$WatcherPath) {
     [pscustomobject]@{ Ok = $ok; Detail = "done=$done stamps=$stamps || $($o -join ' || ') || $(($rows | ForEach-Object { "$($_.step)=$($_.delta_min)" }) -join ' | ')" }
 }
 # -Brief prints what needs attention and a progress line; the history still receives everything.
+function Case-LateBrief([string]$WatcherPath) {
+    $log=New-Name '.log';$csv=New-Name '.csv';$out=New-Name '.out'
+    $at=(Get-Date).AddMinutes(-51).ToString('yyyy-MM-dd HH:mm:ss')
+    $lines=[Collections.Generic.List[string]]::new()
+    $lines.Add("[$at] START pid=$PID host=fixture pwsh=fixture cpus=1 head=fixture concurrent=0 | fixture")
+    foreach($i in 1..1000){$t=($i/20.0).ToString('0.000',[Globalization.CultureInfo]::InvariantCulture);$lines.Add("[+ $t min] PASS historical-$i fixture")}
+    $lines.Add('[+ 50.100 min] REMOTE_CERTIFY: UNREADABLE')
+    $lines.Add('[+ 50.200 min] END exit=2 total=50.2 min')
+    [IO.File]::WriteAllLines($log,$lines)
+    $w=Start-Pwsh ('-File {0} -Log {1} -Run late-brief -PollSeconds 1 -Csv {2} -Brief -ProgressMinutes 2' -f (Q $WatcherPath),(Q $log),(Q $csv)) $out
+    $done=Wait-Exit $w 30
+    $o=@(Get-Content -LiteralPath $out);$rows=@(Import-Csv -LiteralPath $csv)
+    $progress=@($o|Where-Object{$_-match'^progress:'}).Count
+    $testRows=@($rows|Where-Object{$_.step-like'PASS historical-*'}).Count
+    $ok=$done-and$w.ExitCode-eq1-and$progress-eq1-and$testRows-eq1000-and@($o|Where-Object{$_-match'\] PASS historical-'}).Count-eq0-and@($o|Where-Object{$_-match'END exit=2'}).Count-ge1
+    $unreadable=$done-and@($o|Where-Object{$_-match'REMOTE_CERTIFY: UNREADABLE'}).Count-eq1-and@($rows|Where-Object{$_.step-ceq'REMOTE_CERTIFY: UNREADABLE'}).Count-eq1
+    [pscustomobject]@{Ok=$ok;Unreadable=$unreadable;Detail="done=$done exit=$($w.ExitCode) progress=$progress history_tests=$testRows unreadable=$unreadable"}
+}
 function Case-Quiet([string]$RunnerPath, [string]$WatcherPath) {
     $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
     $r = Start-Runner $RunnerPath $log "Write-Output 'PASS: pwsh -NoProfile -File scripts/fake_a.ps1'; Write-Output 'PASS t1 quiet'; Start-Sleep -Seconds 2; Write-Output 'FAILED: pwsh -NoProfile -File scripts/fake_b.ps1 (exit 1)'; exit 1"
@@ -383,12 +428,16 @@ try {
     $c = Case-NeverStarted $Watcher;  Check 'W7 a runner that never starts is reported, not waited on silently' $c.Ok $c.Detail
     $c = Case-Rearm $Runner $Watcher $steps; Check 'W8 a watcher re-armed on a finished failed run exits 1 and adds no duplicate rows; a later successful run exits 0 and compares with the previous one and both conditions' $c.Ok $c.Detail
     $c = Case-Eta $Watcher;          Check 'W9 an ETA is the median of what comparable successful runs still had to do, with its range; a new step falls back to run totals; one run gives none; an ended run says so' $c.Ok $c.Detail
+    $c = Case-CountEta $Watcher; Check 'W38 ETA uses observed test ordinal and compatible known historical totals; insufficient/incompatible evidence gives none' $c.Ok $c.Detail
+    $c = Case-CountEtaCaller $Watcher; Check 'W39 actual -Eta caller passes its observed test count for repeated keys' $c.Ok $c.Detail
     $c = Case-Findings $Watcher;     Check 'W10 findings: a recurring failure is [confirmed]; a repeated command, a slow step, an absent step and a slow run are [hypothesis]; each once' $c.Ok $c.Detail
     $c = Case-Report $Watcher;       Check 'W11 the report ranks failures by rate per run of their own name and says where the time goes' $c.Ok $c.Detail
     $c = Case-Redact $Watcher;       Check 'W12 credentials are redacted by shape and by key; prose that names a secret is kept' $c.Ok $c.Detail
     $c = Case-RedactRun $Runner $Watcher; Check 'W13 a credential a step prints reaches neither the watcher''s output nor the history; each row names its log, which keeps the raw line unredacted' $c.Ok $c.Detail
     $c = Case-Limit $Watcher;        Check 'W14 one append past the bound leaves the history within it: header, then the newest whole rows' $c.Ok $c.Detail
     $c = Case-Tests $Runner $Watcher; Check 'W15 every test line, failed ones included, and every evaluator stage is recorded with its own time at 0.06 s resolution; only failed tests are printed; a TIME line keeps its stated duration' $c.Ok $c.Detail
+    $c = Case-LateBrief $Watcher; Check 'W36 late Brief attach prints one progress line while retaining all historical tests' $c.Ok $c.Detail
+    Check 'W37 UNREADABLE remains visible and recorded as its literal verdict' $c.Unreadable $c.Detail
     $c = Case-Quiet $Runner $Watcher; Check 'W16 -Brief prints failures, the end and progress, and still records every line' $c.Ok $c.Detail
     $c = Case-Classify $Watcher;     Check 'W17 FAIL and TAP not ok are tests, ranked by time and by failure rate; a TODO or SKIP not ok is not a failure' $c.Ok $c.Detail
     $c = Case-ConcurrentAll $Watcher $Evaluator; Check 'W18 six concurrent writers (three evaluator, three watcher): every row once and whole; past the bound, within it, whole, newest rows kept' $c.Ok $c.Detail
@@ -449,7 +498,12 @@ try {
         @{ Name = 'M27 stages not split';                     File = $Watcher; Find = '$stages = @(Split-Stages $body)'; Replace = '$stages = @()'; Case = { param($p) Case-Tests $Runner $p } },
         @{ Name = 'M28 the runner stamps a tenth of a minute'; File = $Runner;  Find = "ToString('0.000',"; Replace = "ToString('0.0',"; Case = { param($p) Case-Tests $p $Watcher } },
         @{ Name = 'M34 resources never sampled';              File = $Runner;  Find = 'if ($IsWindows) {'; Replace = 'if ($false) {'; Case = { param($p) Case-Resources $p } },
-        @{ Name = 'M35 concurrent runs share one resource file'; File = $Runner; Find = '$resources = "$Log.resources.csv"'; Replace = '$resources = Join-Path ([IO.Path]::GetTempPath()) ''orvion-resources.csv'''; Case = { param($p) Case-ResourcesConcurrent $p } }
+        @{ Name = 'M35 concurrent runs share one resource file'; File = $Runner; Find = '$resources = "$Log.resources.csv"'; Replace = '$resources = Join-Path ([IO.Path]::GetTempPath()) ''orvion-resources.csv'''; Case = { param($p) Case-ResourcesConcurrent $p } },
+        @{ Name = 'M38 repeated test ordinal ignored'; File = $Watcher; Find = '$s = $testRows[$TestCount - 1]'; Replace = '$s = $testRows[0]'; Case = { param($p) Case-CountEta $p } },
+        @{ Name = 'M39 incompatible historical test totals accepted'; File = $Watcher; Find = 'if ($totals.Count -ne 1)'; Replace = 'if ($false)'; Case = { param($p) Case-CountEta $p } },
+        @{ Name = 'M40 actual ETA caller drops observed test count'; File = $Watcher; Find = ' (@($lines | Where-Object { Test-TestLine $_.Groups[''body''].Value }).Count)'; Replace = ' 0'; Case = { param($p) Case-CountEtaCaller $p } },
+        @{ Name = 'M36 UNREADABLE verdict dropped'; File = $Watcher; Find = '|UNREADABLE|'; Replace = '|'; Case = { param($p) $v=Case-LateBrief $p;[pscustomobject]@{Ok=$v.Unreadable;Detail=$v.Detail} } },
+        @{ Name = 'M37 historical Brief progress floods'; File = $Watcher; Find = '            if ($Brief -and ((-not $replaying -and $t - $lastProgress -ge $ProgressMinutes) -or ($replaying -and $body -match ''^END exit=''))) {'; Replace = '            if ($Brief -and $t - $lastProgress -ge $ProgressMinutes) {'; Case = { param($p) Case-LateBrief $p } }
     )
     foreach ($m in $mutants) {
         $source = [IO.File]::ReadAllText($m.File); $mutated = $source.Replace($m.Find, $m.Replace)

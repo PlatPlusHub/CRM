@@ -13,7 +13,7 @@ $readerFixture=Join-Path $sandbox 'reader-fixture.ps1'
 $readerSource=Join-Path $sourceRoot 'scripts/github_public_read.ps1'
 $fixtureText=". '$($readerSource.Replace("'","''"))'"+[char]10
 $fixtureText+=@'
-function Get-OrvionPublicRepo([string]$Root) { 'fixture/repository' }
+function Get-OrvionPublicRepo([string]$Root) { if($env:ORVION_STUB_ORIGIN_BAD){throw 'PUBLIC_READ:ORIGIN'}; 'fixture/repository' }
 function Test-OrvionPublicGithub([string]$Root) { throw 'PUBLIC_READ:FIXTURE_NOT_PUBLIC' }
 function Get-OrvionPublicRuns([string]$Repo,[string]$Sha='',[string]$Branch='',[string]$Event='',[string]$WorkflowPath='') {
     $a=@('run','list','--branch',$Branch,'--event',$Event,'--limit','100','--json','attempt,conclusion,databaseId,event,headBranch,headSha,status,workflowName')
@@ -34,6 +34,118 @@ $control=$controlCopy
 
 $script:pass=0;$script:fail=0
 function Assert($Name,[bool]$Condition,[string]$Evidence=''){if($Condition){$script:pass++;Write-Host "PASS $Name"}else{$script:fail++;Write-Host "FAIL $Name :: $Evidence"}}
+function Test-AbsentCriterionListing([string]$ControlSource,[string]$FixtureRoot){
+    # Exact lower-guard evidence: whole-Gate store/read refusals are tested separately, never disabled here.
+    $caseTokens=$null;$caseErrors=$null
+    $caseAst=[Management.Automation.Language.Parser]::ParseFile($ControlSource,[ref]$caseTokens,[ref]$caseErrors)
+    $caseFunctions=@($caseAst.FindAll({param($node)$node-is[Management.Automation.Language.FunctionDefinitionAst]-and$node.Name-ceq'Test-CriterionCheck'},$true))
+    if($caseErrors.Count-or$caseFunctions.Count-ne1){throw 'ABSENT_LISTING_FUNCTION_SOURCE'}
+    $caseSource=$caseFunctions[0].Extent.Text
+    $needle='if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE'
+    if([regex]::Matches($caseSource,[regex]::Escape($needle)).Count-ne1){throw 'ABSENT_LISTING_MUTATION_ANCHOR'}
+    $root=$FixtureRoot
+    $criterion=[pscustomobject]@{Kind='absent';Path='retired.txt';Key=''}
+    $population=@(git -C $root ls-tree --name-only HEAD -- retired.txt 2>$null)
+    if($LASTEXITCODE-ne0-or$population.Count-ne1-or$population[0]-cne'retired.txt'){throw 'ABSENT_LISTING_EMPTY_POPULATION'}
+    . ([scriptblock]::Create($caseSource))
+    $pristineError=''
+    try{Test-CriterionCheck $criterion 'HEAD'|Out-Null}catch{$pristineError=$_.Exception.Message}
+    . ([scriptblock]::Create($caseSource.Replace($needle,'if($false){throw "CRITERION_CHECK_INDETERMINATE')))
+    $mutatedResult=$null;$mutatedError=''
+    try{$mutatedResult=Test-CriterionCheck $criterion 'HEAD'}catch{$mutatedError=$_.Exception.Message}
+    . ([scriptblock]::Create($caseSource))
+    [pscustomobject]@{Passed=($pristineError.StartsWith('CRITERION_CHECK_INDETERMINATE:')-and!$mutatedError-and$null-eq$mutatedResult);
+        Detail="population=$($population[0]) pristine=$pristineError mutantError=$mutatedError mutantResult=$mutatedResult";
+        Boundary='Exact Test-CriterionCheck function and real missing-tree Git fixture; no whole-Gate or credential claim.'}
+}
+function Test-GitReadBoundaries([string]$ControlSource,[string]$FixtureRoot){
+    # Exact function tests with real Git; injected failures never certify whole-Gate admission.
+    if(Test-Path -LiteralPath $FixtureRoot){throw 'READ_FIXTURE_EXISTS'}
+    [void][IO.Directory]::CreateDirectory($FixtureRoot)
+    $Root=$FixtureRoot;$BaseRef=$null;$HeadRef=$null
+    $gitExe=(Get-Command git -CommandType Application|Select-Object -First 1).Source
+    $fault=@{Mode='';Hit=$false;Missing=(Join-Path $Root 'absent-read-target')}
+    function Invoke-ReadFixtureGit([string[]]$Arguments){
+        $value=& $gitExe @Arguments
+        if($LASTEXITCODE-ne0){throw "READ_FIXTURE_SETUP:$LASTEXITCODE"}
+        $value
+    }
+    Invoke-ReadFixtureGit @('-C',$Root,'init','-q','-b','main')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'config','core.autocrlf','false')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'config','gc.auto','0')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'config','maintenance.auto','false')|Out-Null
+    [IO.File]::WriteAllText((Join-Path $Root 'readme.txt'),"SPEC-901 read fixture`n")
+    Invoke-ReadFixtureGit @('-C',$Root,'add','readme.txt')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'-c','user.name=Fixture','-c','user.email=fixture@invalid','commit','-qm','fixture')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'remote','add','origin',$Root)|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'update-ref','refs/remotes/origin/main','HEAD')|Out-Null
+    Invoke-ReadFixtureGit @('-C',$Root,'branch','--set-upstream-to=origin/main','main')|Out-Null
+    $tok=$null;$parseErrors=$null
+    $ast=[Management.Automation.Language.Parser]::ParseFile($ControlSource,[ref]$tok,[ref]$parseErrors)
+    if($parseErrors.Count){throw 'READ_SOURCE_PARSE'}
+    foreach($name in @('Read-RequiredGit','Base-HasId','Git-State')){
+        $nodes=@($ast.FindAll({param($n) $n-is[Management.Automation.Language.FunctionDefinitionAst]-and$n.Name-ceq$name},$true))
+        if($nodes.Count-eq0-and$name-eq'Read-RequiredGit'){continue}
+        if($nodes.Count-ne1){throw "READ_SOURCE_FUNCTION:$name"}
+        . ([scriptblock]::Create($nodes[0].Extent.Text))
+    }
+    function git {
+        [string[]]$a=@($args)
+        $verb=@($a|Where-Object{$_-in@('ls-tree','grep','status','rev-list')})|Select-Object -First 1
+        if($verb-eq'rev-list'-and$fault.Mode-eq'malformed'){$fault.Hit=$true;$global:LASTEXITCODE=0;'not-a-count';return}
+        if($verb-eq'grep'-and$fault.Mode-eq'missing-blob'){$fault.Hit=$true}
+        if($verb-eq'status'-and$fault.Mode-eq'warning'){
+            $fault.Hit=$true;Write-Error 'fixture stderr warning' -ErrorAction Continue
+        }
+        if($verb-and$verb-ceq$fault.Mode){
+            $fault.Hit=$true;$i=[Array]::IndexOf($a,'-C')
+            if($i-lt0){throw 'READ_INJECTION_NOT_REACHED'}
+            $a[$i+1]=$fault.Missing
+        }
+        & $gitExe @a
+        $nativeCode=$LASTEXITCODE;$global:LASTEXITCODE=$nativeCode
+    }
+    $rows=[Collections.Generic.List[object]]::new()
+    function Add-ReadCase([string]$Id,[scriptblock]$Action,[string]$Mode,[scriptblock]$Accept,[string]$ErrorPattern=''){
+        $fault.Mode=$Mode;$fault.Hit=$false;$value=$null;$errorText=''
+        try{$value=&$Action}catch{$errorText=$_.Exception.Message}
+        $ok=if($ErrorPattern){$fault.Hit-and$errorText-match$ErrorPattern}else{!$errorText-and(&$Accept $value)}
+        if($Mode-eq'warning'){$ok=$ok-and$fault.Hit}
+        $rows.Add([pscustomobject]@{Id=$Id;Passed=[bool]$ok;FaultReached=$fault.Hit;Error=$errorText;Value=$value})
+    }
+    Add-ReadCase 'ID present' {Base-HasId HEAD SPEC-901} '' {param($v)$v-eq$true}
+    Add-ReadCase 'genuine no match' {Base-HasId HEAD SPEC-902} '' {param($v)$v-eq$false}
+    Add-ReadCase 'clean upstream' {Git-State} '' {param($v)$v.Text-ceq'clean | ahead 0 / behind 0'-and$v.Synced}
+    $dirty=Join-Path $Root 'untracked.txt';[IO.File]::WriteAllText($dirty,'fixture')
+    Add-ReadCase 'dirty state' {Git-State} '' {param($v)$v.Text-match'^dirty \|'}
+    Remove-Item -LiteralPath $dirty
+    Add-ReadCase 'stderr warning is not a path' {Git-State} 'warning' {param($v)$v.Text-ceq'clean | ahead 0 / behind 0'-and$v.Synced}
+    Add-ReadCase 'failed tree read refuses' {Base-HasId HEAD SPEC-902} 'ls-tree' {} '^GIT_READ_FAILED:ls-tree:exit=128'
+    Add-ReadCase 'failed grep refuses' {Base-HasId HEAD SPEC-902} 'grep' {} '^GIT_READ_FAILED:grep:exit=128'
+    Add-ReadCase 'failed count refuses' {Git-State} 'rev-list' {} '^GIT_READ_FAILED:rev-list:exit=128'
+    Add-ReadCase 'failed status refuses' {Git-State} 'status' {} '^GIT_READ_FAILED:status:exit=128'
+    Add-ReadCase 'malformed count refuses' {Git-State} 'malformed' {} '^GIT_COUNT_INVALID:'
+    # Construct an extra malformed-history fixture without deleting or altering an existing object.
+    $missing='1111111111111111111111111111111111111111'
+    $si=[Diagnostics.ProcessStartInfo]::new($gitExe)
+    $si.UseShellExecute=$false;$si.RedirectStandardInput=$true;$si.RedirectStandardOutput=$true;$si.RedirectStandardError=$true
+    $si.StandardInputEncoding=[Text.UTF8Encoding]::new($false)
+    foreach($arg in @('-C',$Root,'mktree','--missing')){[void]$si.ArgumentList.Add($arg)}
+    $proc=[Diagnostics.Process]::new();$proc.StartInfo=$si
+    try{
+        [void]$proc.Start();$stdout=$proc.StandardOutput.ReadToEndAsync();$stderr=$proc.StandardError.ReadToEndAsync()
+        $proc.StandardInput.WriteLine('100644 blob '+$missing+[char]9+'readme.txt');$proc.StandardInput.Close()
+        $proc.WaitForExit();$tree=$stdout.GetAwaiter().GetResult().Trim();$detail=$stderr.GetAwaiter().GetResult()
+        if($proc.ExitCode-ne0){throw "READ_MISSING_TREE_FIXTURE:$detail"}
+    }finally{$proc.Dispose()}
+    $missingCommit=Invoke-ReadFixtureGit @('-C',$Root,'-c','user.name=Fixture','-c','user.email=fixture@invalid','commit-tree',$tree,'-m','missing blob fixture')
+    Add-ReadCase 'unreadable blob with grep exit1 refuses' {Base-HasId $missingCommit SPEC-902} 'missing-blob' {} '^GIT_READ_FAILED:grep:exit=1'
+    $global:LASTEXITCODE=0
+    $rows.ToArray()
+}
+foreach($readCase in @(Test-GitReadBoundaries -ControlSource $control -FixtureRoot (Join-Path $sandbox 'read-boundaries'))){
+    Assert ("READ: "+$readCase.Id) $readCase.Passed $readCase.Error
+}
 function ContractText(
     [string]$Id='SPEC-900',[string]$Status='In Progress',[string]$Resume='1',[string]$Blocker='None',
     [string]$Attempt='0',[string]$Scope='allowed.txt',[string]$Reading='context.txt',
@@ -1473,6 +1585,12 @@ exit 0
     Assert '108c green runs GitHub cannot read are UNREADABLE with the reason and rerun time, never FAILED or READY' ($r.Code-eq2-and$r.Text-match'REMOTE_CERTIFY: UNREADABLE'-and$r.Text-match'FIXTURE_UNREADABLE'-and$r.Text-match'Rerun -Certify after \d\d:\d\d UTC'-and$r.Text-notmatch'REMOTE_CERTIFY: (FAILED|PENDING|READY)') $r.Text
     $r=RunCertify
     Assert '108d once GitHub can be read again the same SHA certifies READY' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY') $r.Text
+    $beforeOriginLog=StubGhLog
+    $env:ORVION_STUB_ORIGIN_BAD='1'
+    try{$r=RunCertify}finally{Remove-Item Env:ORVION_STUB_ORIGIN_BAD -ErrorAction SilentlyContinue}
+    Assert '108e a permanently invalid origin is UNREADABLE without querying workflows' ($r.Code-eq2-and$r.Text-match'REMOTE_CERTIFY: UNREADABLE'-and$r.Text-match'PUBLIC_READ:ORIGIN'-and$r.Text-notmatch'REMOTE_CERTIFY: (FAILED|PENDING|READY)'-and(StubGhLog)-ceq$beforeOriginLog) $r.Text
+    $r=RunCertify
+    Assert '108f restoring the origin route leaves exact-SHA certification READY' ($r.Code-eq0-and$r.Text-match'REMOTE_CERTIFY: READY') $r.Text
 
     # Fail closed: with no receipt there is no expected set, so nothing can be proven.
     Reset-Fixture;$sha=(git -C $root rev-parse HEAD).Trim()
@@ -3731,10 +3849,12 @@ exit 0
     ChGone -Open|Out-Null;git -C $root rm -q --cached retired.txt;Put '_ORVION_CANONICAL/manifest.md' (ManifestText 'None.');$r=Run 'Gate'
     Assert 'AB11 CHECK: a staged deletion still on disk fails absent in the hook' ($r.Code-ne0-and$r.Text-match'CODE: CRITERION_CHECK_FAILED'-and$r.Text-match'retired\.txt exists') $r.Text
     Pop 'CHECK' 'reject'
-    MutationKillRangeAt 'ABM5 CHECK MUTATION: behind the store guard, a failed listing is indeterminate, not absent' {ChLost -NoReset} 'CRITERION_CHECK_INDETERMINATE' `
-        'if($LASTEXITCODE-ne0){throw "CRITERION_CHECK_INDETERMINATE' 'if($false){throw "CRITERION_CHECK_INDETERMINATE' 'CHECK' `
-        'Assert-ObjectStoreComplete $(if' '$null=$(if'
-    ChFound
+    # The early required-Git guard now rejects this damage before criterion admission. Keep both guards intact;
+    # prove this lower guard at its exact function boundary, while AB10 and B1 retain whole-Gate/read coverage.
+    ChLost|Out-Null
+    try{$listingCase=Test-AbsentCriterionListing $control $root}finally{ChFound}
+    Pop 'CHECK' 'mutation'
+    Assert 'ABM5 CHECK MUTATION: exact absent-listing guard rejects unreadable, and its mutant admits a known present path' $listingCase.Passed $listingCase.Detail
 
     # OBJECT STORE. A missing blob made an identity already in use read as free: `git grep` exits 1 for an
     # unreadable blob as for no match, and the reservation log and pickaxe returned what they had read. The

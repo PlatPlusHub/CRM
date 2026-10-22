@@ -70,7 +70,7 @@ param(
 # judged a test FIRST, so `FAIL <name>` and TAP `not ok` - which the result vocabulary also matches - are
 # timed and reported as the tests they are. A TAP `not ok` with a TODO or SKIP directive is not a
 # failure (TAP 14 specification, "Directives").
-$script:ResultRx = '(^(PASS|FAILED|SKIPPED?): .*|^\s*[A-Z][A-Z0-9_-]*(?: [A-Z0-9_-]+)*: (CLEAN|READY|PASSED|COMPLETE|DONE|PENDING|UNPROVEN|FAILED|BLOCKED|INCOMPLETE|RECOVERY_EXHAUSTED|NOT [A-Z]+|\d+ issue).*|^\s+[A-Z][A-Z0-9-]*(?: [A-Z0-9-]+)+: .*|^(CODE|EVIDENCE): (?!none\b).*|^\s*FAIL\b.*|\b\d+ passed, \d+ failed\b|\bnot ok\b|\bERROR:.*|ALL CHECKS PASSED|\bKILLED\b|\bSURVIVED\b|^END exit=\d+|^TIME: .*)'
+$script:ResultRx = '(^(PASS|FAILED|SKIPPED?): .*|^\s*[A-Z][A-Z0-9_-]*(?: [A-Z0-9_-]+)*: (CLEAN|READY|PASSED|COMPLETE|DONE|PENDING|UNPROVEN|FAILED|BLOCKED|INCOMPLETE|RECOVERY_EXHAUSTED|UNREADABLE|NOT [A-Z]+|\d+ issue).*|^\s+[A-Z][A-Z0-9-]*(?: [A-Z0-9-]+)+: .*|^(CODE|EVIDENCE): (?!none\b).*|^\s*FAIL\b.*|\b\d+ passed, \d+ failed\b|\bnot ok\b|\bERROR:.*|ALL CHECKS PASSED|\bKILLED\b|\bSURVIVED\b|^END exit=\d+|^TIME: .*)'
 function Test-ResultLine([string]$Body) { $Body -cmatch $script:ResultRx }
 $script:TestRx = '^\s*(PASS|FAIL)\s+[^:\s]\S*|^(not )?ok \d+\b'
 function Test-TestLine([string]$Body) { $Body -cmatch $script:TestRx }
@@ -139,15 +139,32 @@ function Read-History([object[]]$Rows, [string]$Name, [string]$Exclude = '') {
 # one (CI practice: Jenkins, TeamCity, Metabase). Two runs at least, or no estimate - one sample is a
 # guess - and fewer than five are labelled a low sample.
 function Get-Recent([object[]]$History, [int]$N) { @($History | Where-Object { $_.Ok } | Sort-Object Date | Select-Object -Last $N) }
-function Get-Eta([object[]]$History, [string]$Key, [double]$Since, [double]$Now) {
-    $left = @(foreach ($h in (Get-Recent $History 10)) {
-        if ($Key) { $s = $h.Index[$Key]; if ($s) { $h.Total - $s.T - $Since } } else { $h.Total - $Now }
-    })
-    # A step the history has not seen yet (a new test) falls back to the runs' totals, under the same rule.
-    if ($left.Count -lt 2 -and $Key) { return Get-Eta $History '' $Since $Now }
+function Get-Eta([object[]]$History, [string]$Key, [double]$Since, [double]$Now, [int]$TestCount = 0) {
+    $byCount = $TestCount -gt 0 -and (Test-TestLine $Key)
+    $countLabel = ''
+    if ($byCount) {
+        $samples = @(foreach ($h in (Get-Recent $History 10)) {
+            $testRows = @($h.Steps | Where-Object Kind -eq 'test')
+            if ($testRows.Count -ge $TestCount) {
+                $s = $testRows[$TestCount - 1]
+                if ($s.Key -ceq $Key) { [pscustomobject]@{ Count = $testRows.Count; Left = $h.Total - $s.T - $Since } }
+            }
+        })
+        if ($samples.Count -lt 2) { return "eta: none - $($samples.Count) comparable successful run(s) at observed test count $TestCount" }
+        $totals = @($samples | ForEach-Object { $_.Count } | Sort-Object -Unique)
+        if ($totals.Count -ne 1) { return 'eta: none - incompatible historical test totals at this observed test count' }
+        $left = @($samples | ForEach-Object { $_.Left })
+        $countLabel = ", by observed test count $TestCount (historical total $($totals[0]) tests)"
+    } else {
+        $left = @(foreach ($h in (Get-Recent $History 10)) {
+            if ($Key) { $s = $h.Index[$Key]; if ($s) { $h.Total - $s.T - $Since } } else { $h.Total - $Now }
+        })
+        # Non-test stages retain the existing measured step/total fallback; tests never guess a count match.
+        if ($left.Count -lt 2 -and $Key) { return Get-Eta $History '' $Since $Now }
+    }
     if ($left.Count -lt 2) { return "eta: none - $($left.Count) comparable successful run(s) in the history$(if ($Key) { ' reached this step' })" }
     $s = @($left | Sort-Object)
-    'eta: ~{0:N1} min left (median of {1} comparable successful runs{5}{4}; range {2:N1} to {3:N1})' -f [Math]::Max(0, (Get-Median $s)), $s.Count, [Math]::Max(0, $s[0]), [Math]::Max(0, $s[-1]), $(if ($s.Count -lt 5) { ', low sample' }), $(if (-not $Key) { ', by run totals' })
+    'eta: ~{0:N1} min left (median of {1} comparable successful runs{5}{4}; range {2:N1} to {3:N1})' -f [Math]::Max(0, (Get-Median $s)), $s.Count, [Math]::Max(0, $s[0]), [Math]::Max(0, $s[-1]), $(if ($s.Count -lt 5) { ', low sample' }), $(if ($byCount) { $countLabel } elseif (-not $Key) { ', by run totals' })
 }
 # Findings on one recorded line. $State dedupes them per run and counts this run's commands and steps.
 function New-FindingState { [pscustomobject]@{ Said = [Collections.Generic.HashSet[string]]::new(); Keys = [Collections.Generic.HashSet[string]]::new(); Commands = @{} } }
@@ -260,7 +277,7 @@ if ($Eta) {
     $now = ((Get-Date) - $first.At).TotalMinutes
     $hist = @(Read-History @(Read-TimingRows $Csv) $Run $first.At.ToString('yyyy-MM-dd HH:mm:ss'))
     if ($lines.Count -and $lines[-1].Groups['body'].Value -match '^END exit=') { "eta: the run has ended ($($lines[-1].Groups['body'].Value))"; exit 0 }
-    if ($lines.Count) { $t = [double]::Parse($lines[-1].Groups['t'].Value, [Globalization.CultureInfo]::InvariantCulture); Get-Eta $hist (Get-StepKey $lines[-1].Groups['body'].Value) ($now - $t) $now } else { Get-Eta $hist '' 0 $now }
+    if ($lines.Count) { $t = [double]::Parse($lines[-1].Groups['t'].Value, [Globalization.CultureInfo]::InvariantCulture); Get-Eta $hist (Get-StepKey $lines[-1].Groups['body'].Value) ($now - $t) $now (@($lines | Where-Object { Test-TestLine $_.Groups['body'].Value }).Count) } else { Get-Eta $hist '' 0 $now }
     exit 0
 }
 
@@ -279,7 +296,7 @@ function Save-Step([string]$Step, [double]$T, [double]$Delta) {
     $key = ($Run, $identity, $Step, (Format-Minutes $T)) -join '|'
     if (-not $have.ContainsKey($key)) { $have[$key] = 1; Write-Row $Csv $Run $identity $Step $T $Delta $conditions }
 }
-$seen = 0; $last = 0.0; $prevLine = 0.0; $tests = 0; $results = 0; $failed = 0; $lastProgress = 0.0; $quiet = [Diagnostics.Stopwatch]::StartNew()
+$replaying = $true; $seen = 0; $last = 0.0; $prevLine = 0.0; $tests = 0; $results = 0; $failed = 0; $lastProgress = 0.0; $quiet = [Diagnostics.Stopwatch]::StartNew()
 while ($true) {
     $lines = @(Get-Content -LiteralPath $Log -Encoding utf8)
     if ($lines.Count -gt $seen) {
@@ -288,9 +305,9 @@ while ($true) {
             if (-not $m.Success) { continue }
             $t = [double]::Parse($m.Groups['t'].Value, [Globalization.CultureInfo]::InvariantCulture); $body = Hide-Secret $m.Groups['body'].Value
             $sinceLine = $t - $prevLine; $prevLine = $t
-            if ($Brief -and $t - $lastProgress -ge $ProgressMinutes) {
+            if ($Brief -and ((-not $replaying -and $t - $lastProgress -ge $ProgressMinutes) -or ($replaying -and $body -match '^END exit='))) {
                 $lastProgress = $t; $now = ((Get-Date) - $start.At).TotalMinutes
-                'progress: {0:N1} min - {1} tests and {2} results so far, {3} failing; {4}' -f $t, $tests, $results, $failed, (Get-Eta $history $lastKey ($now - $t) $now)
+                'progress: {0:N1} min - {1} tests and {2} results so far, {3} failing; {4}' -f $t, $tests, $results, $failed, (Get-Eta $history $lastKey ($now - $t) $now $tests)
             }
             $step = ($body.Substring(0, [Math]::Min(160, $body.Length))) -replace '"', "'"
             if (Test-TestLine $body) {
@@ -315,6 +332,13 @@ while ($true) {
                 exit [int]($body -notmatch '^END exit=0\b')
             }
         }
+        if($replaying){
+            if($Brief-and$prevLine-$lastProgress-ge$ProgressMinutes){
+                $lastProgress=$prevLine;$now=((Get-Date)-$start.At).TotalMinutes
+                'progress: {0:N1} min - {1} tests and {2} results so far, {3} failing; {4}' -f $prevLine,$tests,$results,$failed,(Get-Eta $history $lastKey ($now-$prevLine) $now $tests)
+            }
+            $lastProgress=$prevLine;$replaying=$false
+        }
         $seen = $lines.Count; $quiet.Restart()
     } elseif (-not (Get-Process -Id $start.Pid -ErrorAction SilentlyContinue)) {
         # Re-read once: the END line may have landed between the read above and this check.
@@ -323,7 +347,7 @@ while ($true) {
         exit 1
     } elseif ($quiet.Elapsed.TotalMinutes -ge $QuietMinutes) {
         $now = ((Get-Date) - $start.At).TotalMinutes
-        'heartbeat: no new output for {0:N1} min (last result at {1:N1} min) - {2}; {3}' -f $quiet.Elapsed.TotalMinutes, $last, (Get-RunningStage $start.Pid), (Get-Eta $history $lastKey ($now - $prevLine) $now)
+        'heartbeat: no new output for {0:N1} min (last result at {1:N1} min) - {2}; {3}' -f $quiet.Elapsed.TotalMinutes, $last, (Get-RunningStage $start.Pid), (Get-Eta $history $lastKey ($now - $prevLine) $now $tests)
         $quiet.Restart()
     }
     Start-Sleep -Seconds $PollSeconds

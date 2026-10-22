@@ -47,6 +47,12 @@ pwsh -NoProfile -File scripts/check_agent_continuity.ps1 -Boot
 
 Boot validates and extracts manifest, active CR, official status, Runtime Checkpoint, Git/upstream, repository guard, capabilities, verification profile, and blocker. Follow its exact `ACTION`, `WRITE`, and `START_CONTEXT`. Boot routes context; it does not preload whole Governance, Canon, reports, or guard output. Read more whenever evidence requires it.
 
+Repository-local optional adapters (no additional write authority):
+- Draft generation/application: `scripts/agent/Invoke-DraftSteps.ps1` (`Get-DraftFileStep`) and `scripts/agent/apply-draft-steps.ps1 -Draft <absolute-draft> -Root <absolute-root>`.
+- Scratch hazards: `scripts/agent/Test-ScriptHazards.ps1 <scratch.ps1>`; owning checks: `scripts/agent/test-draft-steps.ps1` and `scripts/test_owner_interfaces.ps1`.
+- Owner Publish: from this product's clean synchronized trusted main, `scripts/owner_publish.ps1 -Root <absolute-candidate-root> -Candidate <full-SHA>`; Owner Promote: `scripts/owner_promote.ps1 -Candidate <full-SHA>`.
+- Both owner interfaces require a real interactive confirmation; `-NonInteractive` refuses. Existing native engines retain Gate/CI/receipt judgment. Metadata goes outside the checkout; `-EvidenceDirectory <absolute-directory>` chooses the destination. Account routing is configuration evidence, not authenticated actor proof. Publication/promotion never means remote certification. Existing owner entrypoints bootstrap the first release; tracked interfaces become usable from trusted main only after release.
+
 Every implementation cycle is:
 
 ```text

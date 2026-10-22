@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -70,7 +70,7 @@ All other unlisted artifacts are outside Write Scope. No migrations, database op
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -1760,6 +1760,8 @@ Post-Implementation Proof Obligation: one authorized native timed/watched Finish
 ## Execution Log
 
 None.
+
+2026-10-22 - Codex applied all fourteen exact frozen Contract B literal file steps using the approved original applier. Each resulting Git-filtered payload blob matches pt/payload.json; Step 15 synchronized this In Progress checkpoint and native generated artifacts. README, native profiles/hooks/CI/release engines remain unchanged. Native timed/watched Finish is the next operation; no test/receipt/release success is inferred from application.
 
 ## Verification Notes
 

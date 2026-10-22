@@ -14,10 +14,10 @@ public sealed class OrvionHttpFixture : IDisposable {
  public ConcurrentQueue<string> Replies=new ConcurrentQueue<string>();
  public ConcurrentQueue<string> Requests=new ConcurrentQueue<string>();
  public TcpListener Listener; public Thread Worker; public int Port; volatile bool Done;
- public long Remaining=60; public long Reset=0; public long Window=3600; public int RateReads=0; public int RateFail=0;
+ public int RateDelayMs=0; public int ForcedReserveReads=0; public long Remaining=60; public long Reset=0; public long Window=3600; public int RateReads=0; public int RateFail=0;
  public OrvionHttpFixture(){Listener=new TcpListener(IPAddress.Loopback,0);Listener.Start();Port=((IPEndPoint)Listener.LocalEndpoint).Port;Worker=new Thread(Loop);Worker.IsBackground=true;Worker.Start();}
- void Loop(){while(!Done){try{using(var c=Listener.AcceptTcpClient()){c.ReceiveTimeout=2000;var s=c.GetStream();var reader=new StreamReader(s,Encoding.ASCII,false,1024,true);string line=reader.ReadLine(),h;var req=line+"\n";while(!String.IsNullOrEmpty(h=reader.ReadLine())) req+=h+"\n";string reply;if(line!=null&&line.StartsWith("GET /rate_limit")){RateReads++;if(RateFail>0){RateFail--;byte[] fb=Encoding.UTF8.GetBytes("HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");s.Write(fb,0,fb.Length);continue;}long now=DateTimeOffset.UtcNow.ToUnixTimeSeconds();if(Reset==0||now>=Reset){if(Reset!=0)Remaining=60;Reset=now+Window;}string body="{\"resources\":{\"core\":{\"limit\":60,\"remaining\":"+Remaining+",\"reset\":"+Reset+",\"used\":"+(60-Remaining)+"}}}";reply="HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "+Encoding.UTF8.GetByteCount(body)+"\r\nConnection: close\r\n\r\n"+body;byte[] rb=Encoding.UTF8.GetBytes(reply);s.Write(rb,0,rb.Length);continue;}Requests.Enqueue(req);if(!Replies.TryDequeue(out reply))reply="HTTP/1.1 500 Missing fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";if(reply.StartsWith("BODYDELAY")){reply=reply.Substring(9);int k=reply.IndexOf("\r\n\r\n")+4;byte[] hbytes=Encoding.UTF8.GetBytes(reply.Substring(0,k));s.Write(hbytes,0,hbytes.Length);Thread.Sleep(1800);reply=reply.Substring(k);}byte[] b=Encoding.UTF8.GetBytes(reply);s.Write(b,0,b.Length);}}catch{if(Done)return;}}}
- public void Dispose(){Done=true;Listener.Stop();Worker.Join(3000);}
+ void Loop(){while(!Done){try{using(var c=Listener.AcceptTcpClient()){c.ReceiveTimeout=2000;var s=c.GetStream();var reader=new StreamReader(s,Encoding.ASCII,false,1024,true);string line=reader.ReadLine(),h;var req=line+"\n";while(!String.IsNullOrEmpty(h=reader.ReadLine())) req+=h+"\n";string reply;if(line!=null&&line.StartsWith("GET /rate_limit")){RateReads++;if(RateDelayMs>0)Thread.Sleep(RateDelayMs);if(RateFail>0){RateFail--;byte[] fb=Encoding.UTF8.GetBytes("HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");s.Write(fb,0,fb.Length);continue;}long now=DateTimeOffset.UtcNow.ToUnixTimeSeconds();if(Reset==0||now>=Reset){if(Reset!=0)Remaining=60;Reset=now+Window;}if(ForcedReserveReads>0){ForcedReserveReads--;Remaining=10;Reset=now+1;}string body="{\"resources\":{\"core\":{\"limit\":60,\"remaining\":"+Remaining+",\"reset\":"+Reset+",\"used\":"+(60-Remaining)+"}}}";reply="HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "+Encoding.UTF8.GetByteCount(body)+"\r\nConnection: close\r\n\r\n"+body;byte[] rb=Encoding.UTF8.GetBytes(reply);s.Write(rb,0,rb.Length);continue;}Requests.Enqueue(req);if(!Replies.TryDequeue(out reply))reply="HTTP/1.1 500 Missing fixture\r\nContent-Length: 0\r\nConnection: close\r\n\r\n";if(reply.StartsWith("BODYDELAY")){reply=reply.Substring(9);int k=reply.IndexOf("\r\n\r\n")+4;byte[] hbytes=Encoding.UTF8.GetBytes(reply.Substring(0,k));s.Write(hbytes,0,hbytes.Length);Thread.Sleep(1800);reply=reply.Substring(k);}byte[] b=Encoding.UTF8.GetBytes(reply);s.Write(b,0,b.Length);}}catch{if(Done)return;}}}
+ public System.Threading.Tasks.Task HoldBudgetLock(string path,int milliseconds){var held=File.Open(path,FileMode.OpenOrCreate,FileAccess.ReadWrite,FileShare.None);return System.Threading.Tasks.Task.Run(()=>{try{Thread.Sleep(milliseconds);}finally{held.Dispose();}});} public void Dispose(){Done=true;Listener.Stop();Worker.Join(3000);}
 }
 '@
 $server=[OrvionHttpFixture]::new()
@@ -32,6 +32,72 @@ function Reply($Body,[int]$Status=200,[string]$Headers='', [string]$Type='applic
 }
 function Payload($Rows,[int]$Total=-1) { if($Total-lt0){$Total=@($Rows).Count}; ConvertTo-Json -Depth 12 -Compress -InputObject @{total_count=$Total;workflow_runs=@($Rows)} }
 function Row([int]$Id=1) { @{id=$Id;workflow_id=3;name='Expected';path='.github/workflows/expected.yml';head_sha=('a'*40);head_branch='main';event='push';run_attempt=2;status='completed';conclusion='success';created_at='2026-10-16T00:00:00Z';repository=@{full_name='owner/repo'}} }
+function Test-PublicOrigin {
+    $cases=@(
+        @{Name='https-git';Urls=@('https://github.com/Owner/Repo.git');Want='Owner/Repo'},
+        @{Name='https-bare';Urls=@('https://github.com/Owner/Repo');Want='Owner/Repo'},
+        @{Name='account-pin';Urls=@('https://Owner@github.com/Owner/Repo.git');Want='Owner/Repo'},
+        @{Name='absent';Urls=@();Want=$null},
+        @{Name='ssh';Urls=@('git@github.com:Owner/Repo.git');Want=$null},
+        @{Name='local';Urls=@('C:/local/repository');Want=$null},
+        @{Name='wrong-host';Urls=@('https://example.invalid/Owner/Repo.git');Want=$null},
+        @{Name='multiple';Urls=@('https://github.com/Owner/Repo.git','https://github.com/Other/Repo.git');Want=$null}
+    )
+    foreach($case in $cases){
+        $fixture=Join-Path $work ("origin "+$case.Name)
+        [void][IO.Directory]::CreateDirectory($fixture)
+        git -C $fixture init -q
+        if($LASTEXITCODE){throw 'ORIGIN_FIXTURE_INIT'}
+        foreach($url in $case.Urls){
+            git -C $fixture config --add remote.origin.url $url
+            if($LASTEXITCODE){throw 'ORIGIN_FIXTURE_CONFIG'}
+        }
+        $answer=$null;$problem=''
+        try{$answer=Get-OrvionPublicRepo $fixture}catch{$problem=$_.Exception.Message}
+        $global:LASTEXITCODE=0
+        $ok=if($case.Want){$answer-ceq$case.Want-and!$problem}else{$problem-ceq'PUBLIC_READ:ORIGIN'}
+        Check ("origin "+$case.Name) $ok ("answer=$answer error=$problem")
+    }
+}
+function Test-PublicTotalDeadline {
+    # All requests use the existing loopback HTTP fixture; never a real API budget.
+    $server.Window=3600;Budget 60 3600
+    $future=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()+4000
+    [IO.File]::WriteAllText($env:ORVION_PUBLIC_BUDGET,"$future")
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    $refused=Refuses {Wait-OrvionPublicSlot 0 1} 'BUDGET_EXHAUSTED'
+    $elapsed=$clock.Elapsed.TotalSeconds
+    $unchanged=[IO.File]::ReadAllText($env:ORVION_PUBLIC_BUDGET)-ceq"$future"
+    Check 'total deadline: distant spendable slot refuses before reservation' ($refused-and$elapsed-lt1.75-and$unchanged) "elapsed=$elapsed unchanged=$unchanged"
+
+    Budget 10 3600;$server.ForcedReserveReads=3
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    $reason='';$refused=try{$null=Wait-OrvionPublicSlot 0 2;$false}catch{$reason=$_.Exception.Message;$reason-match'BUDGET_EXHAUSTED'}
+    $elapsed=$clock.Elapsed.TotalSeconds
+    $server.ForcedReserveReads=0
+    Check 'total deadline: repeated reset loops share one budget' ($refused-and$elapsed-lt2.75) "elapsed=$elapsed reason=$reason"
+
+    Budget 60 3600
+    $hold=$server.HoldBudgetLock("$env:ORVION_PUBLIC_BUDGET.lock",2500)
+    try{
+        $clock=[Diagnostics.Stopwatch]::StartNew()
+        $refused=Refuses {Wait-OrvionPublicSlot 0 1} 'BUDGET_EXHAUSTED'
+        $elapsed=$clock.Elapsed.TotalSeconds
+        Check 'total deadline: lock contention is inside the budget' ($refused-and$elapsed-lt1.75) "elapsed=$elapsed"
+    }finally{$hold.GetAwaiter().GetResult()}
+
+    Budget 60 3600;$server.RateDelayMs=1500
+    try{
+        $clock=[Diagnostics.Stopwatch]::StartNew()
+        $refused=Refuses {Wait-OrvionPublicSlot 0 1} 'BUDGET_EXHAUSTED'
+        $elapsed=$clock.Elapsed.TotalSeconds
+        Check 'total deadline: rate-limit HTTP read uses remaining time' ($refused-and$elapsed-lt1.75) "elapsed=$elapsed"
+    }finally{$server.RateDelayMs=0}
+    Budget 60 3600
+    $clock=[Diagnostics.Stopwatch]::StartNew()
+    $null=Wait-OrvionPublicSlot 0 5
+    Check 'total deadline: immediate slot still succeeds' ($clock.Elapsed.TotalSeconds-lt2)
+}
 function Runs { @(Get-OrvionPublicRuns 'owner/repo' -Sha ('a'*40) -Branch main -Event push) }
 try {
     Reply (Payload @((Row))); $r=Runs
@@ -134,6 +200,8 @@ try {
     $count=$server.Requests.Count
     $o=& pwsh -NoProfile -File (Join-Path $scripts 'watch_ci.ps1') -Sha $head -Branch main -Base $base -Repo $wRepo -RepoRoot $work -PollSeconds 0 -SettleSeconds 0 -MaxWaitMinutes 1 2>&1
     Check 'budget: an exhausted budget stops the watcher without spending a request' ($LASTEXITCODE-eq2-and($o|Out-String)-match'STOPPED: public API retry-after=\d+ seconds is beyond'-and$server.Requests.Count-eq$count) ($o|Out-String)
+    Test-PublicTotalDeadline
+    Test-PublicOrigin
     # Two watchers at once: each records when it was let through; the shared ledger keeps them a spacing apart.
     $probeSlots={param([string]$Ledger,[string]$Out)
         $job={param($Probe,$Ledger,$Out)$env:ORVION_PUBLIC_BUDGET=$Ledger;. $Probe;foreach($k in 1,2){$null=Wait-OrvionPublicSlot 2 60;[IO.File]::AppendAllText($Out,"$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())`n")}}

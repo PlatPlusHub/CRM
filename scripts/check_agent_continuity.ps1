@@ -272,11 +272,23 @@ function Assert-ObjectStoreComplete([string[]]$Refs){
 }
 function Read-GitFile([string]$Ref,[string]$Path){$value=git -C $Root show "${Ref}:$Path" 2>$null;if($LASTEXITCODE-ne0){return $null};$value-join"`n"}
 
+function Read-RequiredGit([string[]]$Arguments,[int[]]$AllowedExitCodes=@(0)){
+    $stderr=[IO.Path]::GetTempFileName()
+    try{
+        $lines=@(git -C $Root @Arguments 2>$stderr)
+        $nativeCode=$LASTEXITCODE
+        $detail=[IO.File]::ReadAllText($stderr).Trim()
+        $global:LASTEXITCODE=0
+        if($nativeCode-notin$AllowedExitCodes-or($nativeCode-eq1-and$detail)){throw "GIT_READ_FAILED:$($Arguments[0]):exit=$nativeCode`: $detail"}
+        [pscustomobject]@{Lines=[string[]]$lines;ExitCode=$nativeCode}
+    }finally{[IO.File]::Delete($stderr)}
+}
 function Base-HasId([string]$Ref,[string]$Id){
     $rx='(^|[^0-9])'+[regex]::Escape($Id)+'([^0-9]|$)'
-    foreach($path in @(git -C $Root ls-tree -r --name-only $Ref)){if($path-match$rx){return $true}}
-    $hits=@(git -C $Root grep -I -E ([regex]::Escape($Id)+'([^0-9]|$)') $Ref -- . 2>$null);$LASTEXITCODE=0
-    $hits.Count-gt0
+    $tree=Read-RequiredGit -Arguments @('ls-tree','-r','--name-only',$Ref)
+    foreach($path in $tree.Lines){if($path-match$rx){return $true}}
+    $hits=Read-RequiredGit -Arguments @('grep','-I','-E',([regex]::Escape($Id)+'([^0-9]|$)'),$Ref,'--','.') -AllowedExitCodes @(0,1)
+    $hits.ExitCode-eq0-and$hits.Lines.Count-gt0
 }
 
 # ---------------------------------------------------------------------------
@@ -2237,8 +2249,14 @@ function Git-State {
     if($BaseRef){Assert-Ref $BaseRef;Assert-Ref $HeadRef;return [pscustomobject]@{Text="range $BaseRef..$HeadRef";Synced=$true}}
     git -C $Root fetch --prune origin *>$null;if($LASTEXITCODE-ne0){throw 'GIT_FETCH_FAILED:origin'}
     git -C $Root rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null|Out-Null;if($LASTEXITCODE-ne0){throw 'GIT_UPSTREAM_MISSING:this branch tracks no upstream and Boot will not guess one; reading needs none (AGENTS.md section 4 route)'}
-    $x=(git -C $Root rev-list --left-right --count 'HEAD...@{u}')-split'\s+';$dirty=@(git -C $Root status --porcelain).Count-gt0
-    [pscustomobject]@{Text="$(if($dirty){'dirty'}else{'clean'}) | ahead $($x[0]) / behind $($x[1])";Synced=([int]$x[1]-eq0)}
+    $counts=Read-RequiredGit -Arguments @('rev-list','--left-right','--count','HEAD...@{u}')
+    if($counts.Lines.Count-ne1){throw 'GIT_COUNT_INVALID:field_count'}
+    $match=[regex]::Match($counts.Lines[0],'^\s*(\d+)\s+(\d+)\s*$')
+    $ahead=0L;$behind=0L
+    if(!$match.Success-or![long]::TryParse($match.Groups[1].Value,[ref]$ahead)-or![long]::TryParse($match.Groups[2].Value,[ref]$behind)){throw 'GIT_COUNT_INVALID:integer_pair'}
+    $status=Read-RequiredGit -Arguments @('status','--porcelain')
+    $dirty=$status.Lines.Count-gt0
+    [pscustomobject]@{Text="$(if($dirty){'dirty'}else{'clean'}) | ahead $ahead / behind $behind";Synced=($behind-eq0)}
 }
 
 # Success is one line. Failure keeps everything a diagnosis needs: the command,
@@ -2613,6 +2631,7 @@ try{try{
         Write-Output 'ORVION: READY';Write-Output 'MODE: PLAN';Write-Output 'ACTIVE_CR: none'
         Write-Output "NEXT_CAPABILITY: $($m.Next)"
         Write-Output 'WRITE_AUTHORITY: none (Draft CR authoring only)'
+        Write-Output 'ADAPTER_CONTEXT: AGENTS.md (repository-local optional adapters) (optional; no write authority)'
         Write-Output "GIT: $($git.Text)";Write-Output "REPOSITORY: $repo"
         $script:Outcome='ORVION: READY'
         exit 0
@@ -2721,6 +2740,7 @@ try{try{
     if($mode-eq'EXECUTE'){Write-Output 'ACTION:';Write-Output $c.Steps[[int]$c.Resume-1]}
     Write-Output "WRITE: $($c.Scope-join', ')"
     Write-Output "START_CONTEXT: $($c.Reading-join', ')"
+    Write-Output 'ADAPTER_CONTEXT: AGENTS.md (repository-local optional adapters) (optional; no write authority)'
     Write-Output "VERIFICATION: $((@($profiles)+@($c.AdditionalVerification))-join', ')"
     # Named as declared, never as proven: this process cannot see these connectors,
     # and a capability line that looked like a probe result would be a false green.
