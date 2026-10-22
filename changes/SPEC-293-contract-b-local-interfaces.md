@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -1762,6 +1762,9 @@ Post-Implementation Proof Obligation: one authorized native timed/watched Finish
 None.
 
 2026-10-22 - Codex applied all fourteen exact frozen Contract B literal file steps using the approved original applier. Each resulting Git-filtered payload blob matches pt/payload.json; Step 15 synchronized this In Progress checkpoint and native generated artifacts. README, native profiles/hooks/CI/release engines remain unchanged. Native timed/watched Finish is the next operation; no test/receipt/release success is inferred from application.
+
+
+2026-10-22 - Cancel (human command): explicit Owner Contract B Recovery Authorization SHA-256 892E7C1513407B54CE0533E4FDE1FE3193721C11415E5D867D7B3651816CE375 authorizes this In Progress -> Cancelled transition. Circular pre-Complete candidate-binding criterion prevents truthful completion. Approved implementation and successful historical Finish evidence remain intact; this is contract cancellation, not source rollback. No acceptance checkbox is asserted, no receipt is relabelled, and no publication or successor approval is granted.
 
 ## Verification Notes
 
