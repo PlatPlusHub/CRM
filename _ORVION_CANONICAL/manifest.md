@@ -33,11 +33,11 @@ Live state: Last fully verified 2026-10-14. **repository, local stack and Primar
 
 Batch 6 surface coverage: counted only in `MASTER_SURFACE_DISPOSITION.md` (Checks 22 and 24), and every surface still `NOT-RECORDED` is a DUE NOW registry member until `B6-EXIT` (EC-1). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key.
 
-Active Change Request: `changes/SPEC-295-brief-unreadable-visibility.md`
+Active Change Request: None.
 
 Open owner decisions — **MAIL-1**, **RET-1**, **PH8-10**, **OD-1**, **OD-2**, **OD-3**, **OD-5**, **OD-8**, **OD-9**, **CTRL-19**. The OD rows are proposed product decisions awaiting the owner, each with its default in the register. MAIL-1, RET-1 and PH8-10 are exact external prerequisites, not unresolved architecture: MAIL-1 has technically selected Resend but production activation still requires owner authorization and counsel/PDPC confirmation for the actual cross-border destination; RET-1's retention/closure architecture and legal-hold override are implemented, while counsel must supply the actual per-type periods as tenant configuration; PH8-10 awaits Google evidence that click-less phone conversions are credited. No email is sent and no retention policy is seeded while those prerequisites remain. CTRL-19 is GitHub configuration only the owner can make.
 
-Last Completed: **SPEC-294: Contract B carrying completion — inherited implementation preserved; fresh local verification and Review complete. Owner publication/promotion and remote certification remain separately governed. Batch 6 and Phase 8 remain ON HOLD. CTRL-19 remains OPEN.**
+Last Completed: **SPEC-295: generic unreadable Brief visibility; native verification and Review complete. Publication/promotion remain separately governed. Batch6/Phase8 remain ON HOLD; CTRL-19 remains OPEN.**
 
 Narrative: `agent-control-plane-corrective-repair-2026-09-11.md` — the latest *session report* (Check 10 pairs this with `reports/README.md`).
 

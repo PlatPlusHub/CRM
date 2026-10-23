@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -171,12 +171,12 @@ Irreversible Action Step: NONE
 
 ## Acceptance Criteria
 
-- [ ] Exact scoped source output; `check: blob scripts/watch_run.ps1 6d337dc27eb56e6fb0aa74136ad7623f41699724`
-- [ ] Exact scoped source output; `check: blob scripts/watch_selftest.ps1 6dc84f48b8b9c17ae329e0958ded6ba38cb80b3c`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @c8324e436fca8fb26d6657b539971b9bd6f78b4c`
-- [ ] Actual generic UNREADABLE is visible once and recorded once, READY/passing noise stays quiet, END0/END2 retain reporter exits0/1, and the focused attention-removal mutant is detected by its actual caller.
-- [ ] Existing own timing/history/redaction/ETA/concurrency/CI reporter cases remain in the unchanged owning schedule; no profile or child suite is exempted or duplicated.
-- [ ] Independent Review inspects declared scope, exact allocation and original-versus-disposable evidence; no local fixture is called owner notification delivery or remote certification.
+- [x] Exact scoped source output; `check: blob scripts/watch_run.ps1 6d337dc27eb56e6fb0aa74136ad7623f41699724`
+- [x] Exact scoped source output; `check: blob scripts/watch_selftest.ps1 6dc84f48b8b9c17ae329e0958ded6ba38cb80b3c`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @c8324e436fca8fb26d6657b539971b9bd6f78b4c`
+- [x] Actual generic UNREADABLE is visible once and recorded once, READY/passing noise stays quiet, END0/END2 retain reporter exits0/1, and the focused attention-removal mutant is detected by its actual caller.
+- [x] Existing own timing/history/redaction/ETA/concurrency/CI reporter cases remain in the unchanged owning schedule; no profile or child suite is exempted or duplicated.
+- [x] Independent Review inspects declared scope, exact allocation and original-versus-disposable evidence; no local fixture is called owner notification delivery or remote certification.
 
 ## Execution Log
 
@@ -206,11 +206,14 @@ Verdict: Confirmed Complete
 
 Independent current Git/actual evidence: selected Draft F5A93D792D8F1B1DE1FFA13A4587B7ED8CE512B829E820F560B5AB581D6F8D4D, allocated blob 37452257b613f495c70c06805597ce3e3f0ce53f, both exact source outputs, unchanged native evaluator and declared scope verified. This original root owns fresh receipt 334ef9c48d6e2284a0b234a9a7764a5e5b0fc8e8d0921b707792aa988e9be549, finishHead 6bc136521b1217390758e6eff1a600f919f3faea, derived REPOSITORY obligations and its one required watcher self-test in native timed/watched Finish, all observed PASS/END0. Actual caller/attention-removal evidence preserves generic unreadable visibility, quiet READY/history and producer-owned exit. All6 Acceptance Criteria and3 Review Gate items are supported; native Complete/range/binder still owns full receipt/criterion validation. No future binding, hosted result, client delivery, failure cause or original certification from a disposable receipt is asserted. Batch6 remains ON HOLD.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 334ef9c48d6e2284a0b234a9a7764a5e5b0fc8e8d0921b707792aa988e9be549, selected bytes and failed/prototype evidence. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Exact literal outputs and every acceptance criterion are independently confirmed against current source and actual evidence.
-- [ ] Fresh native Finish/receipt belongs to this contract/root; the required self-test ran once within that Finish, and all derived obligations passed.
-- [ ] Normal native hooks and legal workflow/source scope remain intact; no unproven cause, client delivery, exemption or product/remote result is asserted.
+- [x] Exact literal outputs and every acceptance criterion are independently confirmed against current source and actual evidence.
+- [x] Fresh native Finish/receipt belongs to this contract/root; the required self-test ran once within that Finish, and all derived obligations passed.
+- [x] Normal native hooks and legal workflow/source scope remain intact; no unproven cause, client delivery, exemption or product/remote result is asserted.
 
 ## Notes
 
