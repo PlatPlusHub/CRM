@@ -76,7 +76,7 @@ $script:TestRx = '^\s*(PASS|FAIL)\s+[^:\s]\S*|^(not )?ok \d+\b'
 function Test-TestLine([string]$Body) { $Body -cmatch $script:TestRx }
 $script:FailedTestRx = '^\s*FAIL\s|^not ok\b(?!.*#\s*(?i:todo|skip)\b)'
 # What -Brief still prints: anything that is or may be a failure, and the end. A pass prints nothing.
-$script:AttentionRx = '(\bFAIL|\bFAILED\b|BLOCKED|^CODE: |\bnot ok\b|\bERROR:|\bSURVIVED\b|INCOMPLETE|UNPROVEN|RECOVERY_EXHAUSTED|\b[1-9]\d* failed\b|^END exit=|CERTIFY: )'
+$script:AttentionRx = '(\bFAIL|\bFAILED\b|BLOCKED|^CODE: |\bnot ok\b|\bERROR:|\bSURVIVED\b|INCOMPLETE|UNPROVEN|UNREADABLE|RECOVERY_EXHAUSTED|\b[1-9]\d* failed\b|^END exit=|CERTIFY: )'
 
 # The runner's START line: `[yyyy-MM-dd HH:mm:ss] START pid=N <environment> | <command>`.
 function Read-StartLine([string]$Line) {

@@ -345,6 +345,24 @@ function Case-LateBrief([string]$WatcherPath) {
     $unreadable=$done-and@($o|Where-Object{$_-match'REMOTE_CERTIFY: UNREADABLE'}).Count-eq1-and@($rows|Where-Object{$_.step-ceq'REMOTE_CERTIFY: UNREADABLE'}).Count-eq1
     [pscustomobject]@{Ok=$ok;Unreadable=$unreadable;Detail="done=$done exit=$($w.ExitCode) progress=$progress history_tests=$testRows unreadable=$unreadable"}
 }
+# Generic required evidence must be visible in Brief even when its producer ended successfully.
+# Reporter exit still belongs to END, never to an inferred failure cause.
+function Case-GenericBrief([string]$WatcherPath) {
+    $passed=$true;$details=@()
+    foreach($sample in @(@{Verdict='UNREADABLE';End=0},@{Verdict='UNREADABLE';End=2},@{Verdict='READY';End=0})){
+        $log=New-Name '.log';$csv=New-Name '.csv';$out=New-Name '.out'
+        $at=(Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+        [IO.File]::WriteAllLines($log,[string[]]@("[$at] START pid=$PID host=fixture pwsh=fixture cpus=1 head=fixture concurrent=0 | generic evidence fixture",'[+ 0.001 min] PASS passing-noise fixture',"[+ 0.002 min] TOOL: $($sample.Verdict)","[+ 0.003 min] END exit=$($sample.End) total=0.003 min"))
+        $w=Start-Pwsh ('-File {0} -Log {1} -Run generic-brief -PollSeconds 1 -Csv {2} -Brief' -f (Q $WatcherPath),(Q $log),(Q $csv)) $out
+        $done=Wait-Exit $w 30;$o=@(Get-Content -LiteralPath $out);$rows=@(Import-Csv -LiteralPath $csv)
+        $visible=@($o|Where-Object{$_-match'\] TOOL: UNREADABLE'}).Count
+        $recorded=@($rows|Where-Object{$_.step-ceq("TOOL: "+$sample.Verdict)}).Count
+        $expectedVisible=[int]($sample.Verdict-ceq'UNREADABLE');$expectedExit=[int]($sample.End-ne0)
+        $ok=$done-and$w.ExitCode-eq$expectedExit-and$visible-eq$expectedVisible-and$recorded-eq1-and@($o|Where-Object{$_-match'\] TOOL: READY|\] PASS passing-noise'}).Count-eq0
+        $passed=$passed-and$ok;$details+="$($sample.Verdict)/END$($sample.End):done=$done exit=$($w.ExitCode) visible=$visible recorded=$recorded"
+    }
+    [pscustomobject]@{Ok=$passed;Detail=($details-join'; ')}
+}
 function Case-Quiet([string]$RunnerPath, [string]$WatcherPath) {
     $log = New-Name '.log'; $csv = New-Name '.csv'; $out = New-Name '.out'
     $r = Start-Runner $RunnerPath $log "Write-Output 'PASS: pwsh -NoProfile -File scripts/fake_a.ps1'; Write-Output 'PASS t1 quiet'; Start-Sleep -Seconds 2; Write-Output 'FAILED: pwsh -NoProfile -File scripts/fake_b.ps1 (exit 1)'; exit 1"
@@ -438,6 +456,7 @@ try {
     $c = Case-Tests $Runner $Watcher; Check 'W15 every test line, failed ones included, and every evaluator stage is recorded with its own time at 0.06 s resolution; only failed tests are printed; a TIME line keeps its stated duration' $c.Ok $c.Detail
     $c = Case-LateBrief $Watcher; Check 'W36 late Brief attach prints one progress line while retaining all historical tests' $c.Ok $c.Detail
     Check 'W37 UNREADABLE remains visible and recorded as its literal verdict' $c.Unreadable $c.Detail
+    $c = Case-GenericBrief $Watcher; Check 'W40 generic UNREADABLE is visible once, READY stays quiet, history persists and END owns reporter exit' $c.Ok $c.Detail
     $c = Case-Quiet $Runner $Watcher; Check 'W16 -Brief prints failures, the end and progress, and still records every line' $c.Ok $c.Detail
     $c = Case-Classify $Watcher;     Check 'W17 FAIL and TAP not ok are tests, ranked by time and by failure rate; a TODO or SKIP not ok is not a failure' $c.Ok $c.Detail
     $c = Case-ConcurrentAll $Watcher $Evaluator; Check 'W18 six concurrent writers (three evaluator, three watcher): every row once and whole; past the bound, within it, whole, newest rows kept' $c.Ok $c.Detail
@@ -503,6 +522,7 @@ try {
         @{ Name = 'M39 incompatible historical test totals accepted'; File = $Watcher; Find = 'if ($totals.Count -ne 1)'; Replace = 'if ($false)'; Case = { param($p) Case-CountEta $p } },
         @{ Name = 'M40 actual ETA caller drops observed test count'; File = $Watcher; Find = ' (@($lines | Where-Object { Test-TestLine $_.Groups[''body''].Value }).Count)'; Replace = ' 0'; Case = { param($p) Case-CountEtaCaller $p } },
         @{ Name = 'M36 UNREADABLE verdict dropped'; File = $Watcher; Find = '|UNREADABLE|'; Replace = '|'; Case = { param($p) $v=Case-LateBrief $p;[pscustomobject]@{Ok=$v.Unreadable;Detail=$v.Detail} } },
+        @{ Name = 'M41 generic UNREADABLE attention removed'; File = $Watcher; Find = '|INCOMPLETE|UNPROVEN|UNREADABLE|RECOVERY_EXHAUSTED|'; Replace = '|INCOMPLETE|UNPROVEN|RECOVERY_EXHAUSTED|'; Case = { param($p) Case-GenericBrief $p } },
         @{ Name = 'M37 historical Brief progress floods'; File = $Watcher; Find = '            if ($Brief -and ((-not $replaying -and $t - $lastProgress -ge $ProgressMinutes) -or ($replaying -and $body -match ''^END exit=''))) {'; Replace = '            if ($Brief -and $t - $lastProgress -ge $ProgressMinutes) {'; Case = { param($p) Case-LateBrief $p } }
     )
     foreach ($m in $mutants) {
