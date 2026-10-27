@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -55,7 +55,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -199,6 +199,17 @@ Post-Implementation Proof Obligation: one authorized native timed/watched Finish
 ## Execution Log
 
 None.
+
+
+### 2026-10-27 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 20ea5e0d8f63742308efd4dc5e13ef178f0f82db and every source anchor matched there; Draft allocated as b8a4067 and approved as 9a932c2 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `scripts/owner_publish.ps1` edited exactly as the step states; blob 6c5152d32e4f272a5ddfed4524cacda1f16cdd5a (1 insertions, 1 deletions).
+- Step 3 Applied: `scripts/owner_promote.ps1` edited exactly as the step states; blob 66ce3167ed07cd1272cae5d320cb068579501111 (1 insertions, 1 deletions).
+- Step 4 Applied: `scripts/test_owner_interfaces.ps1` edited exactly as the step states; blob 95bb63838453351434dba3bbb75846ee98c8e41e (14 insertions, 0 deletions).
+- Step 5 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 

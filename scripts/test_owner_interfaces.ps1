@@ -213,6 +213,20 @@ Write-FixtureText $driverPath $driver
         }
     }
 }
+# Without -EvidenceDirectory, evidence goes to the ORVION-Owner-Tools folder beside the interface's own checkout.
+foreach ($fileName in @('owner_publish.ps1','owner_promote.ps1')) {
+    $parent = Join-Path $work ('default-'+$fileName)
+    $copy = Join-Path $parent "checkout\scripts\$fileName"
+    Write-FixtureText $copy ([IO.File]::ReadAllText((Join-Path $Root "scripts\$fileName")))
+    $childArguments = @('-NoProfile','-File',$copy,'-Candidate',('a'*40),'-NonInteractive')
+    if ($fileName -eq 'owner_publish.ps1') { $childArguments += @('-Root',(Join-Path $parent 'candidate-area\checkout')) }
+    $lines = @(& pwsh @childArguments 2>&1); $code = $LASTEXITCODE
+    $saved = @(Get-ChildItem -LiteralPath (Join-Path $parent 'ORVION-Owner-Tools\records\owner-operations\PlatPlusHub_CRM') -Filter '*.json' -File -ErrorAction SilentlyContinue)
+    $record = if ($saved.Count -eq 1) { Get-Content -Raw -LiteralPath $saved[0].FullName | ConvertFrom-Json } else { $null }
+    $ok = $code -eq 1 -and $null -ne $record -and $record.classification -ceq 'INTERACTIVE_CONFIRMATION_REQUIRED'
+    $records.Add([pscustomobject]@{Product='self';Operation=$fileName;Case='default-evidence-directory';Passed=[bool]$ok;Exit=$code;Result=$record.result;Classification=$record.classification;NativeCalled=$false;Reason=$(if($ok){''}else{($lines|ForEach-Object{"$_"})-join"`n"})})
+    Write-Host ("{0} self/{1}/default-evidence-directory: exit{2} saved={3}" -f $(if($ok){'PASS'}else{'FAIL'}),$fileName,$code,$saved.Count)
+}
 $failed = @($records | Where-Object {!$_.Passed}).Count
 $result = [ordered]@{Passed=$records.Count-$failed;Failed=$failed;Cases=$records;ProofBoundary='Actual adapter child execution; unmodified noninteractive refusal; explicit console/transport seams for positive/operational routes. All remotes are owned fixture bare repositories; HTTPS/SSH prohibited. Stub endpoints prove binding/verdict/ref handling, not native certification, authenticated actor identity, real publication or promotion.'}
 Write-FixtureText $output (($result | ConvertTo-Json -Depth 8)+"`n")
