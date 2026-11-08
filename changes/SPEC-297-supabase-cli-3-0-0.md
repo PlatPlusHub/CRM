@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -55,7 +55,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -335,6 +335,17 @@ Irreversible Action Step: NONE
 ## Execution Log
 
 None.
+
+
+### 2026-11-08 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was df9f1bda82d082cb382da007d6d9c0c2434b5c99 and every source anchor matched there; Draft allocated as 426ddd6 and approved as 26f86dc with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `package.json` edited exactly as the step states; blob 08e4a0bf21990111d23cb0a29b31b8a72ec92c2d (1 insertions, 1 deletions).
+- Step 3 Applied: `package-lock.json` edited exactly as the step states; blob d2a801b4468c06d0148b501b2cdb33fe2ded622a (36 insertions, 36 deletions).
+- Step 4 Applied: `supabase/config.toml` edited exactly as the step states; blob 407043518661d6f3a7c5e2f5d80d803537f3e269 (7 insertions, 5 deletions).
+- Step 5 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain. Batch 6 remains ON HOLD; CTRL-19 remains OPEN.
 
 ## Verification Notes
 
