@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-10-14T07:21:27Z",
-  "read_via": "Fresh Primary Supabase connector reads after the owner-authorized SPEC-278 migration was applied only to vrvtsxexkiiiivlkdxzp under the owner's separate exact-byte Gate 2 authorization of 2026-10-14, effective after the recorded pre-deploy readiness gate. Prewrite recheck matched every Gate-2 condition exactly: HEAD 97bd8b030353f7b3b14488c4c1a2a9426722faa5 on the approved chain b5e0568 -> 5f3b559 -> f923c0d -> 97bd8b0; migration SHA-256 8b99747e6ab7afbc0ab7b600e7ada7413835252398bc8097a8b03b739205c0cc, MD5 635d504d4069cafb52bd113112126a78, 3858 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 252 5f13c62d2f609e7794a0193a2f203c50 with the target absent by version and by name; Check L2/P2 functions e6a65849bc390360dcb53b2be4f1a0b8/331; chart_of_accounts triggers chart_of_accounts_enforce_subscription_write_gate and chart_of_accounts_set_updated_at, 4 constraints, no app.guard_chart_account; 0 tenants, chart accounts, journal entries, journal lines and events. The transmitted text was proven server-side (MD5 635d504d4069cafb52bd113112126a78, 3858 bytes, 68 LF, 0 CR) and applied once. The connector's temporary version 20261014071921 was renamed by one guarded UPDATE (exactly one row after 20261012120000, one stored statement with the file's MD5, no existing target) to 20261013120000. Post-write: ledger 253 b144bdf0f5a31ac66a0f0a723fb009bc, equal to the migration files; Check L2/P2 functions 2cd20c3fea8247598eb9b2bbb559f2ca/332; scripts/parity_surface.sql combined 56625ae4118e1ddc85bab99114b17899/3136 with only functions (+1) and triggers (+1) moved, both equal to the local stack after a clean reset; chart_of_accounts_guard present; app.guard_chart_account md5(prosrc) 6cafcfacc4ef4648df5af67e5952dbdb, SECURITY DEFINER, search_path empty, ACL {postgres=X/postgres}; 4 chart_of_accounts constraints, none added; catalog_values 623; 0 tenants, chart accounts, journal entries, journal lines and events. Secondary was not contacted.",
+  "read_at": "2026-11-08T20:34:31Z",
+  "read_via": "Fresh Primary Supabase connector reads after the SPEC-298 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-298 (owner's instructions of 2026-11-08), effective after the recorded Step 5 readiness gate. Prewrite recheck matched exactly: HEAD 4de9be8c3a0c650e0e9b00bb82010e51790fa2a1; migration SHA-256 e0fc6b11ab72f70200c960ca9527cf423726cd19ec86c04d580f8168ec0bdfaf, MD5 120df9bf5eddeb04d41f3605f199bfcc, 12767 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 253 b144bdf0f5a31ac66a0f0a723fb009bc with the target absent by version and by name; scripts/parity_surface.sql combined 56625ae4118e1ddc85bab99114b17899/3136; notification_deliveries constraints attempt_number_positive, two foreign keys, pkey and indexes chain_idx, claimable_idx, notification_id_idx, pkey, tenant_id_idx; claim md5(prosrc) 772c02d7a55fe3d774a1f861ef1ae208; 0 tenants, 0 notification deliveries, 0 duplicate attempt groups. The transmitted text was proven server-side (MD5 120df9bf5eddeb04d41f3605f199bfcc) and applied once. The connector's temporary version 20261108203059 was renamed by one guarded UPDATE (exactly one row after 20261013120000, one stored statement with the file's MD5, no existing target) to 20261108120000. Post-write: ledger 254 7e7a7fcfd603322c545f7bbc8322c789, equal to the migration files; Check L2/P2 functions c9b4d9a1f8a5d6f400e6d64d266f3887/332; scripts/parity_surface.sql combined 2a15deb38b76a75b9da991b955ea31b3/3137 with only functions (changed), constraints (+1) and indexes (one replaced) moved, each equal to the local stack after a clean reset; notification_deliveries_attempt_key present, chain_idx absent; app.claim_notification_deliveries md5(prosrc) 6781ead55e0e44ff4f829845ce584153, SECURITY DEFINER, ACL {postgres=X/postgres,orvion_integration=X/postgres}; catalog 71/623; 0 tenants and 0 notification deliveries. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "97bd8b030353f7b3b14488c4c1a2a9426722faa5",
-  "migration_count": 253,
-  "ledger_fingerprint": "b144bdf0f5a31ac66a0f0a723fb009bc",
-  "function_surface_hash": "2cd20c3fea8247598eb9b2bbb559f2ca",
+  "repository_head": "4de9be8c3a0c650e0e9b00bb82010e51790fa2a1",
+  "migration_count": 254,
+  "ledger_fingerprint": "7e7a7fcfd603322c545f7bbc8322c789",
+  "function_surface_hash": "c9b4d9a1f8a5d6f400e6d64d266f3887",
   "function_count": 332,
-  "structural_surface_hash": "56625ae4118e1ddc85bab99114b17899",
-  "structural_object_count": 3136,
+  "structural_surface_hash": "2a15deb38b76a75b9da991b955ea31b3",
+  "structural_object_count": 3137,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -265,6 +265,7 @@
     "20261011090000_a_complaint_begins_new_under_its_creator",
     "20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice",
     "20261012120000_a_receipt_is_issued_once_and_stays_as_issued",
-    "20261013120000_a_used_ledger_account_keeps_its_meaning"
+    "20261013120000_a_used_ledger_account_keeps_its_meaning",
+    "20261108120000_a_due_retry_is_opened_once"
   ]
 }

@@ -80,7 +80,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -712,7 +712,45 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-08 — Steps 1–4 applied
+
+- **Lifecycle:** allocate `deb54b2`, Approve `4de9be8` (APPROVAL_EVIDENCE PASS; 7 of 9 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–4** by the literal-step replay, all four files absent or at their `a21a0ec` blobs, each result at its pinned blob: migration `333baa4296c37421ec126da166f282c72935702d`, test 158 `970d8be98908c82c174ddb684c32eac673027eed`, register `754751e3d1b7041453973aef755d6b5fd0297405`, disposition `f42ec9a678d708545b7aa4d25e46249c146a9a82`. Uncommitted until Step 8: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-08 — Pre-deploy readiness gate (Step 5)
+
+From the main checkout at HEAD `4de9be8`, Steps 1–4 applied and uncommitted, project-local CLI 3.0.0, the shared local stack, one logged script:
+- **Bytes.** Migration SHA-256 `e0fc6b11ab72f70200c960ca9527cf423726cd19ec86c04d580f8168ec0bdfaf`, md5 `120df9bf5eddeb04d41f3605f199bfcc`, 12767 bytes; test 158 SHA-256 `77c39a84e1f838874df4bccc5c2b89662aa3a63ee2e00660f74895ce3d6f6380`, md5 `2ba2e1b9b7c182a9806a19f8619bd535`, 12439 bytes; both LF (0 CR) and ASCII. Equal to Consumer Closure.
+- **Causal negative.** `db reset --version 20261013120000`: 253 migrations, claim `md5(prosrc)` `772c02d7a55fe3d774a1f861ef1ae208`, key absent, chain index present. Test 158 FAIL, failed 1–3 and 6–7, aborted at 7 of 16. Race: A `BEGIN 1 COMMIT`; B returned 1 after 0.1 s; chain `1:failed, 2:pending, 2:pending`: ND-1 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (253): functions `2cd20c3fea8247598eb9b2bbb559f2ca`/332, constraints `e669286c961025cb49688862286338ed`/527, indexes `22a4d58cef10893d1279b6ddd9ff38f0`/300, `_combined` `56625ae4118e1ddc85bab99114b17899`/3136. After a clean reset (254, latest `20261108120000`): functions `c9b4d9a1f8a5d6f400e6d64d266f3887`/332, constraints `96ccb990b5c3b6554b95f2539fbfcd45`/528, indexes `9f7369db0309dd9cd935172bf145f54c`/300, `_combined` `2a15deb38b76a75b9da991b955ea31b3`/3137; triggers, policies, grants, columns, views, status transitions and RLS unchanged. Claim `md5(prosrc)` `6781ead55e0e44ff4f829845ce584153`, key present, chain index absent.
+- **Focused tests:** 158 16/16 PASS; 100 22/22 PASS.
+- **Race** on the final bytes: A `BEGIN 1 COMMIT`; B waited 2.6 s and returned 0; chain `1:failed, 2:pending:claimed` once.
+- **Mutants**, each proven installed by a changed fingerprint and restored to `6781ead5…`, key present, 16/16: M1 (key dropped) 158 fails 1 and 3, both race sessions fail 42704 and nothing is sent; M2 (on-conflict removed, `md5(prosrc)` `951bd419…`) 158 fails 10, race B fails 23505 and claims nothing. Both killed.
+- **Generators, scope and diff.** `MASTER_API_CONTRACT.md` regenerates identical (LF-normalized); `generate-ai-map.ps1 -Check` exit 0. Only the four Step 1–4 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the expected pre-deploy items, the same as the sandbox: Check 9 ×3 (count, latest, ledger fingerprint), Check 15 ×2 (files, assertions), RECOVER-1 ×2 (Primary evidence). Checks 21–29 pass.
+- **Fresh Primary baseline**, read-only through `supabase-primary`: URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 253 `b144bdf0f5a31ac66a0f0a723fb009bc`, latest `20261013120000`, target absent by version and by name; functions (Check L2/P2) `2cd20c3fea8247598eb9b2bbb559f2ca`/332; every `parity_surface.sql` surface equal to the unrepaired local stack, `_combined` `56625ae4118e1ddc85bab99114b17899`/3136, equal to the recorded evidence; `notification_deliveries` constraints `attempt_number_positive`, two foreign keys, `pkey`; indexes `chain_idx`, `claimable_idx`, `notification_id_idx`, `pkey`, `tenant_id_idx`; claim `md5(prosrc)` `772c02d7a55fe3d774a1f861ef1ae208`; 0 tenants, 0 deliveries, 0 duplicate attempt groups.
+- **Predicted delta:** ledger 254 `7e7a7fcfd603322c545f7bbc8322c789`; functions `c9b4d9a1…`/332; constraints `96ccb990…`/528; indexes `9f7369db…`/300; `_combined` `2a15deb3…`/3137; claim `6781ead5…`; business counts unchanged.
+
+### 2026-11-08 — Gate 2 (Step 6), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-298: migration `supabase/migrations/20261108120000_a_due_retry_is_opened_once.sql`, SHA-256 `e0fc6b11ab72f70200c960ca9527cf423726cd19ec86c04d580f8168ec0bdfaf`, md5 `120df9bf5eddeb04d41f3605f199bfcc`, 12767 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish and promote ~12:05 Cairo; run slice 1 through P8 without the owner ~17:30 Cairo), recorded outside this repository. Step 5 passed. The migration's top-level statements are one `add constraint`, one `drop index`, one `comment`, one `create or replace function` and its `revoke`/`grant`: it drops no table or column and deletes or rewrites no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-08 — Primary deployment (Step 7)
+
+Through `supabase-primary` from Claude Code in a terminal, ~20:25–20:31 UTC; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read, exact match.** HEAD `4de9be8c3a0c650e0e9b00bb82010e51790fa2a1`; migration SHA-256 `e0fc6b11ab72f70200c960ca9527cf423726cd19ec86c04d580f8168ec0bdfaf`, md5 `120df9bf5eddeb04d41f3605f199bfcc`, 12767 bytes, LF, ASCII; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 253 `b144bdf0f5a31ac66a0f0a723fb009bc`, latest `20261013120000`, target absent by version and by name; constraints and indexes of `notification_deliveries` as in Step 5; claim `md5(prosrc)` `772c02d7a55fe3d774a1f861ef1ae208`; 0 tenants, 0 deliveries, 0 duplicate attempt groups; every `parity_surface.sql` surface equal to Step 5, `_combined` `56625ae4118e1ddc85bab99114b17899`/3136.
+- **Transmitted text** proven server-side: `md5` `120df9bf5eddeb04d41f3605f199bfcc`, equal to the file. Applied once with `apply_migration` (`a_due_retry_is_opened_once`).
+- **Guarded rename.** The connector stored version `20261108203059`: exactly one row after `20261013120000`, one stored statement with md5 `120df9bf…` and 12767 bytes, no existing target. One guarded `UPDATE` (row count required 1) renamed it to `20261108120000`.
+- **Fresh reads.** Ledger 254 `7e7a7fcfd603322c545f7bbc8322c789`, latest `20261108120000`, equal to the migration files; Check L2/P2 functions `c9b4d9a1f8a5d6f400e6d64d266f3887`/332; `parity_surface.sql`: functions `c9b4d9a1…`/332, constraints `96ccb990b5c3b6554b95f2539fbfcd45`/528, indexes `9f7369db0309dd9cd935172bf145f54c`/300, the other seven surfaces unchanged, `_combined` `2a15deb38b76a75b9da991b955ea31b3`/3137, each equal to the local stack after a clean reset; `notification_deliveries` constraints `attempt_key`:u, `attempt_number_positive`:c, two foreign keys, `pkey`; indexes `attempt_key`, `claimable_idx`, `notification_id_idx`, `pkey`, `tenant_id_idx`; the key's comment present; claim `md5(prosrc)` `6781ead55e0e44ff4f829845ce584153`, SECURITY DEFINER, ACL `{postgres=X/postgres,orvion_integration=X/postgres}`; catalog 71/623; 0 tenants, 0 deliveries. No business row was written.
+
+### 2026-11-08 — Post-deploy records (Step 8)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 7 readings only (read 2026-11-08T20:34:31Z): 254 entries whose fingerprint recomputes to `7e7a7fcf…`, functions `c9b4d9a1…`/332, structure `2a15deb3…`/3137.
+- Manifest `Live state` set from the same readings; catalog 71/623 and the HTTP figure unchanged. `supabase/tests` holds 158 files whose literal `plan(N)` sum to 3010; `Suite **158 files / 3010 assertions**`.
+- ND-1 register row replaced with the DEPLOYED text, nothing else changed.
+- The API contract and the two discovery projections regenerated by the canonical generators: byte-identical to HEAD, LF; the projection generator's `-Check` exit 0.
+- Guard self-tests: cold-start 42/0, future-date 19/0, primary-ledger 13/0, status-contradiction 33/0.
+- Runtime Checkpoint DONE; one implementation commit.
 
 ## Verification Notes
 
