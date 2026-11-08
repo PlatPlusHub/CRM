@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -717,6 +717,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-08 — Gate 1 approval recorded
+
+DELEGATED exact Gate1 under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; run slice 1 through P8 without the owner ~17:30 Cairo); Draft SHA-256 22C87DDCBB954B64B233CB1F10032EE7269E9881A9D18C61D3FDA2E58AA3D476, decision SHA-256 3517193BDDEB8D0241875A939976125EDD85672F6971AAF19F821D7F484E1E93. No fabricated human future-digest approval. Gate 2 (Primary deploy) is a separate exact-SHA record in Step 6. Immediately before allocation the hash, the Draft blob 8ba81c1778bd069d359f6f8a9176ee875cbe56e3, all 2 source anchors, the baseline HEAD a21a0ec8c91e863fdd0ad86082bd93dfe1a77ba8 against refreshed origin/main a21a0ec8c91e863fdd0ad86082bd93dfe1a77ba8 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as deb54b2. No implementation performed before this transition.
 
 ## Review Gate
 
