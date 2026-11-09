@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -90,7 +90,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -567,7 +567,45 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-09 — Steps 1–4 applied
+
+- **Lifecycle:** allocate `65e124b`, Approve `0d82db4` (APPROVAL_EVIDENCE PASS; 7 of 9 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–4** by the literal-step replay, all four files absent or at their `a4fc1e1` blobs, each result at its pinned blob: migration `0fb6b37c21d7386e97794e144e30099e9807b825`, test 159 `282d80dcc2f126e7a2ff9e13ed6a37ef4b5b5e74`, register `0628dc28ca4d1972df64589137a4dd6b4448646b`, disposition `196c55813a8c1afcccf01ca4d3b293d1c00538f1`. Uncommitted until Step 8: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-09 — Pre-deploy readiness gate (Step 5)
+
+From the main checkout at HEAD `0d82db4`, Steps 1–4 applied and uncommitted, project-local CLI 3.0.0, the shared local stack, one logged script (15:19–15:24 Cairo):
+- **Bytes.** Migration SHA-256 `eb2ca6ddab68e7af8805d06177fa9d109002296a8b62733596841f136654816c`, md5 `8aaf23a30dd68393dcd8acd7c81325c7`, 5544 bytes; test 159 SHA-256 `775d659910260ccfb886ba1147d5419f118cb4cb2ad7d22414d401204c56ef40`, md5 `6b6757f2bbfa90a70a752b00cdbd581d`, 9726 bytes; both LF (0 CR) and ASCII. Equal to Consumer Closure.
+- **Causal negative.** `db reset --version 20261108120000`: 254 migrations, ledger `7e7a7fcfd603322c545f7bbc8322c789`, guard, trigger and index absent. Test 159 FAIL, failed 1 and 3–5, aborted at 5 of 14. Races: two overlapping requests both opened (two pending, two events); an approval and a rejection both succeeded (request and item `rejected`, cost locked, three events); an approval queued behind a committed withdrawal overwrote it (requirement off, cost locked); the direct door turned a rejected request `approved` and approved one on a cancelled booking. AR-1 to AR-3 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (254): functions `c9b4d9a1f8a5d6f400e6d64d266f3887`/332, triggers `9b53576506088625f67f8156f122bd44`/319, indexes `9f7369db0309dd9cd935172bf145f54c`/300, `_combined` `2a15deb38b76a75b9da991b955ea31b3`/3137. After a clean reset (255, latest `20261109120000`, ledger `7b2e96f12929492376da52621efe840c`): functions `b85385fc150c11088ec13f5dcfc0b889`/333, triggers `be5a19f32b8215cb33cc24c7989a9cbf`/320, indexes `d596c15bc684a9e75a43b582050602ec`/301, `_combined` `04223971cbe8be586da4135ddcfbfe06`/3140; policies, constraints, grants, columns, views, status transitions and RLS unchanged. Guard `md5(prosrc)` `b8669055544c146de381d62de189ea5f`, SECURITY DEFINER, ACL `{postgres=X/postgres}`; trigger and index present.
+- **Focused tests:** 159 14/14, 20 5/5, 29 15/15, 88 25/25, 115 26/26, each PASS.
+- **Races** on the final bytes: the second request refused 23505 (one pending); the second review refused `approved -> rejected` (request and item `approved`, consistent); the approval queued behind a withdrawal refused `cancelled -> approved` (requirement stays withdrawn, no cost lock); the direct door refused `rejected -> approved` and the approval on a cancelled booking. Recorded positions unchanged: a direct approval of a pending request leaves the item pending (no cost lock, no event); a `ceo` self-approval; the requester-`cancelled` branch refused by the item guard.
+- **Mutants**, each proven installed by a changed fingerprint and restored to `b8669055…`, trigger and index present, 14/14: M1 (guard trigger dropped) 159 fails 5–7, 10, 12–13, the review and withdrawal races and the direct door return; M2 (index dropped) 159 fails 1 and 3–5, two pending requests return; M3 (both removed, the `a4fc1e1` schema) 159 fails 1 and 3–5 and every race returns. M1 and M2 killed.
+- **Generators, scope and diff.** `MASTER_API_CONTRACT.md` regenerates identical (LF-normalized); `generate-ai-map.ps1 -Check` exit 0. Only the four Step 1–4 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the expected pre-deploy items, the same as the sandbox: Check 9 ×3 (count, latest, ledger fingerprint), Check 15 ×2 (files, assertions), RECOVER-1 (Primary evidence). Checks 21–29 pass.
+- **Fresh Primary baseline**, read-only (13:20 UTC): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 254 `7e7a7fcfd603322c545f7bbc8322c789`, latest `20261108120000`, target absent by version and by name; guard function absent; `approval_requests` triggers `derive_requester`, `derive_reviewer`, `enforce_catalog_codes`, `enforce_entity_reference`, `enforce_subscription_write_gate`, `guard_parent_state`, `guard_write_capability`; indexes `booking_item_id_idx`, `document_id_idx`, `pkey`, `tenant_status_idx`; 0 tenants, 0 approval requests, 0 groups of more than one pending `finance_execution_approval` per item. `scripts/parity_surface.sql`, run unchanged through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`: every surface equal to the local stack at 254, `_combined` `2a15deb38b76a75b9da991b955ea31b3`/3137, equal to the recorded evidence. (The read-only connector role sees no rows in `information_schema.role_table_grants` and reports grants 0; its catalog equivalent gives the same `6727f6d8…`/189.)
+- **Predicted delta:** ledger 255 `7b2e96f1…`; functions `b85385fc…`/333; triggers `be5a19f3…`/320; indexes `d596c15b…`/301; `_combined` `04223971…`/3140; the guard `b8669055…`; `approval_requests` +1 trigger, +1 index; business counts unchanged.
+
+### 2026-11-09 — Gate 2 (Step 6), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-299: migration `supabase/migrations/20261109120000_a_decided_approval_is_final.sql`, SHA-256 `eb2ca6ddab68e7af8805d06177fa9d109002296a8b62733596841f136654816c`, md5 `8aaf23a30dd68393dcd8acd7c81325c7`, 5544 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo) and 2026-11-09 (slice 2 alongside WS-034 ~13:13 Cairo; go with the recommendation, P3–P8 as slice 1, ~14:00 Cairo), recorded outside this repository. Step 5 passed. The migration's top-level statements are one `create or replace function` and its `revoke`, one `drop trigger if exists` and `create trigger` for the new trigger, and one `create unique index if not exists`: it drops no table or column and deletes or rewrites no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-09 — Primary deployment (Step 7)
+
+Through the Primary write connector from this VS Code session, 13:25–13:26 UTC; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read, exact match** (inside `BEGIN TRANSACTION READ ONLY`). HEAD `0d82db45505e795168d9b70c6fd695f80d5e7a92`; migration SHA-256 `eb2ca6ddab68e7af8805d06177fa9d109002296a8b62733596841f136654816c`, md5 `8aaf23a30dd68393dcd8acd7c81325c7`, 5544 bytes, LF, ASCII; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 254 `7e7a7fcfd603322c545f7bbc8322c789`, latest `20261108120000`, target absent by version and by name; guard absent; triggers and indexes of `approval_requests` as in Step 5; 0 tenants, 0 approval requests, 0 duplicate pending groups.
+- **Transmitted text** proven server-side in the same read: `md5` `8aaf23a30dd68393dcd8acd7c81325c7`, equal to the file. Applied once with `apply_migration` (`a_decided_approval_is_final`).
+- **Guarded rename.** The connector stored version `20261109132541`: exactly one row after `20261108120000`, one stored statement with md5 `8aaf23a3…` and 5544 bytes, no existing target. One guarded `UPDATE` (row count required 1) renamed it to `20261109120000`.
+- **Fresh reads.** Ledger 255 `7b2e96f12929492376da52621efe840c`, latest `20261109120000`, equal to the migration files; Check L2/P2 functions `b85385fc150c11088ec13f5dcfc0b889`/333; `parity_surface.sql`: functions `b85385fc…`/333, triggers `be5a19f32b8215cb33cc24c7989a9cbf`/320, indexes `d596c15bc684a9e75a43b582050602ec`/301, the other seven surfaces unchanged, `_combined` `04223971cbe8be586da4135ddcfbfe06`/3140, each equal to the local stack after a clean reset; `approval_requests` triggers now include `approval_requests_guard_decision` (8), indexes include the unique partial `approval_requests_one_pending_finance_per_item` (5); guard `md5(prosrc)` `b8669055544c146de381d62de189ea5f`, SECURITY DEFINER, ACL `{postgres=X/postgres}`; 0 tenants, 0 approval requests. No business row was written.
+
+### 2026-11-09 — Post-deploy records (Step 8)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 7 readings only (read 2026-11-09T13:25:56Z): 255 entries whose fingerprint recomputes to `7b2e96f1…`, functions `b85385fc…`/333, structure `04223971…`/3140.
+- Manifest `Live state` set from the same readings; catalog 71/623 and the HTTP figure unchanged. `supabase/tests` holds 159 files whose literal `plan(N)` sum to 3024; `Suite **159 files / 3024 assertions**`.
+- AR-1, AR-2 and AR-3 register rows replaced with the DEPLOYED text, nothing else changed.
+- The API contract and the two discovery projections regenerated by the canonical generators: byte-identical to HEAD, LF; the projection generator's `-Check` exit 0.
+- Guard self-tests: cold-start 42/0, future-date 19/0, primary-ledger 13/0, status-contradiction 33/0.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 

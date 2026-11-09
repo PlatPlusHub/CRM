@@ -1,17 +1,17 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-08T20:34:31Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-298 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-298 (owner's instructions of 2026-11-08), effective after the recorded Step 5 readiness gate. Prewrite recheck matched exactly: HEAD 4de9be8c3a0c650e0e9b00bb82010e51790fa2a1; migration SHA-256 e0fc6b11ab72f70200c960ca9527cf423726cd19ec86c04d580f8168ec0bdfaf, MD5 120df9bf5eddeb04d41f3605f199bfcc, 12767 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 253 b144bdf0f5a31ac66a0f0a723fb009bc with the target absent by version and by name; scripts/parity_surface.sql combined 56625ae4118e1ddc85bab99114b17899/3136; notification_deliveries constraints attempt_number_positive, two foreign keys, pkey and indexes chain_idx, claimable_idx, notification_id_idx, pkey, tenant_id_idx; claim md5(prosrc) 772c02d7a55fe3d774a1f861ef1ae208; 0 tenants, 0 notification deliveries, 0 duplicate attempt groups. The transmitted text was proven server-side (MD5 120df9bf5eddeb04d41f3605f199bfcc) and applied once. The connector's temporary version 20261108203059 was renamed by one guarded UPDATE (exactly one row after 20261013120000, one stored statement with the file's MD5, no existing target) to 20261108120000. Post-write: ledger 254 7e7a7fcfd603322c545f7bbc8322c789, equal to the migration files; Check L2/P2 functions c9b4d9a1f8a5d6f400e6d64d266f3887/332; scripts/parity_surface.sql combined 2a15deb38b76a75b9da991b955ea31b3/3137 with only functions (changed), constraints (+1) and indexes (one replaced) moved, each equal to the local stack after a clean reset; notification_deliveries_attempt_key present, chain_idx absent; app.claim_notification_deliveries md5(prosrc) 6781ead55e0e44ff4f829845ce584153, SECURITY DEFINER, ACL {postgres=X/postgres,orvion_integration=X/postgres}; catalog 71/623; 0 tenants and 0 notification deliveries. Secondary was not contacted.",
+  "read_at": "2026-11-09T13:25:56Z",
+  "read_via": "Fresh Primary Supabase connector reads after the SPEC-299 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-299 (owner's instructions of 2026-11-08 and 2026-11-09), effective after the recorded Step 5 readiness gate. Prewrite recheck matched exactly: HEAD 0d82db45505e795168d9b70c6fd695f80d5e7a92; migration SHA-256 eb2ca6ddab68e7af8805d06177fa9d109002296a8b62733596841f136654816c, MD5 8aaf23a30dd68393dcd8acd7c81325c7, 5544 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 254 7e7a7fcfd603322c545f7bbc8322c789 with the target absent by version and by name; scripts/parity_surface.sql combined 2a15deb38b76a75b9da991b955ea31b3/3137; app.guard_approval_request_decision absent; approval_requests triggers derive_requester, derive_reviewer, enforce_catalog_codes, enforce_entity_reference, enforce_subscription_write_gate, guard_parent_state, guard_write_capability and indexes booking_item_id_idx, document_id_idx, pkey, tenant_status_idx; 0 tenants, 0 approval requests, 0 groups of more than one pending finance_execution_approval per booking item. The transmitted text was proven server-side (MD5 8aaf23a30dd68393dcd8acd7c81325c7) and applied once. The connector's temporary version 20261109132541 was renamed by one guarded UPDATE (exactly one row after 20261108120000, one stored statement with the file's MD5, no existing target) to 20261109120000. Post-write: ledger 255 7b2e96f12929492376da52621efe840c, equal to the migration files; Check L2/P2 functions b85385fc150c11088ec13f5dcfc0b889/333; scripts/parity_surface.sql combined 04223971cbe8be586da4135ddcfbfe06/3140 with only functions (+1), triggers (+1) and indexes (+1) moved, each equal to the local stack after a clean reset; app.guard_approval_request_decision md5(prosrc) b8669055544c146de381d62de189ea5f, SECURITY DEFINER, ACL {postgres=X/postgres}; approval_requests_guard_decision and approval_requests_one_pending_finance_per_item present; 0 tenants and 0 approval requests. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "4de9be8c3a0c650e0e9b00bb82010e51790fa2a1",
-  "migration_count": 254,
-  "ledger_fingerprint": "7e7a7fcfd603322c545f7bbc8322c789",
-  "function_surface_hash": "c9b4d9a1f8a5d6f400e6d64d266f3887",
-  "function_count": 332,
-  "structural_surface_hash": "2a15deb38b76a75b9da991b955ea31b3",
-  "structural_object_count": 3137,
-  "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary through the supabase-primary MCP -- the SAME FILE local runs, per PAR-3. Both read READ-ONLY.",
+  "repository_head": "0d82db45505e795168d9b70c6fd695f80d5e7a92",
+  "migration_count": 255,
+  "ledger_fingerprint": "7b2e96f12929492376da52621efe840c",
+  "function_surface_hash": "b85385fc150c11088ec13f5dcfc0b889",
+  "function_count": 333,
+  "structural_surface_hash": "04223971cbe8be586da4135ddcfbfe06",
+  "structural_object_count": 3140,
+  "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -266,6 +266,7 @@
     "20261011120000_an_allocation_spends_its_own_payment_on_its_own_invoice",
     "20261012120000_a_receipt_is_issued_once_and_stays_as_issued",
     "20261013120000_a_used_ledger_account_keeps_its_meaning",
-    "20261108120000_a_due_retry_is_opened_once"
+    "20261108120000_a_due_retry_is_opened_once",
+    "20261109120000_a_decided_approval_is_final"
   ]
 }
