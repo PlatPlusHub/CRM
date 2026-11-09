@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -555,15 +555,15 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] The migration is the frozen bytes; `check: blob supabase/migrations/20261109120000_a_decided_approval_is_final.sql 0fb6b37c21d7386e97794e144e30099e9807b825`
-- [ ] Test 159 is the frozen bytes; `check: blob supabase/tests/159_a_decided_approval_is_final_test.sql 282d80dcc2f126e7a2ff9e13ed6a37ef4b5b5e74`
-- [ ] The disposition record carries `approval_requests` AUDITED / ADVERSARIAL and coverage 45 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 196c55813a8c1afcccf01ca4d3b293d1c00538f1`
-- [ ] AR-1 to AR-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of this contract"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **159 files / 3024 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @a4fc1e18685e5fbdb85eb6c5c1e6c82e7e023131`
-- [ ] The originating review RPC migration remains exact; `check: same supabase/migrations/202607046100_review_finance_approval.sql @a4fc1e18685e5fbdb85eb6c5c1e6c82e7e023131`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 5 readiness gate and Step 6 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1 and M2 are each killed with installation and restoration proven, and the causal negative is recorded.
+- [x] The migration is the frozen bytes; `check: blob supabase/migrations/20261109120000_a_decided_approval_is_final.sql 0fb6b37c21d7386e97794e144e30099e9807b825`
+- [x] Test 159 is the frozen bytes; `check: blob supabase/tests/159_a_decided_approval_is_final_test.sql 282d80dcc2f126e7a2ff9e13ed6a37ef4b5b5e74`
+- [x] The disposition record carries `approval_requests` AUDITED / ADVERSARIAL and coverage 45 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 196c55813a8c1afcccf01ca4d3b293d1c00538f1`
+- [x] AR-1 to AR-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of this contract"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **159 files / 3024 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @a4fc1e18685e5fbdb85eb6c5c1e6c82e7e023131`
+- [x] The originating review RPC migration remains exact; `check: same supabase/migrations/202607046100_review_finance_approval.sql @a4fc1e18685e5fbdb85eb6c5c1e6c82e7e023131`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 5 readiness gate and Step 6 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1 and M2 are each killed with installation and restoration proven, and the causal negative is recorded.
 
 ## Execution Log
 
@@ -621,15 +621,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence at `3b28a3d3236b28469f67084ed7e3e0c69539dfe3`: selected Draft 0EA381A46A2E41FFBED73115CF23577026150DCF34FD3EED091029211D663048, allocated blob 0e7a43c23b33a8677763aef6db5e4d7e87a1ebae; the range `a4fc1e1..3b28a3d` touches only Write Scope paths. Each Acceptance Criterion re-checked: the migration blob 0fb6b37c21d7386e97794e144e30099e9807b825, test 159 blob 282d80dcc2f126e7a2ff9e13ed6a37ef4b5b5e74 and the disposition blob 196c55813a8c1afcccf01ca4d3b293d1c00538f1 (`approval_requests` AUDITED / ADVERSARIAL, 44 → 45 of 78) are the frozen bytes; the register carries AR-1, AR-2 and AR-3 DEPLOYED; the manifest carries `Suite **159 files / 3024 assertions**`; `scripts/check_agent_continuity.ps1`, `.github/workflows/migration-ci.yml` and `202607046100_review_finance_approval.sql` are unchanged from `a4fc1e1`; the Execution Log records the Step 5 readiness gate with the fresh Primary baseline, the causal negative, mutants M1 and M2 each killed with installation and restoration proven (and M3, both removed, bringing back every race), the Step 6 DELEGATED exact-SHA Gate-2 record, and the Step 7 deployment (only the authorized migration and one guarded ledger rename, no business-data write; fresh Primary ledger 255 `7b2e96f1…`, functions `b85385fc…`/333, structure `04223971…`/3140, each equal to local); Secondary `brplkqmbzffpxqgkkdzo` was never contacted. This original root owns fresh receipt 9374ae1dcc56e5acfeb6252e45fcebdede5a90c15809145d73b6b720c00bf199, finishHead 3b28a3d3236b28469f67084ed7e3e0c69539dfe3, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed LOCAL_CERTIFY READY and END exit=0 (3.0 min). Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 9374ae1dcc56e5acfeb6252e45fcebdede5a90c15809145d73b6b720c00bf199 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
