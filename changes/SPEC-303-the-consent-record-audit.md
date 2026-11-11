@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -71,7 +71,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -374,6 +374,17 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 ## Execution Log
 
 None.
+
+
+### 2026-11-11 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 2cc8fea589d8c37cbc59cd2482664e5698c65ded and every source anchor matched there; Draft allocated as 7a89dae and approved as d41f197 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/tests/163_the_consent_record_audit_test.sql` edited exactly as the step states; blob b636fc860e16127d63e5beb48fcb87b011743c5e (123 insertions, 0 deletions (created)).
+- Step 3 Applied: `reports/master/MASTER_SURFACE_DISPOSITION.md` edited exactly as the step states; blob bbd4b7f10e22b0eab2e6f1a844ea99a881f77160 (6 insertions, 4 deletions).
+- Step 4 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob 0b9c4115c7f052872163f6f477e2b5305991e9ae (1 insertions, 1 deletions).
+- Step 5 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
