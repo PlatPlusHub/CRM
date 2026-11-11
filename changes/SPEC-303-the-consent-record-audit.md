@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -362,14 +362,14 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] Test 163 is the frozen bytes; `check: blob supabase/tests/163_the_consent_record_audit_test.sql b636fc860e16127d63e5beb48fcb87b011743c5e`
-- [ ] The disposition record carries `customer_consents` AUDITED / ADVERSARIAL and coverage 49 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md bbd4b7f10e22b0eab2e6f1a844ea99a881f77160`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **163 files / 3086 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
-- [ ] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
-- [ ] The consent writer's migration remains exact; `check: same supabase/migrations/20260929160000_a_google_ads_call_qualifies_as_a_phone_call.sql @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
-- [ ] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M3 are each killed with installation and restoration proven.
+- [x] Test 163 is the frozen bytes; `check: blob supabase/tests/163_the_consent_record_audit_test.sql b636fc860e16127d63e5beb48fcb87b011743c5e`
+- [x] The disposition record carries `customer_consents` AUDITED / ADVERSARIAL and coverage 49 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md bbd4b7f10e22b0eab2e6f1a844ea99a881f77160`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **163 files / 3086 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
+- [x] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
+- [x] The consent writer's migration remains exact; `check: same supabase/migrations/20260929160000_a_google_ads_call_qualifies_as_a_phone_call.sql @2cc8fea589d8c37cbc59cd2482664e5698c65ded`
+- [x] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M3 are each killed with installation and restoration proven.
 
 ## Execution Log
 
@@ -400,15 +400,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence at 8a4ea9c (baseline 2cc8fea589d8c37cbc59cd2482664e5698c65ded): selected Draft 9B008B36D195F000D4C7B53A231C34C594360B36D4E02EB8D6D3EE0978EFA1A6, allocated blob 7b2c3e3ee635260090b1b135a5cc455a0c2d7252. The diff from the baseline names exactly five paths, all in Write Scope: the contract, test 163 (blob b636fc860e16127d63e5beb48fcb87b011743c5e, the frozen bytes), the disposition record (blob bbd4b7f10e22b0eab2e6f1a844ea99a881f77160: customer_consents AUDITED / ADVERSARIAL, coverage 49 of 78), the manifest (Suite **163 files / 3086 assertions**) and the regenerated ai-map.json. No file under supabase/migrations/ changed, so no database object was created, altered or dropped; nothing linked, pushed or deployed, so Primary vrvtsxexkiiiivlkdxzp was not written and Secondary brplkqmbzffpxqgkkdzo was never contacted. Mutants M1-M3 were each installed and killed inside test 163's rolled-back transaction on the prototype (M1 assertion 1; M2 assertions 8-9; M3 assertions 5-6), and the writer's md5(prosrc) with its triggers read 44ac35592d16fd1c06df648e6e6ca62b/3 restored with 0 failures unmutated (Workbench slice record mutants.log). The native evaluator, Migration CI and the consent writer's migration are unchanged from the baseline (Gate-checked at Complete). This original root owns fresh receipt 0c01ac56d389db7518d3a439da431d26da9d7c685dfadf8639131e842ecb84e0, finishHead 8a4ea9c, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed LOCAL_CERTIFY: READY / END exit=0 (2.9 min). Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 0c01ac56d389db7518d3a439da431d26da9d7c685dfadf8639131e842ecb84e0 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
