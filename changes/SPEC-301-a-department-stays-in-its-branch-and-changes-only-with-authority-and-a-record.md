@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -725,16 +725,16 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] The migration is the frozen bytes; `check: blob supabase/migrations/20261111130000_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record.sql e5c56ad2f2df4ee0a4b62e695fa34a16d5918ea2`
-- [ ] Test 161 is the frozen bytes; `check: blob supabase/tests/161_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record_test.sql 4eb38bf030a2909c7b59cdd8c89620279d09ed87`
-- [ ] The disposition record carries `departments` AUDITED / ADVERSARIAL and coverage 47 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 834fca4f222e2d1d30e44dcf3c08672395c20770`
-- [ ] DEP-1, DEP-2 and DEP-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-301"`
-- [ ] The smoke count includes the new code; `check: has scripts/verify_database.sql "expected 625 catalog_values"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **161 files / 3058 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @2e05d4105b3b52625d624cb35645a328af000564`
-- [ ] The originating department RPC migration remains exact; `check: same supabase/migrations/202607049600_identity_event_emission.sql @2e05d4105b3b52625d624cb35645a328af000564`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 8 readiness gate and Step 9 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M3 are each killed with installation and restoration proven, and the causal negative is recorded.
+- [x] The migration is the frozen bytes; `check: blob supabase/migrations/20261111130000_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record.sql e5c56ad2f2df4ee0a4b62e695fa34a16d5918ea2`
+- [x] Test 161 is the frozen bytes; `check: blob supabase/tests/161_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record_test.sql 4eb38bf030a2909c7b59cdd8c89620279d09ed87`
+- [x] The disposition record carries `departments` AUDITED / ADVERSARIAL and coverage 47 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 834fca4f222e2d1d30e44dcf3c08672395c20770`
+- [x] DEP-1, DEP-2 and DEP-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-301"`
+- [x] The smoke count includes the new code; `check: has scripts/verify_database.sql "expected 625 catalog_values"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **161 files / 3058 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @2e05d4105b3b52625d624cb35645a328af000564`
+- [x] The originating department RPC migration remains exact; `check: same supabase/migrations/202607049600_identity_event_emission.sql @2e05d4105b3b52625d624cb35645a328af000564`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 8 readiness gate and Step 9 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M3 are each killed with installation and restoration proven, and the causal negative is recorded.
 
 ## Execution Log
 
@@ -790,15 +790,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft 25B1DD79D7E57CECC3DC044AAE5A5BC31CCBFD30576F63F58EEEF6148FC3653C, allocated blob 2b679650112ea502bf395a099818580b2ac88980, the seven literal outputs (migration, test 161, test 10, smoke, canon 27, register and disposition), the recorded Step 8 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261111130000 to vrvtsxexkiiiivlkdxzp with the fresh post-deploy ledger, functions and structure equal to local, the Step 11 records (ledger evidence, manifest Live state and suite 161/3058, DEP-1, DEP-2, DEP-3 DEPLOYED, API contract regenerated), regenerated discovery, unchanged native evaluator and originating department RPC migration, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt 78e016362b6470161193fae84d6c78a6d51d470dde049cb31bc4c677c021a813, finishHead 0d9ef3adb3db4b6f8d46c5d7fb1bdabdcd30b7a5, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 78e016362b6470161193fae84d6c78a6d51d470dde049cb31bc4c677c021a813 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
