@@ -161,6 +161,9 @@ select is(
 --        `_started` is never fabricated (SPEC-153 Class B).
 -- =============================================================================================
 reset role;
+-- ...and CLEAR the claim, as at 8-9 above: the writes below are SYSTEM paths, and since
+-- `app.guard_placement_authority` (SPEC-300) a leftover employee claim is refused MANAGE_USERS.
+select set_config('request.jwt.claims', null, true);
 select is(
   (select count(*)::int from public.events where event_type_code='user_branch_transfer_completed' and tenant_id='38000000-0000-0000-0000-000000000001'),
   0,

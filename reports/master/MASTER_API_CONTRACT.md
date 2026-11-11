@@ -230,7 +230,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `totp_enrollments` | `SIU-` | no | no | owner_only |
 | `trusted_devices` | `SIU-` | no | no | owner_only |
 | `usage_counters` | `S---` | no | no | tenant_isolation |
-| `user_branch_assignments` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `user_branch_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `user_permission_grants` | `SIU-` | no | no | scope_insert, scope_read, scope_update |
 | `user_role_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `users` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |

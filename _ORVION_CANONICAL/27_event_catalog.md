@@ -267,6 +267,10 @@ Severity: info
 
 Severity: info
 
+## user_branch_assignment_changed
+
+Severity: security
+
 ## role_assigned
 
 Severity: security

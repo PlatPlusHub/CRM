@@ -154,7 +154,8 @@ select is(
 
 savepoint m2;
 select set_config('request.jwt.claims','{"sub":"79000000-0000-0000-0000-0000000000a2","aal":"aal2"}',true);
-update public.user_branch_assignments set ends_at = now() - interval '1 day'
+-- It started before it ended: `ends_at >= starts_at` holds since SPEC-300 (UBA-5).
+update public.user_branch_assignments set starts_at = now() - interval '2 days', ends_at = now() - interval '1 day'
  where id = '79000000-0000-0000-0000-0000000000b1';
 select set_config('request.jwt.claims','{"sub":"79000000-0000-0000-0000-0000000000a1"}',true);
 select is(

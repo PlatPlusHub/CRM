@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-09T13:25:56Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-299 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-299 (owner's instructions of 2026-11-08 and 2026-11-09), effective after the recorded Step 5 readiness gate. Prewrite recheck matched exactly: HEAD 0d82db45505e795168d9b70c6fd695f80d5e7a92; migration SHA-256 eb2ca6ddab68e7af8805d06177fa9d109002296a8b62733596841f136654816c, MD5 8aaf23a30dd68393dcd8acd7c81325c7, 5544 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 254 7e7a7fcfd603322c545f7bbc8322c789 with the target absent by version and by name; scripts/parity_surface.sql combined 2a15deb38b76a75b9da991b955ea31b3/3137; app.guard_approval_request_decision absent; approval_requests triggers derive_requester, derive_reviewer, enforce_catalog_codes, enforce_entity_reference, enforce_subscription_write_gate, guard_parent_state, guard_write_capability and indexes booking_item_id_idx, document_id_idx, pkey, tenant_status_idx; 0 tenants, 0 approval requests, 0 groups of more than one pending finance_execution_approval per booking item. The transmitted text was proven server-side (MD5 8aaf23a30dd68393dcd8acd7c81325c7) and applied once. The connector's temporary version 20261109132541 was renamed by one guarded UPDATE (exactly one row after 20261108120000, one stored statement with the file's MD5, no existing target) to 20261109120000. Post-write: ledger 255 7b2e96f12929492376da52621efe840c, equal to the migration files; Check L2/P2 functions b85385fc150c11088ec13f5dcfc0b889/333; scripts/parity_surface.sql combined 04223971cbe8be586da4135ddcfbfe06/3140 with only functions (+1), triggers (+1) and indexes (+1) moved, each equal to the local stack after a clean reset; app.guard_approval_request_decision md5(prosrc) b8669055544c146de381d62de189ea5f, SECURITY DEFINER, ACL {postgres=X/postgres}; approval_requests_guard_decision and approval_requests_one_pending_finance_per_item present; 0 tenants and 0 approval requests. Secondary was not contacted.",
+  "read_at": "2026-11-11T05:43:51Z",
+  "read_via": "Fresh Primary Supabase connector reads after the SPEC-300 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-300 (owner's instructions of 2026-11-08 and 2026-11-11), effective after the recorded Step 10 readiness gate. Prewrite recheck matched exactly: HEAD db3f68589a5345d3cb48fbaaf1be5aed79989a4b; migration SHA-256 0357e458260a62ae4273aea8759f9f319a06752043f3812c02665a4b525af61b, MD5 89ac4aeb61f5eeade88a9f63360309c0, 7635 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 255 7b2e96f12929492376da52621efe840c with the target absent by version and by name; scripts/parity_surface.sql combined 04223971cbe8be586da4135ddcfbfe06/3140; app.guard_placement_authority, the three new constraints and the code user_branch_assignment_changed absent; user_branch_assignments triggers derive_created_by, emit_transfer (INSERT only), enforce_catalog_codes; event_type 188 rows, maximum sort_order 935; 0 tenants, 0 placements, 0 placements whose department belongs to another branch, 0 that end before they start. The transmitted text was proven server-side (MD5 89ac4aeb61f5eeade88a9f63360309c0) and applied once. The connector's temporary version 20261111054322 was renamed by one guarded UPDATE (exactly one row after 20261109120000, one stored statement with the file's MD5, no existing target) to 20261111120000. Post-write: ledger 256 7175a9d8726ea68a08c612a4a624b972, equal to the migration files; Check L2/P2 functions 965f9695147a4dcba08ca71cd9f4a4d3/334; scripts/parity_surface.sql combined 6ce7270e06e890832c53c505d4976a49/3146 with only functions (+1, one replaced), triggers (+1, one replaced), constraints (+3) and indexes (+1) moved, each equal to the local stack after a clean reset; app.guard_placement_authority md5(prosrc) 6e75bf9dca6e2112e3ef71c26efe88eb and app.emit_user_branch_transfer a0e8398f69ff7bea38ed657ba2915a76, both SECURITY DEFINER, ACL {postgres=X/postgres}; both user_branch_assignments triggers on INSERT and UPDATE; the three constraints and the code present; catalog 71/624; 0 tenants, 0 placements and 0 events. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "0d82db45505e795168d9b70c6fd695f80d5e7a92",
-  "migration_count": 255,
-  "ledger_fingerprint": "7b2e96f12929492376da52621efe840c",
-  "function_surface_hash": "b85385fc150c11088ec13f5dcfc0b889",
-  "function_count": 333,
-  "structural_surface_hash": "04223971cbe8be586da4135ddcfbfe06",
-  "structural_object_count": 3140,
+  "repository_head": "db3f68589a5345d3cb48fbaaf1be5aed79989a4b",
+  "migration_count": 256,
+  "ledger_fingerprint": "7175a9d8726ea68a08c612a4a624b972",
+  "function_surface_hash": "965f9695147a4dcba08ca71cd9f4a4d3",
+  "function_count": 334,
+  "structural_surface_hash": "6ce7270e06e890832c53c505d4976a49",
+  "structural_object_count": 3146,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -267,6 +267,7 @@
     "20261012120000_a_receipt_is_issued_once_and_stays_as_issued",
     "20261013120000_a_used_ledger_account_keeps_its_meaning",
     "20261108120000_a_due_retry_is_opened_once",
-    "20261109120000_a_decided_approval_is_final"
+    "20261109120000_a_decided_approval_is_final",
+    "20261111120000_a_placement_changes_only_with_authority_and_a_record"
   ]
 }
