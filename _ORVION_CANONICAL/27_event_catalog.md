@@ -243,6 +243,10 @@ Severity: info
 
 Severity: info
 
+## department_changed
+
+Severity: info
+
 ## user_created
 
 Severity: info

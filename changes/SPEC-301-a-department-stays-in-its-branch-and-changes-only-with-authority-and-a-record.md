@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -95,7 +95,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -738,8 +738,44 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-11 — Steps 1–7 applied
 
+- **Lifecycle:** allocate `57a8b56`, Approve `8bd7803` (APPROVAL_EVIDENCE PASS; 8 of 10 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–7** by the literal-step replay, every file absent or at its `2e05d41` blob, each result at its pinned blob: migration `e5c56ad2f2df4ee0a4b62e695fa34a16d5918ea2`, test 161 `4eb38bf030a2909c7b59cdd8c89620279d09ed87`, test 10 `518de71a30d557ae4737618fa3a3ecaf47476b08`, smoke `58acd3d7755600acf8b1411d31b18a70e8a1f3f3`, canon 27 `c3fd59a12f850ac1058121f01126ac526a4982c2`, register `bef01c4d2a8d3bc613db431515a7b46f2a68985b`, disposition `834fca4f222e2d1d30e44dcf3c08672395c20770`. Uncommitted until Step 11: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-11 — Pre-deploy readiness gate (Step 8)
+
+From the main checkout at HEAD `8bd7803`, Steps 1–7 applied and uncommitted, project-local CLI 3.0.0, the shared local stack, one logged script (11:23–11:26 Cairo):
+- **Bytes.** Migration SHA-256 `bc7aa0022f8f7b53273f671da5c06a8a5af450c65f7058a28e8290119842eb56`, md5 `8586c0612a656e142b2f2aa8838c5bce`, 7985 bytes; test 161 SHA-256 `d23e546ae647a29e40dbbf2bb4e65b6685d419a70d3a282da52fb32d94c3aeaf`, md5 `3a0bf66f5e358999eb8e879eb10aa29e`, 8559 bytes; both LF (0 CR) and ASCII. Equal to Consumer Closure.
+- **Causal negative.** `db reset --version 20261111120000`: 256 migrations, ledger `7175a9d8726ea68a08c612a4a624b972`; guard, emitter and the new code absent; the RPC `md5(prosrc)` `42218ed9c7b2737a0154c4b1e2cee53c`; catalog 71/624. Test 161 FAIL, failed 1, 3–6, 8–10 and 17. Probes: the `aal1` direct INSERT, rename, re-type and deactivation succeed with 0 events while the RPC refuses; an unplaced department moves to another branch and its lead is stranded at a pair `app.create_lead` refuses. DEP-1, DEP-2 and DEP-3 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (256): functions `965f9695147a4dcba08ca71cd9f4a4d3`/334, triggers `c4da265b570c72f41c8e2c830053fbfa`/321, `_combined` `6ce7270e06e890832c53c505d4976a49`/3146. After a clean reset (257, latest `20261111130000`, ledger `ed3211eac78a43cdcf04f44235d5516d`): functions `5d50b5ba57ec83e66c6ad492a22ff050`/336, triggers `59b4283fc37e2bd9f997b84744139f27`/323, `_combined` `acaa0b419371eb704cc531ad84769485`/3150; policies, constraints, grants, columns, views, indexes, status transitions and RLS unchanged. Guard `md5(prosrc)` `040f97565abd992a60f03231d1c7fe85`, emitter `35d9ec237237cd98d4d6b6439a060f54`, both SECURITY DEFINER, ACL `{postgres=X/postgres}`; RPC `8365ffa3a5dbdce5da337e4e55896eb4`; both triggers on INSERT and UPDATE; the new code present; catalog 71/625.
+- **Focused tests:** 161 17/17, 10 9/9, 38 21/21, 130 29/29, each PASS. Probes on the final bytes: the `aal1` RPC, INSERT and UPDATEs refused 42501; both branch moves refused 23514 (the lead keeps its pair); the stepped-up door insert, rename and deactivation record 1, 2 and 3 events and a touch adds none; the RPC records once; controls hold.
+- **Mutants**, each proven installed by a changed fingerprint and restored to `guard=1 emit=1 fn=7b1b4393` with 17/17: M1 (step-up charge removed) 161 fails 3–4; M2 (branch fix removed) 5–6, 17; M3 (emitter dropped) 1, 8–10, 12; each with its probe attack returning. M4 (all removed and the RPC's own record back, the `2e05d41` schema) fails 1, 3–6, 8–10, 17 and every probe returns. M1–M3 killed.
+- **Generators, scope and diff.** `MASTER_API_CONTRACT.md` regenerates with the expected moved `departments` row (Step 11 writes it); `generate-ai-map.ps1 -Check` exit 0. Only the seven Step 1–7 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: Check 9 ×3 (count, latest, ledger fingerprint), Check 15 ×2 (files, assertions), RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (the grants surface through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`, 09:27 UTC): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co` (both connectors); ledger 256 `7175a9d8726ea68a08c612a4a624b972`, latest `20261111120000`, target absent by version and by name; guard and emitter functions and the new code absent; `departments` triggers `departments_enforce_catalog_codes`, `departments_set_updated_at`; RPC `md5(prosrc)` `42218ed9…`; 0 tenants, 0 departments. `parity_surface.sql`: every surface equal to the local stack at 256, `_combined` `6ce7270e06e890832c53c505d4976a49`/3146, equal to the recorded evidence.
+- **Predicted delta:** ledger 257 `ed3211ea…`; functions `5d50b5ba…`/336; triggers `59b4283f…`/323; `_combined` `acaa0b41…`/3150; guard `040f9756…`, emitter `35d9ec23…`, RPC `8365ffa3…`; both triggers on INSERT and UPDATE; catalog 71/625; business counts unchanged.
+
+### 2026-11-11 — Gate 2 (Step 9), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-301: migration `supabase/migrations/20261111130000_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record.sql`, SHA-256 `bc7aa0022f8f7b53273f671da5c06a8a5af450c65f7058a28e8290119842eb56`, md5 `8586c0612a656e142b2f2aa8838c5bce`, 7985 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo) and 2026-11-11 (slice 4 run mode 2, run through to both products' publish, promote and remote Certify ~10:50 Cairo), recorded outside this repository. Step 8 passed. The migration's top-level statements are one guarded insert of a global `event_type` catalog value, two `create or replace function` with their `revoke`, two `create trigger`, and one `create or replace function` of `app.create_department` with its signature, checks and insert unchanged: it drops no table or column and deletes or rewrites no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-11 — Primary deployment (Step 10)
+
+Through the Primary write connector from this VS Code session, 09:27–09:29 UTC; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read, exact match** (inside `BEGIN TRANSACTION READ ONLY`). HEAD `8bd780394fd47734a327128f938a414c5990453c`; migration SHA-256 `bc7aa0022f8f7b53273f671da5c06a8a5af450c65f7058a28e8290119842eb56`, md5 `8586c0612a656e142b2f2aa8838c5bce`, 7985 bytes, LF, ASCII; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 256 `7175a9d8726ea68a08c612a4a624b972`, latest `20261111120000`, target absent by version and by name; guard and emitter absent; triggers of `departments` as in Step 8; `event_type` 189 rows, maximum `sort_order` 936, the code absent; 0 tenants, 0 departments, 0 events.
+- **Transmitted text** proven server-side in the same read: `md5` `8586c0612a656e142b2f2aa8838c5bce`, equal to the file. Applied once with `apply_migration` (`a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record`).
+- **Guarded rename.** The connector stored version `20261111092831`: exactly one new row, one stored statement with md5 `8586c061…` and 7985 bytes, no existing target. One guarded `UPDATE` (row count required 1) renamed it to `20261111130000`.
+- **Fresh reads** (09:29:03 UTC). Ledger 257 `ed3211eac78a43cdcf04f44235d5516d`, latest `20261111130000`, equal to the migration files; Check L2/P2 functions `5d50b5ba57ec83e66c6ad492a22ff050`/336; `parity_surface.sql`: functions `5d50b5ba…`/336, triggers `59b4283fc37e2bd9f997b84744139f27`/323, the other eight surfaces unchanged, `_combined` `acaa0b419371eb704cc531ad84769485`/3150, each equal to the local stack after a clean reset; `departments` triggers `departments_guard_write` and `departments_emit_change` on INSERT and UPDATE plus `departments_enforce_catalog_codes` and `departments_set_updated_at`; guard `md5(prosrc)` `040f97565abd992a60f03231d1c7fe85` and emitter `35d9ec237237cd98d4d6b6439a060f54`, both SECURITY DEFINER, ACL `{postgres=X/postgres}`; RPC `8365ffa3a5dbdce5da337e4e55896eb4`; `department_changed` at `sort_order` 937, global; catalog 71/625; 0 tenants, 0 departments, 0 events. No business row was written.
+
+### 2026-11-11 — Post-deploy records (Step 11)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 10 readings only (read 2026-11-11T09:29:03Z): 257 entries whose fingerprint recomputes to `ed3211ea…`, functions `5d50b5ba…`/336, structure `acaa0b41…`/3150.
+- Manifest `Live state` set from the same readings; the client RPC figure unchanged. `supabase/tests` holds 161 files whose literal `plan(N)` sum to 3058; `Suite **161 files / 3058 assertions**`.
+- DEP-1, DEP-2 and DEP-3 register rows replaced with the DEPLOYED text, nothing else changed.
+- `MASTER_API_CONTRACT.md` regenerated: only the `departments` row moves (`no | no` → `yes | conditional`); `ai-map.json` and `repository-index.md` regenerate byte-identical, LF.
+- Guard self-tests: cold-start 42/0, future-date 19/0, primary-ledger 13/0, status-contradiction 33/0; repository consistency CLEAN.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 ## Verification Notes
 
 None.
