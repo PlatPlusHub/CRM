@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -94,7 +94,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -591,7 +591,45 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-11 — Steps 1–5 applied
+
+- **Lifecycle:** allocate `4226c1e`, Approve `3c598c2` (APPROVAL_EVIDENCE PASS; 8 of 10 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–5** by the literal-step replay, every file absent or at its `03009ec` blob, each result at its pinned blob: migration `a8bf49fc65755692579727419b4baa191f7933c6`, test 162 `eac192dd08669d6c79ef2fed2190a7b4962e3984`, test 99 `00a89a03ad412ae26c5dd60c6e66d2eb4d414555`, register `eebc16542da97a89b60decb1a31b41296911bf81`, disposition `8a28aa9473d993af7b42dc748a44c6db910a976d`. Uncommitted until Step 9: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-11 — Pre-deploy readiness gate (Step 6)
+
+From the main checkout at HEAD `3c598c2`, Steps 1–5 applied and uncommitted, project-local CLI 3.0.0, the shared local stack, one logged script (15:35–15:37 Cairo):
+- **Bytes.** Migration SHA-256 `af0e95392ea4b77b482d7524b5b81e02a141cb88bbf9bae3933c3f4d967fa7a0`, md5 `b134eea648d20ff63c4014683cf326c5`, 4483 bytes; test 162 SHA-256 `1b62e1f1f7aa93fd5145addfb2d10a64d95732ca2c5c4135e4798847a997fa58`, md5 `ee930285654a4693abfd5c9ee1832ad3`, 9788 bytes; both LF (0 CR) and ASCII. Equal to Consumer Closure.
+- **Causal negative.** `db reset --version 20261111130000`: 257 migrations, ledger `ed3211eac78a43cdcf04f44235d5516d`; guard and trigger absent; catalog 71/625. Test 162 FAIL, failed 1, 3–7, 9–10, 16 and 18. Probes: at `aal1` the RPC refuses while the direct re-points of role, holder, branch scope, scope width and start land; at `aal2` a trainee grant becomes `ceo`; the lone owner's revoke is refused but their self-demotion leaves tenant T3 with 0 MANAGE_USERS holders. URA-1, URA-2 and URA-3 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (257): functions `5d50b5ba57ec83e66c6ad492a22ff050`/336, triggers `59b4283fc37e2bd9f997b84744139f27`/323, `_combined` `acaa0b419371eb704cc531ad84769485`/3150. After a clean reset (258, latest `20261111140000`, ledger `dec3a3dbe82e0568e8d98e5418f23436`): functions `1273cd1b48c879d51aedce0e9818f89b`/337, triggers `c83a7f55085f143723054abb9653d0d5`/324, `_combined` `48183b9ce5d79728a1a952f38cbfbbc3`/3152; policies, constraints, grants, columns, views, indexes, status transitions and RLS unchanged. Guard `md5(prosrc)` `10f82654759c36635b6d3a20edad5db6`, SECURITY DEFINER, ACL `{postgres=X/postgres}`; trigger `user_role_assignments_guard_change` BEFORE UPDATE; catalog 71/625.
+- **The emitter is unchanged:** `app.emit_role_change` `md5(prosrc)` `5b53fafd89abc36d83825cb1c94fec79` before and after on this stack, equal to Primary. Consumer Closure's `5e9af7ee7b8244da3a31326021c005b2` was measured on the prototype clone, whose checkout wrote the older migrations with CRLF line ends (`core.autocrlf`), so the stored body differs only in line ends; `scripts/parity_surface.sql` normalizes whitespace and is equal on both.
+- **Focused tests:** 162 19/19, 99 11/11, 51 13/13, 76 23/23, each PASS. Probes on the final bytes: every re-point of H1–H3 and the lone owner's self-demotion refused 23514, the live-end extension refused 23514; the expiry and the RPC revoke land; ADMIN-2 still refuses the lone owner's revoke and T3 keeps 1 MANAGE_USERS holder; controls hold (the tenant move is now refused by the guard before RLS).
+- **Mutants**, each proven installed by a changed fingerprint and restored to `fn=10f82654` with 19/19: M1 (guard dropped) 162 fails 1, 3–7, 9–10, 16, 18; M2 (live-end check removed) 7; M3 (start left movable) 6. M1–M3 killed.
+- **Generators, scope and diff.** The API-contract generator's output is identical to `MASTER_API_CONTRACT.md`; `generate-ai-map.ps1 -Check` exit 0. Only the five Step 1–5 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: Check 9 ×3 (count, latest, ledger fingerprint), Check 15 ×2 (files, assertions), RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (the grants surface through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`, 13:37–13:38 UTC): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co` (both connectors); ledger 257 `ed3211eac78a43cdcf04f44235d5516d`, latest `20261111130000`, target absent by version and by name; the guard function absent; `user_role_assignments` triggers `user_role_assignments_derive_actor` (BEFORE) and `user_role_assignments_emit_role_change` (AFTER); emitter `5b53fafd…`; 0 tenants, 0 role assignments, 0 events. `parity_surface.sql`: every surface equal to the local stack at 257, `_combined` `acaa0b419371eb704cc531ad84769485`/3150, equal to the recorded evidence.
+- **Predicted delta:** ledger 258 `dec3a3db…`; functions `1273cd1b…`/337; triggers `c83a7f55…`/324; `_combined` `48183b9c…`/3152; guard `10f82654…`; the guard trigger BEFORE UPDATE; emitter unchanged; business counts unchanged.
+
+### 2026-11-11 — Gate 2 (Step 7), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-302: migration `supabase/migrations/20261111140000_a_role_grant_changes_only_by_revoke_and_assign.sql`, SHA-256 `af0e95392ea4b77b482d7524b5b81e02a141cb88bbf9bae3933c3f4d967fa7a0`, md5 `b134eea648d20ff63c4014683cf326c5`, 4483 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo) and 2026-11-11 (slice 5 run mode 2, run through to both products' publish, promote and remote Certify ~14:48 Cairo), recorded outside this repository. Step 6 passed. The migration's top-level statements are one `create or replace function` with its `revoke` and one `create trigger`: it drops no table or column and deletes or rewrites no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-11 — Primary deployment (Step 8)
+
+Through the Primary write connector from this VS Code session, 13:39–13:40 UTC; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read, exact match** (inside `BEGIN TRANSACTION READ ONLY`, 13:39:18 UTC). HEAD `3c598c263f001c483db7d1790856dcd5c135d365`; migration SHA-256 `af0e95392ea4b77b482d7524b5b81e02a141cb88bbf9bae3933c3f4d967fa7a0`, md5 `b134eea648d20ff63c4014683cf326c5`, 4483 bytes, LF, ASCII; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 257 `ed3211eac78a43cdcf04f44235d5516d`, latest `20261111130000`, target absent by version and by name; the guard absent; triggers of `user_role_assignments` as in Step 6; 0 tenants, 0 role assignments, 0 events.
+- **Transmitted text** proven server-side in the same read: `md5` `b134eea648d20ff63c4014683cf326c5`, equal to the file. Applied once with `apply_migration` (`a_role_grant_changes_only_by_revoke_and_assign`).
+- **Guarded rename.** The connector stored version `20261111133931`: exactly one new row, one stored statement with md5 `b134eea6…` and 4483 bytes, no existing target. One guarded `UPDATE` (row count required 1) renamed it to `20261111140000`.
+- **Fresh reads** (13:39:46 UTC). Ledger 258 `dec3a3dbe82e0568e8d98e5418f23436`, latest `20261111140000`, equal to the migration files; `parity_surface.sql`: functions `1273cd1b48c879d51aedce0e9818f89b`/337, triggers `c83a7f55085f143723054abb9653d0d5`/324, the other eight surfaces unchanged, `_combined` `48183b9ce5d79728a1a952f38cbfbbc3`/3152, each equal to the local stack after a clean reset; `user_role_assignments` triggers `user_role_assignments_derive_actor`, `user_role_assignments_emit_role_change` and `user_role_assignments_guard_change` (BEFORE UPDATE); guard `md5(prosrc)` `10f82654759c36635b6d3a20edad5db6`, SECURITY DEFINER, ACL `{postgres=X/postgres}`; emitter `5b53fafd89abc36d83825cb1c94fec79`, unchanged; catalog 71/625; 0 tenants, 0 role assignments, 0 events. No business row was written.
+
+### 2026-11-11 — Post-deploy records (Step 9)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 8 readings only (read 2026-11-11T13:39:46Z): 258 entries whose fingerprint recomputes to `dec3a3db…`, functions `1273cd1b…`/337, structure `48183b9c…`/3152.
+- Manifest `Live state` set from the same readings; the client RPC figure unchanged. `supabase/tests` holds 162 files whose literal `plan(N)` sum to 3077; `Suite **162 files / 3077 assertions**`.
+- URA-1, URA-2 and URA-3 register rows replaced with the DEPLOYED text, nothing else changed.
+- `ai-map.json` and `repository-index.md` regenerate byte-identical, LF; the API-contract generator's output is identical to `MASTER_API_CONTRACT.md`.
+- Repository consistency CLEAN (exit 0). The four CI-only guard self-tests are not run here: `orvion-acceptance` runs them on the exact candidate SHA before `main` may move to it (Consumer Closure).
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 

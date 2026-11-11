@@ -122,9 +122,14 @@ select is(
 -- 8-10. IT IS A TIME TEST, NOT A DENIAL. The same row, backdated, grants everything. Without this
 --       the fix would be indistinguishable from breaking role grants outright.
 -- =============================================================================================
+-- The backdate is a session-less platform write (the fixture's own step): since Batch 6 slice 5
+-- (`20261111140000`) a signed-in session cannot move a grant's start, so the actor's claims are
+-- cleared for it and restored after.
+select set_config('request.jwt.claims', null, true);
 update public.user_role_assignments
    set starts_at = now() - interval '1 day'
  where id = '99000000-0000-0000-0000-0000000000b2';
+select set_config('request.jwt.claims','{"sub":"99000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 
 set local role authenticated;
 
