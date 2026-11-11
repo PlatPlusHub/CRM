@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -578,16 +578,16 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] The migration is the frozen bytes; `check: blob supabase/migrations/20261111140000_a_role_grant_changes_only_by_revoke_and_assign.sql a8bf49fc65755692579727419b4baa191f7933c6`
-- [ ] Test 162 is the frozen bytes; `check: blob supabase/tests/162_a_role_grant_changes_only_by_revoke_and_assign_test.sql eac192dd08669d6c79ef2fed2190a7b4962e3984`
-- [ ] Test 99's backdate is a session-less fixture step; `check: blob supabase/tests/99_role_assignment_temporal_test.sql 00a89a03ad412ae26c5dd60c6e66d2eb4d414555`
-- [ ] The disposition record carries `user_role_assignments` AUDITED / ADVERSARIAL and coverage 48 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 8a28aa9473d993af7b42dc748a44c6db910a976d`
-- [ ] URA-1, URA-2 and URA-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-302"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **162 files / 3077 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @03009ec731caef57138c3b27e78cafa6a5af8f8f`
-- [ ] The role-change emitter's migration remains exact; `check: same supabase/migrations/202607055100_role_change_audit_and_cursor_authority.sql @03009ec731caef57138c3b27e78cafa6a5af8f8f`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 6 readiness gate and Step 7 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M3 are each killed with installation and restoration proven, and the causal negative is recorded.
+- [x] The migration is the frozen bytes; `check: blob supabase/migrations/20261111140000_a_role_grant_changes_only_by_revoke_and_assign.sql a8bf49fc65755692579727419b4baa191f7933c6`
+- [x] Test 162 is the frozen bytes; `check: blob supabase/tests/162_a_role_grant_changes_only_by_revoke_and_assign_test.sql eac192dd08669d6c79ef2fed2190a7b4962e3984`
+- [x] Test 99's backdate is a session-less fixture step; `check: blob supabase/tests/99_role_assignment_temporal_test.sql 00a89a03ad412ae26c5dd60c6e66d2eb4d414555`
+- [x] The disposition record carries `user_role_assignments` AUDITED / ADVERSARIAL and coverage 48 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 8a28aa9473d993af7b42dc748a44c6db910a976d`
+- [x] URA-1, URA-2 and URA-3 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-302"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **162 files / 3077 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @03009ec731caef57138c3b27e78cafa6a5af8f8f`
+- [x] The role-change emitter's migration remains exact; `check: same supabase/migrations/202607055100_role_change_audit_and_cursor_authority.sql @03009ec731caef57138c3b27e78cafa6a5af8f8f`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 6 readiness gate and Step 7 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M3 are each killed with installation and restoration proven, and the causal negative is recorded.
 
 ## Execution Log
 
@@ -645,15 +645,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft 63339ED1B2FA7B1A34054B46BB0A0ED38616FCCE3990F6573278913D37F578BC, allocated blob 45f9f535a19499ded909cebb4fe756d919f81e7e, the five literal outputs (migration, test 162, test 99, register and disposition), the recorded Step 6 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261111140000 to vrvtsxexkiiiivlkdxzp with the fresh post-deploy ledger, functions and structure equal to local, the Step 9 records (ledger evidence, manifest Live state and suite 162/3077, URA-1, URA-2, URA-3 DEPLOYED, API contract identical), regenerated discovery, unchanged native evaluator and role-change emitter migration, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt 9b61f9b0995934e08b158b39655c734a4649c3bee78eff0977431588ec921815, finishHead b9384f991e5210fc0ba1b185d8ca5237c59b9a81, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 9b61f9b0995934e08b158b39655c734a4649c3bee78eff0977431588ec921815 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
