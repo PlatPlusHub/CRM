@@ -465,6 +465,10 @@ Created when a passenger leaves a booking-item manifest. After issue, requires c
 
 Created for each legal-hold transition with actor and reason. Both are critical because they change destruction eligibility.
 
+## document_retention_policy_changed
+
+Created for each creation or change of a document type's retention policy (type, period, active flag or reason), on every door, with the actor and the previous and current values; an update that moves none of them records nothing. Critical because a period decides destruction eligibility, as the legal hold does (RET-4, SPEC-305).
+
 ---
 
 # Supplier Events
