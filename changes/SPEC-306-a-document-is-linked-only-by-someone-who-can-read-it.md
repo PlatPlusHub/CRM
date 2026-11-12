@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -96,7 +96,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -604,8 +604,43 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-12 — Steps 1–5 applied
 
+- **Lifecycle:** allocate `d08a944`, Approve `8c917ee` (APPROVAL_EVIDENCE PASS; 9 of 11 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–5** by the literal-step replay, each result at its pinned blob: migration `f61e88618e7092a2eb13d78fb42f08820b2c80f0`, test 165 `3628685dd2c90e7aa0e8f2979fd36ccc9327177d`, canon 27 `609c2a90947eb29b7e56ca7aa5ceecfd2832ae98`, register `3048e1ceeac1c0131febd63bf0d4fb09e861ff80`, disposition `57392a42d2d6879b77c0d2016cb10e1735028afc`; 0 mismatches. Uncommitted until Step 9: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-12 — Pre-deploy readiness gate (Step 6)
+
+From the main checkout at HEAD `8c917ee`, Steps 1–5 applied and uncommitted, project-local CLI 3.0.0, the local stack recreated by the rig, one logged script (17:33–17:35 Cairo):
+- **Bytes.** Migration SHA-256 `5bfb8e52155d367b5aab3e516e7b295d2ea30b3f0589df935396cbd0a37af9f3`, md5 `149882262bc6f900927121fcc13005b4`, 4684 bytes; test 165 SHA-256 `0d20b1d701ed1e351b6613cbdecc371cb2a26a7f786e6ab1def8a92aa3b7612e`, md5 `a27697b8d7f1ad5f5812e7605f6f78e7`, 12594 bytes; both LF (0 CR) and ASCII. Equal to Consumer Closure.
+- **Causal negative.** `db reset --version 20261111150000`: 259 migrations, ledger `cfd3fcd7719bb2b519efd4bf700636ac`; both functions absent, three triggers on `document_links`; catalog 71/626. Test 165 FAIL at assertion 1 (the functions are absent). Probes: the Giza employee links Suez's passport scan and invoice onto their own booking, and re-points their own ticket link at the scan, and reads each document, its version and its storage path; a confidential document stays hidden; a moved ticket link leaves the events unchanged. DOC-9 and DOC-10 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (259): functions `e11c0124eec937fa08c1f7fe567b1249`/339, triggers `b5c21e213844e603ed5e1a6f9b0be455`/326, `_combined` `0e398aeac8e622fabeda83ac1900bf9d`/3156. After a clean reset (260, latest `20261112150000`, ledger `5f6e412ee282edaf1e16346c3d5b5805`): functions `73b0bbffade0a788aff53c10266a97dc`/341, triggers `8f39469bf723f0ea53cccb3c96fb65fd`/328, `_combined` `4a7b00b15007fbdb9072203d1f46ad19`/3160; the other eight surfaces unchanged. Guard `md5(prosrc)` `692eee1f6c5a0944a5d06e18f5a3a655`, SECURITY INVOKER; emitter `57bdf4c9574caf29f59c651b32dc7888`, SECURITY DEFINER; each ACL `{postgres=X/postgres}`; triggers `document_links_guard_document_readable` and `document_links_emit_move` added; catalog 71/626.
+- **Focused tests:** 165 16/16, 28 10/10, 82 21/21, 48 12/12, each PASS. Probes on the final bytes: the three links and the re-point refused ("a document can be linked only by someone who can already read it"), the moved ticket link recorded once (events 12 → 13), the RPC upload still links and records (events +2), the `aal2` owner links, the `aal1` owner refused (MFA).
+- **Mutants**, each proven installed and restored: M1 (guard trigger dropped) 165 fails 1, 4–7, 12, 13; M2 (guard as SECURITY DEFINER) 2, 4–7, 12, 13; M3 (emitter dropped) 1, 12, 13; M4 (emitter records a no-change update) 13; the causal negative (both triggers dropped) 1, 4–7, 12, 13. All killed; the restored shape equal (guard `dcb651fa…`, invoker, emitter `910d0cfb…`, 5 triggers).
+- **Generators, scope and diff.** The API-contract generator reproduces `MASTER_API_CONTRACT.md` exactly, as Consumer Closure states; `generate-ai-map.ps1 -Check` exit 0. Only the five Step 1–5 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: 259 vs 260 migrations, latest, ledger fingerprint, 164 vs 165 files, 3101 vs 3117 assertions, RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (15:42 UTC by the server clock; the grants surface through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 259 `cfd3fcd7719bb2b519efd4bf700636ac`, latest `20261111150000`, target absent by version and by name; both functions absent; `document_links` triggers `document_links_derive_created_by`, `document_links_enforce_document_subscription_gate`, `document_links_guard_write_capability`; `document_linked` at 56; catalog 71/626; 0 tenants, 0 documents, 0 links, 0 events. `parity_surface.sql`: every surface equal to the local stack at 259, `_combined` `0e398aeac8e622fabeda83ac1900bf9d`/3156, equal to the recorded evidence.
+- **Predicted delta:** ledger 260 `5f6e412e…`; functions `73b0bbff…`/341; triggers `8f39469b…`/328; `_combined` `4a7b00b1…`/3160; guard `692eee1f…`; emitter `57bdf4c9…`; the two new triggers; catalog 71/626 unchanged; business counts unchanged.
+
+### 2026-11-12 — Gate 2 (Step 7), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-306: migration `supabase/migrations/20261112150000_a_document_is_linked_only_by_someone_who_can_read_it.sql`, SHA-256 `5bfb8e52155d367b5aab3e516e7b295d2ea30b3f0589df935396cbd0a37af9f3`, md5 `149882262bc6f900927121fcc13005b4`, 4684 bytes, to Primary `vrvtsxexkiiiivlkdxzp` only, under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo), 2026-11-11 (Batch 6 decisions 1-9 ~19:50 Cairo) and 2026-11-12 (priority order waiving no gate ~12:20 Cairo; slice 8 in run mode 2 ~17:02 Cairo), recorded outside this repository. Step 6 passed. The migration's top-level statements are two `create or replace function`, each with its `revoke`, and two `create trigger`: it drops no table or column and deletes or rewrites no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-12 — Primary deployment (Step 8)
+
+Through the Primary write connector from this VS Code session, 15:43–15:44 UTC by the server clock; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read, exact match** (inside `BEGIN TRANSACTION READ ONLY`, 15:43:44 UTC). HEAD `8c917ee89b0646f81ec08c6bcfb0d12165c4aaf8`; migration SHA-256 `5bfb8e52155d367b5aab3e516e7b295d2ea30b3f0589df935396cbd0a37af9f3`, md5 `149882262bc6f900927121fcc13005b4`, 4684 bytes, LF, ASCII; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 259 `cfd3fcd7719bb2b519efd4bf700636ac`, latest `20261111150000`, target absent by version and by name; both functions absent; triggers of `document_links` as in Step 6; 0 tenants, 0 documents, 0 links, 0 events.
+- **Transmitted text** proven server-side in the same read: `md5` `149882262bc6f900927121fcc13005b4`, equal to the file. Applied once with `apply_migration` (`a_document_is_linked_only_by_someone_who_can_read_it`).
+- **Guarded rename.** The connector stored version `20261112154358`: exactly one new row, one stored statement with md5 `14988226…` and 4684 bytes, no existing target. One guarded `UPDATE` (row count required 1) renamed it to `20261112150000`.
+- **Fresh reads** (15:44:21 UTC). Ledger 260 `5f6e412ee282edaf1e16346c3d5b5805`, latest `20261112150000`, equal to the migration files; `parity_surface.sql`: functions `73b0bbffade0a788aff53c10266a97dc`/341, triggers `8f39469bf723f0ea53cccb3c96fb65fd`/328, the other eight surfaces unchanged, `_combined` `4a7b00b15007fbdb9072203d1f46ad19`/3160, each equal to the local stack after a clean reset; guard `md5(prosrc)` `692eee1f6c5a0944a5d06e18f5a3a655`, SECURITY INVOKER, and emitter `57bdf4c9574caf29f59c651b32dc7888`, SECURITY DEFINER, each ACL `{postgres=X/postgres}`; triggers `document_links_guard_document_readable` (BEFORE INSERT OR UPDATE) and `document_links_emit_move` (AFTER UPDATE) added to the three; catalog 71/626 with `document_linked` at 56; 0 tenants, 0 documents, 0 links, 0 events. No business row was written.
+
+### 2026-11-12 — Post-deploy records (Step 9)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 8 readings only (read 2026-11-12T15:44:21Z): 260 entries whose fingerprint recomputes to `5f6e412e…`, functions `73b0bbff…`/341, structure `4a7b00b1…`/3160.
+- Manifest `Live state` set from the same readings; the client RPC figure unchanged. `supabase/tests` holds 165 files whose literal `plan(N)` sum to 3117; `Suite **165 files / 3117 assertions**`.
+- DOC-9 and DOC-10 register rows replaced with the DEPLOYED text, nothing else changed.
+- `MASTER_API_CONTRACT.md` regenerated byte-identical (80 RPC endpoints), as Consumer Closure states; `ai-map.json` and `repository-index.md` regenerate byte-identical, LF. Repository consistency CLEAN.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 ## Verification Notes
 
 None.

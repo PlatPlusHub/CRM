@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-12T08:19:26Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-305 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-305 (owner's instructions of 2026-11-08, 2026-11-11 and 2026-11-12), effective after the recorded Step 8 readiness gate. Prewrite recheck matched exactly: HEAD 42867624c888f314f11c3d29cf7e89a766f44697; migration SHA-256 c2a07757a5f6010e55999a78bce551327173dcccffa6904b6863faf841e1c506, MD5 445914a298cb4e053a71017048fbddfd, 5531 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 258 dec3a3dbe82e0568e8d98e5418f23436 with the target absent by version and by name; scripts/parity_surface.sql combined 48183b9ce5d79728a1a952f38cbfbbc3/3152; app.guard_document_retention_policy_write and app.emit_document_retention_policy_change absent; document_retention_policies triggers derive_created_by, enforce_catalog_codes, enforce_subscription_write_gate, set_updated_at; 0 tenants, 0 retention policies, 0 documents, 0 versions. The transmitted text was proven server-side (MD5 445914a298cb4e053a71017048fbddfd) and applied once. The connector's temporary version 20261112081912 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261111150000. Post-write: ledger 259 cfd3fcd7719bb2b519efd4bf700636ac, equal to the migration files; functions e11c0124eec937fa08c1f7fe567b1249/339; scripts/parity_surface.sql combined 0e398aeac8e622fabeda83ac1900bf9d/3156 with only functions (+2) and triggers (+2) moved, each equal to the local stack after a clean reset; app.guard_document_retention_policy_write md5(prosrc) 4f51b82e640f070ad91ed6e61f6dfb48 and app.emit_document_retention_policy_change 221826baf9571d7b9a34882c9f754be4, each SECURITY DEFINER, ACL {postgres=X/postgres}; triggers document_retention_policies_guard_write (BEFORE INSERT OR UPDATE) and document_retention_policies_emit_change (AFTER INSERT OR UPDATE); catalog 71/626 with document_retention_policy_changed at 938; 0 tenants, 0 retention policies, 0 documents, 0 versions and 0 events. Secondary was not contacted.",
+  "read_at": "2026-11-12T15:44:21Z",
+  "read_via": "Fresh Primary Supabase connector reads after the SPEC-306 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-306 (owner's instructions of 2026-11-08, 2026-11-11 and 2026-11-12), effective after the recorded Step 6 readiness gate. Prewrite recheck matched exactly: HEAD 8c917ee89b0646f81ec08c6bcfb0d12165c4aaf8; migration SHA-256 5bfb8e52155d367b5aab3e516e7b295d2ea30b3f0589df935396cbd0a37af9f3, MD5 149882262bc6f900927121fcc13005b4, 4684 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 259 cfd3fcd7719bb2b519efd4bf700636ac with the target absent by version and by name; scripts/parity_surface.sql combined 0e398aeac8e622fabeda83ac1900bf9d/3156; app.guard_document_link_readable and app.emit_document_link_move absent; document_links triggers derive_created_by, enforce_document_subscription_gate, guard_write_capability; 0 tenants, 0 documents, 0 links, 0 events. The transmitted text was proven server-side (MD5 149882262bc6f900927121fcc13005b4) and applied once. The connector's temporary version 20261112154358 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261112150000. Post-write: ledger 260 5f6e412ee282edaf1e16346c3d5b5805, equal to the migration files; functions 73b0bbffade0a788aff53c10266a97dc/341; scripts/parity_surface.sql combined 4a7b00b15007fbdb9072203d1f46ad19/3160 with only functions (+2) and triggers (+2) moved, each equal to the local stack after a clean reset; app.guard_document_link_readable md5(prosrc) 692eee1f6c5a0944a5d06e18f5a3a655, SECURITY INVOKER, and app.emit_document_link_move 57bdf4c9574caf29f59c651b32dc7888, SECURITY DEFINER, each ACL {postgres=X/postgres}; triggers document_links_guard_document_readable (BEFORE INSERT OR UPDATE) and document_links_emit_move (AFTER UPDATE); catalog 71/626 unchanged; 0 tenants, 0 documents, 0 links and 0 events. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "42867624c888f314f11c3d29cf7e89a766f44697",
-  "migration_count": 259,
-  "ledger_fingerprint": "cfd3fcd7719bb2b519efd4bf700636ac",
-  "function_surface_hash": "e11c0124eec937fa08c1f7fe567b1249",
-  "function_count": 339,
-  "structural_surface_hash": "0e398aeac8e622fabeda83ac1900bf9d",
-  "structural_object_count": 3156,
+  "repository_head": "8c917ee89b0646f81ec08c6bcfb0d12165c4aaf8",
+  "migration_count": 260,
+  "ledger_fingerprint": "5f6e412ee282edaf1e16346c3d5b5805",
+  "function_surface_hash": "73b0bbffade0a788aff53c10266a97dc",
+  "function_count": 341,
+  "structural_surface_hash": "4a7b00b15007fbdb9072203d1f46ad19",
+  "structural_object_count": 3160,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -271,6 +271,7 @@
     "20261111120000_a_placement_changes_only_with_authority_and_a_record",
     "20261111130000_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record",
     "20261111140000_a_role_grant_changes_only_by_revoke_and_assign",
-    "20261111150000_a_retention_period_changes_only_with_step_up_and_a_record"
+    "20261111150000_a_retention_period_changes_only_with_step_up_and_a_record",
+    "20261112150000_a_document_is_linked_only_by_someone_who_can_read_it"
   ]
 }

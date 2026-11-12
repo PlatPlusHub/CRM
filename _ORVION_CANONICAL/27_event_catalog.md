@@ -677,6 +677,8 @@ Severity: info
 
 Severity: info
 
+Created when `app.upload_document` links the document it has just created, and when a link is moved by UPDATE to another document or target, with the link id and the previous and current document and target; an update that moves neither records nothing (DOC-10, SPEC-306). A new link is attributed by its own `created_by`.
+
 ## document_version_created
 
 Severity: info
