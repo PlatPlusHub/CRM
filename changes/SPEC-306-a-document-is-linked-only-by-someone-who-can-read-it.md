@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -590,17 +590,17 @@ Post-Implementation Proof Obligation: All of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] The migration is the frozen bytes; `check: blob supabase/migrations/20261112150000_a_document_is_linked_only_by_someone_who_can_read_it.sql f61e88618e7092a2eb13d78fb42f08820b2c80f0`
-- [ ] Test 165 is the frozen bytes; `check: blob supabase/tests/165_a_document_is_linked_only_by_someone_who_can_read_it_test.sql 3628685dd2c90e7aa0e8f2979fd36ccc9327177d`
-- [ ] Canon 27 says what `document_linked` now also records; `check: has _ORVION_CANONICAL/27_event_catalog.md "and when a link is moved by UPDATE to another document or target"`
-- [ ] The disposition record carries `document_links` AUDITED / ADVERSARIAL and coverage 51 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 57392a42d2d6879b77c0d2016cb10e1735028afc`
-- [ ] DOC-9 and DOC-10 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-306"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **165 files / 3117 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @789e05660930d98df678dd9a1ba90bc08bfb5c15`
-- [ ] The document read scope migration remains exact; `check: same supabase/migrations/202607052300_document_read_scope.sql @789e05660930d98df678dd9a1ba90bc08bfb5c15`
-- [ ] The generated API contract remains exact; `check: same reports/master/MASTER_API_CONTRACT.md @789e05660930d98df678dd9a1ba90bc08bfb5c15`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 6 readiness gate and Step 7 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M4 are each killed with installation proven and the restored shape read, and the causal negative is recorded.
+- [x] The migration is the frozen bytes; `check: blob supabase/migrations/20261112150000_a_document_is_linked_only_by_someone_who_can_read_it.sql f61e88618e7092a2eb13d78fb42f08820b2c80f0`
+- [x] Test 165 is the frozen bytes; `check: blob supabase/tests/165_a_document_is_linked_only_by_someone_who_can_read_it_test.sql 3628685dd2c90e7aa0e8f2979fd36ccc9327177d`
+- [x] Canon 27 says what `document_linked` now also records; `check: has _ORVION_CANONICAL/27_event_catalog.md "and when a link is moved by UPDATE to another document or target"`
+- [x] The disposition record carries `document_links` AUDITED / ADVERSARIAL and coverage 51 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 57392a42d2d6879b77c0d2016cb10e1735028afc`
+- [x] DOC-9 and DOC-10 are fixed and deployed in the register; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-306"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **165 files / 3117 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @789e05660930d98df678dd9a1ba90bc08bfb5c15`
+- [x] The document read scope migration remains exact; `check: same supabase/migrations/202607052300_document_read_scope.sql @789e05660930d98df678dd9a1ba90bc08bfb5c15`
+- [x] The generated API contract remains exact; `check: same reports/master/MASTER_API_CONTRACT.md @789e05660930d98df678dd9a1ba90bc08bfb5c15`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the authorized migration and at most the one guarded ledger rename, with no business-data write, after a recorded Step 6 readiness gate and Step 7 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M4 are each killed with installation proven and the restored shape read, and the causal negative is recorded.
 
 ## Execution Log
 
@@ -655,15 +655,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft D4725E3B87816DFDC5D442FC5B8C094189E9C27E2C9EF9A7CB94DF51D654EF2B, allocated blob a8a7c3a10bd83102e303c016a04934b5206aa0e9, the five literal outputs (migration, test 165, canon 27, register and disposition), the recorded Step 6 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261112150000 to vrvtsxexkiiiivlkdxzp with the fresh post-deploy ledger, functions and structure equal to local, the Step 9 records (ledger evidence, manifest Live state and suite 165/3117, DOC-9 and DOC-10 DEPLOYED, API contract identical), regenerated discovery, unchanged native evaluator, document read scope migration and API contract, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt 88b4d8fb99758da732cedc5af658fe0eacde8e4073acf87f470f0e44d0b3b989, finishHead f96318fbea22213d84ef726e410a63e29b023c45, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 88b4d8fb99758da732cedc5af658fe0eacde8e4073acf87f470f0e44d0b3b989 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
