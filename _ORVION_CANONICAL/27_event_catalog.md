@@ -487,6 +487,8 @@ Severity: info
 
 Severity: info
 
+Created by every internal supplier link, through `app.link_internal_supplier` or the table door, with the actor, the link id and the provider and requester org units, and the reason the RPC was given (ISL-1, SPEC-308). A link is never changed or deleted: a new provider is a new link (ISL-2).
+
 ## supplier_credit_threshold_exceeded
 
 Created when a supplier's outstanding payable, in the currency its credit ceiling is denominated in, rises above that ceiling. The ceiling WARNS; it never refuses (owner decision 2026-09-04, SUP-4b). Emitted once per breach, not once per write: it is suppressed while the most recent threshold event for the supplier is already this one.
