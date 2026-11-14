@@ -114,6 +114,9 @@ select is(
 -- 7-11. INDIVIDUAL GRANT ADDS A CAPABILITY, AND ONLY THAT ONE.
 -- =============================================================================================
 reset role;
+-- Since Batch 6 slice 51 (`20261114130000`) `app.guard_permission_grant_authority` charges MANAGE_PERMISSIONS to a
+-- signed-in writer, so the leftover claim is CLEARED: every fixture write to it below is a SYSTEM path.
+select set_config('request.jwt.claims', null, true);
 insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect, reason)
 select '92000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000011', p.id, 'grant', 'test'
 from public.permissions p where p.key='MANAGE_SUPPLIER_CREDIT';
@@ -153,6 +156,7 @@ select throws_ok(
 -- 12-15. DENY OVERRIDES A ROLE BUNDLE -- the "Finance Manager minus Refund Approval" requirement.
 -- =============================================================================================
 reset role;
+select set_config('request.jwt.claims', null, true);
 insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect, reason)
 select '92000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000011', p.id, 'deny', 'test'
 from public.permissions p where p.key='CREATE_LEAD';
@@ -178,6 +182,7 @@ select is(
   'ISOLATION: ...and exactly one capability was removed');
 
 reset role;
+select set_config('request.jwt.claims', null, true);
 insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect, reason)
 select '92000000-0000-0000-0000-000000000001','92000000-0000-0000-0000-000000000011', p.id, 'grant', 'conflicting'
 from public.permissions p where p.key='CREATE_LEAD';
@@ -191,6 +196,7 @@ select is(app.has_permission('CREATE_LEAD'), false,
 -- 16-18. REVOCATION AND EXPIRY. A capability must be removable, and a lapsed grant must lapse.
 -- =============================================================================================
 reset role;
+select set_config('request.jwt.claims', null, true);
 update public.user_permission_grants g set is_active = false
 from public.permissions p where p.id = g.permission_id and p.key = 'CREATE_LEAD' and g.effect = 'deny';
 select set_config('request.jwt.claims','{"sub":"92000000-0000-0000-0000-0000000000a1"}', true);
@@ -200,6 +206,7 @@ select is(app.has_permission('CREATE_LEAD'), true,
   'REVOKE: deactivating the deny restores the role bundle -- revocation is is_active=false, not a delete');
 
 reset role;
+select set_config('request.jwt.claims', null, true);
 -- Both bounds move: the `user_permission_grants_period` CHECK refuses ends_at <= starts_at, and it
 -- refused the first draft of this very statement. An expired grant is a real period in the past, not
 -- an end date before its own beginning.
@@ -222,11 +229,13 @@ select throws_ok(
 -- 19. THE PLAN GATE STILL WINS. A tenant administrator must not be able to grant past a commercial
 --     entitlement -- canon 28: "Plan denial overrides user role permission".
 -- =============================================================================================
--- First, tenant isolation on the new table itself. The session is still acting as TENANT 1's
--- employee, so `derive_created_by` stamps a tenant-1 actor onto a tenant-2 row -- and the composite
+-- First, tenant isolation on the new table itself. The session acts as TENANT 1's OWNER at aal2 (since
+-- Batch 6 slice 51 an employee is refused MANAGE_PERMISSIONS before the FK is ever reached), so
+-- `derive_created_by` stamps a tenant-1 actor onto a tenant-2 row -- and the composite
 -- FK refuses it. This is TENANT-1's rule holding on a table added years after it, and it is asserted
 -- rather than worked around because the first draft of the statement below hit it for real.
 reset role;
+select set_config('request.jwt.claims','{"sub":"92000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 select throws_ok(
   $$insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect)
     select '92000000-0000-0000-0000-000000000002','92000000-0000-0000-0000-000000000013', p.id, 'grant'
@@ -277,6 +286,7 @@ select throws_ok(
 --        asserted first, so a mutation that silently did nothing cannot pass as a result.
 -- =============================================================================================
 reset role;
+select set_config('request.jwt.claims', null, true);
 update public.user_permission_grants g set is_active = true
 from public.permissions p where p.id = g.permission_id and p.key = 'CREATE_LEAD' and g.effect = 'deny';
 

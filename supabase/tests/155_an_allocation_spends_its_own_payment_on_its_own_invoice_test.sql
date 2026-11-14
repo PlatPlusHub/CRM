@@ -19,7 +19,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(68);
+select plan(69);
 
 -- ---------------------------------------------------------------------------------------------
 -- Fixture: one tenant (owner + employee), two customers, two bookings the employee owns, five
@@ -471,12 +471,16 @@ select throws_ok($q$do $x$ begin
     execute 'set constraints all immediate';
   end $x$$q$,
   '23514','invoice 15500000-0000-0000-0000-0000000000e2 is paid and its allocations would total 300.0000 of 1000.0000: an allocation that settled it cannot be reduced (canon 26: no transition leaves paid)',
-  '64. ...and the platform cannot strand a paid invoice either: integrity, not authorization');update public.exchange_rates set rate=0.03 where id='15500000-0000-0000-0000-00000000ee02';
+  '64. ...and the platform cannot strand a paid invoice either: integrity, not authorization');
+-- Since Batch 6 slice 51 (`20261114120000`) a rate that recorded money cites cannot be rewritten at all.
+select throws_ok($$update public.exchange_rates set rate=0.03 where id='15500000-0000-0000-0000-00000000ee02'$$,
+  '23514','exchange rate 15500000-0000-0000-0000-00000000ee02 is cited by recorded money: set a new rate and record an adjustment',
+  '64b. the rate this payment and allocation cite cannot be rewritten under them, by the platform either');
 update public.payment_allocations set allocated_amount=allocated_amount where id='15500000-0000-0000-0000-00000000aa03';
 select is((select pa.allocated_amount_invoice_currency::text || '/' ||
                   (select count(*) from public.events e where e.entity_id=pa.id)::text
            from public.payment_allocations pa where pa.id='15500000-0000-0000-0000-00000000aa03'),
-  '100.0000/1', '65. after its rate row is edited, touching an allocation without changing its amount changes no money and records nothing');
+  '100.0000/1', '65. ...and touching an allocation without changing its amount changes no money and records nothing');
 
 -- =============================================================================================
 -- 66-68. Who reads the history, and the mechanism as installed.

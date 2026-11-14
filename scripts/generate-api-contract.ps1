@@ -104,11 +104,11 @@ select c.relname,
        case when has_table_privilege('authenticated', c.oid,'DELETE') then 'D' else '-' end as grants,
        case when exists (select 1 from pg_trigger t join pg_proc p on p.oid=t.tgfoid
                           where t.tgrelid=c.oid and not t.tgisinternal and (t.tgtype & 4)<>0
-                            and pg_get_functiondef(p.oid) ~ '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
+                            and case when p.prokind='f' then pg_get_functiondef(p.oid) end ~ '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
             then 'yes' else 'no' end as insert_capability_guard,
        case when exists (select 1 from pg_trigger t join pg_proc p on p.oid=t.tgfoid
                           where t.tgrelid=c.oid and not t.tgisinternal and (t.tgtype & 16)<>0
-                            and pg_get_functiondef(p.oid) ~ '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
+                            and case when p.prokind='f' then pg_get_functiondef(p.oid) end ~ '(app\.authorize|app\.has_permission|app\.require_lead_handler)')
             then 'conditional' else 'no' end as update_capability_guard,
        coalesce((select string_agg(pp.policyname, ', ' order by pp.policyname)
                    from pg_policies pp where pp.schemaname='public' and pp.tablename=c.relname), 'NONE') as policies

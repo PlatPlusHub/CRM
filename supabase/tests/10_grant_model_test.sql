@@ -294,6 +294,15 @@ select cmp_ok(
 -- table. The charge is UNCONDITIONAL for every signed-in caller, on INSERT and UPDATE and every column;
 -- its one exemption, the SESSION-LESS platform write, is pinned by `164_...`, and the slice's mutants
 -- remove the guard.
+--
+-- IT WENT FROM FOURTEEN TO SEVENTEEN ON 2026-11-14 (Batch 6 slice 51, `20261114120000`, `20261114130000`,
+-- `20261114140000`). `exchange_rates` joined through `app.guard_exchange_rate_write` (SET_EXCHANGE_RATE),
+-- `user_permission_grants` through `app.guard_permission_grant_authority` (MANAGE_PERMISSIONS, USR-3) and
+-- `catalog_values` through `app.guard_catalog_value_write` (MANAGE_TENANT_SETTINGS): each door now asks for the
+-- step-up its MFA-bound holders owe. `guard_write_capability` has no mapping for these tables. Each charge is
+-- UNCONDITIONAL for every signed-in caller, on INSERT and UPDATE and every column; the one exemption, the
+-- SESSION-LESS platform write, is pinned by `166_...`, `167_...` and `168_...`, and the slice's mutants remove
+-- each guard. The exchange-rate guard's citation refusal comes before the exemption and binds every writer.
 -- =============================================================================================
 select set_eq(
   $$select c.relname::text
@@ -309,9 +318,9 @@ select set_eq(
          select 1 from pg_trigger t2 join pg_proc p2 on p2.oid = t2.tgfoid
           where t2.tgrelid = c.oid and not t2.tgisinternal and (t2.tgtype & 4) <> 0
             and p2.proname = 'guard_write_capability')$$,
-  array['chart_of_accounts','departments','document_retention_policies','document_versions','invoices','lead_interactions','payment_allocations',
-        'payments','quotation_items','receipts','refunds','user_branch_assignments','user_role_assignments','users'],
-  'MEAS-2: exactly these FOURTEEN tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". Nine until 2026-09-20, when SPEC-203 gave users app.guard_membership_authority -- admissible only because that guard charges app.authorize unconditionally on every path and every column, and its only two exemptions, the session-less platform write and the activate_membership self-claim, are each pinned by a named assertion in 118_membership_authority_and_audit_test.sql. Eleven since 2026-10-13, when SPEC-278 gave chart_of_accounts app.guard_chart_account -- the same unconditional charge, its one session-less exemption pinned by 157_a_used_ledger_account_keeps_its_meaning_test.sql. Twelve since 2026-11-11, when SPEC-300 gave user_branch_assignments app.guard_placement_authority -- the same unconditional charge, its one session-less exemption pinned by 160_a_placement_changes_only_with_authority_and_a_record_test.sql. Thirteen since 2026-11-11, when Batch 6 slice 4 gave departments app.guard_department_write -- the same unconditional charge, its one session-less exemption pinned by 161_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record_test.sql. Fourteen since 2026-11-11, when Batch 6 slice 7 gave document_retention_policies app.guard_document_retention_policy_write -- the same unconditional charge, its one session-less exemption pinned by 164_a_retention_period_changes_only_with_step_up_and_a_record_test.sql');
+  array['catalog_values','chart_of_accounts','departments','document_retention_policies','document_versions','exchange_rates','invoices','lead_interactions','payment_allocations',
+        'payments','quotation_items','receipts','refunds','user_branch_assignments','user_permission_grants','user_role_assignments','users'],
+  'MEAS-2: exactly these SEVENTEEN tables are credited by a BESPOKE capability trigger rather than by guard_write_capability, so for each of them "credited" means "a human read its short-circuits". Nine until 2026-09-20, when SPEC-203 gave users app.guard_membership_authority -- admissible only because that guard charges app.authorize unconditionally on every path and every column, and its only two exemptions, the session-less platform write and the activate_membership self-claim, are each pinned by a named assertion in 118_membership_authority_and_audit_test.sql. Eleven since 2026-10-13, when SPEC-278 gave chart_of_accounts app.guard_chart_account -- the same unconditional charge, its one session-less exemption pinned by 157_a_used_ledger_account_keeps_its_meaning_test.sql. Twelve since 2026-11-11, when SPEC-300 gave user_branch_assignments app.guard_placement_authority -- the same unconditional charge, its one session-less exemption pinned by 160_a_placement_changes_only_with_authority_and_a_record_test.sql. Thirteen since 2026-11-11, when Batch 6 slice 4 gave departments app.guard_department_write -- the same unconditional charge, its one session-less exemption pinned by 161_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record_test.sql. Fourteen since 2026-11-11, when Batch 6 slice 7 gave document_retention_policies app.guard_document_retention_policy_write -- the same unconditional charge, its one session-less exemption pinned by 164_a_retention_period_changes_only_with_step_up_and_a_record_test.sql. Seventeen since 2026-11-14, when Batch 6 slice 51 gave exchange_rates, user_permission_grants and catalog_values their own step-up guards -- the same unconditional charge, each session-less exemption pinned by tests 166, 167 and 168.');
 
 select * from finish();
 rollback;

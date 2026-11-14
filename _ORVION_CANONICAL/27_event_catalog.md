@@ -291,6 +291,8 @@ Severity: security
 
 Severity: security
 
+`permission_granted` and `permission_revoked` are created when a user permission grant takes or leaves effect. When a live grant moves to another user, permission, effect or tenant, the old row is recorded leaving effect and the new row taking effect (RBAC-7, SPEC-307); an edit that changes no effect, such as a reason, records nothing.
+
 ---
 
 # Booking Events
@@ -645,6 +647,8 @@ Severity: info
 ## exchange_rate_set
 
 Severity: critical
+
+Created by every set of a rate and every change of its pair, rate or instant, with the rate id and the previous and current pair, rate and instant; previous is null when the rate is first set, and an update that moves none of them records nothing (FX-5, FX-6, SPEC-307). A rate that recorded money cites is never changed: a new rate is set and an `exchange_rate_adjustments` row records the correction.
 
 ## exchange_rate_adjustment_created
 

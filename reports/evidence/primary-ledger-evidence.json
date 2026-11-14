@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-12T15:44:21Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-306 migration was applied only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-306 (owner's instructions of 2026-11-08, 2026-11-11 and 2026-11-12), effective after the recorded Step 6 readiness gate. Prewrite recheck matched exactly: HEAD 8c917ee89b0646f81ec08c6bcfb0d12165c4aaf8; migration SHA-256 5bfb8e52155d367b5aab3e516e7b295d2ea30b3f0589df935396cbd0a37af9f3, MD5 149882262bc6f900927121fcc13005b4, 4684 bytes, LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 259 cfd3fcd7719bb2b519efd4bf700636ac with the target absent by version and by name; scripts/parity_surface.sql combined 0e398aeac8e622fabeda83ac1900bf9d/3156; app.guard_document_link_readable and app.emit_document_link_move absent; document_links triggers derive_created_by, enforce_document_subscription_gate, guard_write_capability; 0 tenants, 0 documents, 0 links, 0 events. The transmitted text was proven server-side (MD5 149882262bc6f900927121fcc13005b4) and applied once. The connector's temporary version 20261112154358 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261112150000. Post-write: ledger 260 5f6e412ee282edaf1e16346c3d5b5805, equal to the migration files; functions 73b0bbffade0a788aff53c10266a97dc/341; scripts/parity_surface.sql combined 4a7b00b15007fbdb9072203d1f46ad19/3160 with only functions (+2) and triggers (+2) moved, each equal to the local stack after a clean reset; app.guard_document_link_readable md5(prosrc) 692eee1f6c5a0944a5d06e18f5a3a655, SECURITY INVOKER, and app.emit_document_link_move 57bdf4c9574caf29f59c651b32dc7888, SECURITY DEFINER, each ACL {postgres=X/postgres}; triggers document_links_guard_document_readable (BEFORE INSERT OR UPDATE) and document_links_emit_move (AFTER UPDATE); catalog 71/626 unchanged; 0 tenants, 0 documents, 0 links and 0 events. Secondary was not contacted.",
+  "read_at": "2026-11-14T10:38:42Z",
+  "read_via": "Fresh Primary Supabase connector reads after the three SPEC-307 migrations were applied, in version order, only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-307 (owner's instructions of 2026-11-08, 2026-11-11, 2026-11-12 and 2026-11-14), effective after the recorded Step 18 readiness gate. Prewrite recheck matched exactly before each: HEAD 6a2d6f71ec7304609ba67b4960e6f538f4d909d7; migration SHA-256 f698a40717c89b5c866b74253cb5fff5d3d96fb5d682793b5fdbfb7c3bf14d69 (MD5 7499a1a5ac159a63a9e660d5a600b444, 3810 bytes), 412e8ccfb185abf6862a2f108b3f8e3300eddad40c4be490bc203a4ec3d74dbe (MD5 2a2ae979a9b852391e49b68bc903e841, 3646 bytes), 00f1b6eb9b15115323c08613c7a1da705aeb7a9373b13cbef0ac2cfe5cdf1f1b (MD5 c7db4d745876f18a8ec9617c2bf65275, 2374 bytes), each LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 260 5f6e412ee282edaf1e16346c3d5b5805 with the three targets absent by version and by name, then 261 5d6a9e9ad773a3546fe1b63c1191d4b4 and 262 8226bb2dc7987e394749de14c73f9243, each equal to the migration files through the previous one; scripts/parity_surface.sql combined 4a7b00b15007fbdb9072203d1f46ad19/3160 before; of the six functions only app.emit_permission_change (eef52c22b36f52254d780b27201b8b1c) present before; 0 tenants, 0 exchange rates, 0 permission grants, 626 catalog values, 0 events. Each transmitted text was proven server-side (its MD5 equal to the file) and applied once. The connector's temporary versions 20261114103649, 20261114103742 and 20261114103823 were each renamed by one guarded UPDATE (exactly one new row other than this contract's own versions, one stored statement with the file's MD5, no existing target) to 20261114120000, 20261114130000 and 20261114140000. Post-write: ledger 263 5df6fd8c73bbe79255e09e30bdc78378, equal to the migration files; functions 0b3b9c82bb521f6744950201471196a6/346; scripts/parity_surface.sql combined f87d6fee4ce1857bc3f35672c7ef8a4e/3169 with only functions (+5) and triggers (+4) moved, each equal to the local stack after a clean reset; md5(prosrc) app.guard_exchange_rate_write b32615cfc85296f7784460c5ebf8d430, app.emit_exchange_rate_set ae95d491d8c11cf6f3458591283c58f9, app.guard_permission_grant_authority 6d25488b68a3eceedfa00d29d29d2f4a, app.record_permission_change d29912102dd7eeca8efd2dcd678a2701, app.emit_permission_change 4fb7bbe5f7758b88713b292de80eb016, app.guard_catalog_value_write 2fc6f66be968999abd3152b3b15fbad6, each SECURITY DEFINER with ACL {postgres=X/postgres}; triggers exchange_rates_guard_write, exchange_rates_emit_set, user_permission_grants_guard_authority and catalog_values_guard_write added; catalog 71/626 unchanged; 0 tenants, 0 exchange rates, 0 permission grants and 0 events. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "8c917ee89b0646f81ec08c6bcfb0d12165c4aaf8",
-  "migration_count": 260,
-  "ledger_fingerprint": "5f6e412ee282edaf1e16346c3d5b5805",
-  "function_surface_hash": "73b0bbffade0a788aff53c10266a97dc",
-  "function_count": 341,
-  "structural_surface_hash": "4a7b00b15007fbdb9072203d1f46ad19",
-  "structural_object_count": 3160,
+  "repository_head": "6a2d6f71ec7304609ba67b4960e6f538f4d909d7",
+  "migration_count": 263,
+  "ledger_fingerprint": "5df6fd8c73bbe79255e09e30bdc78378",
+  "function_surface_hash": "0b3b9c82bb521f6744950201471196a6",
+  "function_count": 346,
+  "structural_surface_hash": "f87d6fee4ce1857bc3f35672c7ef8a4e",
+  "structural_object_count": 3169,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -272,6 +272,9 @@
     "20261111130000_a_department_stays_in_its_branch_and_changes_only_with_authority_and_a_record",
     "20261111140000_a_role_grant_changes_only_by_revoke_and_assign",
     "20261111150000_a_retention_period_changes_only_with_step_up_and_a_record",
-    "20261112150000_a_document_is_linked_only_by_someone_who_can_read_it"
+    "20261112150000_a_document_is_linked_only_by_someone_who_can_read_it",
+    "20261114120000_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited",
+    "20261114130000_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded",
+    "20261114140000_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code"
   ]
 }

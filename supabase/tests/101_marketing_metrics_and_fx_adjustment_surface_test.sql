@@ -90,7 +90,10 @@ insert into public.exchange_rates (id, tenant_id, from_currency_code, to_currenc
 select is(
   (select count(*)::int from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname in ('app','public','reporting')
-      and (p.prosrc like '%campaign_daily_metrics%' or p.prosrc like '%exchange_rate_adjustments%')),
+      and (p.prosrc like '%campaign_daily_metrics%' or p.prosrc like '%exchange_rate_adjustments%')
+      -- Re-reasoned at Batch 6 slice 51 (`20261114120000`): `app.guard_exchange_rate_write` only READS
+      -- exchange_rate_adjustments, to refuse rewriting a rate an adjustment cites. It is no door to that table.
+      and p.oid <> 'app.guard_exchange_rate_write'::regproc),
   0,
   'neither surface has ANY function consumer -- so the table door is not a bypass of an RPC door, it IS the door, and RLS is the complete enforcement layer');
 

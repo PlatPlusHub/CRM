@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -117,7 +117,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -1286,7 +1286,44 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 
 ## Execution Log
 
-None.
+### 2026-11-14 — Steps 1–17 applied
+
+- **Lifecycle:** allocate `61e8da7`, Approve `6a2d6f7` (APPROVAL_EVIDENCE PASS; 13 of 15 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–17** by the literal-step replay, each result at its pinned blob: migrations `2bd89afb09e54e94b067557baf03bfc62cdc30ee`, `fe62f40f4df3636db6693837564e84fc7a246a23`, `e0678f33c8e458b74af66f8e93ae1b7fc3300504`; tests 166 `ea86cc11ed685a1306cd6ad19eef21d6961a5f00`, 167 `286d02370f03aa8f9dc63df55ab60e626d1cf15c`, 168 `2fd246de59157743388bc55f7e94172e17899a7a`; moved tests 10 `942107d11b89dfa2a6c515f39995f26219e9f624`, 64 `0200e8aee0003948ba129a4bd57a3564b7006bd8`, 92 `ece170cfd15da7c102001687313d681cbef2917f`, 96 `dfa0b23e384fe29ec369008f4a60b419dc9a3b28`, 99 `3924adcf334844d94595721823f13082d82b67b2`, 101 `9d5f3784082bac2db3f047701c49116c76bb1d74`, 155 `d48cccf93cc1b20aa24bf3385704e1e8b712f0eb`; generator `a9e68fd40ca71f23b298ab2429a4abe0184c6028`; canon 27 `0a78f239febc8960c704a30f44a55517123ec57f`; register `069001d4477bf3ec2bddf0d8e8f7858378d29ccc`; disposition `415a82bc414669369fd7647ca163c5df0cb467f4`; 0 mismatches. Uncommitted until Step 21: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-14 — Pre-deploy readiness gate (Step 18)
+
+From the main checkout at HEAD `6a2d6f7`, Steps 1–17 applied and uncommitted, project-local CLI 3.0.0, the local stack recreated by the rig, one logged script (12:30–12:32 Cairo):
+- **Bytes**, all LF (0 CR) and ASCII, equal to Consumer Closure. Migration `20261114120000` SHA-256 `f698a40717c89b5c866b74253cb5fff5d3d96fb5d682793b5fdbfb7c3bf14d69`, md5 `7499a1a5ac159a63a9e660d5a600b444`, 3810 bytes; `20261114130000` SHA-256 `412e8ccfb185abf6862a2f108b3f8e3300eddad40c4be490bc203a4ec3d74dbe`, md5 `2a2ae979a9b852391e49b68bc903e841`, 3646 bytes; `20261114140000` SHA-256 `00f1b6eb9b15115323c08613c7a1da705aeb7a9373b13cbef0ac2cfe5cdf1f1b`, md5 `c7db4d745876f18a8ec9617c2bf65275`, 2374 bytes. Test 166 SHA-256 `b0c53221bc95f88caa8a8b255479fb3384674bdb79703eb104533d23926698c7`, md5 `647a4c0bd6f0e703f80884e97ba1efc7`, 8597 bytes; 167 `241e1a745cefb2a3c9d446a58f056e5610eb01719ba88c1f9d646b0b17bf890a`, md5 `56d1aef3559cc4f068ee4d4038916abf`, 6621 bytes; 168 `456abbb4d4f7227265bd54abc92f7cb4ca78f684975d3237388233ef4dab6668`, md5 `89a1a017384e9bc454e2090c40759445`, 6173 bytes.
+- **Causal negative.** `db reset --version 20261112150000`: 260 migrations, ledger `5f6e412ee282edaf1e16346c3d5b5805`; of the six functions only `app.emit_permission_change` (`eef52c22b36f52254d780b27201b8b1c`); nine triggers on the three tables; catalog 71/626. Tests 166 FAIL [1–5, 7–8, 10–12], 167 FAIL [1–3, 5, 9–10], 168 FAIL [1–7, 9–10]. Probes: an `aal1` finance manager sets a rate; a cited rate is rewritten 48.5 → 99, re-dated and its pair flipped, unrecorded; an `aal1` ceo grants itself (USR-3); live grants re-pointed to another user, another permission and a deny, unrecorded; an `aal1` owner adds a tenant value; the owner adds values to two system families, claims `is_system`, renames and moves a used value. FX-5, FX-6, USR-3, RBAC-7, CAT-7, CAT-8 and CAT-9 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (260): functions `73b0bbffade0a788aff53c10266a97dc`/341, triggers `8f39469bf723f0ea53cccb3c96fb65fd`/328, `_combined` `4a7b00b15007fbdb9072203d1f46ad19`/3160. After a clean reset (263, latest `20261114140000`, ledger `5df6fd8c73bbe79255e09e30bdc78378`): functions `0b3b9c82bb521f6744950201471196a6`/346, triggers `d241997ceaab37c02327503b4e2587cb`/332, `_combined` `f87d6fee4ce1857bc3f35672c7ef8a4e`/3169; the other eight surfaces unchanged.
+- **Shape.** `md5(prosrc)`: `guard_exchange_rate_write` `b32615cfc85296f7784460c5ebf8d430`, `emit_exchange_rate_set` `ae95d491d8c11cf6f3458591283c58f9`, `guard_permission_grant_authority` `6d25488b68a3eceedfa00d29d29d2f4a`, `record_permission_change` `d29912102dd7eeca8efd2dcd678a2701`, `emit_permission_change` `4fb7bbe5f7758b88713b292de80eb016`, `guard_catalog_value_write` `2fc6f66be968999abd3152b3b15fbad6`; each SECURITY DEFINER, ACL `{postgres=X/postgres}`. Triggers added: `exchange_rates_guard_write`, `exchange_rates_emit_set`, `user_permission_grants_guard_authority`, `catalog_values_guard_write` (thirteen on the three tables); catalog 71/626.
+- **Focused tests:** 166 12/12, 167 10/10, 168 11/11, and the moved tests 10 9/9, 64 21/21, 92 26/26, 96 32/32, 99 11/11, 101 21/21, 155 69/69, each PASS. Probes on the final bytes: every `aal1` write refused (MFA), every no-permission write refused by `app.authorize`, the cited rate's rewrite and re-date refused, grant moves recorded (events +2), the system families, `is_system`, the rename and the move refused; deletes stay ungranted; the other tenant reads 0 rates.
+- **Mutants**, each proven installed and restored: 166 M1 (guard trigger dropped) fails 1–5, 7, 8, 10; M2 (citation check removed) 4, 5, 8, 10; M3 (step-up through `has_permission` only) 2, 3; M4 (session-less writer exempt) 8, 10; M5 (emitter dropped) 1, 11, 12; CN (both triggers dropped) 1–5, 7, 8, 10–12. 167 M1 1–3, 10; M2 2, 3; M3 (move unrecorded) 5, 9; CN 1–3, 5, 9, 10. 168 M1 1–7, 9, 10; M2 2, 3; M3 (`is_system` check removed) 5; M4 (family check removed) 4; M5 (family and code may change) 6, 7, 10; CN 1–7, 9, 10. Thirteen mutants and three causal negatives, all killed; the restored shapes equal.
+- **Generators, scope and diff.** The API-contract generator differs from `MASTER_API_CONTRACT.md` only in the three rows of Consumer Closure (`catalog_values`, `exchange_rates`, `user_permission_grants`: no/no → yes/conditional); `generate-ai-map.ps1 -Check` exit 0. Only the seventeen Step 1–17 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: 260 vs 263 migrations, latest, ledger fingerprint, 165 vs 168 files, 3117 vs 3151 assertions, RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (10:33:31 UTC by the server clock; the grants surface through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 260 `5f6e412ee282edaf1e16346c3d5b5805`, latest `20261112150000`, the three targets absent by version and by name; of the six functions only `app.emit_permission_change` `eef52c22b36f52254d780b27201b8b1c`, SECURITY DEFINER, `{postgres=X/postgres}` (the five new ones absent); the nine triggers of the three tables equal to the local stack at 260; `exchange_rate_set` at 61; catalog 71/626; 0 tenants, 0 rates, 0 grants, 0 events. `parity_surface.sql`: every surface equal to the local stack at 260, `_combined` `4a7b00b15007fbdb9072203d1f46ad19`/3160, equal to the recorded evidence.
+- **Predicted delta:** ledger 263 `5df6fd8c…`; functions `0b3b9c82…`/346; triggers `d241997c…`/332; `_combined` `f87d6fee…`/3169; the six function hashes above; the four new triggers; catalog 71/626 unchanged; business counts unchanged.
+
+### 2026-11-14 — Gate 2 (Step 19), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-307, to Primary `vrvtsxexkiiiivlkdxzp` only, in version order: `supabase/migrations/20261114120000_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited.sql`, SHA-256 `f698a40717c89b5c866b74253cb5fff5d3d96fb5d682793b5fdbfb7c3bf14d69`, md5 `7499a1a5ac159a63a9e660d5a600b444`, 3810 bytes; `supabase/migrations/20261114130000_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded.sql`, SHA-256 `412e8ccfb185abf6862a2f108b3f8e3300eddad40c4be490bc203a4ec3d74dbe`, md5 `2a2ae979a9b852391e49b68bc903e841`, 3646 bytes; `supabase/migrations/20261114140000_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code.sql`, SHA-256 `00f1b6eb9b15115323c08613c7a1da705aeb7a9373b13cbef0ac2cfe5cdf1f1b`, md5 `c7db4d745876f18a8ec9617c2bf65275`, 2374 bytes; under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo), 2026-11-11 (Batch 6 decisions 1-9 ~19:50 Cairo), 2026-11-12 (priority order waiving no gate ~12:20 Cairo) and 2026-11-14 (one contract per product and slice 9 in run mode 2 ~11:30 Cairo; no credential rotation ~12:30 Cairo), recorded outside this repository. Step 18 passed. The migrations' top-level statements are six `create or replace function`, five `revoke execute` and four `create trigger`: they drop no table or column and delete or rewrite no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-14 — Primary deployment (Step 20)
+
+Through the Primary write connector from this VS Code session, 10:36–10:38 UTC by the server clock, in version order; Secondary `brplkqmbzffpxqgkkdzo` not contacted:
+- **Immediate re-read before each, exact match** (inside `BEGIN TRANSACTION READ ONLY`). HEAD `6a2d6f71ec7304609ba67b4960e6f538f4d909d7`; the three files' SHA-256 as in Step 18; URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`. Before `20261114120000` (10:36:37 UTC): ledger 260 `5f6e412ee282edaf1e16346c3d5b5805`, the three targets absent by version and by name, functions and triggers as in Step 18. Before `20261114130000` (10:37:27 UTC): ledger 261 `5d6a9e9ad773a3546fe1b63c1191d4b4`, equal to the migration files through `20261114120000`, its two functions and two triggers present. Before `20261114140000` (10:38:14 UTC): ledger 262 `8226bb2dc7987e394749de14c73f9243`, equal to the files through `20261114130000`. Each time 0 tenants, 0 rates, 0 grants, 626 catalog values, 0 events.
+- **Transmitted text** proven server-side in the same read, each equal to its file: md5 `7499a1a5ac159a63a9e660d5a600b444`, `2a2ae979a9b852391e49b68bc903e841`, `c7db4d745876f18a8ec9617c2bf65275`. Each applied once with `apply_migration` under its own name.
+- **Guarded renames.** The connector stored versions `20261114103649`, `20261114103742` and `20261114103823`: each time exactly one new row other than this contract's own versions, one stored statement with the file's md5 and byte count (3810, 3646, 2374), no existing target. One guarded `UPDATE` each (row count required 1) renamed them to `20261114120000`, `20261114130000` and `20261114140000`.
+- **Fresh reads** (10:38:42 UTC). Ledger 263 `5df6fd8c73bbe79255e09e30bdc78378`, latest `20261114140000`, equal to the migration files; `parity_surface.sql`: functions `0b3b9c82bb521f6744950201471196a6`/346, triggers `d241997ceaab37c02327503b4e2587cb`/332, the other eight surfaces unchanged, `_combined` `f87d6fee4ce1857bc3f35672c7ef8a4e`/3169, each equal to the local stack after a clean reset; the six functions' `md5(prosrc)` equal to Step 18 (`b32615cf…`, `ae95d491…`, `6d25488b…`, `d2991210…`, `4fb7bbe5…`, `2fc6f66b…`), each SECURITY DEFINER, ACL `{postgres=X/postgres}`; the thirteen triggers of the three tables equal to local, with `exchange_rates_guard_write`, `exchange_rates_emit_set`, `user_permission_grants_guard_authority` and `catalog_values_guard_write` added; `exchange_rate_set` at 61; catalog 71/626; 0 tenants, 0 rates, 0 grants, 0 events. No business row was written.
+
+### 2026-11-14 — Post-deploy records (Step 21)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 20 readings only (read 2026-11-14T10:38:42Z): 263 entries whose fingerprint recomputes to `5df6fd8c…`, functions `0b3b9c82…`/346, structure `f87d6fee…`/3169.
+- Manifest `Live state` set from the same readings; the client RPC figure unchanged. `supabase/tests` holds 168 files whose literal `plan(N)` sum to 3151; `Suite **168 files / 3151 assertions**`.
+- The seven register rows (FX-5, FX-6, USR-3, RBAC-7, CAT-7, CAT-8, CAT-9) replaced with the DEPLOYED text, 2 + 2 + 3 spans, nothing else changed.
+- `MASTER_API_CONTRACT.md` regenerated (80 RPC endpoints): exactly the three rows of Consumer Closure changed (`catalog_values`, `exchange_rates`, `user_permission_grants`: no/no → yes/conditional); `ai-map.json` and `repository-index.md` regenerate byte-identical, LF. Repository consistency CLEAN; RECOVER-1 CLEAN.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 

@@ -169,7 +169,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `branches` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
 | `campaign_daily_metrics` | `SIU-` | no | no | scope_isolation |
 | `catalog_types` | `S---` | no | no | read_all_authenticated |
-| `catalog_values` | `SIU-` | no | no | catalog_read, catalog_tenant_delete, catalog_tenant_insert, catalog_tenant_update |
+| `catalog_values` | `SIU-` | yes | conditional | catalog_read, catalog_tenant_delete, catalog_tenant_insert, catalog_tenant_update |
 | `chart_of_accounts` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `company_assets` | `SIU-` | yes | conditional | tenant_isolation |
 | `complaints` | `SIU-` | yes | conditional | scope_isolation |
@@ -190,7 +190,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `documents` | `SIU-` | yes | conditional | scope_isolation |
 | `events` | `S---` | no | no | audit_insert, audit_read |
 | `exchange_rate_adjustments` | `SI--` | no | no | scope_insert, scope_read |
-| `exchange_rates` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `exchange_rates` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `feature_entitlements` | `S---` | no | no | read_all_authenticated |
 | `financial_accounts` | `SIU-` | yes | conditional | tenant_isolation |
 | `holidays` | `SIU-` | yes | conditional | tenant_isolation |
@@ -231,7 +231,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `trusted_devices` | `SIU-` | no | no | owner_only |
 | `usage_counters` | `S---` | no | no | tenant_isolation |
 | `user_branch_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
-| `user_permission_grants` | `SIU-` | no | no | scope_insert, scope_read, scope_update |
+| `user_permission_grants` | `SIU-` | yes | conditional | scope_insert, scope_read, scope_update |
 | `user_role_assignments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `users` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 

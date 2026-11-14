@@ -230,6 +230,9 @@ select is(
 -- this test asserted a table-door refusal that was really an UPDATE matching zero rows. That is the
 -- vacuous-security-test class `AGENTS.md §6` names, caught by its own companion assertion. Visibility
 -- is granted per-user through RBAC-5's `user_permission_grants`, which also exercises that model.
+-- Since Batch 6 slice 51 (`20261114130000`) `app.guard_permission_grant_authority` charges MANAGE_PERMISSIONS to a
+-- signed-in writer, so the leftover claim is CLEARED: the fixture grant below is a SYSTEM path.
+select set_config('request.jwt.claims', null, true);
 insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect, reason)
 select '96000000-0000-0000-0000-000000000001','96000000-0000-0000-0000-000000000013', p.id, 'grant',
        'test fixture: make the invoice VISIBLE so the void refusal is about authority, not visibility'

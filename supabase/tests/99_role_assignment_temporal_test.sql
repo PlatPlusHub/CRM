@@ -154,10 +154,14 @@ select is(
 --     applied `starts_at <= now()`; this pins it so a future "simplification" cannot quietly bring
 --     the two grant paths back into disagreement from the other direction.
 -- =============================================================================================
+-- Since Batch 6 slice 51 (`20261114130000`) `app.guard_permission_grant_authority` charges MANAGE_PERMISSIONS to a
+-- signed-in writer, so the leftover claim is CLEARED: the fixture grant below is a SYSTEM path.
+select set_config('request.jwt.claims', null, true);
 insert into public.user_permission_grants (tenant_id, user_id, permission_id, effect, reason, starts_at)
 select '99000000-0000-0000-0000-000000000001','99000000-0000-0000-0000-000000000012', p.id, 'grant',
        'AUTH-2 test: the sibling grant path must apply the same temporal rule', now() + interval '7 days'
 from public.permissions p where p.key = 'MANAGE_MARKETING_CAMPAIGN';
+select set_config('request.jwt.claims','{"sub":"99000000-0000-0000-0000-0000000000a2","aal":"aal2"}', true);
 
 set local role authenticated;
 

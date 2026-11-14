@@ -219,7 +219,8 @@ select throws_ok(
   null,
   'LEAD-2: an EMPLOYEE cannot extend the lead_source catalog -- canon 25 says "with admin permission"');
 
-select set_config('request.jwt.claims','{"sub":"64000000-0000-0000-0000-0000000000a4"}', true);
+-- The owner is MFA-bound: since Batch 6 slice 51 (`20261114140000`) a tenant value asks for the step-up.
+select set_config('request.jwt.claims','{"sub":"64000000-0000-0000-0000-0000000000a4","aal":"aal2"}', true);
 select lives_ok(
   $$insert into public.catalog_values (tenant_id, catalog_type_code, code, label)
     values ('64000000-0000-0000-0000-000000000001','lead_source','walk_in','Walk In')$$,
