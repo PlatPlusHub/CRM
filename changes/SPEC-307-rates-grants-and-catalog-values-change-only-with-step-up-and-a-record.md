@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -1268,21 +1268,21 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] The rate migration is the frozen bytes; `check: blob supabase/migrations/20261114120000_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited.sql 2bd89afb09e54e94b067557baf03bfc62cdc30ee`
-- [ ] The grant migration is the frozen bytes; `check: blob supabase/migrations/20261114130000_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded.sql fe62f40f4df3636db6693837564e84fc7a246a23`
-- [ ] The catalog value migration is the frozen bytes; `check: blob supabase/migrations/20261114140000_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code.sql e0678f33c8e458b74af66f8e93ae1b7fc3300504`
-- [ ] Test 166 is the frozen bytes; `check: blob supabase/tests/166_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited_test.sql ea86cc11ed685a1306cd6ad19eef21d6961a5f00`
-- [ ] Test 167 is the frozen bytes; `check: blob supabase/tests/167_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded_test.sql 286d02370f03aa8f9dc63df55ab60e626d1cf15c`
-- [ ] Test 168 is the frozen bytes; `check: blob supabase/tests/168_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code_test.sql 2fd246de59157743388bc55f7e94172e17899a7a`
-- [ ] Canon 27 says what the grant events now also record; `check: has _ORVION_CANONICAL/27_event_catalog.md "the old row is recorded leaving effect and the new row taking effect"`
-- [ ] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 54 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 415a82bc414669369fd7647ca163c5df0cb467f4`
-- [ ] The seven register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-307"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **168 files / 3151 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @b44cad9e8d9cad1889b91e62e72430960649f01f`
-- [ ] The step-up authority remains exact; `check: same supabase/migrations/202607044100_mfa_requirement_enforcement.sql @b44cad9e8d9cad1889b91e62e72430960649f01f`
-- [ ] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @b44cad9e8d9cad1889b91e62e72430960649f01f`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the three authorized migrations and at most one guarded ledger rename for each, with no business-data write, after a recorded Step 18 readiness gate and Step 19 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] The thirteen mutants are each killed with installation proven and the restored shape read, and the three causal negatives are recorded.
+- [x] The rate migration is the frozen bytes; `check: blob supabase/migrations/20261114120000_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited.sql 2bd89afb09e54e94b067557baf03bfc62cdc30ee`
+- [x] The grant migration is the frozen bytes; `check: blob supabase/migrations/20261114130000_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded.sql fe62f40f4df3636db6693837564e84fc7a246a23`
+- [x] The catalog value migration is the frozen bytes; `check: blob supabase/migrations/20261114140000_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code.sql e0678f33c8e458b74af66f8e93ae1b7fc3300504`
+- [x] Test 166 is the frozen bytes; `check: blob supabase/tests/166_an_exchange_rate_is_set_with_step_up_and_keeps_its_meaning_once_cited_test.sql ea86cc11ed685a1306cd6ad19eef21d6961a5f00`
+- [x] Test 167 is the frozen bytes; `check: blob supabase/tests/167_a_permission_grant_changes_only_with_step_up_and_every_move_is_recorded_test.sql 286d02370f03aa8f9dc63df55ab60e626d1cf15c`
+- [x] Test 168 is the frozen bytes; `check: blob supabase/tests/168_a_tenant_catalog_value_extends_only_open_families_and_keeps_its_code_test.sql 2fd246de59157743388bc55f7e94172e17899a7a`
+- [x] Canon 27 says what the grant events now also record; `check: has _ORVION_CANONICAL/27_event_catalog.md "the old row is recorded leaving effect and the new row taking effect"`
+- [x] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 54 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 415a82bc414669369fd7647ca163c5df0cb467f4`
+- [x] The seven register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-307"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **168 files / 3151 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @b44cad9e8d9cad1889b91e62e72430960649f01f`
+- [x] The step-up authority remains exact; `check: same supabase/migrations/202607044100_mfa_requirement_enforcement.sql @b44cad9e8d9cad1889b91e62e72430960649f01f`
+- [x] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @b44cad9e8d9cad1889b91e62e72430960649f01f`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the three authorized migrations and at most one guarded ledger rename for each, with no business-data write, after a recorded Step 18 readiness gate and Step 19 Gate-2 record; Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] The thirteen mutants are each killed with installation proven and the restored shape read, and the three causal negatives are recorded.
 
 ## Execution Log
 
@@ -1339,15 +1339,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft 7990BCC82CDA3D62DFED2C34DBE15BE9AB8E3A1898AF93D437AB0BEB42D5679B, allocated blob acd5d984ffb0371137d7e1d5846929a6bb605dd2, the seventeen literal outputs (three migrations, tests 166-168, the seven moved tests, the generator repair, canon 27, register and disposition), the recorded Step 6 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261114120000, 20261114130000 and 20261114140000 to vrvtsxexkiiiivlkdxzp with the fresh post-deploy ledger, functions and structure equal to local, the Step 9 records (ledger evidence, manifest Live state and the suite figure, the seven register rows DEPLOYED, the three moved API contract rows), regenerated discovery, unchanged native evaluator, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt 8b0587aba5eaebba89f4c54f27ce1644d22c2e2c519701e0ad577d943981101d, finishHead 3220f8b85002611cde32b848d94fc0e4f7d579d8, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 8b0587aba5eaebba89f4c54f27ce1644d22c2e2c519701e0ad577d943981101d and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
