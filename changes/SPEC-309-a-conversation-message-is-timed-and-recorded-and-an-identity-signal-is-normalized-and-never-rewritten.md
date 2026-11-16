@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -143,7 +143,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -881,7 +881,42 @@ Before Step 10: the focused tests, the probes, the mutants, the causal negatives
 
 ## Execution Log
 
-None.
+### 2026-11-15 — Steps 1–7 applied
+
+- **Lifecycle:** allocate `f53ef34`, Approve `2ec829b` (APPROVAL_EVIDENCE PASS; 11 of 13 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–7** by the literal-step replay, each result at its pinned blob: migrations `0a0feaaca957fe7593dc68c677775299d20324b8` and `56daf0d42f6b21d7bdb4956d540ee67dd3328c17`; tests 171 `169dd0faab469bf43117c50974277a27bb1b3a2d` and 172 `8336f5c1d946c0b7b8b179499bbf57c558918345`; canon 27 `674b32d83e880da1ddbb9dfe7a0e04f2e22eae7c`; register `adf596562e468af6e7a721829a0ab737b905662f`; disposition `e15e3f863bc568f1d5af1b940de8b0b5f4b1963b`; 0 mismatches. Uncommitted until Step 11: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-15 — Pre-deploy readiness gate (Step 8)
+
+From the main checkout at HEAD `2ec829b`, Steps 1–7 applied and uncommitted, project-local CLI 3.0.0, the local stack recreated by the rig, one logged script (21:57–21:59 Cairo):
+- **Bytes**, all LF (0 CR) and ASCII, equal to Consumer Closure. Migration `20261115180000` SHA-256 `288c93415d7785effd742c3a5dd21a24de7235fdcdc979d031160e560a725146`, md5 `4580e0f416fe029640e1aa363a22d284`, 5574 bytes; `20261115180100` SHA-256 `e1a8113e6890e2e8e09c6b9644f6c441a3bca22fdf0f8bbda2fc71cbeff5fec1`, md5 `45c0077a417fc1e450c879c203e32d2e`, 2824 bytes. Test 171 SHA-256 `10768ec5c1e26cd15e5b71fe4d8fbe6891b8451627941b7c48e4ccdb5107bc65`, md5 `03ec7ff7e2e8f7d28e573e04c38a7df5`, 7940 bytes; 172 `45acbf3c337c55e75ea67ca2156daec208a5694e94e39875f8ceb6136087b06d`, md5 `93b76a89ce103769c1b4d5af0bb7fa80`, 6829 bytes.
+- **Causal negative.** `db reset --version 20261114170000`: 265 migrations, ledger `2a17e52e8270cf7bb2e546dbb0c9f591`; `md5(prosrc)` of `app.derive_message_sender` `58988a626db7efc11ef150b95fa1dc06`, `app.send_conversation_message` `bdd07290a439bb85d7705db48ccf5b29`; no emitter and no normalizer; 10 triggers on the three tables; `authenticated` holds UPDATE on signals; catalog 71/626. Test 171 FAIL [1, 3–7, 11], 172 FAIL [1–2, 4–8, 10]. Probes as hostile roles: a door message recorded no event, left its conversation unmoved, kept 2019 and 2099 times and a blank text; a signal rewritten, moved to a second customer, retyped and back-dated by UPDATE, unrecorded; a raw phone and a mixed-case email stored as typed and missed by the duplicate check. CHAT-3, CHAT-4, CUST-13 and CUST-14 reproduced.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (265): functions `58dc8cf1aaec56b1ba63eabf7391ac0a`/347, triggers `b4a4d2babd4fa85cf46268d2b934268a`/334, grants `6727f6d89168b7aec4c06f131bef75bc`/189, `_combined` `aeb5931b5df96106439433dce07cfe2a`/3172. After a clean reset (267, latest `20261115180100`, ledger `8be9389fce4d3f330674d2ed083278ca`): functions `b13e66125d5ea63134310305faf3ee7e`/349, triggers `246b4ca76492cd46629f538f2ed1b108`/336, grants `5cfb09c3344a26c5513989ef3c358ff1`/188, `_combined` `88c35cab62c01ed7433d57402c8ee72c`/3175; the other seven surfaces unchanged.
+- **Shape.** `md5(prosrc)`: `app.derive_message_sender` `d45f3cf3bb44c382318781198913d760` and `app.send_conversation_message` `df0036ff85a7dd0cf91a4a396b4a0c15`, each SECURITY INVOKER with its ACL unchanged; `app.emit_conversation_message` `82c07dd349d70435f528acc3cc9928e6`, SECURITY DEFINER, `{postgres=X/postgres}`; `app.normalize_identity_signal` `c057ff319168853ff728be3bb26b62b3`, SECURITY INVOKER, `{postgres=X/postgres}`. Triggers added: `conversation_messages_emit_recorded` and `customer_identity_signals_normalize_value` (12 on the three tables); `authenticated` no longer holds UPDATE on signals and keeps INSERT on messages; catalog 71/626.
+- **Focused tests:** 171 11/11 and 172 10/10, PASS. Probes after: a door message is recorded once, moves its conversation, takes its times from the clock and stores a blank text as none; every client UPDATE of a signal is refused; a door phone and email are stored normalized and found by the duplicate check; the held behaviors hold.
+- **Mutants**, each proven installed and restored: 171 M1 fails 1, 4, 5, 7, 8, 11; M2 5; M3 8; M4 3, 6, 7; M5 6, 7; M6 10; CN 1, 3–7, 11. 172 M1 fails 1, 4–6, 10; M2 2, 7, 8, 10; M3 4–6, 10; M4 4, 5, 10; CN 1, 2, 4–8, 10. Ten mutants and two causal negatives, all killed; the restored shapes equal.
+- **Generators, scope and diff.** The API-contract generator's output differs from `MASTER_API_CONTRACT.md` in exactly its two expected rows (`send_conversation_message`, `customer_identity_signals`), regenerated in Step 11; `generate-ai-map.ps1 -Check` exit 0. Only the seven Step 1–7 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: 265 vs 267 migrations, latest, ledger fingerprint, 170 vs 172 files, 3172 vs 3193 assertions, RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (20:02:10 UTC by the server clock, through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 265 `2a17e52e8270cf7bb2e546dbb0c9f591`, latest `20261114170000`, both targets absent by version and by name; `app.derive_message_sender` `58988a626db7efc11ef150b95fa1dc06`, `app.send_conversation_message` `ff802dbe05877df5e5645304abf82ed5` (the stored text differs from the local copy only in whitespace; the whitespace-normalized function surface is equal), each with its local security mode and ACL; no emitter and no normalizer; the 10 triggers of the three tables equal to the local stack at 265; `authenticated` holds UPDATE on signals; `conversation_message_sent` at 45; catalog 71/626; 0 tenants, 0 conversations, 0 messages, 0 signals, 0 deliveries, 0 events. `parity_surface.sql`: every surface equal to the local stack at 265, `_combined` `aeb5931b5df96106439433dce07cfe2a`/3172, equal to the recorded evidence.
+- **Predicted delta:** ledger 267 `8be9389f…`; functions `b13e6612…`/349; triggers `246b4ca7…`/336; grants `5cfb09c3…`/188; `_combined` `88c35cab…`/3175; the four function hashes of Shape (the deployed text is the LF files); the two new triggers; UPDATE on signals revoked from `authenticated`; catalog 71/626 unchanged; business counts unchanged.
+
+### 2026-11-16 — Gate 2 (Step 9), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-309, to Primary `vrvtsxexkiiiivlkdxzp` only, in version order and in one sitting: `supabase/migrations/20261115180000_a_conversation_message_is_timed_and_recorded_on_every_door.sql`, SHA-256 `288c93415d7785effd742c3a5dd21a24de7235fdcdc979d031160e560a725146`, md5 `4580e0f416fe029640e1aa363a22d284`, 5574 bytes; `supabase/migrations/20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten.sql`, SHA-256 `e1a8113e6890e2e8e09c6b9644f6c441a3bca22fdf0f8bbda2fc71cbeff5fec1`, md5 `45c0077a417fc1e450c879c203e32d2e`, 2824 bytes; under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo), 2026-11-11 (Batch 6 decisions 1-9 ~19:50 Cairo), 2026-11-12 (priority order waiving no gate ~12:20 Cairo), 2026-11-14 (one contract per product ~11:30 Cairo; no credential rotation ~12:30 Cairo; BP-32's one-sitting deploy approved in principle ~16:20 Cairo) and 2026-11-15 (go, slice 11 execution authorized in run mode 1 ~19:50 Cairo), recorded outside this repository. Step 8 passed on 2026-11-15; Step 10 re-reads the Primary baseline, HEAD and the hashes immediately before each write. The migrations' top-level statements are four `create or replace function`, one `revoke update` (signals, from `authenticated`), two `revoke execute` and two `create trigger`: they drop no table or column and delete or rewrite no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-16 — Primary deployment (Step 10)
+
+To Primary ``vrvtsxexkiiiivlkdxzp`` only, through the Primary write connector, in version order and in one sitting (08:56–09:00 Cairo). Immediately before the writes, HEAD ``2ec829b`` and both migration hashes were re-read and equal to Gate 2. For each migration: a read-only re-read of the ledger, functions, triggers, catalog and business counts, with the transmitted text's md5 equal to the file's (``4580e0f416fe029640e1aa363a22d284``, then ``45c0077a417fc1e450c879c203e32d2e``); ``apply_migration`` with the exact LF file text; the ledger row read (one statement, the file's md5 and length); the guarded rename from the connector's timestamp to the file version (row count 1). Before the second write the ledger stood at 266, fingerprint ``b9ab22ae8652392819026eb26e161014``, equal to the files through ``20261115180000``. The half-deployed window lasted about two and a half minutes (06:57–06:59 UTC).
+
+Fresh reads after the deploy (07:00:03 UTC): ledger 267, latest ``20261115180100``, fingerprint ``8be9389fce4d3f330674d2ed083278ca``; ``app.derive_message_sender`` ``d45f3cf3bb44c382318781198913d760``, ``app.send_conversation_message`` ``df0036ff85a7dd0cf91a4a396b4a0c15``, ``app.emit_conversation_message`` ``82c07dd349d70435f528acc3cc9928e6`` (SECURITY DEFINER, ``{postgres=X/postgres}``), ``app.normalize_identity_signal`` ``c057ff319168853ff728be3bb26b62b3`` (``{postgres=X/postgres}``), each as predicted; 12 triggers on the three tables; ``authenticated`` no longer holds UPDATE on signals and keeps INSERT on messages; catalog 71/626; every business count 0. ``parity_surface.sql``: functions ``b13e66125d5ea63134310305faf3ee7e``/349, triggers ``246b4ca76492cd46629f538f2ed1b108``/336, grants ``5cfb09c3344a26c5513989ef3c358ff1``/188, the other seven unchanged, ``_combined`` ``88c35cab62c01ed7433d57402c8ee72c``/3175, equal to the local stack after a clean reset. Secondary was not contacted.
+
+### 2026-11-16 — Post-deploy records (Step 11)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 10 readings only (read 2026-11-16T07:00:03Z): 267 entries whose fingerprint recomputes to `8be9389f…`, functions `b13e6612…`/349, structure `88c35cab…`/3175.
+- Manifest `Live state` set from the same readings; the client RPC figure unchanged. `supabase/tests` holds 172 files whose literal `plan(N)` sum to 3193; `Suite **172 files / 3193 assertions**`.
+- The four register rows (CHAT-3, CHAT-4, CUST-13, CUST-14) set to the DEPLOYED text, 2 + 2 spans, nothing else changed.
+- The canonical API-contract generator changes `MASTER_API_CONTRACT.md` in exactly its two expected rows (`send_conversation_message` no longer lists `conversations`; `customer_identity_signals` reads `SI--`); `ai-map.json` and `repository-index.md` regenerate byte-identical, LF, and `generate-ai-map.ps1 -Check` exits 0.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 

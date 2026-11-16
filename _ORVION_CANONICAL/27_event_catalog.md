@@ -1044,9 +1044,13 @@ Requires:
 
 Severity: info
 
+Created by every inbound conversation message, through `app.send_conversation_message` or the table door, on its conversation, with the actor (none on a session-less integration path), the message id and its direction; the conversation's `updated_at` moves with it (CHAT-3, SPEC-309). On a signed-in door the message's time is the clock's, never the caller's (CHAT-4).
+
 ## conversation_message_sent
 
 Severity: info
+
+Created by every outbound conversation message, through `app.send_conversation_message` or the table door, on its conversation, with the actor (none on a session-less integration path), the message id and its direction; the conversation's `updated_at` moves with it (CHAT-3, SPEC-309). On a signed-in door the message's time is the clock's, never the caller's (CHAT-4).
 
 ---
 

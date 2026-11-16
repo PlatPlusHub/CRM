@@ -122,7 +122,7 @@ call it -- see section 6 for what that does and does not establish.
 | `revoke_trusted_device` | p_device_id uuid | `void` | invoker | - | - | trusted_devices | 2 | yes |
 | `revoke_user_role` | p_assignment_id uuid | `void` | invoker | MANAGE_USERS | - | user_role_assignments | 2 | yes |
 | `seed_default_chart_of_accounts` |  | `integer` | invoker | CREATE_JOURNAL_ENTRY | chart_of_accounts | - | 1 | yes |
-| `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | conversations | 3 | yes |
+| `send_conversation_message` | p_conversation_id uuid, p_message_direction_code text, p_sender_type_code text, p_body ... | `uuid` | invoker | SEND_MESSAGE | conversation_messages | - | 3 | yes |
 | `set_document_legal_hold` | p_document_id uuid, p_active boolean, p_reason text | `void` | invoker | - | - | documents | 5 | yes |
 | `start_conversation` | p_channel_code text, p_customer_id uuid, p_lead_id uuid, p_booking_id uuid, p_booking_i... | `uuid` | invoker | SEND_MESSAGE | conversations | - | 5 | yes |
 | `supplier_credit` | p_supplier_id uuid | `TABLE(credit_limit_amount numeric, credit_limit_currency_code text, permitted boolean, exposure_amount numeric, threshold_exceeded boolean, unconvertible_currencies text[])` | invoker | inline has_permission check | - | - | 2 | yes |
@@ -180,7 +180,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `customer_consents` | `S---` | no | no | tenant_isolation |
 | `customer_contact_methods` | `SIU-` | yes | conditional | tenant_isolation |
 | `customer_identity_merges` | `S---` | yes | conditional | tenant_isolation |
-| `customer_identity_signals` | `SIU-` | yes | conditional | tenant_isolation |
+| `customer_identity_signals` | `SI--` | yes | conditional | tenant_isolation |
 | `customer_notes` | `SIU-` | yes | conditional | scope_isolation |
 | `customers` | `SIU-` | yes | conditional | tenant_isolation |
 | `departments` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
