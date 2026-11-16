@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -865,19 +865,19 @@ Before Step 10: the focused tests, the probes, the mutants, the causal negatives
 
 ## Acceptance Criteria
 
-- [ ] The message migration is the frozen bytes; `check: blob supabase/migrations/20261115180000_a_conversation_message_is_timed_and_recorded_on_every_door.sql 0a0feaaca957fe7593dc68c677775299d20324b8`
-- [ ] The signal migration is the frozen bytes; `check: blob supabase/migrations/20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten.sql 56daf0d42f6b21d7bdb4956d540ee67dd3328c17`
-- [ ] Test 171 is the frozen bytes; `check: blob supabase/tests/171_a_conversation_message_is_timed_and_recorded_on_every_door_test.sql 169dd0faab469bf43117c50974277a27bb1b3a2d`
-- [ ] Test 172 is the frozen bytes; `check: blob supabase/tests/172_a_customer_identity_signal_is_normalized_and_never_rewritten_test.sql 8336f5c1d946c0b7b8b179499bbf57c558918345`
-- [ ] Canon 27 says what a conversation message records; `check: has _ORVION_CANONICAL/27_event_catalog.md "Created by every outbound conversation message"`
-- [ ] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 60 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md e15e3f863bc568f1d5af1b940de8b0b5f4b1963b`
-- [ ] The four register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-309"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **172 files / 3193 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
-- [ ] The message sender's origin migration remains exact; `check: same supabase/migrations/202607057000_capability_on_the_insert_path_and_a_message_that_cannot_be_forged.sql @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
-- [ ] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the two authorized migrations, with at most one guarded ledger rename for each and no business-data write, after a recorded Step 8 readiness gate and Step 9 Gate-2 record. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] The ten mutants are each killed with installation proven and the restored shape read, and the two causal negatives and the probes, before and after, are recorded.
+- [x] The message migration is the frozen bytes; `check: blob supabase/migrations/20261115180000_a_conversation_message_is_timed_and_recorded_on_every_door.sql 0a0feaaca957fe7593dc68c677775299d20324b8`
+- [x] The signal migration is the frozen bytes; `check: blob supabase/migrations/20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten.sql 56daf0d42f6b21d7bdb4956d540ee67dd3328c17`
+- [x] Test 171 is the frozen bytes; `check: blob supabase/tests/171_a_conversation_message_is_timed_and_recorded_on_every_door_test.sql 169dd0faab469bf43117c50974277a27bb1b3a2d`
+- [x] Test 172 is the frozen bytes; `check: blob supabase/tests/172_a_customer_identity_signal_is_normalized_and_never_rewritten_test.sql 8336f5c1d946c0b7b8b179499bbf57c558918345`
+- [x] Canon 27 says what a conversation message records; `check: has _ORVION_CANONICAL/27_event_catalog.md "Created by every outbound conversation message"`
+- [x] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 60 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md e15e3f863bc568f1d5af1b940de8b0b5f4b1963b`
+- [x] The four register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-309"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **172 files / 3193 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
+- [x] The message sender's origin migration remains exact; `check: same supabase/migrations/202607057000_capability_on_the_insert_path_and_a_message_that_cannot_be_forged.sql @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
+- [x] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @d38eb19bab1c5727b090ec1ce877a64a200bfc3d`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the two authorized migrations, with at most one guarded ledger rename for each and no business-data write, after a recorded Step 8 readiness gate and Step 9 Gate-2 record. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] The ten mutants are each killed with installation proven and the restored shape read, and the two causal negatives and the probes, before and after, are recorded.
 
 ## Execution Log
 
@@ -932,15 +932,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft 5BEDF921068303F5FE5CC0AE087A93AC4CD8218410459D7365F52446A847E26F, allocated blob 998da2d891d0577ea845bac10ef32efc0f64aaab, the seven literal outputs (two migrations, tests 171-172, canon 27, register and disposition), the recorded Step 8 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261115180000 and 20261115180100 to vrvtsxexkiiiivlkdxzp in one sitting with the fresh post-deploy ledger, functions and structure equal to local, the Step 11 records (ledger evidence, manifest Live state and the suite figure, the four register rows DEPLOYED), the API contract regenerated with only its two moved rows, regenerated discovery, unchanged native evaluator, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt caa872ed48d88b556dd7551169470a5e3c09aed17f17aa75bf6540e65c06be26, finishHead a1cf76ac1773fb24637ba5f482165c5f0e9ad1c6, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt caa872ed48d88b556dd7551169470a5e3c09aed17f17aa75bf6540e65c06be26 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
