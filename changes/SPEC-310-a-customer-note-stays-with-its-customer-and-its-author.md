@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -133,7 +133,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -732,7 +732,42 @@ Before Step 8: the focused tests, the probes, the mutants, the causal negative a
 
 ## Execution Log
 
-None.
+### 2026-11-16 — Steps 1–5 applied
+
+- **Lifecycle:** allocate `879929f`, Approve `8c4ed8c` (APPROVAL_EVIDENCE PASS; 9 of 11 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–5** by the literal-step replay, each result at its pinned blob: migration `5e1697af620f5a7a8bdfc9aba8e297eed763e5aa`; tests 173 `dc3de264a29203d9484d2a7cd420014e49807a97` and 174 `dde6e68f92a1e1c1b90a8962669f284005e87eb9`; register `ca88e2c6b286a3602a90eae5282b688853a9f1d1`; disposition `f538696bf92b7855d69e349c6f12c0383fc54cb2`; 0 mismatches. Uncommitted until Step 9: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-16 — Pre-deploy readiness gate (Step 6)
+
+From the main checkout at HEAD `8c4ed8c`, Steps 1–5 applied and uncommitted, project-local CLI 3.0.0, the local stack recreated by the rig, one logged script (18:13–18:15 Cairo):
+- **Bytes**, all LF (0 CR) and ASCII, equal to Consumer Closure. Migration `20261116120000` SHA-256 `a04fef90c91164ac430238fb840859e079be2ee40bde80df6c70051aa141c198`, md5 `1238bbbbd4522cd5cf384689c97caefa`, 3512 bytes. Test 173 SHA-256 `6c0abdbb4cb4387a158bd477a753a6d4b1f91f00f9d350d7725ac6bdf8ef1ac0`, md5 `628e58db9fa9d69c111fcac633d7b28b`, 6962 bytes; 174 `82ba68e6753ad83416d33265ff36e7a61f87c38038c0593c6d0fb79884d56c85`, md5 `0c56e221262559e16b32f3142d215cef`, 7059 bytes.
+- **Causal negative.** `db reset --version 20261115180100`: 267 migrations, ledger `8be9389fce4d3f330674d2ed083278ca`; `md5(prosrc)` of `app.add_customer_note` `0b06bc5fe2da28f58b0292ab07676078` and `app.derive_created_by` `61eb85f1adc40eff12e502fdac344969`, each SECURITY INVOKER; no guard; 11 triggers on the three tables; catalog 71/626. Test 173 FAIL [1, 5–6, 8–10, 13–14]; 174 PASS (it pins a door that held). Probes as hostile roles: a blank note inserted at the door was kept; an employee rewrote, blanked, moved to a second customer and back-dated (2019) another user's note, and a second employee rewrote the first one's note. CUST-15 and CUST-16 reproduced. Notifications and holidays held on every probe.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (267): functions `b13e66125d5ea63134310305faf3ee7e`/349, triggers `246b4ca76492cd46629f538f2ed1b108`/336, `_combined` `88c35cab62c01ed7433d57402c8ee72c`/3175. After a clean reset (268, latest `20261116120000`, ledger `b19e6f48e19b3b51ccdae01d26186fef`): functions `80f02f416e552e5ecd43d053ae6c1478`/350, triggers `764c62c6b405673cfea362c053bb9315`/337, `_combined` `22978d051e6586ecd1772b144993b6b8`/3177; the other eight surfaces unchanged.
+- **Shape.** `md5(prosrc)`: `app.add_customer_note` and `app.derive_created_by` unchanged, each with its ACL; `app.guard_customer_note_integrity` `e47fbc463245d57861dddd99f93e1517`, SECURITY INVOKER, `{postgres=X/postgres}`. Trigger added: `customer_notes_guard_note_integrity` (12 on the three tables); no grant, policy or RPC signature changed; catalog 71/626.
+- **Focused tests:** 173 14/14 and 174 11/11, PASS. Probes after: a blank door note is refused (not null); another user's note cannot be rewritten or blanked (`only the author of a customer note may change its text; add a new note instead`) or moved (`a customer note stays with the customer it was written about; add a new note instead`); a back-dated `created_at` stays 2026-11-14; the author still corrects their own note; the held behaviors hold.
+- **Mutants**, each proven installed and restored: 173 M1 fails 1, 5, 6, 8–10, 13, 14; M2 5, 6; M3 8; M4 9, 10, 13; M5 14; M6 (postgres not passed through) passes 173 and is killed by the merge test 71 [11–14, 16, 17]; CN 1, 5, 6, 8–10, 13, 14. 174 M1 (DELETE granted) fails 1, 4, 6, 8; M2 (capability guard dropped) 5–9; M3 (tenant isolation opened) 10, 11; M4 (RLS disabled) 10, 11. Ten mutants and the causal negative, all killed; the restored shapes equal.
+- **Generators, scope and diff.** The API-contract generator's output is identical to `MASTER_API_CONTRACT.md` and to the baseline (270 lines, 0 rows differ); `generate-ai-map.ps1 -Check` exit 0. Only the five Step 1–5 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: 267 vs 268 migrations, latest, ledger fingerprint, 172 vs 174 files, 3193 vs 3218 assertions, RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (16:19:08 UTC by the server clock, through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 267 `8be9389fce4d3f330674d2ed083278ca`, latest `20261115180100`, the target absent by version and by name; `public.add_customer_note` `c1212f387fbcdfe7dc4692d17a8f2452`, `app.add_customer_note` `603e16ed8a88323295a88e587352bcff` (the stored text differs from the local copy only in comments and line endings; the normalized text and function definition are equal), `app.derive_created_by` `61eb85f1adc40eff12e502fdac344969`, each with its local security mode and ACL; no guard; the 11 triggers of the three tables equal to the local stack at 267; catalog 71/626; 0 tenants, 0 customers, 0 notes, 0 notifications, 0 holidays, 0 events. `parity_surface.sql`: every surface equal to the local stack at 267, `_combined` `88c35cab62c01ed7433d57402c8ee72c`/3175, equal to the recorded evidence.
+- **Predicted delta:** ledger 268 `b19e6f48…`; functions `80f02f41…`/350; triggers `764c62c6…`/337; `_combined` `22978d05…`/3177; the guard `e47fbc46…` and its trigger; the three existing functions unchanged on Primary; catalog 71/626 unchanged; business counts unchanged.
+
+### 2026-11-16 — Gate 2 (Step 7), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-310, to Primary `vrvtsxexkiiiivlkdxzp` only: `supabase/migrations/20261116120000_a_customer_note_stays_with_its_customer_and_its_author.sql`, SHA-256 `a04fef90c91164ac430238fb840859e079be2ee40bde80df6c70051aa141c198`, md5 `1238bbbbd4522cd5cf384689c97caefa`, 3512 bytes; under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo), 2026-11-11 (Batch 6 decisions 1-9 ~19:50 Cairo), 2026-11-12 (priority order waiving no gate ~12:20 Cairo), 2026-11-14 (one contract per product ~11:30 Cairo; no credential rotation ~12:30 Cairo; BP-32 approved in principle ~16:20 Cairo) and 2026-11-16 (slice 12 runs through in run mode 2 ~17:05 Cairo), recorded outside this repository. Step 6 passed on 2026-11-16; Step 8 re-reads the Primary baseline, HEAD and the hashes immediately before the write. The migration's top-level statements are one `create or replace function`, one `revoke execute` and one `create trigger`: they drop no table or column and delete or rewrite no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-16 — Primary deployment (Step 8)
+
+To Primary `vrvtsxexkiiiivlkdxzp` only, through the Primary write connector, in one sitting (21:49–21:50 Cairo). Immediately before the write, HEAD `8c4ed8c` and the migration hash were re-read and equal to Gate 2. A read-only re-read of the ledger (267, latest `20261115180100`, fingerprint `8be9389fce4d3f330674d2ed083278ca`, the target absent), functions, triggers, catalog and business counts, each equal to the Step 6 baseline, with the transmitted text's md5 equal to the file's (`1238bbbbd4522cd5cf384689c97caefa`); `apply_migration` with the exact LF file text; the ledger row read (one statement, the file's md5 and length); the guarded rename from the connector's timestamp `20261116195002` to the file version (row count 1).
+
+Fresh reads after the deploy (19:50:27 UTC): ledger 268, latest `20261116120000`, fingerprint `b19e6f48e19b3b51ccdae01d26186fef`; `public.add_customer_note` `c1212f387fbcdfe7dc4692d17a8f2452`, `app.add_customer_note` `603e16ed8a88323295a88e587352bcff` and `app.derive_created_by` `61eb85f1adc40eff12e502fdac344969` unchanged; `app.guard_customer_note_integrity` `e47fbc463245d57861dddd99f93e1517` (SECURITY INVOKER, `{postgres=X/postgres}`), as predicted; 12 triggers on the three tables, adding `customer_notes_guard_note_integrity`; catalog 71/626; every business count 0. `parity_surface.sql`: functions `80f02f416e552e5ecd43d053ae6c1478`/350, triggers `764c62c6b405673cfea362c053bb9315`/337, the other eight unchanged, `_combined` `22978d051e6586ecd1772b144993b6b8`/3177, equal to the predicted delta and to the local stack after a clean reset. Secondary was not contacted.
+
+### 2026-11-16 — Post-deploy records (Step 9)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 8 readings only (read 2026-11-16T19:50:27Z): 268 entries, fingerprint `b19e6f48e19b3b51ccdae01d26186fef` (the new ledger hashed to it before the write), functions `80f02f416e552e5ecd43d053ae6c1478`/350, structure `22978d051e6586ecd1772b144993b6b8`/3177, repository head `8c4ed8c`.
+- `_ORVION_CANONICAL/manifest.md` Live state at 268 migrations (latest `20261116120000`) with the same hashes; the client RPC figure unchanged at 80; suite 174 files / 3218 assertions, counted from the test files.
+- `MASTER_GAP_REGISTER.md`: the two rows (CUST-15, CUST-16) now DEPLOYED; nothing else changed.
+- `MASTER_API_CONTRACT.md` regenerated from the local stack and unchanged (80 RPCs); `ai-map.json` and `repository-index.md` regenerated byte-identical, `-Check` exit 0.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 
