@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -1117,18 +1117,18 @@ Before Step 9: the focused tests, the probes, the mutants, the causal negatives 
 
 ## Acceptance Criteria
 
-- [ ] The migration is the frozen bytes; `check: blob supabase/migrations/20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope.sql cac36174e8c9bbd4423192815da9c65611dd03e7`
-- [ ] Test 175 is the frozen bytes; `check: blob supabase/tests/175_a_held_document_keeps_its_retention_finding_open_test.sql 11afba06cdc320d6353b5cd88a72d1cb64d65732`
-- [ ] Test 176 is the frozen bytes; `check: blob supabase/tests/176_a_click_is_read_through_its_lead_and_anchors_only_its_lead_test.sql 1a091b7848ead9adc544c1ab92ec8dd89af29284`
-- [ ] Test 177 is the frozen bytes; `check: blob supabase/tests/177_branch_hours_are_written_only_by_a_tenant_settings_holder_test.sql b58da8e600750ad93e1544b28426a59a2d977e95`
-- [ ] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 66 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 74068baae6f3cd17764f6384ec56fdaef3a4f473`
-- [ ] The three register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-311"`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **177 files / 3258 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
-- [ ] The storage executor's origin migration remains exact; `check: same supabase/migrations/202607055300_storage_executor_contract.sql @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
-- [ ] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
-- [ ] Primary `vrvtsxexkiiiivlkdxzp` received only the one authorized migration, with at most one guarded ledger rename and no business-data write, after a recorded Step 7 readiness gate and Step 8 Gate-2 record. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] The thirteen mutants are each killed with installation proven and the restored shape read, and the two causal negatives and the probes, before and after, are recorded.
+- [x] The migration is the frozen bytes; `check: blob supabase/migrations/20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope.sql cac36174e8c9bbd4423192815da9c65611dd03e7`
+- [x] Test 175 is the frozen bytes; `check: blob supabase/tests/175_a_held_document_keeps_its_retention_finding_open_test.sql 11afba06cdc320d6353b5cd88a72d1cb64d65732`
+- [x] Test 176 is the frozen bytes; `check: blob supabase/tests/176_a_click_is_read_through_its_lead_and_anchors_only_its_lead_test.sql 1a091b7848ead9adc544c1ab92ec8dd89af29284`
+- [x] Test 177 is the frozen bytes; `check: blob supabase/tests/177_branch_hours_are_written_only_by_a_tenant_settings_holder_test.sql b58da8e600750ad93e1544b28426a59a2d977e95`
+- [x] The disposition record carries the three surfaces AUDITED / ADVERSARIAL and coverage 66 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 74068baae6f3cd17764f6384ec56fdaef3a4f473`
+- [x] The three register rows are fixed and deployed; `check: has reports/master/MASTER_GAP_REGISTER.md "DEPLOYED to Primary under the exact-SHA Gate-2 record of SPEC-311"`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **177 files / 3258 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
+- [x] The storage executor's origin migration remains exact; `check: same supabase/migrations/202607055300_storage_executor_contract.sql @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
+- [x] The smoke catalog count remains exact; `check: same scripts/verify_database.sql @ad3a7d4db513834c2bfab0b15b1b49a74eb12590`
+- [x] Primary `vrvtsxexkiiiivlkdxzp` received only the one authorized migration, with at most one guarded ledger rename and no business-data write, after a recorded Step 7 readiness gate and Step 8 Gate-2 record. Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] The thirteen mutants are each killed with installation proven and the restored shape read, and the two causal negatives and the probes, before and after, are recorded.
 
 ## Execution Log
 
@@ -1183,15 +1183,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft 19FA27E9C84D7E21F3E9F32425CF49D21963134F3105587D1446A957336521EA, allocated blob bd4285830f386b539f0540b6d06db1a438492afa, the six literal outputs (one migration, tests 175-177, register and disposition), the recorded Step 7 readiness gate, the DELEGATED exact-SHA Gate-2 record, the Primary deploy of only 20261117120000 to vrvtsxexkiiiivlkdxzp in one sitting with the fresh post-deploy ledger, functions, policies and structure equal to local, the Step 10 records (ledger evidence, manifest Live state and the suite figure, the three register rows DEPLOYED), the API contract regenerated with the one attribution_clicks policy name moved, regenerated discovery, unchanged native evaluator, and declared scope verified; Secondary was never contacted. This original root owns fresh receipt 31f47aa8aa69761cc28c4c963af99d9f19f5d986b61909205d2f4c48badd85f0, finishHead 455bc4acecd701324a98b35dc77c58d01a351434, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 31f47aa8aa69761cc28c4c963af99d9f19f5d986b61909205d2f4c48badd85f0 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
