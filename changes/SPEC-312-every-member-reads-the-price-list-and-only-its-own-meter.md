@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -361,16 +361,16 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] Test 178 is the frozen bytes; `check: blob supabase/tests/178_the_price_list_is_read_by_every_member_and_a_meter_only_by_its_tenant_test.sql f2351dbaf7bcaaca26fd5b3cdf0f55ea7beeae8c`
-- [ ] The disposition record carries `catalog_types`, `feature_entitlements` and `usage_counters` AUDITED / ADVERSARIAL and coverage 69 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md f386ccb9c4168c88789523771b773eef327928d3`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **178 files / 3268 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @eb44e95720abd9a80d24b95854f8c11382bc9494`
-- [ ] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @eb44e95720abd9a80d24b95854f8c11382bc9494`
-- [ ] The catalog migration remains exact; `check: same supabase/migrations/202607041300_create_system_catalog_tables.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
-- [ ] The subscription tables' migration remains exact; `check: same supabase/migrations/202607042700_create_subscription_tables.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
-- [ ] The plan-gating migration remains exact; `check: same supabase/migrations/202607052500_plan_gating.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
-- [ ] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M11 are each killed with installation and restoration proven.
+- [x] Test 178 is the frozen bytes; `check: blob supabase/tests/178_the_price_list_is_read_by_every_member_and_a_meter_only_by_its_tenant_test.sql f2351dbaf7bcaaca26fd5b3cdf0f55ea7beeae8c`
+- [x] The disposition record carries `catalog_types`, `feature_entitlements` and `usage_counters` AUDITED / ADVERSARIAL and coverage 69 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md f386ccb9c4168c88789523771b773eef327928d3`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **178 files / 3268 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @eb44e95720abd9a80d24b95854f8c11382bc9494`
+- [x] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @eb44e95720abd9a80d24b95854f8c11382bc9494`
+- [x] The catalog migration remains exact; `check: same supabase/migrations/202607041300_create_system_catalog_tables.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
+- [x] The subscription tables' migration remains exact; `check: same supabase/migrations/202607042700_create_subscription_tables.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
+- [x] The plan-gating migration remains exact; `check: same supabase/migrations/202607052500_plan_gating.sql @eb44e95720abd9a80d24b95854f8c11382bc9494`
+- [x] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M11 are each killed with installation and restoration proven.
 
 ## Execution Log
 
@@ -401,15 +401,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft D37156FADF27FF2E887A56CAF02F02931977ABA472ECEA8660A656DA17B8877D, allocated blob 338ec572a96d7c9a8eda8a53afe9368a2771e66c, the three literal outputs (test 178, the disposition record, the manifest suite figure 178 files / 3268 assertions), regenerated discovery, the API contract identical to its generator, unchanged native evaluator, Migration CI and the catalog, subscription and plan-gating migrations, and declared scope verified; no migration, no database object changed, Primary not written and Secondary never contacted. This original root owns fresh receipt 37b03b2d0c9cb62501220cf72ebaf0a85da913e0d1f59a422330879a4531e0a8, finishHead c3155acff92c7baa922963c3ee2f3ad019a9509c, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 37b03b2d0c9cb62501220cf72ebaf0a85da913e0d1f59a422330879a4531e0a8 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
