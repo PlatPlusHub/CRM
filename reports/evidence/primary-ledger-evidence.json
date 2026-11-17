@@ -1,15 +1,15 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-16T19:50:27Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-310 migration was applied in one sitting, only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-310 (owner's instructions of 2026-11-08, 2026-11-11, 2026-11-12, 2026-11-14 and 2026-11-16), effective after the recorded Step 6 readiness gate. Prewrite recheck matched exactly: HEAD 8c4ed8c1b5e49c0bf02856a3293b92a8d107da7a; migration SHA-256 a04fef90c91164ac430238fb840859e079be2ee40bde80df6c70051aa141c198 (MD5 1238bbbbd4522cd5cf384689c97caefa, 3512 bytes), LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 267 8be9389fce4d3f330674d2ed083278ca with the target absent by version and by name; scripts/parity_surface.sql combined 88c35cab62c01ed7433d57402c8ee72c/3175 before; app.guard_customer_note_integrity absent before; 0 tenants, 0 customers, 0 customer notes, 0 notifications, 0 holidays, 0 events, 626 catalog values. The transmitted text was proven server-side (its MD5 equal to the file) and applied once. The connector's temporary version 20261116195002 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261116120000. Post-write: ledger 268 b19e6f48e19b3b51ccdae01d26186fef, equal to the migration files; functions 80f02f416e552e5ecd43d053ae6c1478/350; scripts/parity_surface.sql combined 22978d051e6586ecd1772b144993b6b8/3177 with only functions (+1) and triggers (+1) moved, each equal to the local stack after a clean reset; md5(prosrc) public.add_customer_note c1212f387fbcdfe7dc4692d17a8f2452, app.add_customer_note 603e16ed8a88323295a88e587352bcff and app.derive_created_by 61eb85f1adc40eff12e502fdac344969 unchanged; app.guard_customer_note_integrity e47fbc463245d57861dddd99f93e1517, SECURITY INVOKER with ACL {postgres=X/postgres}; trigger customer_notes_guard_note_integrity added; catalog 71/626 unchanged; every business count 0. Secondary was not contacted.",
+  "read_at": "2026-11-17T12:18:58Z",
+  "read_via": "Fresh Primary Supabase connector reads after the SPEC-311 migration was applied in one sitting, only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-311 (owner's instructions of 2026-11-08, 2026-11-11, 2026-11-12, 2026-11-14 and 2026-11-17), effective after the recorded Step 7 readiness gate. Prewrite recheck matched exactly: HEAD 17ac65a908943d7f41153684fd56855e856811e5; migration SHA-256 6044446a9577034e6fc8420baeb505ba050bd94d23c3b61f44387255395705af (MD5 d55cb5f785dc927b524502f8405c7d0a, 13566 bytes), LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 268 b19e6f48e19b3b51ccdae01d26186fef (ordered list MD5 90adf663c200901a4ac6837a38c43821) with the target absent by version and by name; scripts/parity_surface.sql combined 22978d051e6586ecd1772b144993b6b8/3177 before; the attribution_clicks policy tenant_isolation for ALL before; 0 tenants, 0 branches, 0 branch business hours, 0 documents, 0 document versions, 0 storage findings, 0 leads, 0 attribution clicks, 0 events, 626 catalog values. The transmitted text was proven server-side (its MD5 equal to the file; a first reconstructed text was caught by that proof and not applied) and applied once. The connector's temporary version 20261117121809 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261117120000. Post-write: ledger 269 ff29e9c5acf7d70b25862941f548cf97, equal to the migration files; functions f7427d65b5f8ee6d9f0a360ec5717b59/350; policies faa0844a8f07b77634e025f4b72a4320/125; scripts/parity_surface.sql combined 20caafd5b6cde6e9002e209b0a3a3102/3177 with only functions and policies moved, each equal to the local stack after a clean reset; md5(prosrc) app.platform_resolve_storage_finding 28bf1ec800bb7f27d6cb47981a12c09a and app.guard_lead_lifecycle 2868d2e6c834a3ca219091f21249bb35, each SECURITY DEFINER with its ACL unchanged; app.guard_write_capability cdfb01a887ec225fb985ef13757aaa13 unchanged; the attribution_clicks policy scope_isolation for SELECT to authenticated; the 18 triggers of the four tables unchanged; catalog 71/626 unchanged; every business count 0. Secondary was not contacted.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "8c4ed8c1b5e49c0bf02856a3293b92a8d107da7a",
-  "migration_count": 268,
-  "ledger_fingerprint": "b19e6f48e19b3b51ccdae01d26186fef",
-  "function_surface_hash": "80f02f416e552e5ecd43d053ae6c1478",
+  "repository_head": "17ac65a908943d7f41153684fd56855e856811e5",
+  "migration_count": 269,
+  "ledger_fingerprint": "ff29e9c5acf7d70b25862941f548cf97",
+  "function_surface_hash": "f7427d65b5f8ee6d9f0a360ec5717b59",
   "function_count": 350,
-  "structural_surface_hash": "22978d051e6586ecd1772b144993b6b8",
+  "structural_surface_hash": "20caafd5b6cde6e9002e209b0a3a3102",
   "structural_object_count": 3177,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
@@ -280,6 +280,7 @@
     "20261114170000_an_internal_supplier_link_is_appended_and_recorded_on_every_door",
     "20261115180000_a_conversation_message_is_timed_and_recorded_on_every_door",
     "20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten",
-    "20261116120000_a_customer_note_stays_with_its_customer_and_its_author"
+    "20261116120000_a_customer_note_stays_with_its_customer_and_its_author",
+    "20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope"
   ]
 }

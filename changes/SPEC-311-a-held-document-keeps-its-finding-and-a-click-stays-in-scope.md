@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -148,7 +148,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -1132,7 +1132,42 @@ Before Step 9: the focused tests, the probes, the mutants, the causal negatives 
 
 ## Execution Log
 
-None.
+### 2026-11-17 — Steps 1–6 applied
+
+- **Lifecycle:** allocate `36a10bf`, Approve `17ac65a` (APPROVAL_EVIDENCE PASS; 10 of 12 criteria Gate-checked), DELEGATED Gate 1 recorded in Verification Notes.
+- **Steps 1–6** by the literal-step replay, each result at its pinned blob: migration `cac36174e8c9bbd4423192815da9c65611dd03e7`; tests 175 `11afba06cdc320d6353b5cd88a72d1cb64d65732`, 176 `1a091b7848ead9adc544c1ab92ec8dd89af29284` and 177 `b58da8e600750ad93e1544b28426a59a2d977e95`; register `388675e6cf2a4a8377bf6891ce499a8bfe93c1d5`; disposition `74068baae6f3cd17764f6384ec56fdaef3a4f473`; 0 mismatches. Uncommitted until Step 10: the pre-commit guard refuses the measured-state items before the deploy.
+
+### 2026-11-17 — Pre-deploy readiness gate (Step 7)
+
+From the main checkout at HEAD `17ac65a`, Steps 1–6 applied and uncommitted, project-local CLI 3.0.0, the local stack recreated by the rig, one logged script (10:40–10:41 Cairo):
+- **Bytes**, all LF (0 CR) and ASCII. Migration `20261117120000` SHA-256 `6044446a9577034e6fc8420baeb505ba050bd94d23c3b61f44387255395705af`, md5 `d55cb5f785dc927b524502f8405c7d0a`, 13566 bytes. Test 175 SHA-256 `ec0ee5cae44b02b65ed313e655b24529bb4f6f07f9c3f270362090e1cca1705e`, md5 `14ca893aae8dfee1aee07bb8fc3f41a9`, 9769 bytes; 176 `f317780db9bab7437cfc377aa819245a17ba10c9affaa0aed7e22ab8c285908c`, md5 `d8b709fde24ee2cfec7a29d05d56c43d`, 11298 bytes; 177 `ab26fe697b958df8d82c500872f48238811f4bdbe6dbe4a28f48a53b89fec46e`, md5 `dba6097fd6dc92f094ac56ab0f344b29`, 7384 bytes.
+- **Causal negative.** `db reset --version 20261116120000`: 268 migrations, ledger `b19e6f48e19b3b51ccdae01d26186fef`; `md5(prosrc)` of `app.platform_resolve_storage_finding` `b13fbf0502883486adac2753d7f2d9d4`, `app.guard_lead_lifecycle` `d8f4637a1a87f4d96194ce1effdfc337` and `app.guard_write_capability` `f6e54cb431904e54822a4f8adc675c22`, each SECURITY DEFINER with its ACL; 18 triggers on the four tables (attribution_clicks 2, branch_business_hours 3, document_storage_findings 1, leads 12); the `attribution_clicks` policy `tenant_isolation` for ALL; catalog 71/626. Test 175 FAIL [4–9]; 176 FAIL [2, 4–5, 7, 10, 13–14]; 177 PASS (it pins a door that held). Probes as hostile roles: a member with no lead in view read all three clicks, and an employee who sees only L1 read the click on the unseen L2; an employee re-pointed L1's first touch to that foreign click and the owner re-pointed L2's first touch to a click captured for another lead; `service_role` dismissed, failed and resolved (object_deleted) the retention finding of a held document, and the held document's version was deleted. RET-5, ATTR-5 and ATTR-6 reproduced. The claim already skipped the held document (prior control); branch hours held on every probe.
+- **Fingerprints** (`scripts/parity_surface.sql`). Before (268): functions `80f02f416e552e5ecd43d053ae6c1478`/350, policies `b67d466a39413a56bcbfa071b310b33a`/125, `_combined` `22978d051e6586ecd1772b144993b6b8`/3177. After a clean reset (269, latest `20261117120000`, ledger `ff29e9c5acf7d70b25862941f548cf97`): functions `f7427d65b5f8ee6d9f0a360ec5717b59`/350, policies `faa0844a8f07b77634e025f4b72a4320`/125, `_combined` `20caafd5b6cde6e9002e209b0a3a3102`/3177; the other eight surfaces unchanged.
+- **Shape.** `md5(prosrc)`: `app.platform_resolve_storage_finding` `28bf1ec800bb7f27d6cb47981a12c09a` and `app.guard_lead_lifecycle` `2868d2e6c834a3ca219091f21249bb35`, each still SECURITY DEFINER with its ACL; `app.guard_write_capability` unchanged; the `attribution_clicks` policy renamed `scope_isolation`, for SELECT; the same 18 triggers; no grant, constraint, trigger, RPC signature or event code changed; catalog 71/626. Two Consumer Closure notes: its before-md5s `b976b79b…` and `f0aa24cc…` were taken from the prototype's CRLF copies, and the LF bytes in this repository give `b13fbf05…` and `d8f4637a…`, equal on Primary; and `leads` carries 12 triggers, not the 13 in Consumer Closure (a Draft count error; the 18 triggers are equal on local and Primary).
+- **Focused tests:** 175 14/14, 176 15/15 and 177 11/11, PASS. Probes after: every resolution of a held retention finding is refused (`the document of finding … is under legal hold; its retention finding stays open until the hold is released`); a member with no lead in view reads no click, an employee reads only the click of its own lead, a marketing-dashboard holder at aal2 reads all three; a first touch re-pointed to a click not captured for that lead is refused (`a lead's first touch is the click captured for that lead (app.capture_attribution_click)…`); capture still works; branch hours and the anonymous REST doors (401) held in both runs.
+- **Mutants**, each proven installed and restored equal to M0: 175 M1 fails 6–8; M2 4–9; CN 4–9. 176 M1 2, 4, 5; M2 1; M3 2, 4, 7, 10; M4 2, 4, 5; M5 7, 10, 13, 14; M6 7, 10, 13, 14; M7 9; CN 2, 4, 5, 7, 10, 13, 14. 177 M1 (DELETE granted) 1, 4, 6, 7, 9; M2 (capability guard dropped) 5–9; M3 (tenant isolation opened) 10, 11; M4 (RLS disabled) 10, 11. Thirteen mutants and the two causal negatives, all killed.
+- **Generators, scope and diff.** The API-contract generator's output differs from the baseline in one line (`attribution_clicks`, its read policy renamed `scope_isolation`) and equals the verified contract that Step 10 writes; `generate-ai-map.ps1 -Check` exit 0. Only the six Step 1–6 paths changed; `git diff --check` clean.
+- **Consistency:** exactly the six expected pre-deploy items, the same as the sandbox: 268 vs 269 migrations, latest, ledger fingerprint, 174 vs 177 files, 3218 vs 3258 assertions, RECOVER-1 (Primary evidence).
+- **Fresh Primary baseline**, read-only (08:45:11 UTC by the server clock, through the Primary write connector inside `BEGIN TRANSACTION READ ONLY`): URL `https://vrvtsxexkiiiivlkdxzp.supabase.co`; ledger 268 `b19e6f48e19b3b51ccdae01d26186fef`, latest `20261116120000`, the target absent by version and by name; `app.platform_resolve_storage_finding` `b13fbf05…` and `app.guard_lead_lifecycle` `d8f4637a…`, equal to local at 268; `app.guard_write_capability` `cdfb01a887ec225fb985ef13757aaa13` (the stored text differs from the local copy only in comments and line endings; the normalized text is equal, and the migration does not touch it); each SECURITY DEFINER with its local ACL; the 18 triggers of the four tables and the `attribution_clicks` policy `tenant_isolation` equal to the local stack at 268; catalog 71/626; 0 rows in each of the nine business tables. `parity_surface.sql`: every surface equal to the local stack at 268, `_combined` `22978d051e6586ecd1772b144993b6b8`/3177, equal to the recorded evidence.
+- **Predicted delta:** ledger 269 `ff29e9c5…`; functions `f7427d65…`/350; policies `faa0844a…`/125; `_combined` `20caafd5…`/3177; the resolver `28bf1ec8…` and the lead guard `2868d2e6…`; `app.guard_write_capability` unchanged on Primary; the `attribution_clicks` policy `scope_isolation` for SELECT; the 18 triggers unchanged; catalog 71/626 unchanged; business counts unchanged.
+
+### 2026-11-17 — Gate 2 (Step 8), DELEGATED
+
+DELEGATED exact-SHA Gate-2 record for SPEC-311, to Primary `vrvtsxexkiiiivlkdxzp` only: `supabase/migrations/20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope.sql`, SHA-256 `6044446a9577034e6fc8420baeb505ba050bd94d23c3b61f44387255395705af`, md5 `d55cb5f785dc927b524502f8405c7d0a`, 13566 bytes; under the owner's instructions of 2026-11-08 (class authorization for Batch 6 releases and standing approval of proposals ~10:20 Cairo; publish, promote and hosted deploy ~12:05 Cairo), 2026-11-11 (Batch 6 decisions 1-9 ~19:50 Cairo), 2026-11-12 (priority order waiving no gate ~12:20 Cairo), 2026-11-14 (one contract per product ~11:30 Cairo; no credential rotation ~12:30 Cairo; BP-32 approved in principle ~16:20 Cairo) and 2026-11-17 (slice 13 runs through in run mode 2, 09:41 Cairo), recorded outside this repository. Step 7 passed on 2026-11-17; Step 9 re-reads the Primary baseline, HEAD and the hashes immediately before the write. The migration's top-level statements are two `create or replace function`, one `drop policy` and one `create policy` that replaces it under a new name: they drop no table or column and delete or rewrite no business row. Not a human-typed digest. Secondary `brplkqmbzffpxqgkkdzo` is not a target.
+
+### 2026-11-17 — Primary deployment (Step 9)
+
+To Primary `vrvtsxexkiiiivlkdxzp` only, through the Primary write connector, in one sitting (14:14–14:19 Cairo). Immediately before the write, HEAD `17ac65a` and the migration hash were re-read and equal to Gate 2. A read-only re-read of the project URL, the full ordered ledger (268, latest `20261116120000`, fingerprint `b19e6f48e19b3b51ccdae01d26186fef`, ordered list md5 `90adf663c200901a4ac6837a38c43821`, the target absent), the business counts, the triggers of the four tables and the `attribution_clicks` policy, each equal to the Step 7 baseline. A first server-side md5 proof returned `32e02d507de9e24ee89a2669cd71dc35`, not the file's: the text sent had been reconstructed rather than read from the file, and nothing was applied; the exact file text was re-sent and its md5 proven equal to the file's (`d55cb5f785dc927b524502f8405c7d0a`). Then `apply_migration` with that LF text; the ledger row read (one statement, the file's md5 and length); the guarded rename from the connector's timestamp `20261117121809` to the file version (row count 1).
+
+Fresh reads after the deploy (12:18:58 UTC): ledger 269, latest `20261117120000`, fingerprint `ff29e9c5acf7d70b25862941f548cf97`; `app.platform_resolve_storage_finding` `28bf1ec800bb7f27d6cb47981a12c09a` and `app.guard_lead_lifecycle` `2868d2e6c834a3ca219091f21249bb35`, each SECURITY DEFINER with its ACL unchanged; `app.guard_write_capability` `cdfb01a887ec225fb985ef13757aaa13` unchanged; the `attribution_clicks` policy `scope_isolation` for SELECT to `authenticated`; the 18 triggers unchanged; catalog 71/626; every business count 0. `parity_surface.sql`: functions `f7427d65b5f8ee6d9f0a360ec5717b59`/350, policies `faa0844a8f07b77634e025f4b72a4320`/125, the other eight unchanged, `_combined` `20caafd5b6cde6e9002e209b0a3a3102`/3177, equal to the predicted delta and to the local stack after a clean reset. Secondary was not contacted.
+
+### 2026-11-17 — Post-deploy records (Step 10)
+
+- `reports/evidence/primary-ledger-evidence.json` from the Step 9 readings only (read 2026-11-17T12:18:58Z): 269 entries, fingerprint `ff29e9c5acf7d70b25862941f548cf97` (the new ledger hashed to it before the write), functions `f7427d65b5f8ee6d9f0a360ec5717b59`/350, structure `20caafd5b6cde6e9002e209b0a3a3102`/3177, repository head `17ac65a`.
+- `_ORVION_CANONICAL/manifest.md` Live state at 269 migrations (latest `20261117120000`) with the same hashes; the client RPC figure unchanged at 80; suite 177 files / 3258 assertions, counted from the test files.
+- `MASTER_GAP_REGISTER.md`: the three rows (ATTR-5, ATTR-6, RET-5) now DEPLOYED; nothing else changed.
+- `MASTER_API_CONTRACT.md` regenerated from the local stack: sha256 `F4ED4E75…`, equal to the Step 7 verified contract (only the `attribution_clicks` policy cell moved, `tenant_isolation` → `scope_isolation`; 80 RPCs); `ai-map.json` and `repository-index.md` regenerated byte-identical, `-Check` exit 0.
+- Runtime Checkpoint DONE; Status Approved → In Progress; one implementation commit.
 
 ## Verification Notes
 
