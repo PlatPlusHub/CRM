@@ -934,6 +934,17 @@ None.
 
 DELEGATED Gate 1 for CRM SPEC-315 under DEC-02, DEC-25 and the owner instructions of 2026-11-08 and 2026-11-18 (run through S17, reassigned to Codex for this slice only). Original approval record SHA-256 4E8EB31459BC1C8BA2120DA16E3D0A6BDF3BB0F70F069AD0BC96B15F45DD04BB, Draft SHA-256 269DD192343E36D1B15B0B53AAA5509733DB98A2740B1F9701E68A4590B2335F, sandbox approval eb316bcb434cc0bcfc17742727ff205528861ebb. Gate 2 is separate. Immediately before allocation the hash, the Draft blob f5486ff9bae2d46845d275498ccc1ad7279ad1c2, all 3 source anchors, the baseline HEAD c4876c8aaa59dec4043339c50ba71638387df319 against refreshed origin/main c4876c8aaa59dec4043339c50ba71638387df319 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 949a988. No implementation performed before this transition.
 
+
+### Post-deploy local certification and Review (Step 10)
+
+Verdict: Confirmed Complete
+
+Original timed Finish returned LOCAL_CERTIFY READY in 3.5 minutes with both pgTAP passes, all three HTTP verifications, smoke, recorded ten-surface parity, repository guards and Primary evidence validation. Runner, watcher and host observation exited 0. Receipt db1c29a8098779aa7ac5f14586596f7482274a9b7050632485e8f5b4cb97000e is bound to implementation 6b2805171792d0de15171bf812ce8bc06d33dd2d. The earlier transport refusal is preserved and stopped before the database checks.
+
+Review checked the migration, tests and disposition against their frozen blobs, the REF-2 deployed record, 181 test files and 3333 planned assertions, the unchanged native evaluator, catalog rule origin, smoke and API contract, the scoped Git range and clean original checkout. Read-back proves one authorized migration on Platinum Primary, with one guarded ledger rename and stable business counts. Founder was outside this CRM deployment. The original readiness log records both causal negatives, pre- and post-migration probes, all 17 tested mutants and restored shape. The contract has no superseded dependency.
+
+Release requires the exact bound candidate and its independent hosted checks.
+
 ## Review Gate
 
 - [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
