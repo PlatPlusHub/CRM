@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -461,18 +461,18 @@ Post-Implementation Proof Obligation: all of the following on the final bytes, t
 
 ## Acceptance Criteria
 
-- [ ] Test 180 is the frozen bytes; `check: blob supabase/tests/180_plans_languages_and_conversion_cursor_test.sql a5de730097515f7cc2a2f95dcbba070b9f4e4385`
-- [ ] The disposition record carries `subscription_plans`, `integration_cursors` and `languages` AUDITED / ADVERSARIAL and coverage 75 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md aba8a1aa32fa7db61079cc70a2f3f0e454e2fabe`
-- [ ] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **180 files / 3302 assertions**"`
-- [ ] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] The subscription tables' migration remains exact; `check: same supabase/migrations/202607042700_create_subscription_tables.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] The geo reference tables' migration remains exact; `check: same supabase/migrations/202607042000_create_geo_reference_tables.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] The conversion mapper's first migration remains exact; `check: same supabase/migrations/202607049300_outcome_conversion_mapper.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] The conversion mapper's latest migration remains exact; `check: same supabase/migrations/20261114160000_a_conversion_source_event_is_mapped_even_when_it_commits_late.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] The licence activation migration remains exact; `check: same supabase/migrations/202607054100_tenant_license_activation.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
-- [ ] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
-- [ ] Mutants M1–M15 are each killed with installation and restoration proven.
+- [x] Test 180 is the frozen bytes; `check: blob supabase/tests/180_plans_languages_and_conversion_cursor_test.sql a5de730097515f7cc2a2f95dcbba070b9f4e4385`
+- [x] The disposition record carries `subscription_plans`, `integration_cursors` and `languages` AUDITED / ADVERSARIAL and coverage 75 of 78; `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md aba8a1aa32fa7db61079cc70a2f3f0e454e2fabe`
+- [x] The manifest suite figure equals the files; `check: has _ORVION_CANONICAL/manifest.md "Suite **180 files / 3302 assertions**"`
+- [x] Native evaluator remains exact; `check: same scripts/check_agent_continuity.ps1 @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] Migration CI remains exact; `check: same .github/workflows/migration-ci.yml @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] The subscription tables' migration remains exact; `check: same supabase/migrations/202607042700_create_subscription_tables.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] The geo reference tables' migration remains exact; `check: same supabase/migrations/202607042000_create_geo_reference_tables.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] The conversion mapper's first migration remains exact; `check: same supabase/migrations/202607049300_outcome_conversion_mapper.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] The conversion mapper's latest migration remains exact; `check: same supabase/migrations/20261114160000_a_conversion_source_event_is_mapped_even_when_it_commits_late.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] The licence activation migration remains exact; `check: same supabase/migrations/202607054100_tenant_license_activation.sql @8ff5563c118aa36a816f40a11375d85f62a16e88`
+- [x] No file under `supabase/migrations/` changed and no database object was created, altered or dropped; Primary `vrvtsxexkiiiivlkdxzp` was not written and Secondary `brplkqmbzffpxqgkkdzo` was never contacted.
+- [x] Mutants M1–M15 are each killed with installation and restoration proven.
 
 ## Execution Log
 
@@ -503,15 +503,18 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence: selected Draft FD030E280BEFD311CD268021A4CE2152EC958E983096EB83B53A9E4BC50B5DDC, allocated blob f09060a6b6f0745b0218ecbef6c67bf2661505c0, the three literal outputs (test 180, the disposition record, the manifest suite figure 180 files / 3302 assertions), regenerated discovery, the API contract identical to its generator, unchanged native evaluator, Migration CI and the plan, language, cursor and plan-reader migrations, and declared scope verified; no migration, no database object changed, Primary not written and Secondary never contacted. This original root owns fresh receipt 62dc9e5ed790952cbe825c883b58f66fd6dc073124b16e3aed1ff7fe10866af1, finishHead dddaf0077d804559f781683a5e345024cc77fca2, profiles DATABASE,REPOSITORY, in a native timed/watched Finish observed READY/END0. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 62dc9e5ed790952cbe825c883b58f66fd6dc073124b16e3aed1ff7fe10866af1 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
-- [ ] No file outside Write Scope was modified, created, or deleted.
-- [ ] No section was added, removed, or restructured outside the approved steps.
-- [ ] Every Acceptance Criteria item is confirmed true.
-- [ ] Any step that could not be resolved deterministically was reported, not guessed.
-- [ ] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
-- [ ] The repository is in a clean, releasable state.
+- [x] Every change matches the Implementation Steps exactly, or was correctly recorded as Already Applied per its verification check.
+- [x] No file outside Write Scope was modified, created, or deleted.
+- [x] No section was added, removed, or restructured outside the approved steps.
+- [x] Every Acceptance Criteria item is confirmed true.
+- [x] Any step that could not be resolved deterministically was reported, not guessed.
+- [x] If this Change Request's Supersedes / Depends On section names another file, that file's Status has been updated accordingly.
+- [x] The repository is in a clean, releasable state.
 
 ## Notes
 
