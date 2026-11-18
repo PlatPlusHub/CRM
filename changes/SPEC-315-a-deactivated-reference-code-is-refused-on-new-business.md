@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -129,7 +129,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -901,7 +901,29 @@ Before Step 8: the focused tests, the probes, the mutants, the causal negative a
 
 ## Execution Log
 
-None.
+### 2026-11-18 — Steps 1–5 applied
+
+Original allocation 949a988, native approval c2c4fdb173a26d982015baf19a82dbc5d0780293 (APPROVAL_EVIDENCE PASS). The literal applier produced all five declared blobs with zero mismatches, and scope and diff checks passed. Test 180's checkout line endings were restored to the pinned CRLF bytes from Consumer Closure. Its approved Git blob is unchanged.
+
+### 2026-11-18 — Pre-deploy readiness gate (Step 6)
+
+Original CRM local CLI 3.0.0 ran readiness in 128 seconds, exit 0. The migration matched SHA-256 f52a5ce9d0f051329a21e948c437f40a73ae71d56713760d5b9d730ef072a2c4, MD5 96555450ff89541e3ee97f1d85aa8353, 6130 bytes. Test 181 matched SHA-256 2794237871f28733ec439a92b9dfd3a3112108bc4b66ba2d08284418868533ac, MD5 26c81eb3f19740c0c35675738b92f0c3, 25604 bytes. Test 180 matched SHA-256 cd4e3b6d7aa93b447c402b3b471888c1a660c752c56e5a3947796314e4a37b0f, MD5 1c5c1806ce3e5ee516c0d14c3f6e87d5, 14373 bytes. The native negative reset to 269 reproduced test 181's failure and assertion 19 of test 180. The full reset to 270 passed 181 31/31 and 180 20/20. Probes reproduced the expected pre- and post-migration behavior. All 17 mutants were rejected and the guard, trigger set, ACL and nationality foreign key were restored. The API contract was byte-identical, the map check passed, and consistency reported the six expected pre-deploy items. Raw readiness SHA-256 ED1A5900EC1BFA8F042C72D970CAB9D2DFF769D8CB55C2B54F585B8824DA4CF2.
+
+Primary read-only at 20:43:46 UTC, URL https://vrvtsxexkiiiivlkdxzp.supabase.co. Full ordered ledger matches the recorded list (269, latest 20261117120000, fingerprint ff29e9c5acf7d70b25862941f548cf97), target absent by version and name. The guard is absent and all 67 pre-existing triggers across the eight tables matched the frozen per-table counts. All eight business counts and events are zero; four lists hold 82, 82, 18 and 20 values with none inactive. All ten structural surfaces, including functions, policies and privileges, match local before the migration (combined 20caafd5b6cde6e9002e209b0a3a3102, 3177 objects). Baseline artifact SHA-256 2DEFFDEDAE3AA0DF627F6F2E5FBFFE5068BEBF4610BAB0F0BABFA39A75389E5D.
+
+Predicted after deployment from the original local reset: ledger 270 latest 20261118120000 fingerprint 8e1aa53db1892b3904020e1a2f0fc1d5; guard body MD5 8f864b02c2c8df848dea21db315be83f, SECURITY DEFINER, ACL postgres=X/postgres; functions 65062ae3936dcb00559da4107eecb601/351, triggers cb6e44eb359ea185f84135f2fec53e69/345 and combined 1c644a06de383670fd78e5db9b506b71/3186. All other surfaces and business counts unchanged.
+### 2026-11-18 — Gate 2 exact-SHA authorization (Step 7)
+
+DELEGATED by Codex under DEC-02 and DEC-25, the 2026-11-08 Batch 6 hosted deploy class authorization, the 2026-11-18 S17 run-through instruction and the owner's explicit S17-only reassignment. Step 6 passed at CRM HEAD c2c4fdb173a26d982015baf19a82dbc5d0780293. This record covers one migration only, version 20261118120000, SHA-256 F52A5CE9D0F051329A21E948C437F40A73AE71D56713760D5B9D730EF072A2C4, MD5 96555450FF89541E3EE97F1D85AA8353, 6130 bytes, to Primary vrvtsxexkiiiivlkdxzp. The migration creates one trigger function and eight triggers, drops no table or column and deletes or rewrites no business rows. Proceed only if the fresh read and the transmitted text's server-side MD5 match. This is a delegated record.
+Gate 2 decision record SHA-256 2C091C88273C60C463795BFC182CE10E26DEEEEF4FE16C533919B0C9972BBA45.
+
+### 2026-11-18 — Primary deployment and records (Steps 8–9)
+
+In one sitting the exact approval HEAD, migration bytes, project URL, full ordered ledger, triggers and business counts matched the Step 6 baseline. Primary returned 96555450ff89541e3ee97f1d85aa8353 for the transmitted SQL and for the pinned file. The connector applied the migration once, then its sole new ledger row was renamed from 20261118204636 to 20261118120000 under the matching-version, name, statement MD5 and exact row-count guard.
+
+Fresh Primary read at 2026-11-18T20:46:43Z shows ledger 270, latest 20261118120000, fingerprint 8e1aa53db1892b3904020e1a2f0fc1d5. The exact eight triggers and app.enforce_reference_codes() body hash, SECURITY DEFINER and ACL matched the local prediction. Combined structural hash 1c644a06de383670fd78e5db9b506b71 / 3186, function hash 65062ae3936dcb00559da4107eecb601 / 351, and all ten surfaces equal local. All business and reference counts held. Artifact SHA-256 AD1008BEF6577F0A50362AD78438329748A39BE86810FB43B31D0F5126864F65.
+
+Updated the Primary evidence, manifest live facts and pgTAP plan 181 files / 3333 assertions, and marked REF-2 deployed. The API contract and discovery were regenerated within the frozen scope. Native Finish, independent Review, Complete, binding and release follow.
 
 ## Verification Notes
 

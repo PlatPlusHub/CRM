@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-17T12:18:58Z",
-  "read_via": "Fresh Primary Supabase connector reads after the SPEC-311 migration was applied in one sitting, only to vrvtsxexkiiiivlkdxzp under the DELEGATED exact-SHA Gate-2 record of SPEC-311 (owner's instructions of 2026-11-08, 2026-11-11, 2026-11-12, 2026-11-14 and 2026-11-17), effective after the recorded Step 7 readiness gate. Prewrite recheck matched exactly: HEAD 17ac65a908943d7f41153684fd56855e856811e5; migration SHA-256 6044446a9577034e6fc8420baeb505ba050bd94d23c3b61f44387255395705af (MD5 d55cb5f785dc927b524502f8405c7d0a, 13566 bytes), LF; project URL https://vrvtsxexkiiiivlkdxzp.supabase.co; Primary ledger 268 b19e6f48e19b3b51ccdae01d26186fef (ordered list MD5 90adf663c200901a4ac6837a38c43821) with the target absent by version and by name; scripts/parity_surface.sql combined 22978d051e6586ecd1772b144993b6b8/3177 before; the attribution_clicks policy tenant_isolation for ALL before; 0 tenants, 0 branches, 0 branch business hours, 0 documents, 0 document versions, 0 storage findings, 0 leads, 0 attribution clicks, 0 events, 626 catalog values. The transmitted text was proven server-side (its MD5 equal to the file; a first reconstructed text was caught by that proof and not applied) and applied once. The connector's temporary version 20261117121809 was renamed by one guarded UPDATE (exactly one new row, one stored statement with the file's MD5, no existing target) to 20261117120000. Post-write: ledger 269 ff29e9c5acf7d70b25862941f548cf97, equal to the migration files; functions f7427d65b5f8ee6d9f0a360ec5717b59/350; policies faa0844a8f07b77634e025f4b72a4320/125; scripts/parity_surface.sql combined 20caafd5b6cde6e9002e209b0a3a3102/3177 with only functions and policies moved, each equal to the local stack after a clean reset; md5(prosrc) app.platform_resolve_storage_finding 28bf1ec800bb7f27d6cb47981a12c09a and app.guard_lead_lifecycle 2868d2e6c834a3ca219091f21249bb35, each SECURITY DEFINER with its ACL unchanged; app.guard_write_capability cdfb01a887ec225fb985ef13757aaa13 unchanged; the attribution_clicks policy scope_isolation for SELECT to authenticated; the 18 triggers of the four tables unchanged; catalog 71/626 unchanged; every business count 0. Secondary was not contacted.",
+  "read_at": "2026-11-18T20:46:43Z",
+  "read_via": "Fresh Primary Supabase connector read after the one CRM SPEC-315 migration under delegated Gate 2 2C091C88273C60C463795BFC182CE10E26DEEEEF4FE16C533919B0C9972BBA45. Read-back matched the entire local migration list. The exact transmitted file MD5 96555450ff89541e3ee97f1d85aa8353 was checked server-side before applying, the sole matching temporary ledger row was renamed by a guarded update, the eight triggers and guard mode and ACL were verified and all ten structural surfaces match local. Business and reference-list counts stayed unchanged. Post-deploy artifact SHA-256 AD1008BEF6577F0A50362AD78438329748A39BE86810FB43B31D0F5126864F65.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "17ac65a908943d7f41153684fd56855e856811e5",
-  "migration_count": 269,
-  "ledger_fingerprint": "ff29e9c5acf7d70b25862941f548cf97",
-  "function_surface_hash": "f7427d65b5f8ee6d9f0a360ec5717b59",
-  "function_count": 350,
-  "structural_surface_hash": "20caafd5b6cde6e9002e209b0a3a3102",
-  "structural_object_count": 3177,
+  "repository_head": "c2c4fdb173a26d982015baf19a82dbc5d0780293",
+  "migration_count": 270,
+  "ledger_fingerprint": "8e1aa53db1892b3904020e1a2f0fc1d5",
+  "function_surface_hash": "65062ae3936dcb00559da4107eecb601",
+  "function_count": 351,
+  "structural_surface_hash": "1c644a06de383670fd78e5db9b506b71",
+  "structural_object_count": 3186,
   "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
   "ledger": [
     "202607041200_enable_extensions",
@@ -281,6 +281,7 @@
     "20261115180000_a_conversation_message_is_timed_and_recorded_on_every_door",
     "20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten",
     "20261116120000_a_customer_note_stays_with_its_customer_and_its_author",
-    "20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope"
+    "20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope",
+    "20261118120000_a_deactivated_reference_code_is_refused_on_new_business"
   ]
 }

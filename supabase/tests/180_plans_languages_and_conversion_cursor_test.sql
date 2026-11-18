@@ -7,8 +7,8 @@
 -- conversion). The plan readers honour is_active: app.platform_activate_subscription,
 -- app.platform_issue_license_token, app.redeem_license_token (for a token issued while the plan was
 -- active) and app.provision_tenant refuse a deactivated plan; a tenant already on a deactivated plan keeps
--- working (grandfathered). A deactivated language stays valid on a customer, as the sibling reference
--- tables are (the foreign key refuses only an unknown code). Each is proven after a positive control. No
+-- working (grandfathered). A new customer is refused a deactivated language (the owner's policy of
+-- 2026-11-18, slice 59, test 181); an unknown code is the foreign key's. Each is proven after a positive control. No
 -- migration: each door held when probed, so this file pins what was measured and was not yet pinned
 -- (tests 18, 51, 119, 142 and 169 keep the seeded counts, CUR-1 and the mapper's dedupe and findings).
 -- ATTACK-CLASSES: AUTH TENANT DOOR STATE INPUT CONCURRENCY=N/A REPLAY PRIVILEGE BUSINESS OBSERVABILITY=N/A
@@ -157,13 +157,14 @@ select is(app.map_outcomes_to_conversions(500)::text || '/'
   '0/1', 'REPLAY: with the cursor rewound to zero, a rerun maps nothing new -- one source event is one conversion');
 
 -- =============================================================================================
--- 19-20. LANGUAGES on a customer: a deactivated language stays valid, an unknown one is refused.
+-- 19-20. LANGUAGES on a customer: a deactivated language and an unknown one are each refused.
 -- =============================================================================================
 update public.languages set is_active = false where code = 'fr';
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"18000000-0000-0000-0000-0000000000a2","aal":"aal1"}', true);
-select isnt(app.create_customer('person', 'T180 French', p_preferred_language_code => 'fr'), null,
-  'a deactivated language stays valid on a customer, as on the sibling reference tables');
+select throws_ok($$select app.create_customer('person', 'T180 French', p_preferred_language_code => 'fr')$$,
+  '23514', 'customers .preferred_language_code : "fr" is not an active value of reference table "languages"',
+  'a new customer is refused a deactivated language (the owner''s policy, test 181)');
 select throws_ok($$select app.create_customer('person', 'T180 Unknown', p_preferred_language_code => 'zz')$$,
   '23503', 'insert or update on table "customers" violates foreign key constraint "customers_preferred_language_code_fkey"',
   'INPUT: an unknown language code is refused by the foreign key');
