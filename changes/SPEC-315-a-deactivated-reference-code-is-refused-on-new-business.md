@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -906,6 +906,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-18 — Gate 1 approval recorded
+
+DELEGATED Gate 1 for CRM SPEC-315 under DEC-02, DEC-25 and the owner instructions of 2026-11-08 and 2026-11-18 (run through S17, reassigned to Codex for this slice only). Original approval record SHA-256 4E8EB31459BC1C8BA2120DA16E3D0A6BDF3BB0F70F069AD0BC96B15F45DD04BB, Draft SHA-256 269DD192343E36D1B15B0B53AAA5509733DB98A2740B1F9701E68A4590B2335F, sandbox approval eb316bcb434cc0bcfc17742727ff205528861ebb. Gate 2 is separate. Immediately before allocation the hash, the Draft blob f5486ff9bae2d46845d275498ccc1ad7279ad1c2, all 3 source anchors, the baseline HEAD c4876c8aaa59dec4043339c50ba71638387df319 against refreshed origin/main c4876c8aaa59dec4043339c50ba71638387df319 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 949a988. No implementation performed before this transition.
 
 ## Review Gate
 
