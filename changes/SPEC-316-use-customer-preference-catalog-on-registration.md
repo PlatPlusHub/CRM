@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -365,6 +365,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-19 — Gate 1 approval recorded
+
+The owner explicitly approved CRM SPEC-316 Original Gate 1 for SHA-256 61181551A47C9B897DF47F6DD17A526028F4E7DC1A1DD46588E42BDE87B000D3. The exact owner message is preserved in the private Workbench GATE1-SPEC-316-OWNER.md receipt, SHA-256 DDD1BDBEFCF70B15382CF06E8A7B55428BDCD3666DB3D8A0A07F8E6E42A75716. Immediately before allocation the hash, the Draft blob b9a3d69ddf4042d3243b2d97bc25bb667834e101, all 1 source anchors, the baseline HEAD dd19c8095172b42d67e20c97b22e2114d082d345 against refreshed origin/main dd19c8095172b42d67e20c97b22e2114d082d345 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 80dba48. No implementation performed before this transition. The owner reserved Supabase deployment for a separate approval. Original execution is authorized through pre-deployment readiness.
 
 ## Review Gate
 
