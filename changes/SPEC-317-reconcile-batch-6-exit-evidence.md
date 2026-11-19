@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -58,7 +58,7 @@ Other product code, schema, tests, roles, CI and all external writes are outside
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -295,6 +295,16 @@ Irreversible Action Step: NONE
 ## Execution Log
 
 None.
+
+### 2026-11-19 — Original record implementation
+
+Outcome: Complete (implementation only, native Finish and Review pending)
+
+- Steps 1–3 Applied: the approved Workbench applier replayed the three exact record blobs. Gate 1 allocation 69ee92966840d53b9aaab1d42a69297c6e12fce9 and approval 150dd622d6ccb7a3e40a8c08423d093f70bb8d93 checked the owner-authorized digest. The native Approval evaluator reported NOT APPLICABLE for this repository-only profile.
+- reports/master/MASTER_EXECUTION_PLAN.md blob 5ca456b301a3d32f40888b4d01375005b78d2841.
+- reports/master/MASTER_GAP_REGISTER.md blob 5aeb65725dcfb94099158ea0124bd4887cfb3a84.
+- reports/master/MASTER_SURFACE_DISPOSITION.md blob 3f2094ab564533afe8b196c16c1021e41b6b86b5.
+- Step 4 Applied: the native registry has 17 B6-EXIT obligations due, 21 open and 3 partial dispositions, and all five named surfaces at OWN-TRIGGER. Discovery is current. Fresh timed Finish and Review remain pending.
 
 ## Verification Notes
 
