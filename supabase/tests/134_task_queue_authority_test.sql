@@ -7,9 +7,8 @@
 -- that refusal on every column, the RPC's matching refusal, what legitimately stays open, and the
 -- surface's other refusals (tenant, step-up, DELETE, the non-holder, the state machine). A mutation
 -- installs the pre-repair guard in a savepoint, watches the move land, and restores it byte for byte.
--- It also pins two OPEN defects as they stand, not as desired behaviour; each assertion fails when its
--- finding is repaired: ENTRY-1 (a user DENIED COMPLETE_TASK creates a task born `completed`) and
--- ARCH-2 (a user without ARCHIVE_RECORD creates a task born archived under another user's name).
+-- The ENTRY-1 assertions cover rejected terminal-state creation and allowed open creation.
+-- The ARCH-2 assertions retain the pending archive-at-entry evidence.
 -- INPUT=N/A: catalog codes and the related-entity reference are pinned by `12_...` and `15_...`.
 -- BUSINESS=N/A: no money, no PII, and no function, view or trigger reads a task outside its own RPCs.
 -- CONCURRENCY=N/A: no counter, balance or uniqueness is derived from a task.
@@ -19,7 +18,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(30);
+select plan(32);
 
 insert into auth.users (id,email,email_confirmed_at) values
   ('13400000-0000-0000-0000-0000000000a1','owner@tq134.test',now()),
@@ -183,14 +182,24 @@ select is((select title from public.tasks where id = '13400000-0000-0000-0000-00
   'TENANT: the employee''s UPDATE of another tenant''s task changed nothing');
 
 -- ================================================================================================
--- 22-25. OPEN defects, pinned as they stand. Each assertion fails when its finding is repaired.
+-- 22-27. ENTRY-1 terminal-state guard and the existing ARCH-2 evidence.
 -- ================================================================================================
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"13400000-0000-0000-0000-0000000000a4","aal":"aal2"}',true);
-select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title)
+select throws_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title)
                   values ('13400000-0000-0000-0000-0000000000f1','13400000-0000-0000-0000-000000000001','13400000-0000-0000-0000-000000000014',
                           '13400000-0000-0000-0000-0000000000d1','13400000-0000-0000-0000-0000000000b1','follow_up','completed','born completed')$$,
-  'OPEN ENTRY-1: the employee denied COMPLETE_TASK still creates a task born completed');
+  '23514','a task cannot be created in a terminal state',
+  'ENTRY-1: an employee cannot create a completed task');
+select throws_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title)
+                  values ('13400000-0000-0000-0000-0000000000f3','13400000-0000-0000-0000-000000000001','13400000-0000-0000-0000-000000000014',
+                          '13400000-0000-0000-0000-0000000000d1','13400000-0000-0000-0000-0000000000b1','follow_up','cancelled','born cancelled')$$,
+  '23514','a task cannot be created in a terminal state',
+  'ENTRY-1: an employee cannot create a cancelled task');
+select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title)
+                  values ('13400000-0000-0000-0000-0000000000f4','13400000-0000-0000-0000-000000000001','13400000-0000-0000-0000-000000000014',
+                          '13400000-0000-0000-0000-0000000000d1','13400000-0000-0000-0000-0000000000b1','follow_up','open','open task')$$,
+  'ENTRY-1: an employee with CREATE_TASK can create an open task');
 select set_config('request.jwt.claims','{"sub":"13400000-0000-0000-0000-0000000000a3","aal":"aal2"}',true);
 select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title,
                                             is_archived,archived_at,archived_by,archive_reason)
@@ -199,15 +208,14 @@ select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_dep
                           true,'2020-01-01','13400000-0000-0000-0000-000000000011','archived by the owner')$$,
   'OPEN ARCH-2: the employee without ARCHIVE_RECORD still creates a task born archived');
 reset role;
-select is((select task_status_code || ':' || coalesce(completed_at::text,'-') from public.tasks where id = '13400000-0000-0000-0000-0000000000f1'),
-  'completed:-',
-  'OPEN ENTRY-1: it is terminal, with no completion time and no RPC having completed it');
+select is((select count(*)::int from public.tasks where id in ('13400000-0000-0000-0000-0000000000f1','13400000-0000-0000-0000-0000000000f3')), 0,
+  'ENTRY-1: neither rejected terminal-state task was stored');
 select is((select archived_by::text || ':' || archived_at::date::text from public.tasks where id = '13400000-0000-0000-0000-0000000000f2'),
   '13400000-0000-0000-0000-000000000011:2020-01-01',
   'OPEN ARCH-2: it names the owner as archiver at a caller-authored time');
 
 -- ================================================================================================
--- 26-30. Mutation: the pre-repair guard (owner only) is installed in a savepoint, the move lands,
+-- 28-32. Mutation: the pre-repair guard (owner only) is installed in a savepoint, the move lands,
 --        and the guard is restored byte for byte.
 -- ================================================================================================
 savepoint m1;

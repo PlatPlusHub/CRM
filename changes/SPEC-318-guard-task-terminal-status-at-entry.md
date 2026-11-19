@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -63,7 +63,7 @@ Every other product path and migration is out of scope. No historical data rewri
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -296,7 +296,15 @@ Post-Implementation Proof Obligation: Native tests and smoke, regenerated API co
 
 ## Execution Log
 
-None.
+### 2026-11-19 — Original pre-deploy readiness
+
+Steps 1–3 reconstituted the three exact payload blobs at the approved Original head. Step 4 verified the native database tests, API contract, scope and read-only live Primary baseline. Repository consistency returned only the expected RECOVER-1 target-row absence. A delegated exact Gate 2 record was saved in the Workbench packet. The deployment connection is unavailable in the executing Codex session. No hosted write has run.
+
+Gate 2 record SHA-256: 9E3378F3756E4157E48840CFDCE6F481292D35F6F21C8078D37D3F3C223A2A80. Original readiness SHA-256: 03D31D73D2299EA0368A0DD63ABEC8932325C70E441C10682EFC182ED3064D57.
+
+### 2026-11-19 — Original Step 5 verified on Platinum Primary
+
+One call applied the exact approved migration using the owner-authorized Platinum Plus Tours Supabase connector in Codex. The server returned success. Readback proved the stored 633 bytes against MD5 5134389A8B82410EC858573982FCC247, then the guarded reconciliation changed only the temporary ledger version to 20261119112137. Fresh readback proved one canonical entry, enabled BEFORE INSERT guard, invoker function with no API-role execute, unchanged task count (0), matching 272-entry ledger and all ten structural surfaces. Workbench readback SHA-256 474F3FD775B54877365205E3F8A9CAA8D68696BF1C7CAD5E9F01BCD6F5B9DC8D. Original Step 6 records those verified facts.
 
 ## Verification Notes
 

@@ -1895,6 +1895,8 @@ The guard also fails on any of these:
 
 **Recorded exception, 2026-11-19, CRM.** After CRM SPEC-316 remote Certify at `28e9052beaefa367b31d4ea7346654678374c54c`, the owner authorized one CRM-only, record-only Batch 6 Exit Reconciliation Draft. The selector exhausted unrecorded surfaces and the registry still derived 22 obligations due at exit. This exception reconciles their records and identifies remaining work. Gate 1 remains separate. The existing ordering, individual finding triggers and Pre-Production Readiness Closure conditions govern. The private Workbench packet retains the source approval.
 
+**Recorded exception, 2026-11-19, CRM task entry.** After CRM SPEC-317 Remote Certify at `a17473dbe478a2c2268ce9c503bf6e4832b7affb`, the owner authorized bounded discovery and one next Draft because the native selector has zero unrecorded surfaces. SPEC-318 selects the proven task member of ENTRY-1, supported by SPEC-230 and Test 134. The task guard and regression tests share one insertion boundary. Campaign entry requires a material consequence and booking-item entry has a separate authorized lifecycle. ARCH-2 and STEPUP-1 retain their independent authority. This selection does not close an obligation. Original Gate 1 and Primary deployment authorization remain separate.
+
 ---
 
 ## Tooling / environment enablement (supports execution quality — see ARB report §Tooling)
