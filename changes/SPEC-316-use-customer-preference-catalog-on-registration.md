@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -350,13 +350,13 @@ Post-Implementation Proof Obligation: Require all 33 assertions of test 79 plus 
 
 ## Acceptance Criteria
 
-- [ ] The exact migration payload was used; `check: blob supabase/migrations/20261119054533_use_customer_preference_catalog_on_registration.sql 648f35f2ba93a9c69c42b989f1be6e8ddb6152eb`
-- [ ] Existing test 79 was extended with the exact test payload; `check: blob supabase/tests/79_customer_data_integrity_test.sql efe552ad654dbfcfa1d7921b564799e9bc271f7d`
-- [ ] The suite figure is measured; `check: has _ORVION_CANONICAL/manifest.md "Suite **181 files / 3347 assertions**"`
-- [ ] The evaluator is preserved; `check: same scripts/check_agent_continuity.ps1 @dd19c8095172b42d67e20c97b22e2114d082d345`
-- [ ] The public registration and edit paths persist all four preferences and null. Detail and unknown codes are rejected as applicable, with original guards preserved.
-- [ ] The single separately authorized Primary migration reads back against its own local stack, with receipt, no customer-row rewrite and settled CUST-17 recorded.
-- [ ] No product deployment is inferred from local test evidence.
+- [x] The exact migration payload was used; `check: blob supabase/migrations/20261119054533_use_customer_preference_catalog_on_registration.sql 648f35f2ba93a9c69c42b989f1be6e8ddb6152eb`
+- [x] Existing test 79 was extended with the exact test payload; `check: blob supabase/tests/79_customer_data_integrity_test.sql efe552ad654dbfcfa1d7921b564799e9bc271f7d`
+- [x] The suite figure is measured; `check: has _ORVION_CANONICAL/manifest.md "Suite **181 files / 3347 assertions**"`
+- [x] The evaluator is preserved; `check: same scripts/check_agent_continuity.ps1 @dd19c8095172b42d67e20c97b22e2114d082d345`
+- [x] The public registration and edit paths persist all four preferences and null. Detail and unknown codes are rejected as applicable, with original guards preserved.
+- [x] The single separately authorized Primary migration reads back against its own local stack, with receipt, no customer-row rewrite and settled CUST-17 recorded.
+- [x] No product deployment is inferred from local test evidence.
 
 ## Execution Log
 
@@ -392,12 +392,15 @@ The independently recorded Primary readback at 08:17:19 UTC shows exactly one mi
 
 The original timed and watched native Finish returned LOCAL_CERTIFY READY, including the DATABASE and REPOSITORY profiles and required HTTP verification, with own receipt ad77c9cca218c50b0b07324d71b67ba4dd8bfe09b65fdb601d5a2e977a670314 for a38640fc3ed9222e2366396537e88b4d2c11fb5a. Runner, watcher and host observer exited zero. All acceptance and Review Gate items are satisfied.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt ad77c9cca218c50b0b07324d71b67ba4dd8bfe09b65fdb601d5a2e977a670314 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed.
-- [ ] Native Finish and independent review evidence is present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed.
+- [x] Native Finish and independent review evidence is present.
 
 ## Notes
 
