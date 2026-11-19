@@ -1,17 +1,17 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-18T20:46:43Z",
-  "read_via": "Fresh Primary Supabase connector read after the one CRM SPEC-315 migration under delegated Gate 2 2C091C88273C60C463795BFC182CE10E26DEEEEF4FE16C533919B0C9972BBA45. Read-back matched the entire local migration list. The exact transmitted file MD5 96555450ff89541e3ee97f1d85aa8353 was checked server-side before applying, the sole matching temporary ledger row was renamed by a guarded update, the eight triggers and guard mode and ACL were verified and all ten structural surfaces match local. Business and reference-list counts stayed unchanged. Post-deploy artifact SHA-256 AD1008BEF6577F0A50362AD78438329748A39BE86810FB43B31D0F5126864F65.",
+  "read_at": "2026-11-19T08:17:19Z",
+  "read_via": "Fresh read-only Platinum Primary connector read after the single CRM SPEC-316 migration under the owner Gate 2 receipt (SHA-256 83025B89D948952314510B28967B1787A74E8265F62BD96709AFF10A76235F43). Server-side transmission and stored MD5 94cf43a4cb664343d8be39f5c7ff066d matched the file. The sole temporary ledger row was matched by name and stored SQL and normalized to 20261119054533 under the existing guard. The full ledger, function hash and all structural rows agree with the native local stack. The app function changed only its preference catalog lookup. Hosted ACLs and customer counts were unchanged. Workbench post-deploy artifact SHA-256 C5BCE4BA1E2DFF9554967316AD3CCCEC7B535EE7873602F60AD584B86BD3F653.",
   "read_query": "select count(*), md5(string_agg(version || '_' || name, ',' order by version || '_' || name)), jsonb_agg(version || '_' || name order by version || '_' || name) from supabase_migrations.schema_migrations",
-  "repository_head": "c2c4fdb173a26d982015baf19a82dbc5d0780293",
-  "migration_count": 270,
-  "ledger_fingerprint": "8e1aa53db1892b3904020e1a2f0fc1d5",
-  "function_surface_hash": "65062ae3936dcb00559da4107eecb601",
+  "repository_head": "4c63864c341349437dda1d794e0c71dde9ac95c0",
+  "migration_count": 271,
+  "ledger_fingerprint": "a7e29073df56d35463b6fce7e1a13f88",
+  "function_surface_hash": "06dcbc81fc389bfa1d4d457eeac890b6",
   "function_count": 351,
-  "structural_surface_hash": "1c644a06de383670fd78e5db9b506b71",
+  "structural_surface_hash": "d09b57f6f419d7c54a888c3a8c17c59c",
   "structural_object_count": 3186,
-  "surface_read_queries": "function_surface_hash/function_count: the Check L2/P2 expression from scripts/check_database_parity.ps1, over pg_proc in ('app','public') with prokind='f', comment-stripped with chr(10) per PAR-1a. structural_surface_hash/structural_object_count: the _combined row of scripts/parity_surface.sql, run on Primary unchanged -- the SAME FILE local runs, per PAR-3 -- through the Primary write connector inside BEGIN TRANSACTION READ ONLY, because the read-only connector's role sees no rows in information_schema.role_table_grants and would report grants 0. All reads READ-ONLY.",
+  "surface_read_queries": "Function fingerprint reused the Check L2/P2 expression in scripts/check_database_parity.ps1. Structural fingerprint came from scripts/parity_surface.sql unchanged within the read-only statement. Every result was read from Primary in a read-only transaction.",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -282,6 +282,7 @@
     "20261115180100_a_customer_identity_signal_is_normalized_and_never_rewritten",
     "20261116120000_a_customer_note_stays_with_its_customer_and_its_author",
     "20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope",
-    "20261118120000_a_deactivated_reference_code_is_refused_on_new_business"
+    "20261118120000_a_deactivated_reference_code_is_refused_on_new_business",
+    "20261119054533_use_customer_preference_catalog_on_registration"
   ]
 }

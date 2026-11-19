@@ -15,7 +15,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(19);
+select plan(33);
 
 insert into auth.users (id, email) values
   ('79000000-0000-0000-0000-0000000000a1','emp@custdata.example'),
@@ -176,6 +176,87 @@ select ok(
   not exists (select 1 from app.find_customer_duplicates('+20 111 999-8888', null, null, null, null) d
               where d.customer_id = '79000000-0000-0000-0000-0000000000e9'),
   'TENANT ISOLATION: the RIVAL tenant customer holding the SAME phone number is not returned -- find_customer_duplicates is SECURITY INVOKER, so RLS bounds it');
+
+-- Customer communication preference uses the same catalog at registration and on edit (canon 25).
+create temp table preference_creates (test_case text primary key, customer_id uuid not null);
+
+select lives_ok(
+  $$insert into preference_creates
+    select 'email', public.create_customer('person', 'Prefers email', p_preferred_contact_method_code => 'email')$$,
+  'registration accepts email');
+select lives_ok(
+  $$insert into preference_creates
+    select 'whatsapp', public.create_customer('person', 'Prefers WhatsApp', p_preferred_contact_method_code => 'whatsapp')$$,
+  'registration accepts whatsapp');
+select lives_ok(
+  $$insert into preference_creates
+    select 'phone', public.create_customer('person', 'Prefers phone', p_preferred_contact_method_code => 'phone')$$,
+  'registration accepts phone');
+select lives_ok(
+  $$insert into preference_creates
+    select 'social', public.create_customer('person', 'Prefers social', p_preferred_contact_method_code => 'social')$$,
+  'registration accepts social');
+select lives_ok(
+  $$insert into preference_creates
+    select 'unset', public.create_customer('person', 'Preference unset')$$,
+  'registration permits an unspecified preference');
+select results_eq(
+  $$select p.test_case, c.preferred_contact_method_code
+    from preference_creates p join public.customers c on c.id = p.customer_id
+    order by p.test_case$$,
+  $$values ('email'::text, 'email'::text), ('phone', 'phone'), ('social', 'social'),
+           ('unset', null), ('whatsapp', 'whatsapp')$$,
+  'registration persisted all four preferences and the nullable case');
+
+with changed as (
+  update public.customers set preferred_contact_method_code = 'phone'
+  where id = (select id from cust)
+  returning preferred_contact_method_code
+)
+select is((select preferred_contact_method_code from changed), 'phone', 'edit stores phone');
+
+with changed as (
+  update public.customers set preferred_contact_method_code = 'social'
+  where id = (select id from cust)
+  returning preferred_contact_method_code
+)
+select is((select preferred_contact_method_code from changed), 'social', 'edit stores social');
+
+with changed as (
+  update public.customers set preferred_contact_method_code = 'email'
+  where id = (select id from cust)
+  returning preferred_contact_method_code
+)
+select is((select preferred_contact_method_code from changed), 'email', 'edit stores email');
+
+with changed as (
+  update public.customers set preferred_contact_method_code = 'whatsapp'
+  where id = (select id from cust)
+  returning preferred_contact_method_code
+)
+select is((select preferred_contact_method_code from changed), 'whatsapp', 'edit stores whatsapp');
+
+with changed as (
+  update public.customers set preferred_contact_method_code = null
+  where id = (select id from cust)
+  returning preferred_contact_method_code
+)
+select ok((select count(*) = 1 and bool_and(preferred_contact_method_code is null) from changed),
+  'edit can clear an existing preference');
+
+select throws_matching(
+  $$select public.create_customer('person', 'Wrong family', p_preferred_contact_method_code => 'primary_phone')$$,
+  'preferred_contact_method_code',
+  'registration rejects a code from the contact-detail catalog');
+select throws_ok(
+  $$update public.customers set preferred_contact_method_code = 'primary_phone'
+    where id = (select id from cust)$$,
+  '23514', null,
+  'edit rejects a code from the contact-detail catalog');
+select throws_matching(
+  $$select public.create_customer('person', 'Unknown preference', p_preferred_contact_method_code => 'unknown')$$,
+  'preferred_contact_method_code',
+  'registration rejects an unknown code');
 
 select finish();
 rollback;

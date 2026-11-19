@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -56,7 +56,7 @@ None.
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -360,7 +360,17 @@ Post-Implementation Proof Obligation: Require all 33 assertions of test 79 plus 
 
 ## Execution Log
 
-None.
+### 2026-11-19 — CRM Original Steps 1–3 and readiness
+
+Gate 1 passed at 4c63864c341349437dda1d794e0c71dde9ac95c0. The exact migration and test 79 blobs were applied locally. After native local reset, focused 33/33, native database passes A and B (181 files, 3347 assertions each), the employee HTTP journey (35/35), the 78-table smoke and the API-contract byte comparison passed. Git scope and diff checks passed. The fresh pre-deployment read confirmed the 270-entry Primary baseline without the candidate.
+
+### 2026-11-19 — Owner Gate 2 and Platinum Primary readback (Step 4)
+
+The owner authorized this CRM Original through remote Certify in the context of the exact Step 4 migration and target. The private owner receipt digest is 83025B89D948952314510B28967B1787A74E8265F62BD96709AFF10A76235F43. Applied only migration 20261119054533 to Platinum Primary vrvtsxexkiiiivlkdxzp, SHA-256 5C29B9C824BD744A54E544D23C75B9A14CF3643FB8190ED74670E84128AF329D, server precheck and stored statement MD5 94cf43a4cb664343d8be39f5c7ff066d. The connector's one temporary ledger row was matched and renamed to the frozen version with the guarded update. Readback 2026-11-19T08:17:19Z has 271 ordered migrations, ledger a7e29073df56d35463b6fce7e1a13f88, 351 functions 06dcbc81fc389bfa1d4d457eeac890b6, and 3186 structural objects d09b57f6f419d7c54a888c3a8c17c59c. All match the Original local stack. The app.create_customer lookup changed only its catalog family, function ACLs and the public wrapper were unchanged, and Primary customer count stayed 0. Workbench post-deployment artifact SHA-256 C5BCE4BA1E2DFF9554967316AD3CCCEC7B535EE7873602F60AD584B86BD3F653.
+
+### 2026-11-19 — Verified records (Step 5)
+
+Recorded Primary evidence, measured manifest state, CUST-17 and its existing customers disposition, and regenerated API and discovery output. The exact tested migration is committed with the test and measured records. Native Finish and independent Review follow.
 
 ## Verification Notes
 
