@@ -29,7 +29,7 @@ Current Module: Foundation Completion Programme Batch 6 (owner's 2026-10-07 orde
 
 Deployment topology (owner-ratified 2026-08-20, permanent): `PlatPlusHub/CRM` deploys to **Primary `vrvtsxexkiiiivlkdxzp` only**. Secondary `brplkqmbzffpxqgkkdzo` is the `Shehabhub/ORVION` environment and is never a CRM target; differences between the two are expected and valid. Detail: `MASTER_INTEGRATION_CATALOG.md §0/§4`.
 
-Live state: **Repository, local stack and Platinum Primary `vrvtsxexkiiiivlkdxzp` at 272 migrations** (latest `20261119112137`), ledger `b2e617f87c56ee17dfab43629ce88609`. All ten structural surfaces match at `dac7b4e84989c2caca4bdb0deb00c7b5` (3188 objects). **80 client RPCs**. Suite **181 files / 3349 assertions**.
+Live state: **Repository, local stack and Platinum Primary `vrvtsxexkiiiivlkdxzp` at 272 migrations** (latest `20261119112137`), ledger `b2e617f87c56ee17dfab43629ce88609`. full-function-surface hash `ba7201d40c8cff6d416cdd2d01b2c42a` (352 functions), structural-surface hash `dac7b4e84989c2caca4bdb0deb00c7b5` (3,188 objects). All ten surfaces match. Ledger read FROM Primary 2026-11-19. **80 client RPCs**. Suite **181 files / 3349 assertions**.
 
 Batch 6 surface coverage: counted only in `MASTER_SURFACE_DISPOSITION.md` (Checks 22 and 24), and every surface still `NOT-RECORDED` is a DUE NOW registry member until `B6-EXIT` (EC-1). Batch 6 is **NOT complete**; exit criteria EC-1…EC-11 and the adversarial method live in `MASTER_EXECUTION_PLAN.md`. The next slice is ranked by `scripts/batch6_select_target.ps1`, which stores nothing. **Its ranking was INVERTED until 2026-09-08 and is now EXPOSURE-ordered**; `Score` is a diagnostic, not the sort key.
 
