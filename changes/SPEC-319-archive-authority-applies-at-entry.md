@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -61,7 +61,7 @@ Every other product path and migration is out of scope. Keep the existing gates 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -402,6 +402,16 @@ Post-Implementation Proof Obligation: Match the transmitted migration, independe
 ## Execution Log
 
 None.
+
+### 2026-11-19 — Original implementation checkpoint
+
+Outcome: Complete (implementation steps; native Finish and independent Review pending).
+
+- Steps 1–4 applied from the exact approved Draft. All four frozen output blobs match. The temporary prototype and Sandbox remain isolated.
+- Step 5 passed native readiness at this approval head. Both SQL passes ran 182 files and 3381 assertions. The HTTP process exited 0 with 35 passed, database smoke passed, and the measured API blob equals the certified baseline. The unchanged pre-deploy guard reported only the expected RECOVER-1 difference.
+- Step 6 applied migration 20261119203357 once to Platinum Primary under the separately recorded Gate 2. Original SHA-256 8D781F1C9053AE82988F560ABB599175579E7272731D89DEA072B5D459FEA09F and transmitted MD5 904a8f4d882705e4afa994d5b9a148aa match the stored statement. The connector's temporary version was reconciled under the exact-row guard. Independent readback matched all 273 ledger entries, thirteen trigger definitions, function identity and all ten parity surfaces. All five scoped tables retained their measured row counts.
+- Step 7 refreshed the genuine Primary ledger, manifest and projection. The native ledger, parity and consistency verifiers passed. The registry derived 15 exit obligations and exactly two completions, suppliers and tasks. Bookings and passengers and the residual ARCH-2 members remain open.
+- Step 8 enters native timed and watched Finish on the clean implementation commit, followed by independent Review and binding.
 
 ## Verification Notes
 

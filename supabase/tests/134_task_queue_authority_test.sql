@@ -8,7 +8,7 @@
 -- surface's other refusals (tenant, step-up, DELETE, the non-holder, the state machine). A mutation
 -- installs the pre-repair guard in a savepoint, watches the move land, and restores it byte for byte.
 -- The ENTRY-1 assertions cover rejected terminal-state creation and allowed open creation.
--- The ARCH-2 assertions retain the pending archive-at-entry evidence.
+-- The ARCH-2 assertions cover refused archive-at-entry and absence of the rejected task.
 -- INPUT=N/A: catalog codes and the related-entity reference are pinned by `12_...` and `15_...`.
 -- BUSINESS=N/A: no money, no PII, and no function, view or trigger reads a task outside its own RPCs.
 -- CONCURRENCY=N/A: no counter, balance or uniqueness is derived from a task.
@@ -201,18 +201,18 @@ select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_dep
                           '13400000-0000-0000-0000-0000000000d1','13400000-0000-0000-0000-0000000000b1','follow_up','open','open task')$$,
   'ENTRY-1: an employee with CREATE_TASK can create an open task');
 select set_config('request.jwt.claims','{"sub":"13400000-0000-0000-0000-0000000000a3","aal":"aal2"}',true);
-select lives_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title,
+select throws_ok($$insert into public.tasks (id,tenant_id,owner_user_id,owner_department_id,owner_branch_id,task_type_code,task_status_code,title,
                                             is_archived,archived_at,archived_by,archive_reason)
                   values ('13400000-0000-0000-0000-0000000000f2','13400000-0000-0000-0000-000000000001','13400000-0000-0000-0000-000000000013',
                           '13400000-0000-0000-0000-0000000000d1','13400000-0000-0000-0000-0000000000b1','follow_up','open','born archived',
                           true,'2020-01-01','13400000-0000-0000-0000-000000000011','archived by the owner')$$,
-  'OPEN ARCH-2: the employee without ARCHIVE_RECORD still creates a task born archived');
+  '42501','permission denied: ARCHIVE_RECORD',
+  'ARCH-2: an employee without ARCHIVE_RECORD cannot create an archived task');
 reset role;
 select is((select count(*)::int from public.tasks where id in ('13400000-0000-0000-0000-0000000000f1','13400000-0000-0000-0000-0000000000f3')), 0,
   'ENTRY-1: neither rejected terminal-state task was stored');
-select is((select archived_by::text || ':' || archived_at::date::text from public.tasks where id = '13400000-0000-0000-0000-0000000000f2'),
-  '13400000-0000-0000-0000-000000000011:2020-01-01',
-  'OPEN ARCH-2: it names the owner as archiver at a caller-authored time');
+select is((select count(*)::int from public.tasks where id = '13400000-0000-0000-0000-0000000000f2'), 0,
+  'ARCH-2: the rejected archived task was not stored');
 
 -- ================================================================================================
 -- 28-32. Mutation: the pre-repair guard (owner only) is installed in a savepoint, the move lands,

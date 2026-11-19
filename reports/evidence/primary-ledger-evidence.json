@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-19T19:32:33.123105Z",
-  "read_query": "select now() at time zone 'utc' as read_at, count(*) as migration_count, max(version) as latest, md5(string_agg(version||'_'||name, ',' order by version||'_'||name)) as ledger_fingerprint, jsonb_agg(version||'_'||name order by version||'_'||name) as ledger from supabase_migrations.schema_migrations",
-  "repository_head": "a7f2ca5d656d84f96257f5cec6e0820103c54455",
-  "migration_count": 272,
-  "ledger_fingerprint": "b2e617f87c56ee17dfab43629ce88609",
-  "function_surface_hash": "ba7201d40c8cff6d416cdd2d01b2c42a",
+  "read_at": "2026-11-19T21:01:58.628627Z",
+  "read_query": "select now() at time zone 'utc' as read_at, count(*) as migration_count, max(version) as latest, md5(string_agg(version||'_'||name,',' order by version||'_'||name)) as ledger_fingerprint, jsonb_agg(version||'_'||name order by version||'_'||name) as ledger from supabase_migrations.schema_migrations",
+  "repository_head": "7b955f685c439e212ac929268057eee8e339f022",
+  "migration_count": 273,
+  "ledger_fingerprint": "68c065e6e3a2ea0fe8f5c55277220a0f",
+  "function_surface_hash": "443c8b20f452ae326494f8d04d046b9d",
   "function_count": 352,
-  "structural_surface_hash": "dac7b4e84989c2caca4bdb0deb00c7b5",
+  "structural_surface_hash": "eb0cbbdd0c9cb670c7b67bcadcaa181e",
   "structural_object_count": 3188,
-  "surface_read_queries": "Primary was read in read-only transactions. Function and combined fingerprints come from scripts/parity_surface.sql. All ten surfaces and the exact ordered ledger match the Original local stack.",
+  "surface_read_queries": "Read directly from Platinum Primary in read-only transactions. scripts/parity_surface.sql produced the function and combined fingerprints. All ten surfaces and the exact ordered ledger match the Original local stack.",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -283,6 +283,7 @@
     "20261117120000_a_held_document_keeps_its_finding_and_a_click_stays_in_scope",
     "20261118120000_a_deactivated_reference_code_is_refused_on_new_business",
     "20261119054533_use_customer_preference_catalog_on_registration",
-    "20261119112137_guard_task_terminal_status_at_entry"
+    "20261119112137_guard_task_terminal_status_at_entry",
+    "20261119203357_archive_authority_applies_at_entry"
   ]
 }

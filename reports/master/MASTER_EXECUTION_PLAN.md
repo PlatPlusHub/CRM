@@ -1897,6 +1897,8 @@ The guard also fails on any of these:
 
 **Recorded exception, 2026-11-19, CRM task entry.** After CRM SPEC-317 Remote Certify at `a17473dbe478a2c2268ce9c503bf6e4832b7affb`, the owner authorized bounded discovery and one next Draft because the native selector has zero unrecorded surfaces. SPEC-318 selects the proven task member of ENTRY-1, supported by SPEC-230 and Test 134. The task guard and regression tests share one insertion boundary. Campaign entry requires a material consequence and booking-item entry has a separate authorized lifecycle. ARCH-2 and STEPUP-1 retain their independent authority. This selection does not close an obligation. Original Gate 1 and Primary deployment authorization remain separate.
 
+**Recorded exception, 2026-11-19, CRM archive at entry.** After CRM SPEC-318 Remote Certify at `243fd86c53715a4eb69f02e97353cfa2ad90ea8e`, the owner authorized one consolidated repair and continuous native execution because the selector has zero unrecorded surfaces. SPEC-319 selects the bookings, passengers, suppliers and tasks members of ARCH-2, which share the archive authority, and the active-row archive metadata check on the existing customers binding. Test 182 proves each selected effect on one isolated schema. Closure is evaluated after deployment. The Original, deployment and release gates remain enforced.
+
 ---
 
 ## Tooling / environment enablement (supports execution quality — see ARB report §Tooling)
