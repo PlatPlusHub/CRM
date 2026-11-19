@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -406,6 +406,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-19 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-319 only. DEC-02 and Batch 6 Mode 2. Current owner source OWNER-DIRECTION.txt SHA-256 D7DDB062A5639F2372DE908F6C2ED8EE336E43382EFC6431AA18E6ADD88E3570. Frozen Draft SHA-256 61516730756BC8C5C00A4A661E6473B416C15548AA700DFBE60A06FB8F0128B5, Git blob dd32169f2112483002e050223e83763ad43196ad, from CRM baseline 243fd86c53715a4eb69f02e97353cfa2ad90ea8e. Native isolated Approve febc28679101e03495476c9fe81bc0294b70a885, identical native allocation, four exact payload files, isolated suite 182/3381, HTTP 35/0, smoke PASS, API identity, baseline causal negative, and the unchanged sandbox consistency evaluator reported RECOVER-1 only for the exact absent candidate migration. The scope comprises the four selected archive-at-entry members and existing customer-path metadata. Gate 2 and release have later exact-target prerequisites and separate delegated records. Immediately before allocation the hash, the Draft blob dd32169f2112483002e050223e83763ad43196ad, all 2 source anchors, the baseline HEAD 243fd86c53715a4eb69f02e97353cfa2ad90ea8e against refreshed origin/main 243fd86c53715a4eb69f02e97353cfa2ad90ea8e and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 15c70f2. No implementation performed before this transition.
 
 ## Review Gate
 
