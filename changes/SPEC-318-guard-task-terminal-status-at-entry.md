@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -286,13 +286,13 @@ Post-Implementation Proof Obligation: Native tests and smoke, regenerated API co
 
 ## Acceptance Criteria
 
-- [ ] The exact migration adds the task-local terminal-state INSERT guard. `check: blob supabase/migrations/20261119112137_guard_task_terminal_status_at_entry.sql e4864c7bf2c4dc9c9ce07f79e9c0e4a389d98a5d`
-- [ ] Test 134 covers both exact refusals, allowed open creation and absence of rejected rows. `check: blob supabase/tests/134_task_queue_authority_test.sql 74612c13c8b24286eb7687ed55c285b6544b0532`
-- [ ] The approved selector exception appears exactly once and B6-EXIT obligations retain their recorded status. `check: blob reports/master/MASTER_EXECUTION_PLAN.md c8ac9f40985fb8136dfb12ced623a2c8e9f2865f`
-- [ ] The generated API contract matches the certified baseline. `check: same reports/master/MASTER_API_CONTRACT.md @a17473dbe478a2c2268ce9c503bf6e4832b7affb`
-- [ ] The native selector and registry retain their authority. `check: same scripts/batch6_select_target.ps1 @a17473dbe478a2c2268ce9c503bf6e4832b7affb`
-- [ ] The manifest records the measured test figure. `check: has _ORVION_CANONICAL/manifest.md "Suite **181 files / 3349 assertions**"`
-- [ ] The verified Primary ledger and structural evidence match the local result. ENTRY-1 and tasks evidence reflect only the verified task-member repair.
+- [x] The exact migration adds the task-local terminal-state INSERT guard. `check: blob supabase/migrations/20261119112137_guard_task_terminal_status_at_entry.sql e4864c7bf2c4dc9c9ce07f79e9c0e4a389d98a5d`
+- [x] Test 134 covers both exact refusals, allowed open creation and absence of rejected rows. `check: blob supabase/tests/134_task_queue_authority_test.sql 74612c13c8b24286eb7687ed55c285b6544b0532`
+- [x] The approved selector exception appears exactly once and B6-EXIT obligations retain their recorded status. `check: blob reports/master/MASTER_EXECUTION_PLAN.md c8ac9f40985fb8136dfb12ced623a2c8e9f2865f`
+- [x] The generated API contract matches the certified baseline. `check: same reports/master/MASTER_API_CONTRACT.md @a17473dbe478a2c2268ce9c503bf6e4832b7affb`
+- [x] The native selector and registry retain their authority. `check: same scripts/batch6_select_target.ps1 @a17473dbe478a2c2268ce9c503bf6e4832b7affb`
+- [x] The manifest records the measured test figure. `check: has _ORVION_CANONICAL/manifest.md "Suite **181 files / 3349 assertions**"`
+- [x] The verified Primary ledger and structural evidence match the local result. ENTRY-1 and tasks evidence reflect only the verified task-member repair.
 
 ## Execution Log
 
@@ -320,12 +320,15 @@ Verdict: Confirmed Complete
 
 The Review checked the allocated Draft blob, all three frozen output blobs and the committed range independently of the implementation log. Native timed and watched Finish returned LOCAL_CERTIFY READY on a4b8c9ace84558e8be0747d82ce38ab2b53c4082 with receipt c993b81a9e7ed068ae382cf59e2246dc4dddc9b4d940c39a689ccc375bcfab7d. Both native database passes, Test 134, HTTP verification, smoke, parity, API equivalence and repository verification passed. The first Finish refusal was caused by missing native manifest hash labels. The corrected manifest passed the targeted parity check and the full new Finish. Primary readback proved the 272-entry ledger and all ten surfaces agree with local. RECOVER-1 is clean. The approved selector exception, tasks AUDITED-OPEN and the 17 due Batch 6 exit obligations are preserved. This Review covers this CRM correction and verified Primary deployment.
 
+
+Native Review and Complete close the Original on its fresh, matching Finish and verified Primary evidence. Candidate binding follows Complete. The native release gates still apply to this exact candidate.
+
 ## Review Gate
 
-- [ ] Exact payload and scope matched.
-- [ ] Test 134, native database verification, smoke and API equivalence are backed by actual results.
-- [ ] Primary state, ledger, suite counts and regenerated discovery match the verified evidence.
-- [ ] ARCH-2 and all other unresolved findings remain correctly classified.
+- [x] Exact payload and scope matched.
+- [x] Test 134, native database verification, smoke and API equivalence are backed by actual results.
+- [x] Primary state, ledger, suite counts and regenerated discovery match the verified evidence.
+- [x] ARCH-2 and all other unresolved findings remain correctly classified.
 
 ## Notes
 
