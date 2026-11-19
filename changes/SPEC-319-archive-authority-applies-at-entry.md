@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -390,14 +390,14 @@ Post-Implementation Proof Obligation: Match the transmitted migration, independe
 
 ## Acceptance Criteria
 
-- [ ] Exact migration applies existing archive authority at creation and enforces server-owned metadata. `check: blob supabase/migrations/20261119203357_archive_authority_applies_at_entry.sql ec8e125c0b20c282cacaad51d1a05a429039aaaf`
-- [ ] Task queue test retains its earlier controls and records refused archive creation. `check: blob supabase/tests/134_task_queue_authority_test.sql a8c0ef7d4a916bfbcef68668691b4028a0d8c27a`
-- [ ] Test 182 proves the authority and attribution of all five selected cases. `check: blob supabase/tests/182_archive_authority_applies_at_entry_test.sql 5ffffdeb43e3ae777957cafbb35fac99fdbc2e48`
-- [ ] The recorded selector exception is exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md b7aa489315d5cf5618e45d3ad927ae6237d9b943`
-- [ ] The regenerated API contract matches baseline. `check: same reports/master/MASTER_API_CONTRACT.md @243fd86c53715a4eb69f02e97353cfa2ad90ea8e`
-- [ ] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @243fd86c53715a4eb69f02e97353cfa2ad90ea8e`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **182 files / 3381 assertions**"`
-- [ ] Verified Primary and local ledger and all ten surfaces agree. Suppliers and tasks complete, bookings and passengers remain open for recorded reasons, ARCH-2 stays open for its remaining members.
+- [x] Exact migration applies existing archive authority at creation and enforces server-owned metadata. `check: blob supabase/migrations/20261119203357_archive_authority_applies_at_entry.sql ec8e125c0b20c282cacaad51d1a05a429039aaaf`
+- [x] Task queue test retains its earlier controls and records refused archive creation. `check: blob supabase/tests/134_task_queue_authority_test.sql a8c0ef7d4a916bfbcef68668691b4028a0d8c27a`
+- [x] Test 182 proves the authority and attribution of all five selected cases. `check: blob supabase/tests/182_archive_authority_applies_at_entry_test.sql 5ffffdeb43e3ae777957cafbb35fac99fdbc2e48`
+- [x] The recorded selector exception is exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md b7aa489315d5cf5618e45d3ad927ae6237d9b943`
+- [x] The regenerated API contract matches baseline. `check: same reports/master/MASTER_API_CONTRACT.md @243fd86c53715a4eb69f02e97353cfa2ad90ea8e`
+- [x] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @243fd86c53715a4eb69f02e97353cfa2ad90ea8e`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **182 files / 3381 assertions**"`
+- [x] Verified Primary and local ledger and all ten surfaces agree. Suppliers and tasks complete, bookings and passengers remain open for recorded reasons, ARCH-2 stays open for its remaining members.
 
 ## Execution Log
 
@@ -427,12 +427,15 @@ Verdict: Confirmed Complete
 
 The Review checked the exact allocated Draft blob dd32169f2112483002e050223e83763ad43196ad, frozen SHA-256 61516730756BC8C5C00A4A661E6473B416C15548AA700DFBE60A06FB8F0128B5, implementation head ef9d0f174d5467f18fa632f6200ac9256ae3939b, all four committed payload blobs and the declared Git range. Fresh native Finish returned LOCAL_CERTIFY READY, receipt 2ca6cc0b86ee740c9905b5290a391b608b33db5fcca171dcac09cb0479e3de59, with all three native process exits zero. Native Original readiness passed 182 SQL files and 3381 assertions on each pass, 35 HTTP assertions, database smoke and identical generated API blob. The pre-deploy refusal was the expected exact target missing under RECOVER-1. The genuine independent Primary readback after the one migration and bounded ledger correction showed all 273 ordered ledger rows, the expected server-owned archive metadata and authority wiring, all ten parity surfaces matching local, and unchanged business-row counts. The native ledger and parity checks passed. No Founder write or integration change was in this range. The native registry derived exactly two newly completed surfaces, suppliers and tasks, and retains 15 Batch 6 exit obligations. Bookings and passengers and the residual ARCH-2 finding remain open. Publication and remote certification have their own recorded gates.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 2ca6cc0b86ee740c9905b5290a391b608b33db5fcca171dcac09cb0479e3de59 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Exact approved payload and allowed scope.
-- [ ] Isolated causal negative and native SQL, smoke, HTTP and API evidence.
-- [ ] Verified Primary identity, ledger, parity and registry changes.
-- [ ] Existing open items and governance gates retained.
+- [x] Exact approved payload and allowed scope.
+- [x] Isolated causal negative and native SQL, smoke, HTTP and API evidence.
+- [x] Verified Primary identity, ledger, parity and registry changes.
+- [x] Existing open items and governance gates retained.
 
 ## Notes
 
