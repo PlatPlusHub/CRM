@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -301,6 +301,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-19 — Gate 1 approval recorded
+
+Owner directly approved CRM SPEC-318 r2 Original Gate 1 for exact Draft SHA-256 AE2755380A2429721071776A41B94A54B570777BA0C9F3389D67A0A804581E23 in owner instruction OWNER-SPEC318-RUN-THROUGH.md (SHA-256 9DB89E5851377A8F5195E8EA188763FC227AD8F53B6DF48078E07B9228681E37). The current instruction sets Batch 6 PLAN section 2 Mode 2. Native sandbox approval 45fe50fa9e86cae09270fb8f304ffd1fe048671c passed; the unchanged checkpoint guard isolated only RECOVER-1. This record is Gate 1 only. Gate 2 is separate and depends on the exact artifact, current target, readiness and recovery. Immediately before allocation the hash, the Draft blob c466187285bb35fbd1899c27a201636d87312b14, all 2 source anchors, the baseline HEAD a17473dbe478a2c2268ce9c503bf6e4832b7affb against refreshed origin/main a17473dbe478a2c2268ce9c503bf6e4832b7affb and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 9d3837f. No implementation performed before this transition.
 
 ## Review Gate
 
