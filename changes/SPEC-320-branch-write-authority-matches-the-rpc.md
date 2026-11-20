@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -567,12 +567,12 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 
 ## Acceptance Criteria
 
-- [ ] Exact migration reuses the existing capability guard for branch writes. `check: blob supabase/migrations/20261120122927_branch_write_authority_matches_the_rpc.sql ea92b491bf33a69377921ba84d76daf11abd8770`
-- [ ] Test 58 retains exact shared guard membership. `check: blob supabase/tests/58_write_grants_and_config_capability_test.sql 0b044df1bc6fc9e9e8387b0ba8f583c17bf1ff5c`
-- [ ] Test 130 proves permission and MFA behavior and preserves the existing branch event boundary. `check: blob supabase/tests/130_branch_door_audit_test.sql 1100910b9540ce32e32d691bb215f11fa74bdecd`
-- [ ] The generated API reports only the expected branches guard change. `check: blob reports/master/MASTER_API_CONTRACT.md 4c71ef7a47348212c2ce70c8ac30a05ebda80be6`
-- [ ] The native Batch 6 selector remains unchanged. `check: same scripts/batch6_select_target.ps1 @21d411b0e642c68b90cec795bbab0c86f27c8bee`
-- [ ] The hosted target, ordered ledger and all ten structural parity sections are independently verified. Branch authority is evidenced and the event obligation and remaining class members keep their scopes and triggers.
+- [x] Exact migration reuses the existing capability guard for branch writes. `check: blob supabase/migrations/20261120122927_branch_write_authority_matches_the_rpc.sql ea92b491bf33a69377921ba84d76daf11abd8770`
+- [x] Test 58 retains exact shared guard membership. `check: blob supabase/tests/58_write_grants_and_config_capability_test.sql 0b044df1bc6fc9e9e8387b0ba8f583c17bf1ff5c`
+- [x] Test 130 proves permission and MFA behavior and preserves the existing branch event boundary. `check: blob supabase/tests/130_branch_door_audit_test.sql 1100910b9540ce32e32d691bb215f11fa74bdecd`
+- [x] The generated API reports only the expected branches guard change. `check: blob reports/master/MASTER_API_CONTRACT.md 4c71ef7a47348212c2ce70c8ac30a05ebda80be6`
+- [x] The native Batch 6 selector remains unchanged. `check: same scripts/batch6_select_target.ps1 @21d411b0e642c68b90cec795bbab0c86f27c8bee`
+- [x] The hosted target, ordered ledger and all ten structural parity sections are independently verified. Branch authority is evidenced and the event obligation and remaining class members keep their scopes and triggers.
 
 ## Execution Log
 
@@ -599,12 +599,15 @@ Verdict: Confirmed Complete
 
 Independent Review against the committed Original and Primary readback. Verified allocated Draft blob a564ea530f8307f55e52c91cc738bdc9d0d2b1c0 and frozen SHA-256 F415D9527F63B393D84A6863A02A1FE1BA59BA5518C0487AC3B634A0BB169A17 at baseline 21d411b0e642c68b90cec795bbab0c86f27c8bee, all four exact final payload blobs, the unchanged native selector, and 11 scoped paths. The migration adds the branches membership of the existing MANAGE_BRANCHES capability guard for INSERT and UPDATE, with app.authorize enforcing step-up for the applicable roles. Tests 58 and 130, both Original pgTAP passes (182/3381), 35 native HTTP assertions, smoke, and the one-row generated API diff establish the local authority and unchanged branch event boundary. Native Finish returned LOCAL_CERTIFY READY on 2f9d1cd2c4abd7d1775ffe78cdc537e000610e63, receipt dc289506ebfa21f76075b44cdd7f0759355f1a2cef661d4526f2025276abea17, and the runner, watcher and host exits were zero. Platinum Primary vrvtsxexkiiiivlkdxzp independently returned the exact stored statement and version 20261120122927, 274 ordered ledger entries, enabled branch trigger, matching guard and ACL, ten parity sections and unchanged branch row count. The separate Gate 2 record, pre-apply function definition and rollback boundary are preserved. Native RECOVER-1 and consistency passed. BRANCH-1 is completed. BRANCH-2 is still at ENABLE-SURFACE-WORKFLOW, the branches surface is AUDITED-OPEN, and the same other 14 B6-EXIT obligations, including STEPUP-1, remain due. Native release and remote certification follow.
 
+
+Local Original Finish and Review verified, including receipt dc289506ebfa21f76075b44cdd7f0759355f1a2cef661d4526f2025276abea17 on 2f9d1cd2c4abd7d1775ffe78cdc537e000610e63. Candidate binding, publication, promotion and Remote Certify retain their native gates.
+
 ## Review Gate
 
-- [ ] Implementation matches the exact frozen payload.
-- [ ] Local authority, native test and generated API proofs match the approved contract.
-- [ ] Primary identity, deployed row, recovery and registry evidence hold independently.
-- [ ] BRANCH-2 and remaining obligations retain their applicable triggers.
+- [x] Implementation matches the exact frozen payload.
+- [x] Local authority, native test and generated API proofs match the approved contract.
+- [x] Primary identity, deployed row, recovery and registry evidence hold independently.
+- [x] BRANCH-2 and remaining obligations retain their applicable triggers.
 
 ## Notes
 
