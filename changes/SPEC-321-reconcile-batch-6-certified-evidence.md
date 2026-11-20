@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -59,7 +59,7 @@ Product code, migrations, tests, hosted changes, Founder ORVION, integration act
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -194,6 +194,13 @@ Irreversible Action Step: NONE
 ## Execution Log
 
 None.
+
+### 2026-11-20 — Original implementation
+
+Outcome: Implementation complete. Native Finish and independent Review pending.
+
+- Step 1 Applied: The frozen CRM contract produced the exact Action Registry blob 3347d75afa11a93738478c161eb6382d0ba2c269.
+- Step 2 Applied: The native registry matched the isolated replay on every row. B6-EXIT moves from 14 to 12, bookings and passengers keep their existing open findings and workflow triggers, and all 78 surface dispositions and EC rows are preserved. BRANCH-1 is verified complete and BRANCH-2 remains at its workflow trigger. Native consistency runs in the commit Gate. Timed Finish, independent Review and Complete follow in order.
 
 ## Verification Notes
 
