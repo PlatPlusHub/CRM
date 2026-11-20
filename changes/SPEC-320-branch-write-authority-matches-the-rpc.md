@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -581,6 +581,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-20 — Gate 1 approval recorded
+
+Owner approved Original Gate 1 for CRM SPEC-320 and this exact frozen Draft SHA-256 F415D9527F63B393D84A6863A02A1FE1BA59BA5518C0487AC3B634A0BB169A17 in the current directive. Verbatim owner source runtime/OWNER-GATE1-SPEC320.txt SHA-256 5E0E89ECBABBE6B951029A365B7981169ACB259D8EDF04FCAABAE664E0E914C0. Mode 2. Isolated native approval 2f73adebd91de5ece73d0120dbd69ff1391ea95c and verified handoff package 2B28F0C48B86C5C6B8CC216316D959CD18B7C8EFD7A508EBD2FA1B09485550AB. Gate 2 and release retain their exact separate evidence and authority records. Immediately before allocation the hash, the Draft blob a564ea530f8307f55e52c91cc738bdc9d0d2b1c0, all 2 source anchors, the baseline HEAD 21d411b0e642c68b90cec795bbab0c86f27c8bee against refreshed origin/main 21d411b0e642c68b90cec795bbab0c86f27c8bee and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 28c184c. No implementation performed before this transition.
 
 ## Review Gate
 
