@@ -45,18 +45,13 @@
 --       answer -- OTP-2. Assertion 14 pins that KNOWN-OPEN state deliberately: a registered open
 --       finding that silently changes shape is worse than one nobody wrote down.
 --
--- 15-16 are the PAX-4 correction, made executable. `202607061400` recorded that 20 tables "have no
---       trigger that calls app.authorize or app.has_permission at all" and read that as 20
---       ungoverned writes. Re-measured: 15 of the 20 carry the capability check inside the RLS
---       POLICY instead of a trigger, so the count was of ENFORCEMENT SITES OF ONE KIND and the
---       inference drawn from it was about GOVERNANCE. These two assertions exist so the corrected
---       number cannot quietly drift back to the proxy: if a future change moves a capability check
---       from a policy into a trigger, or removes one, the numbers move and this file fails.
+-- INSERT authorization coverage is owned by Test 67 (SEC-1b). Test 106 keeps the independent OTP assertions.
+
 
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select plan(16);
+select plan(14);
 
 -- =============================================================================================
 -- FIXTURE. Two humans, because a cross-identity assertion whose foreign row does not exist is the
@@ -190,39 +185,6 @@ select is(
     where table_schema = 'public' and table_name = 'totp_enrollments' and grantee = 'authenticated'),
   'INSERT,SELECT,UPDATE',
   'totp_enrollments KEEPS its write grant and that is OTP-2, pinned OPEN on purpose: MFA self-disable at aal1 is reproducible, and whether it should require step-up is a policy question canon does not answer');
-
--- =============================================================================================
--- 15-16. THE PAX-4 CORRECTION, MADE EXECUTABLE.
--- =============================================================================================
-select is(
-  (with named(t) as (values
-     ('branches'),('catalog_values'),('chart_of_accounts'),('departments'),('exchange_rates'),
-     ('journal_entries'),('journal_entry_lines'),('lead_interactions'),('subscriptions'),('tenants'),
-     ('users'),('user_branch_assignments'),('user_permission_grants'),('otp_challenges'),
-     ('totp_enrollments'),('trusted_devices'),('campaign_daily_metrics'),('document_retention_policies'),
-     ('exchange_rate_adjustments'),('subscription_payment_proofs'))
-   select count(*)::int from named n
-    where coalesce((select bool_or(coalesce(pg_get_expr(p.polqual, p.polrelid),'') ||
-                                   coalesce(pg_get_expr(p.polwithcheck, p.polrelid),'') ~* '(has_permission|authorize)')
-                      from pg_policy p
-                     where p.polrelid = ('public.' || n.t)::regclass and p.polcmd in ('a','w')), false)),
-  15,
-  'PAX-4 CORRECTED: 15 of the 20 tables it counted as having "no capability trigger" carry the capability check inside the RLS POLICY -- the count measured enforcement sites of one kind and was read as governance');
-
-select is(
-  (with named(t) as (values
-     ('branches'),('catalog_values'),('chart_of_accounts'),('departments'),('exchange_rates'),
-     ('journal_entries'),('journal_entry_lines'),('lead_interactions'),('subscriptions'),('tenants'),
-     ('users'),('user_branch_assignments'),('user_permission_grants'),('otp_challenges'),
-     ('totp_enrollments'),('trusted_devices'),('campaign_daily_metrics'),('document_retention_policies'),
-     ('exchange_rate_adjustments'),('subscription_payment_proofs'))
-   select coalesce(string_agg(n.t, ',' order by n.t), '') from named n
-    where not coalesce((select bool_or(coalesce(pg_get_expr(p.polqual, p.polrelid),'') ||
-                                       coalesce(pg_get_expr(p.polwithcheck, p.polrelid),'') ~* '(has_permission|authorize)')
-                          from pg_policy p
-                         where p.polrelid = ('public.' || n.t)::regclass and p.polcmd in ('a','w')), false)),
-  'campaign_daily_metrics,lead_interactions,otp_challenges,totp_enrollments,trusted_devices',
-  '...and PAX-4''s genuinely uncovered set is these FIVE, each already dispositioned or registered -- named rather than counted, so a new member cannot hide inside a number that still reads 5');
 
 select * from finish();
 rollback;
