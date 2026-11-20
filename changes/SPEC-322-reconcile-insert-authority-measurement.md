@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -267,15 +267,15 @@ Post-Implementation Proof Obligation: Record the native DATABASE readiness and F
 
 ## Acceptance Criteria
 
-- [ ] The scoped retire the redundant measurement assertions only payload equals the isolated edit. `check: blob supabase/tests/106_otp_challenge_subject_authority_test.sql 02adabd5182f9515a5c1ff17bbaf6431fb083519`
-- [ ] The scoped reconcile PAX-4 using the owning evidence payload equals the isolated edit. `check: blob reports/master/MASTER_GAP_REGISTER.md 21ace69e0132278a4ad89950a83ff4af61c92e56`
-- [ ] The scoped retain the individual side-effect and ownership boundaries payload equals the isolated edit. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 5c33d781bb9b41f3a908036aca95036b663040eb`
-- [ ] Test 67 SEC-1b remains the effective INSERT-path measurement. The positive and omission checks prove its population and Test 106 assertions 1 through 14 stay identical.
-- [ ] Test 101 preserves campaign policy coverage and Test 108 preserves actor-bound writer coverage and the recorded LI-3 behavior.
-- [ ] Native Check 29 derives ten obligations due at B6-EXIT, PAX-4 completed, and lead_interactions and LI-3 NOT DUE at ENABLE-CRM. AUTH-1, STEPUP-1 and every unrelated obligation remain at their existing boundaries.
-- [ ] Local DATABASE and REPOSITORY evidence is certified for this Original, including the named HTTP suite. The suite manifest reports 182 files and 3379 assertions.
-- [ ] The disposition and registry evaluator remain byte-identical to the baseline. `check: same reports/master/MASTER_SURFACE_DISPOSITION.md @d4bed23db3c03ed4c91508fb595a0ca10515f0da` `check: same scripts/readiness_population.ps1 @d4bed23db3c03ed4c91508fb595a0ca10515f0da`
-- [ ] Test 67, Test 101, Test 108 and Test 151 remain byte-identical to the baseline and the contract introduces no migration.
+- [x] The scoped retire the redundant measurement assertions only payload equals the isolated edit. `check: blob supabase/tests/106_otp_challenge_subject_authority_test.sql 02adabd5182f9515a5c1ff17bbaf6431fb083519`
+- [x] The scoped reconcile PAX-4 using the owning evidence payload equals the isolated edit. `check: blob reports/master/MASTER_GAP_REGISTER.md 21ace69e0132278a4ad89950a83ff4af61c92e56`
+- [x] The scoped retain the individual side-effect and ownership boundaries payload equals the isolated edit. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 5c33d781bb9b41f3a908036aca95036b663040eb`
+- [x] Test 67 SEC-1b remains the effective INSERT-path measurement. The positive and omission checks prove its population and Test 106 assertions 1 through 14 stay identical.
+- [x] Test 101 preserves campaign policy coverage and Test 108 preserves actor-bound writer coverage and the recorded LI-3 behavior.
+- [x] Native Check 29 derives ten obligations due at B6-EXIT, PAX-4 completed, and lead_interactions and LI-3 NOT DUE at ENABLE-CRM. AUTH-1, STEPUP-1 and every unrelated obligation remain at their existing boundaries.
+- [x] Local DATABASE and REPOSITORY evidence is certified for this Original, including the named HTTP suite. The suite manifest reports 182 files and 3379 assertions.
+- [x] The disposition and registry evaluator remain byte-identical to the baseline. `check: same reports/master/MASTER_SURFACE_DISPOSITION.md @d4bed23db3c03ed4c91508fb595a0ca10515f0da` `check: same scripts/readiness_population.ps1 @d4bed23db3c03ed4c91508fb595a0ca10515f0da`
+- [x] Test 67, Test 101, Test 108 and Test 151 remain byte-identical to the baseline and the contract introduces no migration.
 
 ## Execution Log
 
@@ -311,12 +311,15 @@ Findings: Verified committed Original de5b426c30176e1422f0bc59a3cb0055c467eb89 a
 
 Recommendation: Complete and bind the exact record-only Original. No deployment applies.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt c7150924906fdd01868a786148ce733b1cbae394a6c3311ef52befff3ee0695a and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] All criteria are verified against the exact live Original and fresh native evidence.
-- [ ] Native Finish and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] All criteria are verified against the exact live Original and fresh native evidence.
+- [x] Native Finish and independent Review are present.
 
 ## Notes
 
