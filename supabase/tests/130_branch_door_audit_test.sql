@@ -1,13 +1,9 @@
 -- ATTACK-CLASSES: AUTH DOOR PRIVILEGE TENANT REPLAY OBSERVABILITY STATE=N/A INPUT=N/A BUSINESS=N/A CONCURRENCY=N/A
--- SPEC-226 / Batch 6 Slice 24. `branches` is audited, not repaired. What holds is pinned to the
--- control that holds it: tenant placement, tenant relocation and the non-holder are refused by the
--- `scope_insert` / `scope_update` policies, which is proven by removing each conjunct of the INSERT
--- policy separately inside a savepoint and watching the matching attack land; DELETE has no grant;
--- the slug is unique per tenant. What does NOT hold is pinned as OPEN so this file can never be read
--- as having fixed it: BRANCH-1 (an aal1 owner writes the table the RPC refuses it) and BRANCH-2 (a
--- direct INSERT records no `branch_created`). Those four assertions (6-8, 19) record a DEFECT that
--- is still OPEN, NOT a desired invariant: they pass today only because the defect exists, and they
--- are written to FAIL when their finding is repaired.
+-- SPEC-226 / Batch 6 Slice 24 records the branch audit. BRANCH-1 now requires the same
+-- step-up for table writes, the branch RPC and branch business hours. The capability guard
+-- enforces permission on INSERT independently of RLS. RLS still owns the tenant fence and
+-- UPDATE visibility. DELETE has no grant, and the slug remains unique per tenant.
+-- BRANCH-2 remains open. Assertion 19 records the direct creation event gap at its own gate.
 -- STATE=N/A: `branches` has no status machine and nothing reads `is_active`.
 -- INPUT=N/A: `branch_type` is free text by CAT-6's recorded canon position; nothing reads `slug`,
 -- `name`, `primary_phone`, `address` or `created_at`. A caller-supplied `created_at` is the
@@ -64,8 +60,8 @@ select is((select count(*)::int from public.branches where id='13000000-0000-000
   'CONTROL: the aal1 owner can see the branch under attack');
 
 -- ================================================================================================
--- 4-8. AUTH / DOOR. The RPC and the child table charge step-up (desired, held). The table door does
---      not: 6-8 pin the OPEN defect BRANCH-1, which is NOT desired behaviour.
+-- 4-8. AUTH / DOOR. The branch table, RPC and child table all require step-up.
+--      BRANCH-1 closes only the branch table's authority gap.
 -- ================================================================================================
 select throws_ok(
   $$select app.create_branch('Via RPC','br130-rpc-aal1')$$,
@@ -76,20 +72,21 @@ select throws_ok(
     values ('13000000-0000-0000-0000-000000000001','13000000-0000-0000-0000-00000000000a',1,'09:00','17:00')$$,
   '42501','multi-factor authentication required for this role',
   'the child table door refuses the aal1 owner the same capability');
-select lives_ok(
+select throws_ok(
   $$insert into public.branches (tenant_id,name,slug)
     values ('13000000-0000-0000-0000-000000000001','Squat aal1','br130-squat')$$,
-  'BRANCH-1 is OPEN: the aal1 owner creates a branch through the table (FAILS when BRANCH-1 is repaired)');
-select lives_ok(
+  '42501','multi-factor authentication required for this role',
+  'the branch table refuses creation without step-up');
+select throws_ok(
   $$update public.branches set name='Hijacked', slug='br130-hijacked', is_active=false
     where id='13000000-0000-0000-0000-00000000000a'$$,
-  'BRANCH-1 is OPEN: the aal1 owner renames, re-slugs and deactivates a branch through the table (FAILS when repaired)');
+  '42501','multi-factor authentication required for this role',
+  'the branch table refuses edits without step-up');
 reset role;
 select is(
   (select array[name, slug, is_active::text] from public.branches where id='13000000-0000-0000-0000-00000000000a'),
-  array['Hijacked','br130-hijacked','false'],
-  '...and the aal1 rewrite persisted');
-update public.branches set name='Main', slug='br130-main', is_active=true where id='13000000-0000-0000-0000-00000000000a';
+  array['Main','br130-main','true'],
+  'the refused edit preserves the branch row');
 
 -- ================================================================================================
 -- 9-18. Owner at aal2: legitimate doors, the tenant boundary, DELETE, slug uniqueness, and the
@@ -148,7 +145,7 @@ select is(
   'BRANCH-2 is OPEN: a direct INSERT records no branch event (FAILS when BRANCH-2 is repaired)');
 
 -- ================================================================================================
--- 20-23. PRIVILEGE: a non-holder at aal2 has its INSERT refused by the policy, and its UPDATE matches
+-- 20-23. PRIVILEGE: the guard refuses INSERT by a non-holder at aal2, and UPDATE matches
 --        no row and changes nothing.
 -- ================================================================================================
 set local role authenticated;
@@ -159,7 +156,7 @@ select is((select count(*)::int from public.branches where id='13000000-0000-000
 select throws_ok(
   $$insert into public.branches (tenant_id,name,slug)
     values ('13000000-0000-0000-0000-000000000001','Employee','br130-employee')$$,
-  '42501','new row violates row-level security policy for table "branches"',
+  '42501','permission denied: one of MANAGE_BRANCHES is required to write branches',
   'PRIVILEGE: the employee cannot create a branch through the table');
 update public.branches set name='Employee Rename' where id='13000000-0000-0000-0000-00000000000a';
 reset role;
@@ -167,9 +164,9 @@ select is((select name from public.branches where id='13000000-0000-0000-0000-00
   'PRIVILEGE: the employee''s UPDATE changed nothing');
 
 -- ================================================================================================
--- 24-29. Mutation: each conjunct of `scope_insert` is load-bearing. Remove one at a time inside a
---        savepoint, prove the installed expression changed, prove the attack that conjunct refuses
---        now lands, then roll back and prove the original expression is back byte for byte.
+-- 24-29. Remove each INSERT policy conjunct in its own savepoint. The capability guard still
+--        refuses an actor without permission. The tenant restriction remains load-bearing.
+--        Roll the changes back and check restoration.
 -- ================================================================================================
 savepoint m1;
 alter policy scope_insert on public.branches
@@ -178,10 +175,11 @@ select isnt((select md5(with_check) from pg_policies where schemaname='public' a
   (select v from s130 where k='policy_insert'), 'MUTANT 1 installed: scope_insert without the permission conjunct');
 set local role authenticated;
 select set_config('request.jwt.claims','{"sub":"13000000-0000-0000-0000-0000000000a2","aal":"aal2"}',true);
-select lives_ok(
+select throws_ok(
   $$insert into public.branches (tenant_id,name,slug)
     values ('13000000-0000-0000-0000-000000000001','Employee','br130-employee')$$,
-  'MUTANT 1: the employee''s insert lands, so the permission conjunct is what refused it');
+  '42501','permission denied: one of MANAGE_BRANCHES is required to write branches',
+  'MUTANT 1: the capability guard still refuses a non-holder');
 reset role;
 rollback to savepoint m1;
 

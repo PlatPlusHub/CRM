@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -60,7 +60,7 @@ All other paths, Founder Secondary, integration activation, UI, branch events, G
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -577,6 +577,13 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 ## Execution Log
 
 None.
+
+### 2026-11-20 — Original implementation
+
+- Steps 1–3 reproduced the three exact frozen Git blobs. Steps 4–5 regenerated the approved API blob 4c71ef7a47348212c2ce70c8ac30a05ebda80be6, changing only the branches row. Two pgTAP passes each ran 182 files and 3381 assertions. HTTP ran 35 assertions with exit 0. Database smoke and local parity passed. Native pre-deploy consistency reported only the exact pending migration under RECOVER-1.
+- Step 6 used the separate DEC-25 Gate 2 record for one apply to Platinum Primary vrvtsxexkiiiivlkdxzp. SQL SHA-256 4ABC64F420ABC6EA35AC6F59571FB4F423DBDE93729A5DF4193E82061344CBB5 and MD5 4c710c23130d618cec77a5ffb3e368eb match the approved payload and stored statement. The verified temporary ledger version 20261120142616 was reconciled to 20261120122927 under the one-row guard. Final readback proved the 274 ordered entries, ledger 67a6f9f8b5454c75d09b62a8f748c20d, ten-domain structural parity, enabled branch trigger, expected function identity and ACL, and unchanged branch row count.
+- Step 7 refreshed attributable Primary ledger evidence and its parity and registry records. Ledger, parity and consistency verifiers passed. BRANCH-1 is completed. Branches remain AUDITED-OPEN for BRANCH-2 at ENABLE-SURFACE-WORKFLOW. STEPUP-1 remains open and the same other 14 obligations are due at B6-EXIT.
+- Step 8 proceeds to the timed and watched Original Finish on this implementation commit, followed by Review, Complete, bind and the native release gates.
 
 ## Verification Notes
 

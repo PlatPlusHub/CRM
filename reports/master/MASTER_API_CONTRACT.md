@@ -166,7 +166,7 @@ or archive flag changes -- so a DESCRIPTIVE edit passes it. That is SEC-2, and i
 | `booking_items` | `-IU-` | yes | conditional | scope_isolation |
 | `bookings` | `SIU-` | yes | conditional | scope_isolation |
 | `branch_business_hours` | `SIU-` | yes | conditional | tenant_isolation |
-| `branches` | `SIU-` | no | no | scope_delete, scope_insert, scope_read, scope_update |
+| `branches` | `SIU-` | yes | conditional | scope_delete, scope_insert, scope_read, scope_update |
 | `campaign_daily_metrics` | `SIU-` | no | no | scope_isolation |
 | `catalog_types` | `S---` | no | no | read_all_authenticated |
 | `catalog_values` | `SIU-` | yes | conditional | catalog_read, catalog_tenant_delete, catalog_tenant_insert, catalog_tenant_update |
