@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -198,6 +198,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-20 — Gate 1 approval recorded
+
+The owner answered the exact SPEC-321 r2 Gate 1 request in the current session. The approval is bound to the single presented Draft SHA-256 0498F86977F5F7ED0C7C2F31E7D11347617C680C1F6652A317EAA9EEF994DFBE. Verbatim reply retained in private Workbench evidence OWNER-ORIGINAL-APPROVAL.txt with SHA-256 3B262234FC8711BE0971B08707BD05C8C54F0C141DB945DA7320DFE923A34C62. The scope is the frozen CRM record-only candidate and the native Original lifecycle. Immediately before allocation the hash, the Draft blob 0355937cacbcb463bc178fba91fa5e918bd3b794, all 1 source anchors, the baseline HEAD d7960b8ddd9675c339ce464440b480141fc4d9c3 against refreshed origin/main d7960b8ddd9675c339ce464440b480141fc4d9c3 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as e244dfc. No implementation performed before this transition. No production write applies to this contract. Owner publication and promotion retain their native release authority.
 
 ## Review Gate
 
