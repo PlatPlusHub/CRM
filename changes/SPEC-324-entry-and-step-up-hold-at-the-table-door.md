@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -65,7 +65,7 @@ All other paths, Founder Secondary, integration activation, UI, campaign entry (
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -789,6 +789,13 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 ## Execution Log
 
 None.
+
+### 2026-11-21 — Original implementation
+
+- Steps 1–5 reproduced the exact frozen Git blobs: migration fc317dda36df2d5540bad2ba6afcabbf9d2e8867, Tests 58 68f4e874e55af952e5e2e8034dd334e347ea935c, 101 2b86d7be04a4a337d387ff60da68789caa9c9ca6 and 183 d11dea50c36e8dcc1e418251125358ad0377e87b. Step 6 regenerated the approved API blob 24cbab925f5b30f88cb174fa9acae950e9fcc785. Step 7 readiness ran two pgTAP passes of 183 files and 3409 assertions each, native HTTP 35 passed and 0 failed, and database smoke; local catalog and parity matched 275 / 20261121100000 / 5213d0d035d53e635a839f0ce9bb7693. Native pre-deploy consistency reported only the exact pending migration under RECOVER-1.
+- Step 8 used the separate DELEGATED Gate 2 record for one apply to Platinum Primary vrvtsxexkiiiivlkdxzp after a lock read showing 274 / 67a6f9f8b5454c75d09b62a8f748c20d, the target absent, zero locks and zero rows on the six tables. SQL SHA-256 7183ED4A01A9AF15AFB24EEAB8812B8F064F0F5C80A089B08D83F2D0C97E7BB0 and MD5 954df5eb745b4f0b6ab6f06eafe314b7 (19097 bytes) match the approved payload and stored statement. The verified temporary ledger version 20261121020535 was reconciled to 20261121100000 under the one-row guard. Final readback proved 275 ordered entries, ledger 5213d0d035d53e635a839f0ce9bb7693, all ten surfaces equal local (combined 13c9e501661f1306e5374ea23f3c42a1, 3193 objects), the enabled bindings, the expected function identities and zero rows on the six tables. Founder Secondary was not touched.
+- Step 9 refreshed attributable Primary ledger evidence, the manifest live state and the plan registry lines. ARCH-2 and ENTRY-1 are fixed and STEPUP-1 resolved for its B6-EXIT members; CAMP-2, CAMP-4 and JE-2 keep their statuses. `booking_items` is AUDITED, `quotations` stays PARTIAL with its archive axis closed, and the proof is added to `leads`, `invoices`, `campaign_daily_metrics` and `exchange_rate_adjustments`. A fresh measurement at 2026-11-21 04:16 Cairo found `ExposeDockerAPIOnTCP2375` false, no listener on port 2375 and both loopback connections refused, with every Docker context on the named pipe, so the Docker 2375 backlog item is closed.
+- Step 10 proceeds to the timed and watched Original Finish on this implementation commit, followed by Review, Complete, bind and the native release gates.
 
 ## Verification Notes
 

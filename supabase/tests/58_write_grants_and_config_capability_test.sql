@@ -243,8 +243,8 @@ select is(
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
     where not t.tgisinternal and t.tgname like '%\_guard\_write\_capability'),
-  29,
-  'twenty-nine tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400 + booking_items, BOOK-3, 202607061500 + marketing_campaigns, CAMP-3, SPEC-222 + branches, BRANCH-1)');
+  31,
+  'thirty-one tables now carry the write-capability guard (13 + SEC-1b''s twelve, 202607057000 + booking_item_passengers, PAX-1, 202607061400 + booking_items, BOOK-3, 202607061500 + marketing_campaigns, CAMP-3, SPEC-222 + branches, BRANCH-1 + campaign_daily_metrics and exchange_rate_adjustments, STEPUP-1, 20261121100000)');
 
 select is(
   (select count(*)::int from pg_trigger t join pg_class c on c.oid = t.tgrelid
@@ -276,7 +276,9 @@ select is(
                             -- it does not own.
                             'booking_items',
                             -- CAMP-3 (SPEC-222): RLS charged the permission but not the step-up.
-                            'marketing_campaigns','branches')),
+                            'marketing_campaigns','branches',
+                            -- STEPUP-1 (20261121100000): RLS charged the permission but not the step-up.
+                            'campaign_daily_metrics','exchange_rate_adjustments')),
   0,
   '...and every one of them is on a table the function has a permission mapping for');
 

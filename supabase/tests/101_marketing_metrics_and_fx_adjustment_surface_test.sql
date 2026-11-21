@@ -93,7 +93,11 @@ select is(
       and (p.prosrc like '%campaign_daily_metrics%' or p.prosrc like '%exchange_rate_adjustments%')
       -- Re-reasoned at Batch 6 slice 51 (`20261114120000`): `app.guard_exchange_rate_write` only READS
       -- exchange_rate_adjustments, to refuse rewriting a rate an adjustment cites. It is no door to that table.
-      and p.oid <> 'app.guard_exchange_rate_write'::regproc),
+      and p.oid <> 'app.guard_exchange_rate_write'::regproc
+      -- Re-reasoned at B6-EXIT bundle A (`20261121100000`, STEPUP-1): `app.guard_write_capability` is the
+      -- table door's own step-up guard, charging the permission the RLS write check already names plus
+      -- the role's MFA. It writes nothing and opens no other door to either table.
+      and p.oid <> 'app.guard_write_capability'::regproc),
   0,
   'neither surface has ANY function consumer -- so the table door is not a bypass of an RPC door, it IS the door, and RLS is the complete enforcement layer');
 
