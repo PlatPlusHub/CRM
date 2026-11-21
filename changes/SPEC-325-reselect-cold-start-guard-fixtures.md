@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -204,12 +204,12 @@ Post-Implementation Proof Obligation: The native Finish runs all five hosted gua
 
 ## Acceptance Criteria
 
-- [ ] The cold-start guard suite selects its fixtures by shape and proves the selected row exists. `check: blob scripts/test_cold_start_state_guard.ps1 2ddd674cc7b372c0a74e5997bfee206570f2f49d`
-- [ ] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @35560623dcd4405204f72034170d78ab618379ea`
-- [ ] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @35560623dcd4405204f72034170d78ab618379ea`
-- [ ] The other hosted guard suites are preserved. `check: same scripts/readiness_selftest.ps1 @35560623dcd4405204f72034170d78ab618379ea`
-- [ ] The hosted guard workflow is preserved. `check: same .github/workflows/repository-consistency.yml @35560623dcd4405204f72034170d78ab618379ea`
-- [ ] All five hosted guard suites pass in the native Finish.
+- [x] The cold-start guard suite selects its fixtures by shape and proves the selected row exists. `check: blob scripts/test_cold_start_state_guard.ps1 2ddd674cc7b372c0a74e5997bfee206570f2f49d`
+- [x] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @35560623dcd4405204f72034170d78ab618379ea`
+- [x] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @35560623dcd4405204f72034170d78ab618379ea`
+- [x] The other hosted guard suites are preserved. `check: same scripts/readiness_selftest.ps1 @35560623dcd4405204f72034170d78ab618379ea`
+- [x] The hosted guard workflow is preserved. `check: same .github/workflows/repository-consistency.yml @35560623dcd4405204f72034170d78ab618379ea`
+- [x] All five hosted guard suites pass in the native Finish.
 
 ## Execution Log
 
@@ -238,12 +238,15 @@ Verdict: Confirmed Complete
 
 Exact frozen Draft blob 3516aba5affaeb6a92e04d481bcd1b1ba7f7cb38 (SHA-256 D0348C33260093082C50C746E45E2C5B033D12B7EE49A1C503B67655810B12D4) was implemented on baseline 35560623 at 748166a. The final scripts/test_cold_start_state_guard.ps1 blob is 2ddd674cc7b372c0a74e5997bfee206570f2f49d; scripts/check_repository_consistency.ps1, scripts/check_agent_continuity.ps1, scripts/readiness_selftest.ps1 and .github/workflows/repository-consistency.yml are byte-identical to the baseline. The changed paths (the contract, the cold-start suite, _ORVION_CANONICAL/manifest.md and ai-map.json) are all within the Write Scope. The native timed Finish at finishHead 748166a returned LOCAL_CERTIFY READY (receipt digest 4797c5dcf0125e315b15e1d98e4673d77a524130df32c982c7492a1037b5722f, profile REPOSITORY): the repository guard, git diff --check and all five hosted guard suites passed through Additional Verification, including the cold-start suite with its new precondition, with runner, watcher and host exits 0. No database action was taken and Founder Secondary was not touched. Native release and remote certification follow under their own gates.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 4797c5dcf0125e315b15e1d98e4673d77a524130df32c982c7492a1037b5722f and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed by local evidence.
-- [ ] Native Finish evidence and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed by local evidence.
+- [x] Native Finish evidence and independent Review are present.
 
 ## Notes
 
