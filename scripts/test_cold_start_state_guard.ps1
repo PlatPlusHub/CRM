@@ -219,20 +219,28 @@ try {
     Write-Host "`n== C. REGISTER STATUS VOCABULARY AND ANCHORING (Checks 14/25) ==" -ForegroundColor Cyan
     # =============================================================================================
     $registerOriginal = Read-S $REGISTER
-    # ARCH-2's row is the exact live false-negative: its status OPENS with `**OPEN - engineering,
+    # The exact live false-negative was ARCH-2's row: its status OPENED with `**OPEN - engineering,
     # PROVEN ... deliberately NOT fixed ...**`, and Check 25's unanchored pattern read the substring
-    # FIXED as a settled verdict. Its Owner-Decision cell is currently `-` (no decider), so it sits
-    # outside Check 25's population; giving it one puts it in.
-    $archRow = (($registerOriginal -split "`r?`n") | Where-Object { $_ -match '^\|\s*ARCH-2\s*\|' } | Select-Object -First 1)
-    Check 'C-precondition: ARCH-2 opens OPEN and contains the word FIXED inside its status' `
-        ($archRow -and $archRow -match 'OPEN' -and $archRow -match 'NOT fixed')
+    # FIXED as a settled verdict. ARCH-2 itself closed at CRM SPEC-324, so the site is now SELECTED:
+    # the first register row whose status cell itself OPENS with **OPEN, still says NOT fixed, and has
+    # no decider (Owner-Decision `-`), so it sits outside Check 25's population until given one. The
+    # precondition reads the status CELL, not the whole row, so a row whose history merely mentions
+    # OPEN can never satisfy it vacuously again.
+    $archRow = (($registerOriginal -split "`r?`n") | Where-Object {
+        $c = $_ -split '\|'
+        $_ -match '^\|\s*[A-Z][A-Z0-9]*-\d+[a-z]?\s*\|' -and $c.Count -gt 10 -and
+        $c[9] -match '^\s*\*\*OPEN' -and $c[9] -match 'NOT fixed' -and $c[10].Trim() -in @('-', [string][char]0x2014)
+    } | Select-Object -First 1)
+    $archId = if ($archRow) { ($archRow -split '\|')[1].Trim() } else { '' }
+    Check "C-precondition: a no-decider register row ($archId) whose status cell opens OPEN and contains the word FIXED" `
+        ($archRow -and ($archRow -split '\|')[9] -match '^\s*\*\*OPEN' -and ($archRow -split '\|')[9] -match 'NOT fixed')
 
     $cells = $archRow -split '\|'
     $withDecider = ($cells.Clone()); $withDecider[10] = ' owner: probe '
     Write-S $REGISTER $registerOriginal.Replace($archRow, ($withDecider -join '|'))
     $r = Invoke-Guard
     Check 'C1 MUTATION: a status OPENING with OPEN is not settled merely because "deliberately NOT FIXED" contains FIXED' `
-        ($r.Exit -ne 0 -and $r.Text -match "UNSURFACED DECISION: register entry 'ARCH-2'") $r.Exit
+        ($r.Exit -ne 0 -and $r.Text -match "UNSURFACED DECISION: register entry '$([regex]::Escape($archId))'") $r.Exit
 
     # C2 -- SECOND DIRECTION at the SAME site, so the difference measured is the vocabulary and
     # nothing else. `VERIFIED` is one of the words the register's own Legend declares terminal and
@@ -241,7 +249,7 @@ try {
     Write-S $REGISTER $registerOriginal.Replace($archRow, ($settledForm -join '|'))
     $r = Invoke-Guard
     Check 'C2 CONTROL: the same row LEADING with VERIFIED is settled, and is not demanded on the boot line' `
-        ($r.Exit -eq 0 -and $r.Text -notmatch "UNSURFACED DECISION: register entry 'ARCH-2'") $r.Exit
+        ($r.Exit -eq 0 -and $r.Text -notmatch "UNSURFACED DECISION: register entry '$([regex]::Escape($archId))'") $r.Exit
 
     Restore-S $REGISTER
     $r = Invoke-Guard
@@ -338,7 +346,7 @@ try {
     Write-S $PLAN $planOriginal.Replace('| Batch 6, this plan | NEXT |', '| Batch 6, this plan | REACHED 2026-10-12 probe |')
     $r = Invoke-Guard
     Check 'F3 MUTATION: a REACHED boundary with its items open fails Check 29 as OVERDUE' `
-        ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: ENTRY-1 -- boundary B6-EXIT') $r.Exit
+        ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: \S+ -- boundary B6-EXIT is REACHED 2026-10-12 probe') $r.Exit
     Restore-S $PLAN
 
     $registerNow = Read-S $REGISTER
