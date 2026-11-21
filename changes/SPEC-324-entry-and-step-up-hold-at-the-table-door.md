@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -775,16 +775,16 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 
 ## Acceptance Criteria
 
-- [ ] Exact migration reuses the archive authority, capability guard and entry shape at six tables. `check: blob supabase/migrations/20261121100000_entry_and_step_up_hold_at_the_table_door.sql fc317dda36df2d5540bad2ba6afcabbf9d2e8867`
-- [ ] Test 58 retains exact shared guard membership. `check: blob supabase/tests/58_write_grants_and_config_capability_test.sql 68f4e874e55af952e5e2e8034dd334e347ea935c`
-- [ ] Test 101 records the guard as the tables' own door. `check: blob supabase/tests/101_marketing_metrics_and_fx_adjustment_surface_test.sql 2b86d7be04a4a337d387ff60da68789caa9c9ca6`
-- [ ] Test 183 proves every selected effect, its authorized path and its exemption. `check: blob supabase/tests/183_entry_and_step_up_hold_at_the_table_door_test.sql d11dea50c36e8dcc1e418251125358ad0377e87b`
-- [ ] The recorded grouped selection and the per-item registry closure are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 171d70f4a107af5b7827fc0a67636d3bb267b74c`
-- [ ] The generated API reports only the two expected guard-row changes. `check: blob reports/master/MASTER_API_CONTRACT.md 24cbab925f5b30f88cb174fa9acae950e9fcc785`
-- [ ] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @065155b47d24698e851d7a0eb6b48cc747173aa1`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **183 files / 3409 assertions**"`
-- [ ] The Docker 2375 item closes on live evidence. `check: has reports/future-backlog.md "**DONE** (SPEC-324): the setting is off and nothing listens on port 2375"`
-- [ ] Verified Primary and local ledger and all ten surfaces agree. ARCH-2, ENTRY-1 and STEPUP-1 close per item with evidence; CAMP-2, CAMP-4, JE-2 and the remaining candidates keep their recorded triggers.
+- [x] Exact migration reuses the archive authority, capability guard and entry shape at six tables. `check: blob supabase/migrations/20261121100000_entry_and_step_up_hold_at_the_table_door.sql fc317dda36df2d5540bad2ba6afcabbf9d2e8867`
+- [x] Test 58 retains exact shared guard membership. `check: blob supabase/tests/58_write_grants_and_config_capability_test.sql 68f4e874e55af952e5e2e8034dd334e347ea935c`
+- [x] Test 101 records the guard as the tables' own door. `check: blob supabase/tests/101_marketing_metrics_and_fx_adjustment_surface_test.sql 2b86d7be04a4a337d387ff60da68789caa9c9ca6`
+- [x] Test 183 proves every selected effect, its authorized path and its exemption. `check: blob supabase/tests/183_entry_and_step_up_hold_at_the_table_door_test.sql d11dea50c36e8dcc1e418251125358ad0377e87b`
+- [x] The recorded grouped selection and the per-item registry closure are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 171d70f4a107af5b7827fc0a67636d3bb267b74c`
+- [x] The generated API reports only the two expected guard-row changes. `check: blob reports/master/MASTER_API_CONTRACT.md 24cbab925f5b30f88cb174fa9acae950e9fcc785`
+- [x] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @065155b47d24698e851d7a0eb6b48cc747173aa1`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **183 files / 3409 assertions**"`
+- [x] The Docker 2375 item closes on live evidence. `check: has reports/future-backlog.md "**DONE** (SPEC-324): the setting is off and nothing listens on port 2375"`
+- [x] Verified Primary and local ledger and all ten surfaces agree. ARCH-2, ENTRY-1 and STEPUP-1 close per item with evidence; CAMP-2, CAMP-4, JE-2 and the remaining candidates keep their recorded triggers.
 
 ## Execution Log
 
@@ -811,12 +811,15 @@ Verdict: Confirmed Complete
 
 Independent Review against the committed Original and a fresh Primary readback. Verified allocated Draft blob a329d2ec9d4ffd3589014c7d4aafcebc2ce56c40 and frozen SHA-256 96D44C5165C9B8B3FF295BF3A75FC5FEC51C3B8A41C0A8C9502544BA90E74791 at baseline 065155b47d24698e851d7a0eb6b48cc747173aa1, the exact final blobs (migration fc317dda36df2d5540bad2ba6afcabbf9d2e8867, test 58 68f4e874e55af952e5e2e8034dd334e347ea935c, test 101 2b86d7be04a4a337d387ff60da68789caa9c9ca6, test 183 d11dea50c36e8dcc1e418251125358ad0377e87b, plan 171d70f4a107af5b7827fc0a67636d3bb267b74c, generated API 24cbab925f5b30f88cb174fa9acae950e9fcc785), the unchanged native evaluator and Migration CI, and the 13 declared scoped paths. The migration re-attaches four archive-authority bindings, adds two write-capability bindings and the booking-item entry function and trigger, and replaces the capability guard body; it drops no table or column and rewrites no business row. Native Finish on 7a97685681afa7916dd64d3ac2e62a3d71f84a95 ran db reset, two pgTAP passes, native HTTP, verify_database, parity evidence, repository consistency, git diff --check and the Primary ledger check, and returned LOCAL_CERTIFY READY with receipt a604d937bf91fd1f0ff49db33db7648fa92c867768e9273fc166695f12e60ac9 (profiles DATABASE, REPOSITORY); runner, watcher and host exits were zero. Platinum Primary vrvtsxexkiiiivlkdxzp, read independently at 2026-11-21 02:27:36 UTC through the read-only route, returned 275 ledger rows, latest 20261121100000, ordered fingerprint 5213d0d035d53e635a839f0ce9bb7693, the stored statement 954df5eb745b4f0b6ab6f06eafe314b7 (19097 bytes), guard definition 273225576a94854d5398b103de3fa372, all ten bindings enabled, and zero rows on the six tables. The Gate 2 record, the guarded ledger reconciliation and the pre-deploy fingerprints are preserved. The gap register records that this contract closes the last ARCH-2 and ENTRY-1 members and the STEPUP-1 B6-EXIT members, while CAMP-2, CAMP-4 and JE-2 keep their own statuses; the disposition coverage is 57 AUDITED and 18 AUDITED-OPEN; the Docker 2375 backlog item closed on the live measurement. Founder Secondary was not touched. Native release and remote certification follow under their own gates.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt a604d937bf91fd1f0ff49db33db7648fa92c867768e9273fc166695f12e60ac9 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Exact approved payload and allowed scope.
-- [ ] Isolated causal negatives and native SQL, smoke, HTTP and API evidence.
-- [ ] Verified Primary identity, ledger, parity and per-item registry changes.
-- [ ] Existing open items and governance gates retained.
+- [x] Exact approved payload and allowed scope.
+- [x] Isolated causal negatives and native SQL, smoke, HTTP and API evidence.
+- [x] Verified Primary identity, ledger, parity and per-item registry changes.
+- [x] Existing open items and governance gates retained.
 
 ## Notes
 
