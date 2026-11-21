@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -505,6 +505,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-22 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-327 only, DEC-02 and Batch 6 PLAN section 2 run mode 2 as redefined by the owner on 2026-11-21 (owner-2026-11-21-run-modes-redefined.txt, SHA-256 35E35600BB9D2D69EBF0A85BE8E6256260617F9A8B47F74A091565BC53AF69DD). Exact Draft SHA-256 6053A624814DD356B2B1393FD17DCE991061D1F2F8990FA9FCE03AAFF5B6358C, Git blob 34a177eb02dabdee876245739844ef19ca7a34c0, CRM baseline 17ec05a. Native isolated Approve 17a3d7d9b2fb18f13b9f75d11d5f80c38cfa280e passed, literal Steps 1-4 matched, and the unchanged consistency guard reported RECOVER-1 only after the Step 6 text. This record is Gate 1 only. Gate 2 is separate and depends on the exact artifact, current target, readiness and recovery. Immediately before allocation the hash, the Draft blob 34a177eb02dabdee876245739844ef19ca7a34c0, all 2 source anchors, the baseline HEAD 17ec05a0904f9b5eac676b2d0024d71850886441 against refreshed origin/main 17ec05a0904f9b5eac676b2d0024d71850886441 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 1c42645. No implementation performed before this transition.
 
 ## Review Gate
 
