@@ -233,6 +233,11 @@ None.
 
 DELEGATED Original Gate 1 for CRM SPEC-325 only, DEC-02 and Batch 6 PLAN section 2 run mode 2 as redefined by the owner on 2026-11-21 (owner-2026-11-21-run-modes-redefined.txt, SHA-256 35E35600BB9D2D69EBF0A85BE8E6256260617F9A8B47F74A091565BC53AF69DD). Exact Draft SHA-256 D0348C33260093082C50C746E45E2C5B033D12B7EE49A1C503B67655810B12D4, Git blob 3516aba5affaeb6a92e04d481bcd1b1ba7f7cb38, CRM baseline 3556062. Native isolated Approve 78df2f2 and Implement 7e23d57 passed and the isolated native Finish returned LOCAL_CERTIFY READY with all five hosted guard suites green. No database action. This record is Gate 1 only; release is separate. Immediately before allocation the hash, the Draft blob 3516aba5affaeb6a92e04d481bcd1b1ba7f7cb38, all 1 source anchors, the baseline HEAD 35560623dcd4405204f72034170d78ab618379ea against refreshed origin/main 73b02a1ac820683846a7566c88d5704bf3171884 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as b605671. No implementation performed before this transition.
 
+
+Verdict: Confirmed Complete
+
+Exact frozen Draft blob 3516aba5affaeb6a92e04d481bcd1b1ba7f7cb38 (SHA-256 D0348C33260093082C50C746E45E2C5B033D12B7EE49A1C503B67655810B12D4) was implemented on baseline 35560623 at 748166a. The final scripts/test_cold_start_state_guard.ps1 blob is 2ddd674cc7b372c0a74e5997bfee206570f2f49d; scripts/check_repository_consistency.ps1, scripts/check_agent_continuity.ps1, scripts/readiness_selftest.ps1 and .github/workflows/repository-consistency.yml are byte-identical to the baseline. The changed paths (the contract, the cold-start suite, _ORVION_CANONICAL/manifest.md and ai-map.json) are all within the Write Scope. The native timed Finish at finishHead 748166a returned LOCAL_CERTIFY READY (receipt digest 4797c5dcf0125e315b15e1d98e4673d77a524130df32c982c7492a1037b5722f, profile REPOSITORY): the repository guard, git diff --check and all five hosted guard suites passed through Additional Verification, including the cold-start suite with its new precondition, with runner, watcher and host exits 0. No database action was taken and Founder Secondary was not touched. Native release and remote certification follow under their own gates.
+
 ## Review Gate
 
 - [ ] Every change matches the accepted implementation steps.
