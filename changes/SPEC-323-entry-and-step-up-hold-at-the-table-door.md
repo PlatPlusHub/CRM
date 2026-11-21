@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -770,6 +770,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-21 — Gate 1 approval recorded
+
+Owner directly approved CRM SPEC-323 r2 Original Gate 1 for exact Draft SHA-256 715D4EC55BFE9EB06B05CFF1C777BB03D3A2268E1FFFC097F9D5CF3C7546C558 at baseline 73b02a1 on 2026-11-21, with run-through authority through Finish including the Step 8 CRM Primary deploy of these exact bytes, in owner words owner-2026-11-21-spec323-r2-run-through.txt (SHA-256 08DE33D40732E759739D6B747D6B22A3FB346772E2DAEBA593A0D9EDE06E59E9). The current instruction sets Batch 6 PLAN section 2 Mode 2. Native sandbox approval 665fdef9ae5bd848d2ce9173a9918db8dbae2148 passed. This record is Gate 1 only. Gate 2 is separate and depends on the exact artifact, current target, readiness and recovery. Immediately before allocation the hash, the Draft blob 774ac33253d029daebbb8a8409567959845bc577, all 3 source anchors, the baseline HEAD 73b02a1ac820683846a7566c88d5704bf3171884 against refreshed origin/main 73b02a1ac820683846a7566c88d5704bf3171884 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as c818f22. No implementation performed before this transition.
 
 ## Review Gate
 
