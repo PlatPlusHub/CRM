@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -64,7 +64,7 @@ All other paths, Founder Secondary, integration activation, email delivery, UI, 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -1196,6 +1196,17 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 ## Execution Log
 
 None.
+
+### 2026-11-21 — Original implementation
+
+- Steps 1–7 reproduced the exact frozen Git blobs: migration 52bb1f1577f4346b439a1c33c47b233de5d4935d, Tests 54 c4b1b3e8549fd8820ae39eeda99c3e9edcb1dda7, 96 72e2107b07178f352a634606fcbd7173bdf39a23, 140 d132e48e82f068588148df658d9eeedc4d2b15d7, 155 f85481f019a59ea756ba93a056140cc3576fc423 and 184 be2fc2e45076505879939d0a8accc0fa0f28656b, and the plan b766c82547d6c870d3cc2ecf16a51e387668a7d4.
+- Step 8 regenerated the approved API blob 62af74be28b058e41b6b6bcfbe43457f15acfd33, in which only the `record_payment` row differs.
+- Step 9 readiness ran two pgTAP passes of 184 files and 3445 assertions, native HTTP 35 passed and 0 failed, and smoke. Local catalog and parity matched 276 / 20261121110000 / 3d6fe3908078c02f611c70b4eb070623. Native pre-deploy consistency reported only RECOVER-1.
+- Step 10 used the separate DELEGATED Gate 2 record for one apply to Platinum Primary vrvtsxexkiiiivlkdxzp after a lock read showing 275 / 5213d0d035d53e635a839f0ce9bb7693, the target absent, zero locks and zero rows on the five tables. SQL SHA-256 C73CF263E190D520D3B80BBE4D2D51CC861F878D068CABD991FDB330AC054D6C and MD5 28b4a3013130fe9337d1fe8d67d9c342 (22430 bytes) match the approved payload and the stored statement. The connector's temporary version 20261121142834 was reconciled to 20261121110000 under the one-row guard. Final readback: 276 entries, ledger 3d6fe3908078c02f611c70b4eb070623, all ten surfaces equal local (combined 3c6ea07a196c3cf0a3ff801397931e0e, 3203 objects), five bindings enabled, nine function bodies equal local and zero rows. Founder Secondary was not touched.
+- Step 11 refreshed attributable Primary ledger evidence, the manifest live state, the plan and the API contract. RFD-3, CHAT-2, PAY-5 and FIN-11 are fixed; FIN-9 records its answered half and keeps its journal-event half open; PAY-9, PAY-4, JE-2 and LI-3 keep their statuses. `conversations`, `payment_allocations` and `refunds` are AUDITED; coverage is 60 AUDITED, 15 AUDITED-OPEN and 3 PARTIAL.
+- Step 12 proceeds to the timed and watched Original Finish on this implementation commit, followed by Review, Complete, bind and the native release gates.
+
+Evidence: Workbench `data/records/batch6/exit-bundle-b/spec326/` (`runtime/`, `GATE1-SPEC-326-DELEGATED.md`, `GATE2-SPEC-326-DELEGATED.md`, `DRAFT.md`).
 
 ## Verification Notes
 

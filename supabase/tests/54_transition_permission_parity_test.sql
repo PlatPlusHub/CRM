@@ -87,14 +87,15 @@ insert into _rpc_owned values
   ('documents','superseded','archived','app.archive_document'),
   -- FIN-7. `invoices` has no `advance_invoice` either: the machine is driven by two named finance
   -- operations whose own guards have always enforced it. `app.issue_invoice` performs the only move
-  -- into `issued`; `app.record_payment` performs every move into `partially_paid`/`paid` and DERIVES
-  -- which one from the amount rather than choosing it.
+  -- into `issued`; every move into `partially_paid`/`paid` is DERIVED from the allocated amount by
+  -- `app.derive_invoice_payment_status` on payment_allocations (B6-EXIT PAY-5 / FIN-11), so the
+  -- table door and `app.record_payment` settle the invoice through one producer.
   ('invoices','draft',         'issued',        'app.issue_invoice'),
-  ('invoices','issued',        'partially_paid','app.record_payment'),
-  ('invoices','issued',        'paid',          'app.record_payment'),
-  ('invoices','partially_paid','paid',          'app.record_payment'),
-  ('invoices','overdue',       'partially_paid','app.record_payment'),
-  ('invoices','overdue',       'paid',          'app.record_payment'),
+  ('invoices','issued',        'partially_paid','app.derive_invoice_payment_status'),
+  ('invoices','issued',        'paid',          'app.derive_invoice_payment_status'),
+  ('invoices','partially_paid','paid',          'app.derive_invoice_payment_status'),
+  ('invoices','overdue',       'partially_paid','app.derive_invoice_payment_status'),
+  ('invoices','overdue',       'paid',          'app.derive_invoice_payment_status'),
   -- VOID-1 (202607060400). The same shape one act over: `app.void_invoice` is the named finance
   -- RPC that owns every move into `voided`, and there is deliberately no move OUT of it.
   ('invoices','draft',         'voided',        'app.void_invoice'),

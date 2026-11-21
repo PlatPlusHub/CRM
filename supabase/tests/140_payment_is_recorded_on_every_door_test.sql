@@ -120,8 +120,8 @@ values ('14000000-0000-0000-0000-000000000001', (select v from s140 where k='doo
 set constraints payments_emit_recorded immediate;
 set constraints payments_emit_recorded deferred;
 select is(pg_temp.p140((select v from s140 where k='doorA')::uuid),
-  '1/14000000-0000-0000-0000-000000000011/payment_recorded/-/{"amount": 5000.0000, "invoice_id": "' || (select v from s140 where k='inv2') || '", "currency_code": "EGP", "invoice_new_status": "issued"}',
-  'PAY-3: a door payment allocated to an invoice in the same transaction records ONE payment_recorded naming its writer and that invoice -- before the PAY-3 migration it had zero events');
+  '1/14000000-0000-0000-0000-000000000011/payment_recorded/-/{"amount": 5000.0000, "invoice_id": "' || (select v from s140 where k='inv2') || '", "currency_code": "EGP", "invoice_new_status": "paid"}',
+  'PAY-3: a door payment allocated to an invoice in the same transaction records ONE payment_recorded naming its writer and that invoice, which its allocation settled (PAY-5) -- before the PAY-3 migration it had zero events');
 
 with p as (
       insert into public.payments (tenant_id, payment_direction_code, customer_id, booking_id, currency_code, payment_method_code, amount, paid_at)

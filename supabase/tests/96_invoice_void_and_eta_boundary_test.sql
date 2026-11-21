@@ -65,10 +65,19 @@ insert into public.invoices (id, tenant_id, customer_id, invoice_number, invoice
 
 -- f3 has ALLOCATED PAYMENT. f4 was ACCEPTED by the authority. Both are set here with no session, on
 -- the platform path, so the fixtures themselves are not what is under test.
+-- Since SPEC-326 an allocation derives partially_paid itself (PAY-5), which the transition table alone
+-- would then refuse to void. f3 keeps the state this test exists for -- money allocated while the
+-- status word still says `issued`, as every door allocation before SPEC-326 left it -- by writing its
+-- allocation with only the settlement trigger off, so the void guard, not the status, is what refuses.
 insert into public.payments (id, tenant_id, customer_id, payment_direction_code, payment_method_code, currency_code, amount, paid_at) values
   ('96000000-0000-0000-0000-0000000000e1','96000000-0000-0000-0000-000000000001','96000000-0000-0000-0000-0000000000d1','customer_payment','bank_transfer','EGP', 400, now());
+alter table public.payment_allocations disable trigger payment_allocations_settle_invoice;
 insert into public.payment_allocations (tenant_id, payment_id, invoice_id, allocated_amount, currency_code) values
   ('96000000-0000-0000-0000-000000000001','96000000-0000-0000-0000-0000000000e1','96000000-0000-0000-0000-0000000000f3', 400, 'EGP');
+-- Its two deferred ceilings run now (the table cannot be altered with them pending) and defer again.
+set constraints payment_allocations_within_invoice_total, payment_allocations_within_payment_amount immediate;
+alter table public.payment_allocations enable trigger payment_allocations_settle_invoice;
+set constraints payment_allocations_within_invoice_total, payment_allocations_within_payment_amount deferred;
 update public.invoices
    set external_submission_status_code = 'accepted',
        external_submission_id = 'ETA-DOC-UUID-0001',

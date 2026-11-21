@@ -15,7 +15,8 @@
 --   a second row, bounded by both ceilings (assertions 15 and 44).
 -- OBSERVABILITY -- assertions 49-54, 61, 63 and 65-66: one event per allocation and per real change of its
 --   money, on the RPC, the door and the platform path; none for a no-op or a refused write.
---   A door allocation still leaves the invoice status where it was (PAY-5, not this contract's).
+--   Since SPEC-326 a door allocation derives the invoice's partially_paid or paid status itself (PAY-5, Test 184),
+--   so every correction below happens where the invoice's recorded status still allows it.
 create extension if not exists pgtap with schema extensions;
 
 begin;
@@ -263,16 +264,16 @@ select is((select p.amount::text || '/' || p.currency_code || '/' || p.payment_d
 select lives_ok($q$do $x$ begin
     insert into public.payment_allocations (id,tenant_id,payment_id,invoice_id,allocated_amount,currency_code,exchange_rate_id)
     values ('15500000-0000-0000-0000-00000000aa02','15500000-0000-0000-0000-000000000001','15500000-0000-0000-0000-0000000000f3',
-            '15500000-0000-0000-0000-0000000000e1',8,'USD','15500000-0000-0000-0000-00000000ee01');
+            '15500000-0000-0000-0000-0000000000e1',4,'USD','15500000-0000-0000-0000-00000000ee01');
     execute 'set constraints all immediate'; execute 'set constraints all deferred';
   end $x$$q$,
-  '30. FA-2 permits a cross-currency allocation with its rate: 8 USD to C1''s EGP invoice');
+  '30. FA-2 permits a cross-currency allocation with its rate: 4 USD to C1''s EGP invoice');
 select is((select allocated_amount::text || '/' || allocated_amount_invoice_currency::text
            from public.payment_allocations where id='15500000-0000-0000-0000-00000000aa02'),
-  '8.0000/400.0000', '31. the invoice-currency amount is derived from the rate: 8 USD at 50 is 400 EGP');
-select throws_ok($$select app.record_payment('15500000-0000-0000-0000-0000000000e1',0.0001,'cash')$$,
-  'P0001','payment 0.0001 exceeds invoice outstanding 0.0000 (total 1000.0000, already allocated 1000.0000)',
-  '32. app.record_payment reads the invoice in its own currency: 600 EGP + 8 USD fill it (face value would leave 392)');
+  '4.0000/200.0000', '31. the invoice-currency amount is derived from the rate: 4 USD at 50 is 200 EGP');
+select throws_ok($$select app.record_payment('15500000-0000-0000-0000-0000000000e1',200.0001,'cash')$$,
+  'P0001','payment 200.0001 exceeds invoice outstanding 200.0000 (total 1000.0000, already allocated 800.0000)',
+  '32. app.record_payment reads the invoice in its own currency: 600 EGP + 4 USD leave 200 (face value would leave 396)');
 select lives_ok($q$do $x$ begin
     insert into public.payment_allocations (id,tenant_id,payment_id,invoice_id,allocated_amount,currency_code,exchange_rate_id)
     values ('15500000-0000-0000-0000-00000000aa03','15500000-0000-0000-0000-000000000001','15500000-0000-0000-0000-0000000000f6',
@@ -284,13 +285,13 @@ select is((select allocated_amount::text || '/' || allocated_amount_invoice_curr
            from public.payment_allocations where id='15500000-0000-0000-0000-00000000aa03'),
   '5000.0000/100.0000', '34. ...as 100 USD');
 select lives_ok($q$do $x$ begin
-    update public.payment_allocations set allocated_amount=0 where id='15500000-0000-0000-0000-00000000aa02';
+    update public.payment_allocations set allocated_amount=2 where id='15500000-0000-0000-0000-00000000aa02';
     execute 'set constraints all immediate'; execute 'set constraints all deferred';
   end $x$$q$,
-  '35. RECORD_PAYMENT still corrects an amount');
+  '35. RECORD_PAYMENT still corrects an amount, while the invoice it part-paid stays part-paid (4 -> 2 USD)');
 select is((select allocated_amount::text || '/' || allocated_amount_invoice_currency::text
            from public.payment_allocations where id='15500000-0000-0000-0000-00000000aa02'),
-  '0.0000/0.0000', '36. ...and the invoice-currency amount follows it');
+  '2.0000/100.0000', '36. ...and the invoice-currency amount follows it');
 select lives_ok($q$do $x$ begin
     update public.payment_allocations set allocated_amount=0 where id='15500000-0000-0000-0000-00000000aa01';
     insert into public.payment_allocations (id,tenant_id,payment_id,invoice_id,allocated_amount,currency_code)
@@ -298,12 +299,12 @@ select lives_ok($q$do $x$ begin
             '15500000-0000-0000-0000-0000000000e3',600,'EGP');
     execute 'set constraints all immediate'; execute 'set constraints all deferred';
   end $x$$q$,
-  '37. the correction a misplaced allocation needs, where no recorded status rests on it: zero it, allocate again');
+  '37. the correction a misplaced allocation needs, while the invoice stays part-paid on what remains: zero it, allocate again');
 select is((select (select sum(coalesce(allocated_amount_invoice_currency,allocated_amount)) from public.payment_allocations
                     where invoice_id='15500000-0000-0000-0000-0000000000e1')::text || '/' ||
                   (select sum(allocated_amount) from public.payment_allocations
                     where invoice_id='15500000-0000-0000-0000-0000000000e3')::text),
-  '0.0000/600.0000', '38. ...moving C1''s 600 from IA to IC, both rows kept as history');
+  '100.0000/600.0000', '38. ...moving C1''s 600 from IA to IC, both rows kept as history');
 select lives_ok($q$do $x$ begin
     update public.payments set amount=650 where id='15500000-0000-0000-0000-0000000000f1';
     execute 'set constraints all immediate'; execute 'set constraints all deferred';
@@ -388,7 +389,7 @@ select is((select string_agg(e.event_type_code || ':' || e.severity_code || ':' 
                   || '>' || (e.payload ->> 'allocated_amount_invoice_currency') || ':'
                   || (e.actor_user_id = '15500000-0000-0000-0000-000000000011')::text, ' | ' order by e.seq)
            from public.events e where e.entity_id='15500000-0000-0000-0000-00000000aa02'),
-  'payment_allocation_created:info:->8.0000:->400.0000:true | payment_allocation_amount_changed:warning:8.0000>0.0000:400.0000>0.0000:true',
+  'payment_allocation_created:info:->4.0000:->200.0000:true | payment_allocation_amount_changed:warning:4.0000>2.0000:200.0000>100.0000:true',
   '51. assertion 35''s correction is recorded with the amounts before and after, in both currencies, by its actor');
 select is((select string_agg(e.event_type_code || ':' || (e.payload ->> 'invoice_id') || ':' || coalesce(e.payload ->> 'previous_allocated_amount','-')
                   || '>' || (e.payload ->> 'allocated_amount'), ' | ' order by e.seq)
@@ -441,8 +442,8 @@ select is((select string_agg(i.invoice_number || ':' || i.status_code || ':'
                   || coalesce((select sum(coalesce(pa.allocated_amount_invoice_currency, pa.allocated_amount))
                                  from public.payment_allocations pa where pa.invoice_id=i.id)::text, '-'), ' | ' order by i.invoice_number)
            from public.invoices i where i.id in ('15500000-0000-0000-0000-0000000000e1','15500000-0000-0000-0000-0000000000e2','15500000-0000-0000-0000-0000000000e4')),
-  'PA155-IA:issued:0.0000 | PA155-IB:paid:1000.0000 | PA155-ID:partially_paid:100.0000',
-  '60. the floor refuses and moves no status: the door''s IA stays issued (PAY-5), IB paid, ID partially_paid');
+  'PA155-IA:partially_paid:100.0000 | PA155-IB:paid:1000.0000 | PA155-ID:partially_paid:100.0000',
+  '60. the floor refuses and moves no status: the door''s IA stays part-paid on what remains (PAY-5), IB paid, ID partially_paid');
 select is((select string_agg(e.event_type_code || ':' || e.severity_code || ':' || coalesce(e.payload ->> 'previous_allocated_amount','-')
                   || '>' || (e.payload ->> 'allocated_amount'), ' | ' order by e.seq)
            from public.events e where e.entity_type='payment_allocation'
@@ -459,7 +460,7 @@ select lives_ok($q$do $x$ begin
     update public.payment_allocations set allocated_amount=500 where id='15500000-0000-0000-0000-00000000aa04';
     execute 'set constraints all immediate'; execute 'set constraints all deferred';
   end $x$$q$,
-  '62. a session-less correction on an issued invoice passes every check');
+  '62. a session-less correction on a part-paid invoice that stays part-paid passes every check');
 select is((select e.event_type_code || ':' || (e.payload ->> 'previous_allocated_amount') || '>' || (e.payload ->> 'allocated_amount')
                   || ':' || coalesce(e.actor_user_id::text, '<system>')
            from public.events e where e.entity_id='15500000-0000-0000-0000-00000000aa04' order by e.seq desc limit 1),

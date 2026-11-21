@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-21T02:09:23.8614Z",
+  "read_at": "2026-11-21T14:30:55.511486Z",
   "read_query": "select now() at time zone 'utc' as read_at, count(*) as migration_count, max(version) as latest, md5(string_agg(version||'_'||name,',' order by version||'_'||name)) as ledger_fingerprint, jsonb_agg(version||'_'||name order by version||'_'||name) as ledger from supabase_migrations.schema_migrations",
-  "repository_head": "7aca616e46cd580b13f27333fb3c36e7832d20c5",
-  "migration_count": 275,
-  "ledger_fingerprint": "5213d0d035d53e635a839f0ce9bb7693",
-  "function_surface_hash": "b072f29b5077d32b8ac87e1153da6fe7",
-  "function_count": 353,
-  "structural_surface_hash": "13c9e501661f1306e5374ea23f3c42a1",
-  "structural_object_count": 3193,
-  "surface_read_queries": "Independent read from Platinum Primary in read-only transactions after convergence to migration 20261121100000. scripts/parity_surface.sql supplied all ten section signatures and the combined signature. The ordered ledger and every section match the Original local stack.",
+  "repository_head": "cc22ea99d82d2c6eee1a54afe9be436aaf2faed1",
+  "migration_count": 276,
+  "ledger_fingerprint": "3d6fe3908078c02f611c70b4eb070623",
+  "function_surface_hash": "fb9b700aa2c6c0a013af6576314ae3b9",
+  "function_count": 358,
+  "structural_surface_hash": "3c6ea07a196c3cf0a3ff801397931e0e",
+  "structural_object_count": 3203,
+  "surface_read_queries": "Independent read from Platinum Primary in read-only transactions after convergence to migration 20261121110000. scripts/parity_surface.sql supplied all ten section signatures and the combined signature. The ordered ledger and every section match the Original local stack.",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -286,6 +286,7 @@
     "20261119112137_guard_task_terminal_status_at_entry",
     "20261119203357_archive_authority_applies_at_entry",
     "20261120122927_branch_write_authority_matches_the_rpc",
-    "20261121100000_entry_and_step_up_hold_at_the_table_door"
+    "20261121100000_entry_and_step_up_hold_at_the_table_door",
+    "20261121110000_a_refund_a_conversation_and_a_settlement_are_recorded_on_every_door"
   ]
 }
