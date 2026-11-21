@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -1181,17 +1181,17 @@ Post-Implementation Proof Obligation: Fresh approved Primary apply and separate 
 
 ## Acceptance Criteria
 
-- [ ] Exact migration moves each effect to its table's producer and strips the RPC duplicates. `check: blob supabase/migrations/20261121110000_a_refund_a_conversation_and_a_settlement_are_recorded_on_every_door.sql 52bb1f1577f4346b439a1c33c47b233de5d4935d`
-- [ ] Test 54 attributes invoice transitions to the allocation producer. `check: blob supabase/tests/54_transition_permission_parity_test.sql c4b1b3e8549fd8820ae39eeda99c3e9edcb1dda7`
-- [ ] Test 96 still proves the void guard on an issued invoice holding money. `check: blob supabase/tests/96_invoice_void_and_eta_boundary_test.sql 72e2107b07178f352a634606fcbd7173bdf39a23`
-- [ ] Test 140 records the derived settled status. `check: blob supabase/tests/140_payment_is_recorded_on_every_door_test.sql d132e48e82f068588148df658d9eeedc4d2b15d7`
-- [ ] Test 155 keeps the misplaced-allocation correction on a part-paid invoice. `check: blob supabase/tests/155_an_allocation_spends_its_own_payment_on_its_own_invoice_test.sql f85481f019a59ea756ba93a056140cc3576fc423`
-- [ ] Test 184 proves every selected effect, its authorized path and its exemption. `check: blob supabase/tests/184_refund_conversation_and_settlement_are_recorded_on_every_door_test.sql be2fc2e45076505879939d0a8accc0fa0f28656b`
-- [ ] The recorded grouped selection and the per-item registry closure are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md b766c82547d6c870d3cc2ecf16a51e387668a7d4`
-- [ ] The generated API reports only the expected `record_payment` row change. `check: blob reports/master/MASTER_API_CONTRACT.md 62af74be28b058e41b6b6bcfbe43457f15acfd33`
-- [ ] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @7c5975a09b9351308a3178f1c1579798747fbe51`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **184 files / 3445 assertions**"`
-- [ ] Verified Primary and local ledger and all ten surfaces agree. RFD-3, CHAT-2, PAY-5 and FIN-11 close per item with evidence; PAY-9, PAY-4, JE-2 and LI-3 keep their recorded triggers.
+- [x] Exact migration moves each effect to its table's producer and strips the RPC duplicates. `check: blob supabase/migrations/20261121110000_a_refund_a_conversation_and_a_settlement_are_recorded_on_every_door.sql 52bb1f1577f4346b439a1c33c47b233de5d4935d`
+- [x] Test 54 attributes invoice transitions to the allocation producer. `check: blob supabase/tests/54_transition_permission_parity_test.sql c4b1b3e8549fd8820ae39eeda99c3e9edcb1dda7`
+- [x] Test 96 still proves the void guard on an issued invoice holding money. `check: blob supabase/tests/96_invoice_void_and_eta_boundary_test.sql 72e2107b07178f352a634606fcbd7173bdf39a23`
+- [x] Test 140 records the derived settled status. `check: blob supabase/tests/140_payment_is_recorded_on_every_door_test.sql d132e48e82f068588148df658d9eeedc4d2b15d7`
+- [x] Test 155 keeps the misplaced-allocation correction on a part-paid invoice. `check: blob supabase/tests/155_an_allocation_spends_its_own_payment_on_its_own_invoice_test.sql f85481f019a59ea756ba93a056140cc3576fc423`
+- [x] Test 184 proves every selected effect, its authorized path and its exemption. `check: blob supabase/tests/184_refund_conversation_and_settlement_are_recorded_on_every_door_test.sql be2fc2e45076505879939d0a8accc0fa0f28656b`
+- [x] The recorded grouped selection and the per-item registry closure are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md b766c82547d6c870d3cc2ecf16a51e387668a7d4`
+- [x] The generated API reports only the expected `record_payment` row change. `check: blob reports/master/MASTER_API_CONTRACT.md 62af74be28b058e41b6b6bcfbe43457f15acfd33`
+- [x] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @7c5975a09b9351308a3178f1c1579798747fbe51`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **184 files / 3445 assertions**"`
+- [x] Verified Primary and local ledger and all ten surfaces agree. RFD-3, CHAT-2, PAY-5 and FIN-11 close per item with evidence; PAY-9, PAY-4, JE-2 and LI-3 keep their recorded triggers.
 
 ## Execution Log
 
@@ -1222,12 +1222,15 @@ Verdict: Confirmed Complete
 
 Independent Review against the committed Original and a fresh Primary readback. Verified allocated Draft blob b124b765a1f6e40a5c2c948bc6be76cbd39eea8c and frozen SHA-256 05F67B185E3AAA8B9A8E09D46FFB1081D566D6344CCAED6B7FD745F44E6FDCF8 at baseline 7c5975a09b9351308a3178f1c1579798747fbe51, the exact final blobs (migration 52bb1f1577f4346b439a1c33c47b233de5d4935d, test 54 c4b1b3e8549fd8820ae39eeda99c3e9edcb1dda7, test 96 72e2107b07178f352a634606fcbd7173bdf39a23, test 140 d132e48e82f068588148df658d9eeedc4d2b15d7, test 155 f85481f019a59ea756ba93a056140cc3576fc423, test 184 be2fc2e45076505879939d0a8accc0fa0f28656b, plan b766c82547d6c870d3cc2ecf16a51e387668a7d4, generated API 62af74be28b058e41b6b6bcfbe43457f15acfd33), the unchanged native evaluator and Migration CI, and the 14 declared scoped paths. The migration adds five functions and five triggers (refund requested and transition events, conversation transition guard and event, invoice payment-status derivation on allocation) and replaces four RPC bodies (record_refund, advance_refund, advance_conversation, record_payment); it drops no table or column and rewrites no business row. Before the Finish the local stack was recreated by the project-local Supabase CLI 3.0.0 (runtime/original-stack.log: npm ci exit 0, stop exit 0 at 16:16:56, start exit 0 at 16:17:25 Cairo, 10 containers up). Native Finish on addd2a32dd4ba5d5f4202ab33c28b7194925b7fe ran db reset, two pgTAP passes, native HTTP, verify_database, parity evidence, repository consistency, git diff --check, the Primary ledger check and the four guard tests with readiness_selftest, and returned LOCAL_CERTIFY READY with receipt 671aa6cf970e0e28661d27c62a8d984099cb2167bf3444e7f384f35cdbdeab4e (profiles DATABASE, REPOSITORY); runner, watcher and host exits were zero. Platinum Primary vrvtsxexkiiiivlkdxzp, read independently at 2026-11-21 14:58:13 UTC through the read-only route, returned 276 ledger rows, latest 20261121110000, ordered fingerprint 3d6fe3908078c02f611c70b4eb070623, the stored single statement 28b4a3013130fe9337d1fe8d67d9c342 (22430 bytes), all five new bindings enabled, and zero rows on the five tables. The Gate 2 record, the guarded ledger reconciliation and the pre-deploy fingerprints are preserved. The gap register records that this contract fixes RFD-3, CHAT-2, PAY-5 and FIN-11, while FIN-9 keeps its journal-event half and PAY-9, PAY-4, JE-2 and LI-3 keep their own statuses; the disposition coverage is 60 AUDITED and 15 AUDITED-OPEN. Founder Secondary was not touched. Native release and remote certification follow under their own gates.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 671aa6cf970e0e28661d27c62a8d984099cb2167bf3444e7f384f35cdbdeab4e and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Exact approved payload and allowed scope.
-- [ ] Isolated causal negatives and native SQL, smoke, HTTP and API evidence.
-- [ ] Verified Primary identity, ledger, parity and per-item registry changes.
-- [ ] Existing open items and governance gates retained.
+- [x] Exact approved payload and allowed scope.
+- [x] Isolated causal negatives and native SQL, smoke, HTTP and API evidence.
+- [x] Verified Primary identity, ledger, parity and per-item registry changes.
+- [x] Existing open items and governance gates retained.
 
 ## Notes
 
