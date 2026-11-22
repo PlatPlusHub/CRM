@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -646,17 +646,17 @@ Post-Implementation Proof Obligation: A fresh read-only Primary readback agrees 
 
 ## Acceptance Criteria
 
-- [ ] The deployed migration is carried byte for byte. `check: blob supabase/migrations/20261122100000_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value.sql 606ce8ad8a5d8bf928cb11b920fbae0e79714a9b`
-- [ ] Test 145 pins JE-2 as CONTAINED and keeps JE-3/JE-4. `check: blob supabase/tests/145_a_journal_line_is_written_only_with_its_entry_test.sql 926f2eac4f1c96b5a5814a9c134115d34343e253`
-- [ ] Test 185 proves every selected effect on every door with its positive controls. `check: blob supabase/tests/185_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value_test.sql 67a626e1efa1d1f69109bd107bb8cfe3ae6141af`
-- [ ] The recorded Primary evidence is carried. `check: blob reports/evidence/primary-ledger-evidence.json 2db7dde875ec85455c89bbbb960a48923a854e32`
-- [ ] PAY-4 is fixed and JE-2 contained in the gap register. `check: blob reports/master/MASTER_GAP_REGISTER.md b442d9f1ad801e1041e07d4eb76951afc06c249b`
-- [ ] journal_entry_lines and payments are AUDITED. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md f4fad84038b67bf00686d36e4a3c543314f68581`
-- [ ] The grouped selection, the per-item registry closure and the dated header are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md a28c51c3b52f50e6c7b0de8ab8a9131d63f43287`
-- [ ] The generated API contract is unchanged. `check: blob reports/master/MASTER_API_CONTRACT.md 62af74be28b058e41b6b6bcfbe43457f15acfd33`
-- [ ] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @ac6bc7a9aea091d93a02a43ae2734fdbe0e716cb`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **185 files / 3456 assertions**"`
-- [ ] Live Primary equals the recorded ledger and surfaces, read only; no Primary write. DC-11, PAY-9, FIN-9 and LI-3 keep their recorded triggers.
+- [x] The deployed migration is carried byte for byte. `check: blob supabase/migrations/20261122100000_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value.sql 606ce8ad8a5d8bf928cb11b920fbae0e79714a9b`
+- [x] Test 145 pins JE-2 as CONTAINED and keeps JE-3/JE-4. `check: blob supabase/tests/145_a_journal_line_is_written_only_with_its_entry_test.sql 926f2eac4f1c96b5a5814a9c134115d34343e253`
+- [x] Test 185 proves every selected effect on every door with its positive controls. `check: blob supabase/tests/185_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value_test.sql 67a626e1efa1d1f69109bd107bb8cfe3ae6141af`
+- [x] The recorded Primary evidence is carried. `check: blob reports/evidence/primary-ledger-evidence.json 2db7dde875ec85455c89bbbb960a48923a854e32`
+- [x] PAY-4 is fixed and JE-2 contained in the gap register. `check: blob reports/master/MASTER_GAP_REGISTER.md b442d9f1ad801e1041e07d4eb76951afc06c249b`
+- [x] journal_entry_lines and payments are AUDITED. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md f4fad84038b67bf00686d36e4a3c543314f68581`
+- [x] The grouped selection, the per-item registry closure and the dated header are exact. `check: blob reports/master/MASTER_EXECUTION_PLAN.md a28c51c3b52f50e6c7b0de8ab8a9131d63f43287`
+- [x] The generated API contract is unchanged. `check: blob reports/master/MASTER_API_CONTRACT.md 62af74be28b058e41b6b6bcfbe43457f15acfd33`
+- [x] Native selection stays intact. `check: same scripts/batch6_select_target.ps1 @ac6bc7a9aea091d93a02a43ae2734fdbe0e716cb`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **185 files / 3456 assertions**"`
+- [x] Live Primary equals the recorded ledger and surfaces, read only; no Primary write. DC-11, PAY-9, FIN-9 and LI-3 keep their recorded triggers.
 
 ## Execution Log
 
@@ -692,12 +692,15 @@ Verdict: Confirmed Complete
 
 Current Git evidence (self-review by the author, Claude main claude-opus-5-5; Codex skipped by owner decision D120): selected Draft 6B5CDD693E4233C3A624903C06B62BF51B1C463DA928F205C37225E7DDA0EB6F, allocated blob c14b731cb71b18ec08d1de0e69c1942aa1b91cac, under the DELEGATED Gate 1 record for this exact Draft. The cancelled SPEC-327 delivery is carried byte for byte: migration 20261122100000 (blob 606ce8ad), Test 145 (926f2eac), Test 185 (67a626e1), the recorded Primary ledger evidence (2db7dde8), manifest (efff5b2e), gap register (b442d9f1), surface disposition (f4fad840) and the execution plan with the dated SPEC-328 header (a28c51c3), each equal to the isolated rehearsal's blob; MASTER_API_CONTRACT.md unchanged (62af74be); regenerated discovery; unchanged native evaluator and Migration CI; declared scope verified. Step 10 Primary verification was read-only on vrvtsxexkiiiivlkdxzp at 2026-11-22 15:34 UTC: 277 migrations, latest 20261122100000, fingerprint 7d224a770526c87f171b9525b0817701, payments_amount_positive_check validated, the single-currency branch present, functions ca519b79e522cff13cd309456f618a14|358 and structural _combined 0bb1e5b10e0bde5bd344f706366150ee|3204: Already Applied, no Primary write. This original root owns fresh receipt 368f6ff6f02ebd01a34105f178960caafc59436b16433e79135e782dd9961803, finishHead 58dd20f1fc811dc2c72339954aac0531d4300762, profiles DATABASE,REPOSITORY, in one native timed/watched Finish (npm offline, 14.0 min) observed LOCAL_CERTIFY READY and END exit=0 with 0 FAIL, which ran db reset, the full SQL suite twice, verify_api_end_to_end, verify_database.sql, the parity evidence check, repository consistency and the five Additional guard suites. Disclosed deviation: Prepare-Stack was not rerun for SPEC-328 before the Finish; the Finish ran on the stack Prepare-Stack recreated for SPEC-327 original at 00:51 today with the same root's CLI 3.0.0 (9 of 10 container IDs equal; the database container was recreated by the Finish's own db reset), recorded in runtime original-stack.log. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted; Secondary was never contacted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 368f6ff6f02ebd01a34105f178960caafc59436b16433e79135e782dd9961803 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Exact approved payload and allowed scope.
-- [ ] Carried bytes equal the SPEC-327 delivery; native SQL, smoke, HTTP and API evidence pass.
-- [ ] Read-only Primary identity, ledger and surfaces equal the records.
-- [ ] Existing open items and governance gates retained.
+- [x] Exact approved payload and allowed scope.
+- [x] Carried bytes equal the SPEC-327 delivery; native SQL, smoke, HTTP and API evidence pass.
+- [x] Read-only Primary identity, ledger and surfaces equal the records.
+- [x] Existing open items and governance gates retained.
 
 ## Notes
 
