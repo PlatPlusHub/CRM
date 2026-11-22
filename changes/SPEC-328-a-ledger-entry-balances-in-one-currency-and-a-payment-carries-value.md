@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -665,6 +665,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-22 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-328 only, the successor of Cancelled SPEC-327, under DEC-02 and Batch 6 PLAN section 2 run mode 2 as redefined by the owner on 2026-11-21 (owner-2026-11-21-run-modes-redefined.txt, SHA-256 35E35600BB9D2D69EBF0A85BE8E6256260617F9A8B47F74A091565BC53AF69DD). Exact Draft SHA-256 6B5CDD693E4233C3A624903C06B62BF51B1C463DA928F205C37225E7DDA0EB6F, Git blob c14b731cb71b18ec08d1de0e69c1942aa1b91cac, CRM baseline ac6bc7a (SPEC-327 Cancel, carried). Native isolated Approve 6acbbe2 and implement da3c429 passed with 8 committed blobs verified, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 E1F61862C7996D270931A8B40D340D668384CF03C220BF4F1EA494CCBBE40B79). No Primary write: the Primary step is a read-only Already Applied verification. Gate 1 only. Immediately before allocation the hash, the Draft blob c14b731cb71b18ec08d1de0e69c1942aa1b91cac, all 6 source anchors, the baseline HEAD ac6bc7a9aea091d93a02a43ae2734fdbe0e716cb against refreshed origin/main 17ec05a0904f9b5eac676b2d0024d71850886441 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 42adaf8. No implementation performed before this transition.
 
 ## Review Gate
 
