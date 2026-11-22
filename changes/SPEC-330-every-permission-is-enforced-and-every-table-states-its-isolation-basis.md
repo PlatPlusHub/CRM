@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -59,7 +59,7 @@ Migrations, product code, any Primary write, Founder Secondary, frontend work, i
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -433,6 +433,19 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-22 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 790aa963f2b7dc8049a9dd691f54ed61d22e920f and every source anchor matched there; Draft allocated as f8cee99 and approved as 311a682 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/tests/186_every_permission_is_enforced_and_every_table_states_its_isolation_basis_test.sql` edited exactly as the step states; blob 167a93e4abbb497b2856c323b193a449480489e3 (153 insertions, 0 deletions (created)).
+- Step 3 Applied: `scripts/test_cold_start_state_guard.ps1` edited exactly as the step states; blob b36a1b40bccf9ec5a3b4a106f6356ea7e9108ffb (3 insertions, 1 deletions).
+- Step 4 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob dced60ebeefbe45fb56365039dba27b7018c0038 (8 insertions, 5 deletions).
+- Step 5 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 657998b4f24cac8845fa787d6bfd6364cfd0464a (4 insertions, 2 deletions).
+- Step 6 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob 85e19acf8ccc3845109d9a60de893d1fa2e4e700 (1 insertions, 1 deletions).
+- Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 

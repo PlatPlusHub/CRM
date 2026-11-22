@@ -343,7 +343,9 @@ try {
     $r = Invoke-Guard
     Check 'F2 MUTATION: an open finding no registry row classifies fails Check 29' `
         ($r.Exit -ne 0 -and $r.Text -match 'UNCLASSIFIED: PAY-9') $r.Exit
-    Write-S $PLAN $planOriginal.Replace('| Batch 6, this plan | NEXT |', '| Batch 6, this plan | REACHED 2026-10-12 probe |')
+    # The witness is planted, not borrowed: once no live member is due at B6-EXIT (SPEC-330 resolved RPC-1, the
+    # last), F3 must still prove the guard, so PAY-9's open row is moved to that boundary inside the mutation.
+    Write-S $PLAN $planOriginal.Replace($payRow, $payRow.Replace('| `FIRST-BOOKING` |', '| `B6-EXIT` |')).Replace('| Batch 6, this plan | NEXT |', '| Batch 6, this plan | REACHED 2026-10-12 probe |')
     $r = Invoke-Guard
     Check 'F3 MUTATION: a REACHED boundary with its items open fails Check 29 as OVERDUE' `
         ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: \S+ -- boundary B6-EXIT is REACHED 2026-10-12 probe') $r.Exit
