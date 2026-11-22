@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -437,6 +437,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-22 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-330 only under DEC-02 and Batch 6 PLAN section 2 run mode 2 as redefined by the owner on 2026-11-21 (owner-2026-11-21-run-modes-redefined.txt, SHA-256 35E35600BB9D2D69EBF0A85BE8E6256260617F9A8B47F74A091565BC53AF69DD), continuing Batch 6 under the owner OD-9 decision of 2026-11-22 (SHA-256 1A7B5647FA270EBB6E514414C2FF6E1D88E6D81872733B196797318BDDA9920D). Exact Draft SHA-256 DF4F4B38FE49E97EDEB89460839B0AC17A530CF681395058CBA4D9023587CDEF, Git blob 0e4713a81c95a17e391bad7423e8df433fa9dda4, CRM baseline 790aa96. Native isolated Approve c922cf9 and implement 05197b1 passed with 5 committed blobs verified, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 9300211AA1D4D9E02211544A9093539F3D35A415DEF12A2702C5B9E67FF2E0BE). One pgTAP test and records; no migration, no Primary write. Gate 1 only. Immediately before allocation the hash, the Draft blob 0e4713a81c95a17e391bad7423e8df433fa9dda4, all 4 source anchors, the baseline HEAD 790aa963f2b7dc8049a9dd691f54ed61d22e920f against refreshed origin/main 790aa963f2b7dc8049a9dd691f54ed61d22e920f and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as f8cee99. No implementation performed before this transition.
 
 ## Review Gate
 
