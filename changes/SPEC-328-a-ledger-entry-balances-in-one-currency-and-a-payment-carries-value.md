@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -60,7 +60,7 @@ All other paths, any Primary write, Founder Secondary, integration activation, e
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -661,6 +661,22 @@ Post-Implementation Proof Obligation: A fresh read-only Primary readback agrees 
 ## Execution Log
 
 None.
+
+
+### 2026-11-22 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was ac6bc7a9aea091d93a02a43ae2734fdbe0e716cb and every source anchor matched there; Draft allocated as 42adaf8 and approved as ffab0c5 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/migrations/20261122100000_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value.sql` edited exactly as the step states; blob 606ce8ad8a5d8bf928cb11b920fbae0e79714a9b (99 insertions, 0 deletions (created)).
+- Step 3 Applied: `supabase/tests/145_a_journal_line_is_written_only_with_its_entry_test.sql` edited exactly as the step states; blob 926f2eac4f1c96b5a5814a9c134115d34343e253 (12 insertions, 7 deletions).
+- Step 4 Applied: `supabase/tests/185_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value_test.sql` edited exactly as the step states; blob 67a626e1efa1d1f69109bd107bb8cfe3ae6141af (142 insertions, 0 deletions (created)).
+- Step 5 Applied: `reports/evidence/primary-ledger-evidence.json` edited exactly as the step states; blob 2db7dde875ec85455c89bbbb960a48923a854e32 (10 insertions, 9 deletions).
+- Step 6 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob efff5b2e48fed35dc26ab983ad54324889df346f (1 insertions, 1 deletions).
+- Step 7 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob b442d9f1ad801e1041e07d4eb76951afc06c249b (5 insertions, 3 deletions).
+- Step 8 Applied: `reports/master/MASTER_SURFACE_DISPOSITION.md` edited exactly as the step states; blob f4fad84038b67bf00686d36e4a3c543314f68581 (6 insertions, 4 deletions).
+- Step 9 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob a28c51c3b52f50e6c7b0de8ab8a9131d63f43287 (9 insertions, 5 deletions).
+- Step 10 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 

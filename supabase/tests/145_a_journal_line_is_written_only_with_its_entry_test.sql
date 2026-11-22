@@ -153,12 +153,17 @@ select set_config('request.jwt.claims','{"sub":"14500000-0000-0000-0000-00000000
 select is((select count(*)::int from public.journal_entry_lines), 0,
   'TENANT: another tenant''s finance manager reads none of this tenant''s lines');
 
--- JE-2 stays OPEN and is pinned as OPEN, not as desired behaviour: this fails when DC-11 decides
--- whether an entry is one currency or is translated to a base currency.
+-- JE-2 is CONTAINED (20261122100000): an entry balances in one currency until DC-11 decides the
+-- translation model, so a 100 USD debit no longer balances a 100 EGP credit. The refusal is the
+-- deferred balance trigger's, so the check is fired inside the call; `185_...` pins both doors.
 select set_config('request.jwt.claims','{"sub":"14500000-0000-0000-0000-0000000000a1","aal":"aal2"}',true);
-select lives_ok($q$select app.create_journal_entry('manual_entry', current_date, 'JE-2',
-    '[{"account_code":"1000","debit":100,"currency":"USD"},{"account_code":"4000","credit":100,"currency":"EGP"}]'::jsonb)$q$,
-  'JE-2 OPEN: a 100 USD debit still balances a 100 EGP credit through the RPC -- the accounting-model decision DC-11 owns');
+select throws_ok($q$do $x$ begin
+    perform app.create_journal_entry('manual_entry', current_date, 'JE-2',
+      '[{"account_code":"1000","debit":100,"currency":"USD"},{"account_code":"4000","credit":100,"currency":"EGP"}]'::jsonb);
+    execute 'set constraints all immediate';
+  end $x$$q$,
+  '23514', null,
+  'JE-2 CONTAINED: a 100 USD debit against a 100 EGP credit is refused through the RPC');
 reset role;
 select set_config('request.jwt.claims','',true);
 
@@ -193,8 +198,8 @@ select is((select count(*)::int from public.journal_entries je
               and (select count(*) from public.journal_entry_lines l where l.journal_entry_id = je.id) >= 2
               and (select sum(l.debit_amount) = sum(l.credit_amount) and sum(l.debit_amount) > 0
                      from public.journal_entry_lines l where l.journal_entry_id = je.id)),
-  4,
-  'OBSERVABILITY: every entry in the tenant has at least two lines and balances');
+  3,
+  'OBSERVABILITY: every entry in the tenant has at least two lines and balances -- E1, E2 and E4; the refused JE-2 entry left nothing');
 
 select * from finish();
 rollback;

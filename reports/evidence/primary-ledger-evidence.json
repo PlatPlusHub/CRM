@@ -1,16 +1,16 @@
 {
   "schema_version": 2,
   "project_ref": "vrvtsxexkiiiivlkdxzp",
-  "read_at": "2026-11-21T14:30:55.511486Z",
+  "read_at": "2026-11-22T08:18:51.697771Z",
   "read_query": "select now() at time zone 'utc' as read_at, count(*) as migration_count, max(version) as latest, md5(string_agg(version||'_'||name,',' order by version||'_'||name)) as ledger_fingerprint, jsonb_agg(version||'_'||name order by version||'_'||name) as ledger from supabase_migrations.schema_migrations",
-  "repository_head": "cc22ea99d82d2c6eee1a54afe9be436aaf2faed1",
-  "migration_count": 276,
-  "ledger_fingerprint": "3d6fe3908078c02f611c70b4eb070623",
-  "function_surface_hash": "fb9b700aa2c6c0a013af6576314ae3b9",
+  "repository_head": "9da4c45a25bacb8ea78b5acb480ca1d21d745dbe",
+  "migration_count": 277,
+  "ledger_fingerprint": "7d224a770526c87f171b9525b0817701",
+  "function_surface_hash": "ca519b79e522cff13cd309456f618a14",
   "function_count": 358,
-  "structural_surface_hash": "3c6ea07a196c3cf0a3ff801397931e0e",
-  "structural_object_count": 3203,
-  "surface_read_queries": "Independent read from Platinum Primary in read-only transactions after convergence to migration 20261121110000. scripts/parity_surface.sql supplied all ten section signatures and the combined signature. The ordered ledger and every section match the Original local stack.",
+  "structural_surface_hash": "0bb1e5b10e0bde5bd344f706366150ee",
+  "structural_object_count": 3204,
+  "surface_read_queries": "Independent read from Platinum Primary in read-only transactions after convergence to migration 20261122100000. scripts/parity_surface.sql supplied nine section signatures; the grants section and the combined signature came from its ACL variant (pg_class.relacl, same rows), because the read-only role cannot see other roles' grants in information_schema.role_table_grants. The ordered ledger and every section match the Original local stack.",
   "ledger": [
     "202607041200_enable_extensions",
     "202607041300_create_system_catalog_tables",
@@ -287,6 +287,7 @@
     "20261119203357_archive_authority_applies_at_entry",
     "20261120122927_branch_write_authority_matches_the_rpc",
     "20261121100000_entry_and_step_up_hold_at_the_table_door",
-    "20261121110000_a_refund_a_conversation_and_a_settlement_are_recorded_on_every_door"
+    "20261121110000_a_refund_a_conversation_and_a_settlement_are_recorded_on_every_door",
+    "20261122100000_a_ledger_entry_balances_in_one_currency_and_a_payment_carries_value"
   ]
 }
