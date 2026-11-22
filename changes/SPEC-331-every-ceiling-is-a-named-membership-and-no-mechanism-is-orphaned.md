@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -59,7 +59,7 @@ Migrations, product code, any Primary write, Founder Secondary, frontend work, i
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -556,6 +556,19 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-22 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 23be9e2cee6e29ef8ffb5c751554a65651a0f994 and every source anchor matched there; Draft allocated as 3cadeb7 and approved as e2c202f with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/tests/187_every_ceiling_is_a_named_membership_and_no_mechanism_is_orphaned_test.sql` edited exactly as the step states; blob 4b7acb723de2ecea6b5ea08190af4b5161566ad3 (185 insertions, 0 deletions (created)).
+- Step 3 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob f5f0acb106e9c1e3520ede80b8cc48110788a787 (9 insertions, 7 deletions).
+- Step 4 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 434c9a8db2f30d450ea7dccb564032be32f5dc4e (9 insertions, 7 deletions).
+- Step 5 Applied: `reports/master/MASTER_SURFACE_DISPOSITION.md` edited exactly as the step states; blob 62db5668af68eaa6f34a108d6cacb13b261ed0d8 (6 insertions, 4 deletions).
+- Step 6 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob 59eb3e6ee784b335f49eb1ba4403cb8a50c1509e (1 insertions, 1 deletions).
+- Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
