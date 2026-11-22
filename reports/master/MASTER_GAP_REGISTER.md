@@ -4,7 +4,9 @@ Status: **Permanent single source of truth for architectural findings.** Never r
 
 Owner policy in force: **Earn-It suspended for design/assurance only.** Findings are classified **Architecturally Required** (evidence proves it belongs in a complete modern Travel ERP/CRM/Revenue platform → its *design* must exist now) or **Architecturally Optional** (genuine independent/optimization choice). **Implementation timing belongs only to the owner.** The phrase "can be added later" is not used.
 
-Last updated: 2026-11-22 (CRM SPEC-331 re-words OPS-2, RLS-1, API-2, TAX-1 and FIN-DOC-1 to the settled vocabulary, each keeping its superseded text, and adds no finding. Test 187 pins the suite ceilings and the mechanism sweep.)
+Last updated: 2026-11-23 (CRM SPEC-332 settles R8/B3 and N1 on Test 188 and DC-5, RC-4 and RC-1 on their existing tests, each keeping its superseded status, and adds no finding.)
+
+Previously: 2026-11-22 (CRM SPEC-331 re-words OPS-2, RLS-1, API-2, TAX-1 and FIN-DOC-1 to the settled vocabulary, each keeping its superseded text, and adds no finding. Test 187 pins the suite ceilings and the mechanism sweep.)
 
 Previously: 2026-11-22 (CRM SPEC-330 resolves RPC-1: Test 186 re-measures it to four permissions enforced nowhere, each with its recorded reason, as a set that can only shrink. No other finding changes status.)
 
@@ -257,16 +259,16 @@ Legend — **Req/Opt:** R = Architecturally Required · O = Architecturally Opti
 | R4 | booking_items + product/reference links + ticketing_deadline | reservations | High | R | 0 | M | 🔒 | DESIGN-READY | synthesis/BF-1/DC-7 | 07-09 | 07-11 |
 | R5 | attribution_clicks + gbraid/wbraid/consent; leads.attribution_click_id | attribution | High | R | 0→3 | M | 🔒 | ✅IMPLEMENTED (SPEC-119) | done | 07-09 | 07-13 |
 | R6 | customers/suppliers + party_id; customer credit terms | party | High | R | 0 | M | 🔒 | DESIGN-READY | synthesis/BF-3 | 07-09 | 07-11 |
-| R8/B3 | business-key UNIQUE constraints (5 keys) | integrity | High | R | 0 | M | 🔒 | DESIGN-READY | audit B3 | 07-09 | 07-11 |
+| R8/B3 | business-key UNIQUE constraints (5 keys) | integrity | High | R | 0 | M | 🔒 | ✅RESOLVED 2026-11-23 (SPEC-332, Test 188: migration `202607048800`; the five keys are validated, each refuses a duplicate inside its owner and admits it in another tenant; superseded: DESIGN-READY) | audit B3 | 07-09 | 07-11 |
 | DC-13 | UUIDv7 PK on high-insert tables (amend ADR-0002) | scalability | Med | NME | trigger | M | 📋 | MOVED→PENDING | deferred (RJ-1) | ARB-07-11 | 07-11 | 07-11 |
 | DC-16 | pgTAP regression harness + RLS/invariant tests | quality | High | R | 0 | A | 🔒 | ✅IMPLEMENTED (SPEC-113) | done | ARB-07-11 | 07-11 | 07-15 |
 | DC-2 | write-idempotency keys on mutating RPCs | correctness | High | R | 1 | A | 🔒 | DESIGN-READY | cert-2026-07 | 07-10 | 07-11 |
 | DC-3 | concurrency control (oversell lock + lost-update guard) | concurrency | High | R | 1 | A | 🔒 | DESIGN-READY | cert-2026-07 | 07-10 | 07-11 |
 | DC-4 | PII erasure boundary (pseudonymization/crypto-shred) | privacy | High | R | 0→1 | A/M | 🔒 | DESIGN-READY | cert-2026-07 | 07-10 | 07-11 |
 | N5 | single consent model (party-owned) | privacy | High | R | 1 | A | 🔒 | DESIGN-READY | synthesis | 07-09 | 07-11 |
-| N1 | event_type registry validated by record_event (amend ADR-0006) | event-contract | High | R | 1 | A | 🔒 | DESIGN-READY | synthesis | 07-09 | 07-11 |
+| N1 | event_type registry validated by record_event (amend ADR-0006) | event-contract | High | R | 1 | A | 🔒 | ✅RESOLVED 2026-11-23 (SPEC-332, Test 188: migration `202607049100`, current body `20261114160000`; `app.record_event` refuses an unregistered event type and severity; superseded: DESIGN-READY) | synthesis | 07-09 | 07-11 |
 | INV-1..4 | derived-primitive invariants (amend ADR-0021) | finance | High | R | 0 | A | 🔒 | DESIGN-READY | synthesis | 07-09 | 07-11 |
-| DC-5 | document binary storage + Storage RLS | security | High | R | 2 | A | 🛡 | DESIGN-READY | cert-2026-07 | 07-10 | 07-11 |
+| DC-5 | document binary storage + Storage RLS | security | High | R | 2 | A | 🛡 | ✅IMPLEMENTED (migration `202607054600`; Tests 48, 49, 97, 116, 175; settled 2026-11-23 by SPEC-332; superseded: DESIGN-READY) | cert-2026-07 | 07-10 | 07-11 |
 | DC-10 | opening-balance / legacy AR-AP onboarding | accounting | High | O | 4 | A | ➕ | PENDING (OPTIONAL / NEEDS MORE EVIDENCE) — see Validation reclassifications note above; row reconciled to it 08-10 | pending | PENDING_ARCHITECTURE_FINDINGS.md (was ARB-07-11) | 07-11 | 08-10 |
 | A1 | RLS (select …) init-plan wrapping | performance | High | R | 2 | M | 🛡 | ✅RESOLVED (SPEC-117) | done | audit A1 | 07-09 | 07-15 |
 | A2 | 18 missing tenant_id indexes | performance | High | R | 2 | A | 🛡 | ✅RESOLVED bare-index (SPEC-114); composite deferred | partial | audit A2 | 07-09 | 07-15 |
@@ -301,9 +303,9 @@ Legend — **Req/Opt:** R = Architecturally Required · O = Architecturally Opti
 | BF-10 | amendment / change-fee / fare-difference workflow | finance | Medium | R | 4 | A | ➕ | DESIGN-READY | stress-test | 07-09 | 07-11 |
 | BF-11 | customer account statements | reporting | Medium | R | 5 | A | ➕ | DESIGN-READY | stress-test | 07-09 | 07-11 |
 | BF-12 | guide/vehicle resource scheduling | operations | Low-Med | R | 5 | A | ➕ | DESIGN-READY | stress-test | 07-09 | 07-11 |
-| RC-1 | Subscription/billing lifecycle + entitlement enforcement | saas | Medium | R | 5 | A | ➕ | DESIGN-READY | design-evolution/audit D | 07-09 | 07-11 |
+| RC-1 | Subscription/billing lifecycle + entitlement enforcement | saas | Medium | R | 5 | A | ➕ | ✅IMPLEMENTED (Tests 42, 66, 148; settled 2026-11-23 by SPEC-332; superseded: DESIGN-READY) | design-evolution/audit D | 07-09 | 07-11 |
 | RC-2 | Notification engine (templates/preferences/routing) | engagement | Medium | R | 5 | A | ➕ | DESIGN-READY | design-evolution | 07-09 | 07-11 |
-| RC-4 | Reporting/Dashboards read-model layer (0 views today) | reporting | Medium | R | 5 | A | ➕ | DESIGN-READY | design-evolution/ARB | 07-09 | 07-11 |
+| RC-4 | Reporting/Dashboards read-model layer (0 views today) | reporting | Medium | R | 5 | A | ➕ | ✅IMPLEMENTED Tier A (migration `202607048900`, the `reporting` security-invoker views; Tests 23, 45, 53; Tier B aggregates only where measured cost earns them, ADR-0022; settled 2026-11-23 by SPEC-332; superseded: DESIGN-READY) | design-evolution/ARB | 07-09 | 07-11 |
 | B7 | pg_trgm fuzzy dedup | crm | Low | O | 5 | A | 📋 | OPEN | pending | backlog | 07-04 | 07-11 |
 | B8 | partitioning high-volume tables | scalability | Low | O | 5 | A | 📋 | OPEN | pending | backlog | 07-04 | 07-11 |
 | OPS-1 | structured logging/metrics/tracing + documented RPO/RTO | observability | Medium | R | 2 | ops | 📋 | OPEN | pending | audit C | 07-09 | 07-11 |
