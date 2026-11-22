@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -541,17 +541,17 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 
 ## Acceptance Criteria
 
-- [ ] Test 187 pins the four ceilings as named memberships and the mechanism sweep. `check: blob supabase/tests/187_every_ceiling_is_a_named_membership_and_no_mechanism_is_orphaned_test.sql 4b7acb723de2ecea6b5ea08190af4b5161566ad3`
-- [ ] The plan removes the two settled registry rows and the EC-7, EC-8 and EC-11 readings cite the result. `check: blob reports/master/MASTER_EXECUTION_PLAN.md f5f0acb106e9c1e3520ede80b8cc48110788a787`
-- [ ] The register carries the five settled statuses with their superseded text. `check: blob reports/master/MASTER_GAP_REGISTER.md 434c9a8db2f30d450ea7dccb564032be32f5dc4e`
-- [ ] The two surfaces are AUDITED with their resolving evidence and superseded Next. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 62db5668af68eaa6f34a108d6cacb13b261ed0d8`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **187 files / 3479 assertions**"`
-- [ ] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
-- [ ] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
-- [ ] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
-- [ ] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
-- [ ] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
-- [ ] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
+- [x] Test 187 pins the four ceilings as named memberships and the mechanism sweep. `check: blob supabase/tests/187_every_ceiling_is_a_named_membership_and_no_mechanism_is_orphaned_test.sql 4b7acb723de2ecea6b5ea08190af4b5161566ad3`
+- [x] The plan removes the two settled registry rows and the EC-7, EC-8 and EC-11 readings cite the result. `check: blob reports/master/MASTER_EXECUTION_PLAN.md f5f0acb106e9c1e3520ede80b8cc48110788a787`
+- [x] The register carries the five settled statuses with their superseded text. `check: blob reports/master/MASTER_GAP_REGISTER.md 434c9a8db2f30d450ea7dccb564032be32f5dc4e`
+- [x] The two surfaces are AUDITED with their resolving evidence and superseded Next. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 62db5668af68eaa6f34a108d6cacb13b261ed0d8`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **187 files / 3479 assertions**"`
+- [x] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
+- [x] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
+- [x] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
+- [x] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
+- [x] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @23be9e2cee6e29ef8ffb5c751554a65651a0f994`
+- [x] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
 
 ## Execution Log
 
@@ -584,12 +584,15 @@ Verdict: Confirmed Complete
 
 Current Git evidence (self-review by the author, Claude main claude-opus-5-5; Codex skipped by owner decision D120): selected Draft 3916118680FC141BE30551E27E0283D68F127472467A9262B69487CE3EEEF43D, allocated blob d7707769fc4c0ccba5df8e3baf0b50255063762d, under the DELEGATED Gate 1 record for this exact Draft. The five outputs equal the frozen payload and the isolated rehearsal's blobs: Test 187 (4b7acb72, select plan(12)), MASTER_EXECUTION_PLAN.md (f5f0acb1), MASTER_GAP_REGISTER.md (434c9a8d), MASTER_SURFACE_DISPOSITION.md (62db5668) and manifest.md (59eb3e6e). MASTER_API_CONTRACT.md, readiness_population.ps1, check_repository_consistency.ps1, check_agent_continuity.ps1, test_cold_start_state_guard.ps1 and migration-ci.yml are unchanged from baseline 23be9e2; regenerated discovery; declared scope verified (five paths plus the contract, ai-map.json and repository-index.md). Native repository consistency on the identical sandbox final tree is CLEAN, and readiness_population.ps1 there reports REGISTRY complete, BLOCKED 20, NOT DUE 33, ACCEPTED RESIDUAL 26, FUTURE-ONLY 57 (the two settled rows left); no exit criterion is marked met. Test 187 passed 12 of 12 locally, and its mutation set failed all 12. This original root owns fresh receipt 4fbf3ac177ffac0b0f0168cc1a3b69613238b04cd2e3c1756a7ab3a7f3f9461f, finishHead 26e565c3b38ee420f6279aacb5044b02a54329fe, profiles DATABASE,REPOSITORY, in one native timed/watched Finish (17.8 min) on the stack recreated by CLI 3.0.0, observed LOCAL_CERTIFY READY and END exit=0 with 0 FAIL: db reset, pgTAP suite (Test 187 included), verify_api_end_to_end.ps1, verify_database.sql, database parity evidence, repository consistency, git diff --check and the five Additional guard suites. No migration or database object changes; Primary was not contacted by this run and Founder Secondary was never contacted. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 4fbf3ac177ffac0b0f0168cc1a3b69613238b04cd2e3c1756a7ab3a7f3f9461f and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed by local evidence.
-- [ ] Native Finish evidence and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed by local evidence.
+- [x] Native Finish evidence and independent Review are present.
 
 ## Notes
 
