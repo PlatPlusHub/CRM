@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -442,6 +442,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-23 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-332 only under DEC-02 in the owner AFK Mode (owner-2026-11-23-modes-any-session.txt, SHA-256 FE02A9FFFBDC408431E3FB59E944ADFED71B07F935BBB2291B7AA59B2A36CE73), continuing Batch 6 under the owner OD-9 decision of 2026-11-22 (SHA-256 1A7B5647FA270EBB6E514414C2FF6E1D88E6D81872733B196797318BDDA9920D). Exact Draft SHA-256 0959AC513FD9CC6FCF5217AD469F896B556323150D5BB2207279CAB44CAAE32A, Git blob 57a27b860cfa6e2cc53f20204da23a63e62a9cf8, CRM baseline 5bed4ed. Native isolated Approve 8b5f2b3 and implement 9b5270f passed with 4 committed blobs verified, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 6EA597226F11ACD505E1056F9EC6CF40CF1BBC6B0ED655FD7CA03746B1BDEFF0). One pgTAP test and records; no migration, no Primary write. Gate 1 only. Immediately before allocation the hash, the Draft blob 57a27b860cfa6e2cc53f20204da23a63e62a9cf8, all 3 source anchors, the baseline HEAD 5bed4ed52cf3612b58c73b09f054b296c968bcf5 against refreshed origin/main 5bed4ed52cf3612b58c73b09f054b296c968bcf5 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as e001dfe. No implementation performed before this transition.
 
 ## Review Gate
 
