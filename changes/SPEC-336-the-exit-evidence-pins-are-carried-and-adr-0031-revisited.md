@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -160,21 +160,21 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 
 ## Acceptance Criteria
 
-- [ ] ADR-0031 records its revisit. `check: has reports/architecture-decision-records.md "Revisited 2026-11-23 (SPEC-336)"`
-- [ ] Test 192 pins the CUST-10 and CUST-12 locks (carried). `check: blob supabase/tests/192_a_customer_lock_is_taken_before_its_judgement_test.sql 00d4d776f17ad411f4499ad454d446e0ac772623`
-- [ ] Test 193 pins the surviving structural controls (carried). `check: blob supabase/tests/193_structural_control_presence_test.sql 472b404c67b1656b5c0013bbbb86f1b7a2e33b4a`
-- [ ] Test 194 pins DOC-11, QUO-11, QUO-12 and BOOK-13 as OPEN (carried). `check: blob supabase/tests/194_door_evidence_and_sale_dates_open_pins_test.sql 0390d2a92ead6a69ff20e2276332adfc9a036c4c`
-- [ ] The EC readings and gate rows are recorded (carried). `check: blob reports/master/MASTER_EXECUTION_PLAN.md 984a32d852fa86036f357c2761fa7aca6b9474fe`
-- [ ] The register carries the new findings, the BRANCH-2 correction and CTRL-19's acceptance (carried). `check: blob reports/master/MASTER_GAP_REGISTER.md 424d084a30c76058ee2a081004d317f6e2b909c5`
-- [ ] The disposition follows the findings (carried). `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 222ee26cf30b5dff7b0bef93c76416b2c2fa7d6f`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **194 files / 3609 assertions**"`
-- [ ] The manifest records the owner's CTRL-19 decision. `check: has _ORVION_CANONICAL/manifest.md "CTRL-19 is no longer an open owner decision"`
-- [ ] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @b78739119185d7b7c4bb20c422e47a8cda088469`
-- [ ] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
-- [ ] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
-- [ ] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
-- [ ] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
-- [ ] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
+- [x] ADR-0031 records its revisit. `check: has reports/architecture-decision-records.md "Revisited 2026-11-23 (SPEC-336)"`
+- [x] Test 192 pins the CUST-10 and CUST-12 locks (carried). `check: blob supabase/tests/192_a_customer_lock_is_taken_before_its_judgement_test.sql 00d4d776f17ad411f4499ad454d446e0ac772623`
+- [x] Test 193 pins the surviving structural controls (carried). `check: blob supabase/tests/193_structural_control_presence_test.sql 472b404c67b1656b5c0013bbbb86f1b7a2e33b4a`
+- [x] Test 194 pins DOC-11, QUO-11, QUO-12 and BOOK-13 as OPEN (carried). `check: blob supabase/tests/194_door_evidence_and_sale_dates_open_pins_test.sql 0390d2a92ead6a69ff20e2276332adfc9a036c4c`
+- [x] The EC readings and gate rows are recorded (carried). `check: blob reports/master/MASTER_EXECUTION_PLAN.md 984a32d852fa86036f357c2761fa7aca6b9474fe`
+- [x] The register carries the new findings, the BRANCH-2 correction and CTRL-19's acceptance (carried). `check: blob reports/master/MASTER_GAP_REGISTER.md 424d084a30c76058ee2a081004d317f6e2b909c5`
+- [x] The disposition follows the findings (carried). `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 222ee26cf30b5dff7b0bef93c76416b2c2fa7d6f`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **194 files / 3609 assertions**"`
+- [x] The manifest records the owner's CTRL-19 decision. `check: has _ORVION_CANONICAL/manifest.md "CTRL-19 is no longer an open owner decision"`
+- [x] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @b78739119185d7b7c4bb20c422e47a8cda088469`
+- [x] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
+- [x] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
+- [x] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
+- [x] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @b78739119185d7b7c4bb20c422e47a8cda088469`
+- [x] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
 
 ## Execution Log
 
@@ -203,12 +203,15 @@ Verdict: Confirmed Complete
 
 Current Git evidence (self-review by the author, Claude main claude-opus-5-5; Codex skipped by owner decision D120): selected Draft 939285E2D4FD147DFE77BD5A60579409AD3671DD6C9EC7255086D50F09EDCA7D, allocated blob 3d8dc27a3e89071d149b762c93f37dac52b62458, under the DELEGATED Gate 1 record for this exact Draft. Baseline b787391 carries the Cancelled SPEC-335 (named in Supersedes; approve logged the carried segment). The one approved output reports/architecture-decision-records.md equals the frozen payload and the isolated rehearsal blob db6c7d7d (the ADR-0031 line "Revisited 2026-11-23 (SPEC-336)"); the seven carried SPEC-335 outputs are unchanged from b787391 (Test 192 00d4d776 and the others, enforced by this contract's same and blob criteria); check_agent_continuity.ps1 and migration-ci.yml are unchanged from baseline; the range b787391..c79eb36 changes only the ADR file, the contract, the manifest and ai-map.json. The product's own criterion checker judged this original tree before Finish: checked 14, failed 0 (original-criteria.log); in rehearsal the same guard failed criterion 1 when the ADR marker was altered. Native repository consistency on the identical sandbox final tree is CLEAN, with Check 29 BLOCKED 20, NOT DUE 31, ACCEPTED RESIDUAL 28, FUTURE-ONLY 57; no exit criterion is marked met. This original root owns fresh receipt 321a466c880241e38e396fdd9f3c6a853b7709534db37830f8f76e92d422a887, finishHead c79eb36de886e0b9e08545ac006192d4eacffa72, profiles DATABASE,REPOSITORY, in one native timed/watched Finish (21.0 min, npm offline) on the stack recreated by CLI 3.0.0, observed LOCAL_CERTIFY READY and END exit=0 with 0 FAIL, running the DATABASE protocol with Tests 192 to 194. No migration or database object changes; Primary was not written by this run and Founder Secondary was never contacted. CTRL-19 is an owner-accepted residual by the owner's words of 2026-11-23. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt 321a466c880241e38e396fdd9f3c6a853b7709534db37830f8f76e92d422a887 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed by local evidence.
-- [ ] Native Finish evidence and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed by local evidence.
+- [x] Native Finish evidence and independent Review are present.
 
 ## Notes
 
