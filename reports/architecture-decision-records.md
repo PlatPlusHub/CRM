@@ -409,6 +409,7 @@ Convention: append-only. Each ADR is numbered and dated. A superseded ADR is mar
   - CTRL-19 closed or changed;
   - a second publication route proposed, or pull requests adopted;
   - a change in how GitHub applies a ruleset's required status checks to a push.
+- **Revisited 2026-11-23 (SPEC-336):** CTRL-19 changed: the owner declined its GitHub configuration repair, so it is an accepted residual (recorded by SPEC-335). The decision stands unchanged, because its promotion route is that residual's containment.
 
 ## Programme lesson numbering (resolved 2026-08-31)
 

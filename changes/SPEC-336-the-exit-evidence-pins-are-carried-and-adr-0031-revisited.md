@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -61,7 +61,7 @@ Migrations, product code, any change to the carried SPEC-335 outputs, the repair
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -179,6 +179,15 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-23 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was b78739119185d7b7c4bb20c422e47a8cda088469 and every source anchor matched there; Draft allocated as 26fc79b and approved as 24fb34c with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `reports/architecture-decision-records.md` edited exactly as the step states; blob db6c7d7dc989577e4e619f4b4211bcd55225ea32 (1 insertions, 0 deletions).
+- Step 3 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
