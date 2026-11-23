@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -395,17 +395,17 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 
 ## Acceptance Criteria
 
-- [ ] Test 189 proves the contact-method update door's seven controls. `check: blob supabase/tests/189_a_contact_method_change_is_refused_at_the_update_door_test.sql 85f9d02296a20357411b5df659b9eeab9bb3d36e`
-- [ ] The EC-6 reading cites the door sweep and Test 189. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 3e5a77c722aaa1bd496b6c6e0cc282d8528429bc`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **189 files / 3506 assertions**"`
-- [ ] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The surface disposition is unchanged. `check: same reports/master/MASTER_SURFACE_DISPOSITION.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The gap register is unchanged. `check: same reports/master/MASTER_GAP_REGISTER.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
-- [ ] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
+- [x] Test 189 proves the contact-method update door's seven controls. `check: blob supabase/tests/189_a_contact_method_change_is_refused_at_the_update_door_test.sql 85f9d02296a20357411b5df659b9eeab9bb3d36e`
+- [x] The EC-6 reading cites the door sweep and Test 189. `check: blob reports/master/MASTER_EXECUTION_PLAN.md 3e5a77c722aaa1bd496b6c6e0cc282d8528429bc`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **189 files / 3506 assertions**"`
+- [x] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The surface disposition is unchanged. `check: same reports/master/MASTER_SURFACE_DISPOSITION.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The gap register is unchanged. `check: same reports/master/MASTER_GAP_REGISTER.md @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @2f8c19ae489ecbb988ebffd4b8aad7911dd4edd1`
+- [x] Full DATABASE readiness and all five hosted guard suites pass in the native Finish; no exit criterion is marked met.
 
 ## Execution Log
 
@@ -436,12 +436,15 @@ Verdict: Confirmed Complete
 
 Current Git evidence (self-review by the author, Claude main claude-opus-5-5; Codex skipped by owner decision D120): selected Draft E103650BBB3A30F0A27340981A304F758D35970DC90D1F02DA683DCFCE771562, allocated blob c7f8e40fa492ae26b90d4cca3349521b66bb2657, under the DELEGATED Gate 1 record for this exact Draft. The three outputs equal the frozen payload and the isolated rehearsal's blobs: Test 189 (85f9d022, select plan(15)), MASTER_EXECUTION_PLAN.md (3e5a77c7) and manifest.md (bb7314e9). MASTER_API_CONTRACT.md, MASTER_SURFACE_DISPOSITION.md, MASTER_GAP_REGISTER.md, readiness_population.ps1, check_repository_consistency.ps1, check_agent_continuity.ps1, test_cold_start_state_guard.ps1 and migration-ci.yml are unchanged from baseline 2f8c19a; regenerated discovery; declared scope verified (the range 2f8c19a..ca3b591 changes only the three paths plus the contract and ai-map.json). Native repository consistency on the identical sandbox final tree is CLEAN, and readiness_population.ps1 there reports REGISTRY complete, BLOCKED 20, NOT DUE 27, ACCEPTED RESIDUAL 26, FUTURE-ONLY 57; no exit criterion is marked met and EC-6 stays partial (the door sweep does not grade the tests of tested doors). Test 189 passed 15 of 15 locally, and its mutation set failed all 15. This original root owns fresh receipt d797a6241bb3bdf1256ce5ca22de8dd009f6344a9a653bf8d912e615e85fa468, finishHead ca3b591662741c99aaefd7012a49b0af2fa04e20, profiles DATABASE,REPOSITORY, in one native timed/watched Finish (13.9 min) on the stack recreated by CLI 3.0.0, observed LOCAL_CERTIFY READY and END exit=0 with 0 FAIL: db reset, pgTAP suite (Test 189 included), verify_api_end_to_end.ps1, verify_database.sql, database parity evidence, repository consistency, git diff --check and the five Additional guard suites plus readiness_selftest.ps1. No migration or database object changes; Primary was not written by this run and Founder Secondary was never contacted. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt d797a6241bb3bdf1256ce5ca22de8dd009f6344a9a653bf8d912e615e85fa468 and selected bytes. Candidate binding follows Complete; publication/promotion remain separately governed.
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed by local evidence.
-- [ ] Native Finish evidence and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed by local evidence.
+- [x] Native Finish evidence and independent Review are present.
 
 ## Notes
 
