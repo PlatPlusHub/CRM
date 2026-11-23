@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -183,6 +183,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-23 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-336 only under DEC-02 in the owner AFK Mode (owner-2026-11-23-modes-any-session.txt, SHA-256 FE02A9FFFBDC408431E3FB59E944ADFED71B07F935BBB2291B7AA59B2A36CE73), continuing Batch 6 under the owner OD-9 decision of 2026-11-22 (SHA-256 1A7B5647FA270EBB6E514414C2FF6E1D88E6D81872733B196797318BDDA9920D); CTRL-19 accepted residual by the owner (owner-2026-11-23-ctrl19-declined.txt, SHA-256 6882D7C5A1E1C71B05EE8AD878DD72100821972811F1E1358CA022623D333124). Successor of the Cancelled SPEC-335 (DELEGATED-CANCEL.md). Exact Draft SHA-256 939285E2D4FD147DFE77BD5A60579409AD3671DD6C9EC7255086D50F09EDCA7D, Git blob 3d8dc27a3e89071d149b762c93f37dac52b62458, CRM baseline b787391. Native isolated Approve a6dada3 (carried Cancel named) and implement aeb9d6a passed, the product criterion checks on the sandbox tree passed 14 of 14, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 657972E7A31FE89DCFB1049A65A82F10B82F828A1D7DFE41E87F1B202FC256FE). One ADR line, carried outputs and records; no migration, no Primary write. Gate 1 only. Immediately before allocation the hash, the Draft blob 3d8dc27a3e89071d149b762c93f37dac52b62458, all 1 source anchors, the baseline HEAD b78739119185d7b7c4bb20c422e47a8cda088469 against refreshed origin/main 676df3e46fffae83366fa4c177a74d327edd6381 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 26fc79b. No implementation performed before this transition.
 
 ## Review Gate
 
