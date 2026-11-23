@@ -4,9 +4,9 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
+[ ] In Progress
 [ ] Complete
-[ ] Cancelled
+[x] Cancelled
 
 ## Objective
 
@@ -1020,6 +1020,14 @@ DELEGATED Original Gate 1 for CRM SPEC-335 only under DEC-02 in the owner AFK Mo
 Verdict: Confirmed Complete
 
 Current Git evidence (self-review by the author, Claude main claude-opus-5-5; Codex skipped by owner decision D120): selected Draft F9F41EBD3F4AF0A13A803F4E557ECDD921DA0ACD6B1C6EDA76280BF905081A53, allocated blob c1084bbfb731621c40debbb9acb26c338c717a02, under the DELEGATED Gate 1 record for this exact Draft. The seven outputs equal the frozen payload and the isolated rehearsal's blobs: Test 192 (00d4d776, select plan(4)), Test 193 (472b404c, select plan(3)), Test 194 (0390d2a9, select plan(11)), MASTER_EXECUTION_PLAN.md (984a32d8), MASTER_GAP_REGISTER.md (424d084a), MASTER_SURFACE_DISPOSITION.md (222ee26c) and manifest.md (b0e8f24e, Suite 194 files / 3609 assertions); ai-map.json and repository-index.md equal the rehearsal's. check_agent_continuity.ps1 and migration-ci.yml are unchanged from baseline 676df3e; regenerated discovery; declared scope verified (the range 676df3e..b274da4 changes only the seven paths plus the contract and ai-map.json). Native repository consistency on the identical sandbox final tree is CLEAN, with Check 29 BLOCKED 20, NOT DUE 31, ACCEPTED RESIDUAL 28, FUTURE-ONLY 57; no exit criterion is marked met. In rehearsal, Test 192 fails all 4 assertions when either customer lock is removed, Test 193 fails when any one of the 302 structural controls (244 foreign keys, 22 permissive policies, 36 updated_at triggers) is removed (302 of 302), and Test 194 passes unmutated and fails on each of the 7 repairing mutants; Test 193 pins presence and definition, not behaviour (UNPROVEN). This original root owns fresh receipt 703516cb37dc317f41656511a92c3e7500000caf869df4fa6a9193033857e815, finishHead b274da429f656c35bd703c1b474766336c9d32be, profiles DATABASE,REPOSITORY, in one native timed/watched Finish (13.6 min) on the stack recreated by CLI 3.0.0, observed LOCAL_CERTIFY READY and END exit=0 with 0 FAIL: db reset, pgTAP suite (Tests 192, 193 and 194 included), verify_api_end_to_end.ps1, verify_database.sql, database parity evidence, repository consistency, git diff --check and the five Additional guard suites plus readiness_selftest.ps1. No migration or database object changes; Primary was not written by this run and Founder Secondary was never contacted. CTRL-19 is an owner-accepted residual by the owner's words of 2026-11-23. Native Complete/range/binder still own full receipt/criterion validation. No publication or hosted result asserted.
+
+### 2026-11-23 — Cancelled (DELEGATED owner command)
+
+- **Authority.** The owner's AFK Mode (Workbench `data/records/batch6/owner-words/owner-2026-11-23-modes-any-session.txt`, SHA-256 `FE02A9FFFBDC408431E3FB59E944ADFED71B07F935BBB2291B7AA59B2A36CE73`), which carries run mode 2 as the owner redefined it on 2026-11-21 (`owner-2026-11-21-run-modes-redefined.txt`, SHA-256 `35E35600BB9D2D69EBF0A85BE8E6256260617F9A8B47F74A091565BC53AF69DD`): "use the Constitution for any answer need's from me". The question "Cancel and rebuild as one successor that adds the missing ADR-0031 revisit step?" was answered yes by the constitution and recorded as DELEGATED, never as typed by the owner (Workbench `data/records/batch6/exit-bundle-j/spec335/DELEGATED-CANCEL.md`). `In Progress → Cancelled` is a human-only transition (`CR_LIFECYCLE.md` §4); this commit records that delegated command, as SPEC-323 (065155b) did.
+- **Why.** Acceptance criterion 9 (`check: has reports/architecture-decision-records.md "Revisited 2026-11-23 (SPEC-335)"`) cannot be met: `reports/architecture-decision-records.md` is in the Write Scope, but no Implementation Step writes that line, and the steps are applied exactly as written. The native Complete refused with `CRITERION_CHECK_FAILED criterion 9`. No frozen step may be changed.
+- **Correction of the Review above.** The Review committed at 4c46fea recorded "Confirmed Complete". That verdict was wrong: criterion 9 was not met. The truthful verdict is Needs Corrective Change Request. Everything else that Review states is unchanged: the seven outputs equal the frozen payload, and the native Finish at b274da4 observed LOCAL_CERTIFY READY (receipt `703516cb37dc317f41656511a92c3e7500000caf869df4fa6a9193033857e815`), which this Cancel retires.
+- **What stands.** The implementation commit b274da4 stays in history unchanged: Tests 192, 193 and 194, the plan, register, disposition and manifest edits. No migration and no database object: Primary `vrvtsxexkiiiivlkdxzp` was never written by this contract and Founder Secondary was never contacted. Nothing was pushed.
+- **What remains.** One successor contract carries this contract's seven outputs forward unchanged, adds the ADR-0031 revisit line, and names this file in its `Supersedes / Depends On`. The manifest's Active Change Request becomes `None`, with `ai-map.json` regenerated by `scripts/generate-ai-map.ps1`.
 
 ## Review Gate
 
