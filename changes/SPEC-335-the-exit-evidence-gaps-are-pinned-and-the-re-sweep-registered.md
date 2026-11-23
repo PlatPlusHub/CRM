@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -63,7 +63,7 @@ Migrations, product code, the repair of any finding registered here, any Primary
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -991,6 +991,21 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-23 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 676df3e46fffae83366fa4c177a74d327edd6381 and every source anchor matched there; Draft allocated as 3d013bd and approved as 88e3047 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/tests/192_a_customer_lock_is_taken_before_its_judgement_test.sql` edited exactly as the step states; blob 00d4d776f17ad411f4499ad454d446e0ac772623 (47 insertions, 0 deletions (created)).
+- Step 3 Applied: `supabase/tests/193_structural_control_presence_test.sql` edited exactly as the step states; blob 472b404c67b1656b5c0013bbbb86f1b7a2e33b4a (336 insertions, 0 deletions (created)).
+- Step 4 Applied: `supabase/tests/194_door_evidence_and_sale_dates_open_pins_test.sql` edited exactly as the step states; blob 0390d2a92ead6a69ff20e2276332adfc9a036c4c (147 insertions, 0 deletions (created)).
+- Step 5 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob 984a32d852fa86036f357c2761fa7aca6b9474fe (22 insertions, 14 deletions).
+- Step 6 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 424d084a30c76058ee2a081004d317f6e2b909c5 (10 insertions, 3 deletions).
+- Step 7 Applied: `reports/master/MASTER_SURFACE_DISPOSITION.md` edited exactly as the step states; blob 222ee26cf30b5dff7b0bef93c76416b2c2fa7d6f (8 insertions, 6 deletions).
+- Step 8 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob b0e8f24e9ef3c1607ab24642c0d553ef3262c6a0 (2 insertions, 2 deletions).
+- Step 9 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
