@@ -4,8 +4,8 @@
 
 [ ] Draft
 [ ] Approved
-[x] In Progress
-[ ] Complete
+[ ] In Progress
+[x] Complete
 [ ] Cancelled
 
 ## Objective
@@ -913,20 +913,20 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 
 ## Acceptance Criteria
 
-- [ ] Test 195 reaches the no-active-tenant refusals. `check: blob supabase/tests/195_every_tenant_function_refuses_a_caller_with_no_active_tenant_test.sql e18dadc093b8ec000e75242f92bc204a58c289fd`
-- [ ] Test 196 reaches the direct-call refusals and pins CHAT-5 OPEN. `check: blob supabase/tests/196_each_function_refusal_is_reached_by_a_call_test.sql ed6542eebeee21869968c6a113ad22430f504450`
-- [ ] Test 197 reaches the prepared-state refusals. `check: blob supabase/tests/197_each_prepared_state_refusal_is_reached_test.sql 05dc8925972f07f939a2520a8213615b6e7b5ac5`
-- [ ] Test 198 reaches the trigger refusals. `check: blob supabase/tests/198_each_trigger_refusal_is_reached_test.sql 4865e7f8d5d7859d333965f83af04e07f2c5fa3f`
-- [ ] The EC-5 reading, the registry rows and the bundle L exception are recorded. `check: blob reports/master/MASTER_EXECUTION_PLAN.md e2fb1c95d6e393a07d8df12d274babc46373720e`
-- [ ] The register carries CHAT-5. `check: blob reports/master/MASTER_GAP_REGISTER.md 7c1bdefca422d936386f24e1b8a82c2c84434eaa`
-- [ ] The disposition follows the finding. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 1c05b168f84579a789434d8c9cf8b6be092d2db0`
-- [ ] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **198 files / 3960 assertions**"`
-- [ ] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @b4562e7a3ab4390dac0992032ebe384d0af5082a`
-- [ ] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
-- [ ] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
-- [ ] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
-- [ ] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
-- [ ] Full DATABASE readiness and all five hosted guard suites pass in the native Finish.
+- [x] Test 195 reaches the no-active-tenant refusals. `check: blob supabase/tests/195_every_tenant_function_refuses_a_caller_with_no_active_tenant_test.sql e18dadc093b8ec000e75242f92bc204a58c289fd`
+- [x] Test 196 reaches the direct-call refusals and pins CHAT-5 OPEN. `check: blob supabase/tests/196_each_function_refusal_is_reached_by_a_call_test.sql ed6542eebeee21869968c6a113ad22430f504450`
+- [x] Test 197 reaches the prepared-state refusals. `check: blob supabase/tests/197_each_prepared_state_refusal_is_reached_test.sql 05dc8925972f07f939a2520a8213615b6e7b5ac5`
+- [x] Test 198 reaches the trigger refusals. `check: blob supabase/tests/198_each_trigger_refusal_is_reached_test.sql 4865e7f8d5d7859d333965f83af04e07f2c5fa3f`
+- [x] The EC-5 reading, the registry rows and the bundle L exception are recorded. `check: blob reports/master/MASTER_EXECUTION_PLAN.md e2fb1c95d6e393a07d8df12d274babc46373720e`
+- [x] The register carries CHAT-5. `check: blob reports/master/MASTER_GAP_REGISTER.md 7c1bdefca422d936386f24e1b8a82c2c84434eaa`
+- [x] The disposition follows the finding. `check: blob reports/master/MASTER_SURFACE_DISPOSITION.md 1c05b168f84579a789434d8c9cf8b6be092d2db0`
+- [x] The measured manifest test count is present. `check: has _ORVION_CANONICAL/manifest.md "Suite **198 files / 3960 assertions**"`
+- [x] The API contract is unchanged. `check: same reports/master/MASTER_API_CONTRACT.md @b4562e7a3ab4390dac0992032ebe384d0af5082a`
+- [x] The registry evaluator is preserved. `check: same scripts/readiness_population.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
+- [x] The repository guard is preserved. `check: same scripts/check_repository_consistency.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
+- [x] The native evaluator is preserved. `check: same scripts/check_agent_continuity.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
+- [x] The cold-start guard suite is preserved. `check: same scripts/test_cold_start_state_guard.ps1 @b4562e7a3ab4390dac0992032ebe384d0af5082a`
+- [x] Full DATABASE readiness and all five hosted guard suites pass in the native Finish.
 
 ## Execution Log
 
@@ -962,12 +962,15 @@ Verdict: Confirmed Complete
 
 Independent current Git evidence (Claude main, DELEGATED Gate 1 in the owner's AFK Mode; checks the reviewer ran, not the author's): selected Draft 069AACAD03379735EB5729246332A6EA14A0294B3D79989667E5A87932F9B8DC, allocated blob b796c38c8ac31c8e64fd9d7f7cee354e28f1b9ff; the range b4562e7..3792b61 changes only Write Scope paths (the contract, Tests 195 to 198, the plan, the gap register, the surface disposition, the canonical manifest and the regenerated ai-map.json); each test and record blob at HEAD equals its criterion (195 e18dadc, 196 ed6542e, 197 05dc892, 198 4865e7f, plan e2fb1c9, register 7c1bdef, disposition 1c05b16); the manifest carries "Suite **198 files / 3960 assertions**"; the API contract, the registry evaluator, the repository guard, the native evaluator and the cold-start guard suite are byte-identical to b4562e7; no migration changed. Before -Finish the project-local CLI 3.0.0 recreated the stack. This original root owns fresh receipt digest 366e63c5d0495bcc0ad494c0c747a30e8ba0eba028c2ece87baa329816f8e274, finishHead 3792b61962c427e2ad17473ec3dbf11be9486752, profiles DATABASE,REPOSITORY, from a native timed and watched Finish observed READY and END exit 0 (18.7 min): db reset, the full pgTAP suite twice, the API end-to-end check, verify_database, the parity evidence check, repository consistency, git diff --check and the five hosted guard suites all PASS. The behavioural EC-5 evidence is the bundle L mutation probe on the local stack (347 killed, 13 proven unreachable). Native Complete, range and binder still own full receipt and criterion validation. No publication or hosted result asserted.
 
+
+Local original native verification and truthful Review complete. Preserve this root's receipt digest 366e63c5d0495bcc0ad494c0c747a30e8ba0eba028c2ece87baa329816f8e274 and selected bytes. Candidate binding follows Complete; publication and promotion remain separately governed (DEC-25).
+
 ## Review Gate
 
-- [ ] Every change matches the accepted implementation steps.
-- [ ] All changed paths are within Write Scope.
-- [ ] Every acceptance criterion is confirmed by local evidence.
-- [ ] Native Finish evidence and independent Review are present.
+- [x] Every change matches the accepted implementation steps.
+- [x] All changed paths are within Write Scope.
+- [x] Every acceptance criterion is confirmed by local evidence.
+- [x] Native Finish evidence and independent Review are present.
 
 ## Notes
 
