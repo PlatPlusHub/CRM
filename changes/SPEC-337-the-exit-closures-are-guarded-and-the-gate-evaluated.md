@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -62,7 +62,7 @@ Migrations, tests under `supabase/`, product code, the repair of any EC-5 surviv
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -413,6 +413,19 @@ Post-Implementation Proof Obligation: The native Finish runs the repository guar
 ## Execution Log
 
 None.
+
+
+### 2026-11-24 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 5f9c2f8e13e9ad74bc52841d62ea71100a7e5ba0 and every source anchor matched there; Draft allocated as 9bd007f and approved as bdaaf18 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `.github/workflows/repository-consistency.yml` edited exactly as the step states; blob 328b1206bae0983f445df0a0f297a2473015f158 (3 insertions, 0 deletions).
+- Step 3 Applied: `scripts/check_repository_consistency.ps1` edited exactly as the step states; blob c71c4f67fe55b89e0e111bd17caa59c1bd0c6fca (70 insertions, 0 deletions).
+- Step 4 Applied: `scripts/test_status_contradiction_guard.ps1` edited exactly as the step states; blob 4ddf0f567f7d5b4b7fe249254e4f71b0de302912 (42 insertions, 0 deletions).
+- Step 5 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 76bf1acac532c7e5f783b183fabc36de2791b728 (4 insertions, 1 deletions).
+- Step 6 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob 7ff2cce501247a9cdc8db5b9de1a83884fbe1014 (11 insertions, 7 deletions).
+- Step 7 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 

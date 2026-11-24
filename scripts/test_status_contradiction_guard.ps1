@@ -223,6 +223,48 @@ try {
     if ($sandboxRoot -and $sandboxRoot -eq [IO.Path]::GetFullPath($d)) { Remove-Item -LiteralPath $sandboxRoot -Recurse -Force }
 }
 
+# SPEC-337: Check 30 (GOV-12, duplicate register ids) and Check 31 (SYNC-2, bare exit), both directions.
+# The helper refuses a run that never reached Check 31, so "no hit" cannot mean "the guard died first".
+# Check 3 stops a reports-only copy, so the tracked tree is copied, as in the slice-11 block above.
+$d = New-Sandbox
+try {
+    $sandboxRoot = [IO.Path]::GetFullPath($d)
+    if (-not $sandboxRoot.StartsWith([IO.Path]::GetFullPath([IO.Path]::GetTempPath()), [StringComparison]::OrdinalIgnoreCase)) { throw 'Sandbox escaped temp root' }
+    foreach ($relative in (git -C $repoRoot ls-files)) {
+        $destination = Join-Path $sandboxRoot $relative
+        New-Item -ItemType Directory -Force (Split-Path -Parent $destination) | Out-Null
+        Copy-Item -LiteralPath (Join-Path $repoRoot $relative) -Destination $destination
+    }
+    function Get-IdExitDefects {
+        $out = & pwsh -NoProfile -File $guard -RepoRoot $d 2>&1 | Out-String
+        if ($out -notmatch '== Check 31:') { throw "Guard failed before Check 31 completed: $out" }
+        @($out -split "`n" | Where-Object { $_ -cmatch 'DUPLICATE REGISTER ID:|STALE DUPLICATE ALLOWANCE:|BARE EXIT:|UNPARSEABLE SCRIPT:' })
+    }
+    $path = Join-Path $d 'reports/master/MASTER_GAP_REGISTER.md'
+    $original = [IO.File]::ReadAllLines($path)
+    $clean = Get-IdExitDefects
+    Check 'ID/EXIT CONTROL: the frozen duplicates and the real scripts are accepted' ($clean.Count -eq 0) ($clean -join ' | ')
+    $row = @($original | Where-Object { $_ -like '| RBAC-5 |*' })
+    [IO.File]::WriteAllLines($path, [string[]]($original + $row))
+    $hits = Get-IdExitDefects
+    Check 'ID MUTATION: a second RBAC-5 row is a new duplicate' ($row.Count -eq 1 -and @($hits -cmatch 'DUPLICATE REGISTER ID: RBAC-5 ').Count -eq 1) ($hits -join ' | ')
+    $meas = @(for ($i = 0; $i -lt $original.Count; $i++) { if ($original[$i] -like '| MEAS-2 |*') { $i } })
+    [IO.File]::WriteAllLines($path, [string[]]@(for ($i = 0; $i -lt $original.Count; $i++) { if ($i -ne $meas[-1]) { $original[$i] } }))
+    $hits = Get-IdExitDefects
+    Check 'ID MUTATION: an allowed duplicate reduced to one row is a stale allowance' ($meas.Count -eq 2 -and @($hits -cmatch 'STALE DUPLICATE ALLOWANCE: MEAS-2 ').Count -eq 1) ($hits -join ' | ')
+    [IO.File]::WriteAllLines($path, $original)
+    $probe = Join-Path $d 'scripts/probe.ps1'
+    New-Item -ItemType Directory -Force (Split-Path -Parent $probe) | Out-Null
+    [IO.File]::WriteAllText($probe, "if (`$args.Count) { Write-Host 'x' }`nexit`n")
+    $hits = Get-IdExitDefects
+    Check 'EXIT MUTATION: a bare exit is refused' (@($hits -cmatch 'BARE EXIT: scripts[\\/]probe\.ps1:2 ').Count -eq 1) ($hits -join ' | ')
+    [IO.File]::WriteAllText($probe, "if (`$args.Count) { Write-Host 'x' }`nexit 1`n")
+    $hits = Get-IdExitDefects
+    Check 'EXIT CONTROL: an exit with a code is accepted' ($hits.Count -eq 0) ($hits -join ' | ')
+} finally {
+    if ($sandboxRoot -and $sandboxRoot -eq [IO.Path]::GetFullPath($d)) { Remove-Item -LiteralPath $sandboxRoot -Recurse -Force }
+}
+
 Write-Host "`n== $pass passed, $fail failed ==" -ForegroundColor $(if ($fail -eq 0) { 'Green' } else { 'Red' })
 if ($fail -gt 0) { exit 1 }
 exit 0

@@ -8,6 +8,8 @@ on:
   push:
     paths:
       - "**/*.md"
+      # Check 31 (SYNC-2, SPEC-337) parses every PowerShell script for a bare exit.
+      - "**/*.ps1"
       - "scripts/check_repository_consistency.ps1"
       # Check 19 DELEGATES to this script and reads this evidence file. Both were missing here,
       # and it showed twice: `6a246ca` introduced Check 19 and its script with no CI run at all,
@@ -56,6 +58,7 @@ on:
     # parses the two blocks separately and compares them.
     paths:
       - "**/*.md"
+      - "**/*.ps1"
       - "scripts/check_repository_consistency.ps1"
       - "scripts/check_primary_ledger.ps1"
       - "reports/evidence/primary-ledger-evidence.json"

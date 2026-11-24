@@ -1744,6 +1744,7 @@ if (-not (Test-Path $ciWorkflow)) {
         '.mcp.json'                                   = 'Check 28 (WS-1) compares it against the manifest table'
         'scripts/readiness_population.ps1'            = 'Check 29 (CTRL-9) executes it'
         'scripts/generate-ai-map.ps1'                 = 'Check 7 (SPEC-270) executes it to reproduce ai-map.json and repository-index.md'
+        '**/*.ps1'                                    = 'Check 31 (SYNC-2) parses every PowerShell script'
     }
     # THE GUARD-OF-THE-GUARD SUITES ARE DERIVED FROM THE WORKFLOW, NOT RESTATED HERE (2026-09-09).
     # This job also EXECUTES the mutation suites, and a suite edited without being run is a silent
@@ -2536,6 +2537,75 @@ if (-not (Test-Path $registryScript)) {
         $issues += [Math]::Max(1, $registryProblems.Count)
     }
 }
+
+Write-Host ""
+Write-Host "== Check 30: no new duplicate finding id in the gap register (GOV-12) ==" -ForegroundColor Cyan
+# GOV-12 (2026-09-04) closed one id recorded twice with "no guard added", reasoning that a title
+# heuristic would misfire. The class recurred: MEAS-2's second row is dated 2026-09-07. Measured at
+# 5f9c2f8 (SPEC-337): exactly seven ids are register rows twice. Deciding by id alone needs no
+# heuristic: the duplicated set must equal the frozen allowance below, each exactly twice. A new
+# duplicate fails; an allowed id no longer duplicated fails as stale, so the allowance only shrinks.
+$dupRegister = Join-Path $RepoRoot 'reports/master/MASTER_GAP_REGISTER.md'
+$dupAllowed = [ordered]@{ 'ATTR-1' = 2; 'CAT-5' = 2; 'DOC-1' = 2; 'FIN-1' = 2; 'MEAS-2' = 2; 'SEC-3' = 2; 'SUP-1' = 2 }
+if (-not (Test-Path $dupRegister)) {
+    Write-Host "  MISSING: reports/master/MASTER_GAP_REGISTER.md" -ForegroundColor Red
+    $issues++
+} else {
+    $dupSeen = @{}
+    $dupLines = [IO.File]::ReadAllLines($dupRegister)
+    for ($i = 0; $i -lt $dupLines.Count; $i++) {
+        if ($dupLines[$i] -notmatch '^\|') { continue }
+        $cells = @($dupLines[$i] -split '(?<!\\)\|')
+        if (($cells.Count - 2) -lt 12) { continue }
+        $id = $cells[1].Trim() -replace '^\*\*|\*\*$', ''
+        if ($id -cnotmatch '^[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)*-\d+[a-z]?$') { continue }
+        if (-not $dupSeen.ContainsKey($id)) { $dupSeen[$id] = [System.Collections.Generic.List[int]]::new() }
+        $dupSeen[$id].Add($i + 1)
+    }
+    $dupIssues = 0
+    foreach ($id in @($dupSeen.Keys | Sort-Object)) {
+        $n = $dupSeen[$id].Count
+        if ($n -gt 1 -and $dupAllowed[$id] -ne $n) {
+            Write-Host "  DUPLICATE REGISTER ID: $id is a register row $n times (lines $($dupSeen[$id] -join ', ')) -- give the new finding its own id" -ForegroundColor Red
+            $dupIssues++
+        }
+    }
+    foreach ($id in $dupAllowed.Keys) {
+        $n = if ($dupSeen.ContainsKey($id)) { $dupSeen[$id].Count } else { 0 }
+        if ($n -lt $dupAllowed[$id]) {
+            Write-Host "  STALE DUPLICATE ALLOWANCE: $id is a register row $n time(s), allowed $($dupAllowed[$id]) -- remove it from Check 30's allowance" -ForegroundColor Red
+            $dupIssues++
+        }
+    }
+    if ($dupIssues -eq 0) { Write-Host "  $($dupSeen.Count) register ids, no duplicate beyond the frozen $($dupAllowed.Count)" -ForegroundColor Green }
+    $issues += $dupIssues
+}
+
+Write-Host ""
+Write-Host "== Check 31: no PowerShell script exits with a bare exit (SYNC-2) ==" -ForegroundColor Cyan
+# SYNC-2 (2026-09-09): repository-all.ps1 reported SUCCESS over a failed push because every failure
+# path used a bare `exit`, which returns 0 when the last native command succeeded. The fix was not
+# guarded (its row says so). Measured at 5f9c2f8 (SPEC-337): 0 bare exits in 50 scripts. This check
+# parses every .ps1 the guard sees and refuses an exit statement without a value.
+$exitScripts = @($allFiles | Where-Object { $_.Extension -eq '.ps1' })
+$exitIssues = 0
+foreach ($f in $exitScripts) {
+    $rel = $f.FullName.Substring($RepoRoot.Length + 1)
+    $perr = $null
+    $ast = [System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$perr)
+    if ($perr -and $perr.Count) {
+        Write-Host "  UNPARSEABLE SCRIPT: $rel -- $($perr[0].Message)" -ForegroundColor Red
+        $exitIssues++
+        continue
+    }
+    foreach ($x in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.ExitStatementAst] -and -not $n.Pipeline }, $true)) {
+        Write-Host "  BARE EXIT: ${rel}:$($x.Extent.StartLineNumber) -- returns 0 after a successful native command; give it a code" -ForegroundColor Red
+        $exitIssues++
+    }
+}
+if ($exitIssues -eq 0) { Write-Host "  $($exitScripts.Count) scripts, no bare exit" -ForegroundColor Green }
+$issues += $exitIssues
+
 Write-Host ""
 if ($issues -eq 0) {
     Write-Host "REPOSITORY CONSISTENCY: CLEAN" -ForegroundColor Green
