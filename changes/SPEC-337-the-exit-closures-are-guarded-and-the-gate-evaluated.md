@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -417,6 +417,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-24 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-337 only under DEC-02 in the owner AFK Mode (owner-2026-11-23-modes-any-session.txt, SHA-256 FE02A9FFFBDC408431E3FB59E944ADFED71B07F935BBB2291B7AA59B2A36CE73), continuing Batch 6 under the owner OD-9 decision of 2026-11-22 (SHA-256 1A7B5647FA270EBB6E514414C2FF6E1D88E6D81872733B196797318BDDA9920D) and the owner prompt to continue until the Batch 6 Finish (SHA-256 7D2A8B8F0F209C8538B0D87F133C440DBB620C2577DEAECF8F3D312584C94759); CTRL-19 accepted residual by the owner (owner-2026-11-23-ctrl19-declined.txt, SHA-256 6882D7C5A1E1C71B05EE8AD878DD72100821972811F1E1358CA022623D333124). Exact Draft revision r3 SHA-256 F0BEC5E82D93FF668F94173A2A50EAD4FB8A390EC1FCB8E918D648536932F4BB, Git blob 8b233da8f1ba0d67ca49bd223485f9dbace1c842, CRM baseline 5f9c2f8. Native isolated Approve 8ee0e5f and implement 5fdb89b passed (5 committed blobs verified), the product criterion checks on the sandbox tree passed 10 of 10, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 F28420F0A4C4934D21A0F77742E73DBA33002714A7B12379A47DC26D6A6A097A). Two repository guard checks, one workflow trigger, one guard suite block and records; no migration, no Primary write. Gate 1 only. Immediately before allocation the hash, the Draft blob 8b233da8f1ba0d67ca49bd223485f9dbace1c842, all 5 source anchors, the baseline HEAD 5f9c2f8e13e9ad74bc52841d62ea71100a7e5ba0 against refreshed origin/main 5f9c2f8e13e9ad74bc52841d62ea71100a7e5ba0 and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as 9bd007f. No implementation performed before this transition.
 
 ## Review Gate
 
