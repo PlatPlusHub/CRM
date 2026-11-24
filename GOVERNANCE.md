@@ -203,9 +203,9 @@ Normal CR execution and routine checkpoints do not require a session report. CR 
 
     | File | Line | Value owned by | SHA-256 of the line |
     |---|---|---|---|
-    | `_ORVION_CANONICAL/manifest.md` | `Current Module` | `scripts/batch6_select_target.ps1` | `63c303fb1bcfde20de5d8f6c9f16ab38436e451c6bf8795cb93d7da97114ca77` |
-    | `_ORVION_CANONICAL/manifest.md` | `Batch 6 surface coverage` | `reports/master/MASTER_SURFACE_DISPOSITION.md` | `166b2f42e10851e6c13be8d578229e72ff22865d6761bfb2a2d8f78296ce8a16` |
-    | `_ORVION_CANONICAL/manifest.md` | `Next capability` | `scripts/batch6_select_target.ps1` | `90b037bb396498533eb9209c81d73278a5da8ad481562a02941440a3219557ee` |
+    | `_ORVION_CANONICAL/manifest.md` | `Current Module` | `reports/master/MASTER_EXECUTION_PLAN.md` | `efde8086c712a111907be3abb2c60d054adc622e8775467b57a7d3cbf23f4d0d` |
+    | `_ORVION_CANONICAL/manifest.md` | `Batch 6 surface coverage` | `reports/master/MASTER_SURFACE_DISPOSITION.md` | `ab75ed855f391cbfd165340e57cc69b6831cdf60282abd15e26b2983d9ca26ca` |
+    | `_ORVION_CANONICAL/manifest.md` | `Next capability` | `reports/master/MASTER_EXECUTION_PLAN.md` | `4ede42e1e2c2c9d6d5019dfb039c8c84d791277990df280440bbf782e63bc298` |
 
 ---
 

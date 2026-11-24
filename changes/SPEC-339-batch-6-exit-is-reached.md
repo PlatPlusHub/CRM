@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -57,7 +57,7 @@ Migrations, product code, test SQL, reaching `GATE-EVAL` or any other boundary, 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -302,6 +302,18 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-24 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 7b3e35e60351b27b57fda6abdae42bae2c271b3c and every source anchor matched there; Draft allocated as 8b31aad and approved as 7a41880 with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob cb7ef900646a7f31fd27b74c6d4866ea7131caa9 (11 insertions, 6 deletions).
+- Step 3 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob f0c709651e85562774337d24e92157b570f87264 (3 insertions, 3 deletions).
+- Step 4 Applied: `GOVERNANCE.md` edited exactly as the step states; blob 0f2f6361495f68d6254087bb0a465f0d4e88c61c (3 insertions, 3 deletions).
+- Step 5 Applied: `scripts/test_cold_start_state_guard.ps1` edited exactly as the step states; blob ff8f70c79c6f86c4b8b8742802e62b8f655028b7 (5 insertions, 4 deletions).
+- Step 6 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 

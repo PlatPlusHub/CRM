@@ -338,17 +338,18 @@ try {
 
     $planOriginal = Read-S $PLAN
     $payRow = [regex]::Match($planOriginal, '(?m)^\| PAY-9 \|[^\r\n]*\r?\n').Value
-    Check 'F-precondition: the registry classifies PAY-9 and B6-EXIT is NEXT' ($payRow -and $planOriginal.Contains('| Batch 6, this plan | NEXT |'))
+    Check 'F-precondition: the registry classifies PAY-9 and B6-EXIT is REACHED' ($payRow -and $planOriginal.Contains('| Batch 6, this plan | REACHED 2026-11-24 '))
     Write-S $PLAN $planOriginal.Replace($payRow, '')
     $r = Invoke-Guard
     Check 'F2 MUTATION: an open finding no registry row classifies fails Check 29' `
         ($r.Exit -ne 0 -and $r.Text -match 'UNCLASSIFIED: PAY-9') $r.Exit
     # The witness is planted, not borrowed: once no live member is due at B6-EXIT (SPEC-330 resolved RPC-1, the
-    # last), F3 must still prove the guard, so PAY-9's open row is moved to that boundary inside the mutation.
-    Write-S $PLAN $planOriginal.Replace($payRow, $payRow.Replace('| `FIRST-BOOKING` |', '| `B6-EXIT` |')).Replace('| Batch 6, this plan | NEXT |', '| Batch 6, this plan | REACHED 2026-10-12 probe |')
+    # last), F3 must still prove the guard, so PAY-9's open row is moved to that boundary inside the mutation. Since
+    # SPEC-339 the boundary is REACHED in the live plan, so only the row moves, and the refusal must name PAY-9.
+    Write-S $PLAN $planOriginal.Replace($payRow, $payRow.Replace('| `FIRST-BOOKING` |', '| `B6-EXIT` |'))
     $r = Invoke-Guard
     Check 'F3 MUTATION: a REACHED boundary with its items open fails Check 29 as OVERDUE' `
-        ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: \S+ -- boundary B6-EXIT is REACHED 2026-10-12 probe') $r.Exit
+        ($r.Exit -ne 0 -and $r.Text -match 'OVERDUE: PAY-9 -- boundary B6-EXIT is REACHED 2026-11-24 SPEC-339') $r.Exit
     Restore-S $PLAN
 
     $registerNow = Read-S $REGISTER
