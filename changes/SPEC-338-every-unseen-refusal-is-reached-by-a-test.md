@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -62,7 +62,7 @@ Migrations, product code, the repair of CHAT-5 or any other finding, recording `
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -931,6 +931,22 @@ Post-Implementation Proof Obligation: The native Finish runs the full DATABASE p
 ## Execution Log
 
 None.
+
+
+### 2026-11-24 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was b4562e7a3ab4390dac0992032ebe384d0af5082a and every source anchor matched there; Draft allocated as c0ca6b1 and approved as f87dc6d with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `supabase/tests/195_every_tenant_function_refuses_a_caller_with_no_active_tenant_test.sql` edited exactly as the step states; blob e18dadc093b8ec000e75242f92bc204a58c289fd (103 insertions, 0 deletions (created)).
+- Step 3 Applied: `supabase/tests/196_each_function_refusal_is_reached_by_a_call_test.sql` edited exactly as the step states; blob ed6542eebeee21869968c6a113ad22430f504450 (203 insertions, 0 deletions (created)).
+- Step 4 Applied: `supabase/tests/197_each_prepared_state_refusal_is_reached_test.sql` edited exactly as the step states; blob 05dc8925972f07f939a2520a8213615b6e7b5ac5 (172 insertions, 0 deletions (created)).
+- Step 5 Applied: `supabase/tests/198_each_trigger_refusal_is_reached_test.sql` edited exactly as the step states; blob 4865e7f8d5d7859d333965f83af04e07f2c5fa3f (131 insertions, 0 deletions (created)).
+- Step 6 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob e2fb1c95d6e393a07d8df12d274babc46373720e (8 insertions, 2 deletions).
+- Step 7 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 7c1bdefca422d936386f24e1b8a82c2c84434eaa (4 insertions, 1 deletions).
+- Step 8 Applied: `reports/master/MASTER_SURFACE_DISPOSITION.md` edited exactly as the step states; blob 1c05b168f84579a789434d8c9cf8b6be092d2db0 (5 insertions, 3 deletions).
+- Step 9 Applied: `_ORVION_CANONICAL/manifest.md` edited exactly as the step states; blob 8718954229782dfecd3b9c703c864bdbcc92cf99 (1 insertions, 1 deletions).
+- Step 10 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
