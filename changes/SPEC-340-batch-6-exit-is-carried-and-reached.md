@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -58,7 +58,7 @@ Migrations, product code, test SQL, reaching `GATE-EVAL` or any other boundary, 
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -172,6 +172,15 @@ Post-Implementation Proof Obligation: The native Finish runs the repository guar
 ## Execution Log
 
 None.
+
+
+### 2026-11-25 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 78c71bdc86b246090e327e6b9e31e85880564ad0 and every source anchor matched there; Draft allocated as b6de3d0 and approved as baeec7c with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob dd50b17c2a1d954c24769bac8fb3280048751acd (3 insertions, 1 deletions).
+- Step 3 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
