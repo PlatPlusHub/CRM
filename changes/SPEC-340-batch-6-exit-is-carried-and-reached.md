@@ -2,8 +2,8 @@
 
 ## Status
 
-[x] Draft
-[ ] Approved
+[ ] Draft
+[x] Approved
 [ ] In Progress
 [ ] Complete
 [ ] Cancelled
@@ -176,6 +176,11 @@ None.
 ## Verification Notes
 
 None.
+
+
+### 2026-11-25 — Gate 1 approval recorded
+
+DELEGATED Original Gate 1 for CRM SPEC-340 only under DEC-02 in the owner AFK Mode (owner-2026-11-23-modes-any-session.txt, SHA-256 FE02A9FFFBDC408431E3FB59E944ADFED71B07F935BBB2291B7AA59B2A36CE73) and the owner words to finish all plan (owner-2026-11-24-afk-finish-all-plan.txt, SHA-256 C155D6191185693D3DBBA01471540EA16A2C6BB0C6B835FFC08B82E792B968DE), continuing Batch 6 under the owner OD-9 decision of 2026-11-22 (SHA-256 1A7B5647FA270EBB6E514414C2FF6E1D88E6D81872733B196797318BDDA9920D) and the owner prompt to continue until the Batch 6 Finish (SHA-256 7D2A8B8F0F209C8538B0D87F133C440DBB620C2577DEAECF8F3D312584C94759); CTRL-19 accepted residual by the owner (owner-2026-11-23-ctrl19-declined.txt, SHA-256 6882D7C5A1E1C71B05EE8AD878DD72100821972811F1E1358CA022623D333124). Exact Draft SHA-256 F79CB9ADE8EE99C5C9ECC091414F2E3A20B24B718D013FD1FD4257ED334881BF, Git blob d58cced6200f54fc15531407597f3df0e239e722, CRM baseline 78c71bd (the SPEC-339 Cancel). The one successor of the Cancelled SPEC-339: carries its implementation af450d4 unchanged and adds one dated plan header. Native isolated Approve 48ddaf1 and implement 11e168e passed (1 committed blob verified), the product criterion checks on the sandbox tree passed 9 of 9, and the native repository consistency on the sandbox final tree is CLEAN (sandbox-final-consistency.log SHA-256 2BCDFA78906C55A4F38BA029BF083F5BB4D77AEC0D308A7B798D64D9838B0047). Derived profiles CONTROL and REPOSITORY; no migration, no Primary write. Gate 1 only. Immediately before allocation the hash, the Draft blob d58cced6200f54fc15531407597f3df0e239e722, all 1 source anchors, the baseline HEAD 78c71bdc86b246090e327e6b9e31e85880564ad0 against refreshed origin/main 7b3e35e60351b27b57fda6abdae42bae2c271b3c and a clean checkout were revalidated, and the pre-commit allocator admitted the identity; Draft allocated as b6de3d0. No implementation performed before this transition.
 
 ## Review Gate
 
