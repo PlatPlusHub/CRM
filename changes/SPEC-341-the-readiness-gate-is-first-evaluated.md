@@ -3,8 +3,8 @@
 ## Status
 
 [ ] Draft
-[x] Approved
-[ ] In Progress
+[ ] Approved
+[x] In Progress
 [ ] Complete
 [ ] Cancelled
 
@@ -60,7 +60,7 @@ Migrations, product code, test SQL, any owner decision (the BUSINESS POLICY memb
 
 ## Runtime Checkpoint
 
-Resume Step: 1
+Resume Step: DONE
 Blocker: None
 Recovery Attempt: 0
 
@@ -311,6 +311,18 @@ Post-Implementation Proof Obligation: The native Finish runs the repository guar
 ## Execution Log
 
 None.
+
+
+### 2026-11-25 — Implementation checkpoint (governed automation)
+
+Outcome: Complete (implementation steps; final verification pending)
+
+- Step 1 Applied: native recorded Gate 1 evidence names this exact Draft's SHA-256; the baseline HEAD was 15bff27b445bdddb7572e4128f9388629d959b03 and every source anchor matched there; Draft allocated as 16c69ce and approved as da2d1cf with APPROVAL_EVIDENCE: PASS.
+- Step 2 Applied: `reports/master/MASTER_EXECUTION_PLAN.md` edited exactly as the step states; blob baf1e609dc3c75c8cb4df99e7541435921796695 (21 insertions, 4 deletions).
+- Step 3 Applied: `reports/master/MASTER_GAP_REGISTER.md` edited exactly as the step states; blob 08b8da4c065a8a211ed2e13b6970108f952bc5c4 (4 insertions, 2 deletions).
+- Step 4 Applied: `reports/master/MASTER_CERTIFICATION_STATUS.md` edited exactly as the step states; blob 1148df87640114da911888afabf45ae1c914224f (6 insertions, 2 deletions).
+- Step 5 Applied: `reports/future-backlog.md` edited exactly as the step states; blob e456a972649d0646e33dfe596a8a972c642d3344 (1 insertions, 1 deletions).
+- Step 6 Applied: generator rerun, `generate-ai-map.ps1 -Check` exit 0, the staged change names only Write Scope paths. Every edit was applied literally from this contract's steps and its Git blob checked before commit. Fresh timed and watched Finish, independent Review, Complete and candidate binding remain.
 
 ## Verification Notes
 
