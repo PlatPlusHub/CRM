@@ -10,7 +10,7 @@
   "live_state": {
     "source": "_ORVION_CANONICAL/manifest.md",
     "phase": "**Phase 8 (Offline Conversion) — IN PROGRESS**. Execution order 7→9→8→10 (`32`). Phases 2–7 + 9 COMPLETE. Supabase-native backend (ADR-0014); transport ADR-0023. **Phase 10 is NOT ready** — evidence in `32` under Phase 10; blocker is Phase 8's unbuilt n8n workflow, gated behind the Foundation Completion Programme.",
-    "active_change_request": "None.",
+    "active_change_request": "`changes/SPEC-341-the-readiness-gate-is-first-evaluated.md`",
     "last_completed": "**SPEC-340: Batch 6 exit is carried and reached.**",
     "next_capability": "**the readiness gate** (`MASTER_EXECUTION_PLAN.md`): Batch 6 is complete (`B6-EXIT` REACHED by SPEC-339); FE-0 starts only after its own gates and the owner's frontend assessment; then the Phase-8 order in `32` resumes: bounded boundary revalidation → n8n workflow → Direct Call Quality Feedback Loop → PH8-10 evidence → Smart Bidding handoff when earned. **The control-plane optimization chapter is CLOSED** — reopening it requires newly earned evidence (a real incident, a false green or false red, a measured material cost, or a proven safety/governance gap), never a further search for theoretical optimizations."
   },
